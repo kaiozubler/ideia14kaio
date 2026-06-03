@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediCopilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g50:#f2faf2;--g100:#dff0df;--g200:#b8dbb8;--g300:#84c184;--g400:#4fa84f;
+  --g500:#3a8f3a;--g600:#2b722b;--g700:#1d551d;--g800:#113811;
+  --n50:#fafaf9;--n75:#f5f4f2;--n100:#edece9;--n150:#e3e2de;--n200:#d4d3ce;
+  --n300:#b5b4ae;--n400:#8e8d87;--n500:#686762;--n600:#46453f;--n700:#2a2926;
+  --white:#fff;
+  --font:'Figtree',system-ui,sans-serif;
+  --mono:'JetBrains Mono',monospace;
+  --r4:4px;--r6:6px;--r8:8px;--r12:12px;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font);background:var(--n75);color:var(--n700);font-size:13px;line-height:1.5}
+button{font-family:var(--font);cursor:pointer}
+input,textarea,select{font-family:var(--font)}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--n200);border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:56px;background:var(--white);border-right:0.5px solid var(--n150);display:flex;flex-direction:column;transition:width .22s cubic-bezier(.4,0,.2,1);overflow:hidden;z-index:200;flex-shrink:0}
+.sidebar:hover{width:220px}
+.sb-logo{height:54px;padding:0 14px;display:flex;align-items:center;gap:11px;border-bottom:0.5px solid var(--n100);flex-shrink:0}
+.sb-mark{width:28px;height:28px;background:var(--g500);border-radius:var(--r6);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sb-mark .ti{color:var(--white);font-size:15px}
+.sb-name{font-size:13px;font-weight:600;color:var(--n700);white-space:nowrap;opacity:0;transition:opacity .18s .04s;letter-spacing:-.01em}
+.sidebar:hover .sb-name{opacity:1}
+.sb-nav{flex:1;padding:6px 0;overflow:hidden}
+.sb-item{display:flex;align-items:center;gap:11px;padding:10px 14px;cursor:pointer;color:var(--n400);border-left:2px solid transparent;transition:all .14s;white-space:nowrap}
+.sb-item:hover{color:var(--n600);background:var(--n50)}
+.sb-item.active{color:var(--g600);border-left-color:var(--g500);background:var(--g50)}
+.sb-item .ti{font-size:19px;flex-shrink:0}
+.sb-item.active .ti{color:var(--g500)}
+.sb-lbl{font-size:12.5px;opacity:0;transition:opacity .18s .04s}
+.sidebar:hover .sb-lbl{opacity:1}
+.sb-footer{padding:6px 0;border-top:0.5px solid var(--n100);flex-shrink:0}
+
+/* TOPBAR */
+.topbar{height:54px;background:var(--white);border-bottom:0.5px solid var(--n150);display:flex;align-items:center;padding:0 20px;gap:10px;flex-shrink:0}
+.topbar-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.page-title{font-size:13px;font-weight:500;color:var(--n600)}
+.bc{font-size:11px;color:var(--n400)}
+.bc span{color:var(--n600)}
+.topbar-right{display:flex;align-items:center;gap:3px}
+.ib{width:32px;height:32px;border-radius:var(--r6);display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:var(--n400);cursor:pointer;transition:all .14s;position:relative}
+.ib:hover{background:var(--n100);color:var(--n600)}
+.ib .ti{font-size:17px}
+.notif-dot{width:5px;height:5px;background:var(--g500);border-radius:50%;position:absolute;top:8px;right:8px;border:1.5px solid var(--white)}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--g100);border:0.5px solid var(--g200);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.avatar span{font-size:11px;font-weight:600;color:var(--g700)}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.content{flex:1;overflow-y:auto;padding:20px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--r6);font-size:12px;font-weight:500;border:0.5px solid var(--n200);background:transparent;color:var(--n600);transition:all .14s;line-height:1}
+.btn:hover{background:var(--n100)}
+.btn.primary{background:var(--g500);border-color:var(--g500);color:var(--white)}
+.btn.primary:hover{background:var(--g600)}
+.btn.ghost{border-color:var(--g300);color:var(--g700);background:var(--g50)}
+.btn.ghost:hover{background:var(--g100)}
+.btn.danger{border-color:rgba(200,50,50,.3);color:#8a2222}
+.btn.danger:hover{background:rgba(200,50,50,.06)}
+.btn .ti{font-size:13px}
+.btn.sm{padding:4px 9px;font-size:11px}
+.btn.sm .ti{font-size:12px}
+
+/* SEARCH */
+.search-wrap{max-width:640px;margin:0 auto}
+.search-hero{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12);padding:20px;margin-bottom:14px}
+.search-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.search-kicker{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--n400)}
+.adv-link{font-size:11px;color:var(--g600);cursor:pointer;display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:var(--r4);border:0.5px solid var(--g200);background:var(--g50)}
+.adv-link .ti{font-size:12px}
+.search-bar{display:flex;align-items:center;gap:9px;border:0.5px solid var(--n200);border-radius:var(--r8);padding:0 13px;height:40px;background:var(--n50);transition:border-color .15s,background .15s}
+.search-bar:focus-within{border-color:var(--g400);background:var(--white)}
+.search-bar .ti{color:var(--n300);font-size:17px;flex-shrink:0}
+.search-bar input{flex:1;border:none;background:transparent;font-size:13px;color:var(--n700);outline:none}
+.search-bar input::placeholder{color:var(--n400)}
+.adv-filters{display:none;border-top:0.5px solid var(--n100);margin-top:14px;padding-top:14px}
+.adv-filters.open{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.ff label{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--n400);display:block;margin-bottom:3px}
+.ff input,.ff select{width:100%;height:32px;border:0.5px solid var(--n200);border-radius:var(--r6);padding:0 9px;font-size:12px;color:var(--n700);background:var(--n50);outline:none}
+.ff.wide{grid-column:1/-1}
+.nf-bar{background:var(--g50);border:0.5px solid var(--g200);border-radius:var(--r8);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.nf-bar p{font-size:12px;color:var(--g800)}
+.nf-bar strong{font-weight:600}
+.results-card{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12);overflow:hidden}
+.results-hd{padding:10px 16px;border-bottom:0.5px solid var(--n100);display:flex;align-items:center;justify-content:space-between}
+.results-ct{font-size:11px;color:var(--n400)}
+.pt-row{display:flex;align-items:center;gap:11px;padding:11px 16px;border-bottom:0.5px solid var(--n75);cursor:pointer;transition:background .12s}
+.pt-row:last-child{border-bottom:none}
+.pt-row:hover{background:var(--n50)}
+.pt-row:hover .row-acts{opacity:1}
+.pt-av{width:34px;height:34px;border-radius:50%;background:var(--g100);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--g700);flex-shrink:0}
+.pt-info{flex:1;min-width:0}
+.pt-name{font-size:12.5px;font-weight:500;color:var(--n700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pt-meta{font-size:11px;color:var(--n400);margin-top:1px}
+.pt-badge{font-size:10px;padding:2px 7px;border-radius:var(--r4);background:var(--n75);color:var(--n500);border:0.5px solid var(--n200);flex-shrink:0}
+.pt-badge.green{background:var(--g50);color:var(--g700);border-color:var(--g200)}
+.row-acts{display:flex;gap:3px;opacity:0;transition:opacity .14s}
+.ra-btn{width:26px;height:26px;border-radius:var(--r4);border:0.5px solid var(--n200);background:transparent;display:flex;align-items:center;justify-content:center;color:var(--n400);cursor:pointer}
+.ra-btn:hover{background:var(--n100);color:var(--n600)}
+.ra-btn .ti{font-size:13px}
+.empty-st{padding:36px;text-align:center;color:var(--n400)}
+.empty-st .ti{font-size:30px;color:var(--n200);display:block;margin-bottom:8px}
+.empty-st p{font-size:12.5px}
+
+/* PATIENT HEADER */
+.pt-hdr-card{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12);padding:16px 20px;display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-shrink:0}
+.pth-av{width:46px;height:46px;border-radius:50%;background:var(--g100);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:var(--g700);flex-shrink:0}
+.pth-name{font-size:15px;font-weight:600;color:var(--n700);letter-spacing:-.01em}
+.pth-sub{font-size:11.5px;color:var(--n400);margin-top:2px}
+.pth-badges{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+.pth-badge{font-size:10px;padding:2px 8px;border-radius:var(--r4)}
+.pth-badge.green{background:var(--g50);color:var(--g700);border:0.5px solid var(--g200)}
+.pth-badge.gray{background:var(--n75);color:var(--n500);border:0.5px solid var(--n200)}
+.pth-actions{margin-left:auto;display:flex;gap:5px}
+
+/* TABS */
+.tabs-row{display:flex;background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12) var(--r12) 0 0;border-bottom:none;overflow-x:auto;flex-shrink:0}
+.tabs-row::-webkit-scrollbar{height:0}
+.tab{padding:10px 15px;font-size:12px;color:var(--n400);cursor:pointer;border-bottom:2px solid transparent;transition:all .14s;white-space:nowrap}
+.tab:hover{color:var(--n600)}
+.tab.on{color:var(--g600);border-bottom-color:var(--g500);font-weight:500;background:var(--g50)}
+.tab-body{background:var(--white);border:0.5px solid var(--n150);border-top:none;border-radius:0 0 var(--r12) var(--r12);padding:16px;flex:1;overflow-y:auto}
+
+/* FORM */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-grid .wide{grid-column:1/-1}
+.fld label{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--n400);display:block;margin-bottom:3px}
+.fld input,.fld select{width:100%;height:34px;border:0.5px solid var(--n200);border-radius:var(--r6);padding:0 10px;font-size:12.5px;color:var(--n700);background:var(--n50);outline:none}
+.fld input:focus,.fld select:focus{border-color:var(--g400);background:var(--white)}
+.sec-hd{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--n400);margin-bottom:8px;padding-top:12px;border-top:0.5px solid var(--n100);margin-top:10px}
+
+/* ATTACHMENTS */
+.attach-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.attach-item{display:flex;align-items:center;gap:6px;padding:6px 10px;border:0.5px solid var(--n200);border-radius:var(--r6);font-size:11.5px;color:var(--n600);cursor:pointer;background:var(--n50);transition:all .12s}
+.attach-item:hover{background:var(--n100)}
+.attach-item .ti{font-size:14px;color:var(--g500)}
+.attach-add{border-style:dashed;background:transparent;color:var(--n400)}
+.attach-add:hover{border-color:var(--n300);color:var(--n500);background:var(--n50)}
+
+/* ATENDIMENTOS */
+.atend-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.atend-left{display:flex;align-items:center;gap:8px}
+.atend-item{display:flex;align-items:flex-start;gap:10px;border:0.5px solid var(--n150);border-radius:var(--r8);padding:12px 14px;margin-bottom:7px;cursor:pointer;transition:all .14s}
+.atend-item:hover{border-color:var(--g200);background:var(--g50)}
+.atend-item:last-child{margin-bottom:0}
+.atend-cb{accent-color:var(--g500);margin-top:2px;flex-shrink:0}
+.atend-body{flex:1;min-width:0}
+.atend-title{font-size:12.5px;font-weight:500;color:var(--n700)}
+.atend-sub{font-size:11px;color:var(--n400);margin-top:3px;display:flex;align-items:center;gap:8px}
+.atend-tag{font-size:10px;padding:1px 7px;border-radius:var(--r4);background:var(--n75);color:var(--n500);border:0.5px solid var(--n200)}
+.atend-tag.green{background:var(--g50);color:var(--g700);border-color:var(--g200)}
+.atend-tag.orange{background:#fff7ed;color:#7c4a00;border-color:#fcd09a}
+.atend-chev{color:var(--n300);font-size:15px;margin-top:1px;flex-shrink:0}
+.dossie-btn{display:none}
+.dossie-btn.show{display:flex}
+.atend-detail-hd{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:12px;border-bottom:0.5px solid var(--n100)}
+.atend-detail-title{font-size:14px;font-weight:600;color:var(--n700)}
+.atend-detail-date{font-size:11px;color:var(--n400)}
+.ai-resume-block{background:var(--g50);border:0.5px solid var(--g200);border-radius:var(--r8);padding:12px 14px;margin-bottom:12px}
+.air-label{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.air-label .ti{font-size:13px}
+.air-text{font-size:12.5px;color:var(--n700);line-height:1.65}
+.notes-block{background:var(--n50);border:0.5px solid var(--n150);border-radius:var(--r8);padding:12px 14px;margin-bottom:12px}
+.notes-label{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--n400);margin-bottom:6px}
+.notes-text{font-size:12.5px;color:var(--n600);line-height:1.65}
+.atend-links{display:flex;gap:6px;flex-wrap:wrap}
+
+/* NOVO ATENDIMENTO SPLIT */
+.split-wrap{display:grid;grid-template-columns:1fr 1fr;gap:0;border:0.5px solid var(--n150);border-radius:var(--r12);overflow:hidden;flex:1;min-height:0}
+.split-left{background:var(--white);border-right:0.5px solid var(--n150);display:flex;flex-direction:column;overflow:hidden}
+.split-right{background:var(--n50);display:flex;flex-direction:column;overflow:hidden;position:relative}
+.pront-header{padding:8px 12px;border-bottom:0.5px solid var(--n100);display:flex;align-items:center;justify-content:space-between;background:var(--n50);gap:6px;flex-shrink:0}
+.pront-label{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--n400)}
+.toolbar{display:flex;gap:2px;padding:4px 10px;border-bottom:0.5px solid var(--n100);background:var(--n50);flex-shrink:0;flex-wrap:wrap}
+.tbtn{width:25px;height:25px;border-radius:var(--r4);border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--n400);font-size:11px;font-weight:500;font-family:var(--mono)}
+.tbtn:hover{background:var(--n200);color:var(--n600)}
+.tbtn .ti{font-size:12px}
+.tsep{width:0.5px;background:var(--n200);margin:2px 3px}
+.pront-area{flex:1;padding:10px 12px;font-family:var(--mono);font-size:11.5px;color:var(--n700);resize:none;outline:none;border:none;background:var(--white);line-height:1.75;min-height:0}
+.pront-area::placeholder{color:var(--n300)}
+
+/* NOTE PERSONAL */
+.nota-personal-wrap{border-top:0.5px solid var(--n100);background:var(--n50);flex-shrink:0}
+.nota-personal-hd{padding:5px 12px;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+.nota-personal-hd .ti{font-size:12px;color:var(--n400)}
+.nota-personal-hd span{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--n400);flex:1}
+.nota-personal-body{display:none;padding:0 12px 8px}
+.nota-personal-body.open{display:block}
+.nota-personal-ta{width:100%;border:0.5px dashed var(--n200);border-radius:var(--r6);padding:6px 8px;font-family:var(--font);font-size:11.5px;color:var(--n600);resize:none;outline:none;background:var(--white);line-height:1.5;min-height:52px}
+.nota-personal-ta::placeholder{color:var(--n400)}
+.nota-personal-note{font-size:10px;color:var(--n300);margin-top:3px;font-style:italic}
+
+/* FOOTER */
+.left-footer{border-top:0.5px solid var(--n150);padding:8px 12px;display:flex;flex-direction:column;gap:6px;background:var(--white);flex-shrink:0}
+.lf-label{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--n400)}
+.lf-row{display:flex;gap:6px;align-items:flex-end}
+.lf-ta{flex:1;border:0.5px solid var(--n200);border-radius:var(--r6);padding:6px 9px;font-family:var(--font);font-size:12px;color:var(--n700);resize:none;outline:none;background:var(--n50);max-height:60px;line-height:1.45}
+.lf-ta:focus{border-color:var(--g400);background:var(--white)}
+.lf-ta::placeholder{color:var(--n400)}
+.lf-send{width:30px;height:30px;border-radius:var(--r6);border:none;background:var(--g500);color:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.lf-send:hover{background:var(--g600)}
+.lf-send .ti{font-size:14px}
+.lf-actions{display:flex;gap:4px;align-items:center}
+
+/* DROPDOWN MENU */
+.dropdown{position:relative;display:inline-flex}
+.dropdown-menu{position:absolute;bottom:calc(100% + 4px);left:0;background:var(--white);border:0.5px solid var(--n200);border-radius:var(--r8);box-shadow:0 4px 16px rgba(0,0,0,.1);min-width:150px;z-index:100;display:none;overflow:hidden}
+.dropdown-menu.open{display:block}
+.dm-item{display:flex;align-items:center;gap:8px;padding:9px 12px;font-size:12px;color:var(--n700);cursor:pointer;border-bottom:0.5px solid var(--n100)}
+.dm-item:last-child{border-bottom:none}
+.dm-item:hover{background:var(--n50)}
+.dm-item .ti{font-size:14px;color:var(--n400)}
+.dm-item.green .ti{color:var(--g500)}
+
+/* AI RIGHT — TRANSCRIPTION */
+.trans-bar{background:var(--white);border-bottom:0.5px solid var(--n150);flex-shrink:0;overflow:hidden;transition:max-height .28s cubic-bezier(.4,0,.2,1);max-height:46px}
+.trans-bar.exp2{max-height:115px}
+.trans-bar.exp3{max-height:340px}
+.trans-bar-top{padding:5px 10px;display:flex;align-items:center;gap:7px;min-height:34px}
+.tdot{width:6px;height:6px;border-radius:50%;background:var(--n200);flex-shrink:0}
+.tdot.live{background:var(--g500);animation:tdp 1.1s infinite}
+@keyframes tdp{0%,100%{opacity:1}50%{opacity:.25}}
+.trans-lbl{font-size:10.5px;color:var(--n400);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic}
+.trans-lbl.live-lbl{color:var(--g600)}
+.trans-expand-btn{width:22px;height:22px;border-radius:var(--r4);border:none;background:transparent;cursor:pointer;color:var(--n300);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .14s}
+.trans-expand-btn:hover{background:var(--n100);color:var(--n600)}
+.trans-expand-btn .ti{font-size:12px}
+.trans-content{padding:0 10px 8px;overflow-y:auto}
+.trans-bar.exp2 .trans-content{max-height:75px}
+.trans-bar.exp3 .trans-content{max-height:295px}
+.trans-line{font-size:11px;color:var(--n500);line-height:1.55;padding:2px 0;border-bottom:0.5px solid var(--n75);font-style:italic}
+.trans-line:last-child{border-bottom:none;color:var(--n700);font-weight:500;font-style:normal}
+
+/* AI STAGE */
+.ai-stage{flex:1;position:relative;display:flex;flex-direction:column;overflow:hidden}
+.ai-bg-icon{position:absolute;opacity:0.04;pointer-events:none;top:50%;left:50%;transform:translate(-50%,-55%);z-index:0}
+.ai-bg-icon .ti{font-size:120px;color:var(--g600)}
+.ai-orb-center{flex:1;display:flex;align-items:center;justify-content:center;position:relative;z-index:2}
+/* PINNED STRIP */
+.pinned-strip{display:none;flex-shrink:0;border-bottom:0.5px solid var(--n150);background:#fffbeb;padding:5px 10px;gap:4px;flex-direction:column;max-height:90px;overflow-y:auto}
+.pinned-strip.has-pins{display:flex}
+.pin-strip-hd{font-size:9.5px;font-weight:600;color:#92400e;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:4px}
+.pin-strip-hd .ti{font-size:11px}
+.pin-strip-item{font-size:11px;color:#78350f;padding:2px 0;border-bottom:0.5px solid #fde68a;line-height:1.4;display:flex;align-items:flex-start;gap:5px}
+.pin-strip-item:last-child{border-bottom:none}
+.pin-strip-item .ti{font-size:11px;color:#d97706;flex-shrink:0;margin-top:1px}
+/* BUBBLES SCROLL AREA */
+.bubbles-scroll{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:8px 10px;z-index:1;position:relative}
+.bubbles-scroll.hidden-bbl .bbl:not(.pinned){display:none}
+.bbl{max-width:82%;padding:7px 10px;border-radius:12px;font-size:11.5px;line-height:1.45;pointer-events:auto;animation:popBbl .28s cubic-bezier(.175,.885,.32,1.275) both;position:relative;display:flex;align-items:flex-start;gap:5px;flex-shrink:0}
+@keyframes popBbl{from{opacity:0;transform:scale(.78) translateY(6px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.bbl.sug{background:var(--white);border:0.5px solid var(--n200);color:var(--n700);border-bottom-left-radius:3px;align-self:flex-start}
+.bbl.ia{background:#dbeafe;border:0.5px solid #93c5fd;color:#1e3a5f;border-bottom-left-radius:3px;align-self:flex-start}
+.bbl.usr{background:var(--g500);color:var(--white);border-bottom-right-radius:3px;align-self:flex-end;flex-direction:row-reverse}
+.bbl.pinned{background:#fef9c3!important;border-color:#fde047!important;color:var(--n700)!important}
+.bbl-text{flex:1;min-width:0}
+.bbl-actions{display:flex;gap:2px;opacity:0;transition:opacity .14s;flex-shrink:0;margin-top:0}
+.bbl:hover .bbl-actions{opacity:1}
+.bbl-pin-btn{width:18px;height:18px;border-radius:3px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--n300)}
+.bbl-pin-btn:hover{color:var(--g500);background:rgba(0,0,0,.06)}
+.bbl-pin-btn .ti{font-size:12px}
+.bbl.pinned .bbl-pin-btn .ti{color:#d97706}
+
+/* ORB */
+.orb-wrap{position:relative;width:100px;height:100px;display:flex;align-items:center;justify-content:center;flex-shrink:0;z-index:2}
+.wave{position:absolute;border-radius:50%;border:1.5px solid var(--g300);opacity:0;width:100%;height:100%}
+.orb-wrap.live .wave.w1{animation:rip 2.1s infinite 0s}
+.orb-wrap.live .wave.w2{animation:rip 2.1s infinite .55s}
+.orb-wrap.live .wave.w3{animation:rip 2.1s infinite 1.1s}
+@keyframes rip{0%{opacity:.5;transform:scale(.65)}100%{opacity:0;transform:scale(1.55)}}
+.orb{width:58px;height:58px;border-radius:50%;background:var(--g50);border:1.5px solid var(--g200);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .18s;z-index:2;position:relative}
+.orb:hover{background:var(--g100);border-color:var(--g300)}
+.orb.live{background:var(--g500);border-color:var(--g600)}
+.orb.live .ti{color:var(--white)}
+.orb .ti{font-size:24px;color:var(--g400);transition:all .18s}
+.orb-lbl{font-size:10.5px;color:var(--n400);margin-top:7px;text-align:center}
+.orb-lbl.live{color:var(--g600);font-weight:500}
+
+/* AI BOTTOM */
+.ai-bottom{border-top:0.5px solid var(--n150);background:var(--white);flex-shrink:0}
+
+/* RESUMO PANEL (inline no AI) */
+.resumo-panel{display:none;position:absolute;inset:0;background:var(--white);z-index:10;flex-direction:column;overflow:hidden}
+.resumo-panel.open{display:flex}
+.resumo-panel-hd{padding:10px 13px;border-bottom:0.5px solid var(--n150);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.resumo-panel-title{font-size:12px;font-weight:600;color:var(--n700);flex:1}
+.resumo-panel-body{flex:1;overflow-y:auto;padding:12px 13px}
+.resumo-pre{font-family:var(--mono);font-size:11px;color:var(--n700);line-height:1.75;white-space:pre-wrap}
+.resumo-panel-foot{padding:10px 13px;border-top:0.5px solid var(--n150);display:flex;gap:6px;flex-wrap:wrap}
+
+/* AI CONTROLS */
+.ai-ctrls{padding:7px 12px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;border-bottom:0.5px solid var(--n100)}
+.ai-ctrls .csep{width:0.5px;height:16px;background:var(--n200)}
+.ai-input-row{padding:7px 12px 9px;display:flex;gap:5px}
+.ai-inp{flex:1;border:0.5px solid var(--n200);border-radius:var(--r6);padding:6px 10px;font-family:var(--font);font-size:12px;color:var(--n700);outline:none;background:var(--n50)}
+.ai-inp:focus{border-color:var(--g400);background:var(--white)}
+.ai-inp::placeholder{color:var(--n400)}
+.ai-sbtn{width:30px;height:30px;border-radius:var(--r6);border:none;background:var(--g500);color:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.ai-sbtn:hover{background:var(--g600)}
+.ai-sbtn .ti{font-size:14px}
+
+/* EXAMES */
+.exame-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.exame-item{display:flex;align-items:center;gap:12px;padding:10px 13px;border:0.5px solid var(--n150);border-radius:var(--r8);margin-bottom:7px;cursor:pointer;transition:all .12s}
+.exame-item:hover{border-color:var(--g200);background:var(--g50)}
+.exame-icon{width:34px;height:34px;border-radius:var(--r6);background:var(--g50);border:0.5px solid var(--g200);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.exame-icon .ti{font-size:17px;color:var(--g500)}
+.exame-body{flex:1;min-width:0}
+.exame-name{font-size:12.5px;font-weight:500;color:var(--n700)}
+.exame-obs{font-size:11px;color:var(--n400);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exame-date{font-size:11px;color:var(--n400);flex-shrink:0}
+.exame-acts{display:flex;gap:3px;opacity:0;transition:opacity .12s}
+.exame-item:hover .exame-acts{opacity:1}
+
+/* PRONTUÁRIO TAB */
+.pront-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.pront-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:20px;background:var(--g50);color:var(--g700);border:0.5px solid var(--g200)}
+.pront-badge .ti{font-size:11px;color:var(--g500)}
+.reprocess-bar{background:var(--n50);border:0.5px solid var(--n150);border-radius:var(--r8);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.reprocess-info{display:flex;align-items:center;gap:8px}
+.reprocess-info .ti{font-size:16px;color:var(--g500)}
+.reprocess-info div p{font-size:12px;font-weight:500;color:var(--n700)}
+.reprocess-info div span{font-size:10.5px;color:var(--n400)}
+
+/* TIMELINE */
+.tl-wrap{padding:2px 0}
+.tl-item{display:flex;gap:14px;padding-bottom:18px}
+.tl-item:last-child{padding-bottom:0}
+.tl-left{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:36px}
+.tl-dot{width:9px;height:9px;border-radius:50%;border:2px solid var(--g400);background:var(--white);flex-shrink:0;margin-top:3px;z-index:1}
+.tl-dot.filled{background:var(--g500);border-color:var(--g500)}
+.tl-line{width:1px;flex:1;background:var(--n200);margin-top:4px}
+.tl-item:last-child .tl-line{display:none}
+.tl-right{flex:1;min-width:0;padding-top:1px}
+.tl-date{font-size:10px;color:var(--n400);letter-spacing:.02em;margin-bottom:3px}
+.tl-card{background:var(--n50);border:0.5px solid var(--n150);border-radius:var(--r8);padding:9px 12px}
+.tl-card-title{font-size:12px;font-weight:500;color:var(--n700);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tl-card-title .ti{font-size:14px;color:var(--g500)}
+.tl-card-sub{font-size:11.5px;color:var(--n500);margin-top:3px;line-height:1.4}
+.tl-type{font-size:10px;padding:1px 7px;border-radius:var(--r4)}
+.tl-type.atend{background:var(--g50);color:var(--g700);border:0.5px solid var(--g200)}
+.tl-type.exame{background:#edf2fe;color:#2d4da3;border:0.5px solid #c5d3f7}
+.tl-type.cadastro{background:#fef8e1;color:#7a5c00;border:0.5px solid #f3dfa0}
+.tl-type.anexo{background:#f5effe;color:#5a2da1;border:0.5px solid #d0b5f7}
+
+/* INDICADORES */
+.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+.kpi{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12);padding:16px 18px}
+.kpi-label{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--n300);margin-bottom:6px}
+.kpi-val{font-size:28px;font-weight:600;color:var(--n700);letter-spacing:-.02em;line-height:1}
+.kpi-val.green{color:var(--g600)}
+.kpi-sub{font-size:11px;color:var(--n400);margin-top:4px}
+.chart-placeholder{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12);padding:20px;display:flex;flex-direction:column;gap:12px}
+.chart-bar-row{display:flex;align-items:center;gap:10px}
+.chart-lbl{font-size:11px;color:var(--n500);width:60px;text-align:right;flex-shrink:0}
+.chart-bar-bg{flex:1;height:8px;background:var(--n100);border-radius:4px;overflow:hidden}
+.chart-bar-fill{height:100%;background:var(--g400);border-radius:4px;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.chart-val{font-size:11px;color:var(--n500);width:28px;flex-shrink:0}
+
+/* RECEITAS SCREEN */
+.rec-empty{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12);padding:60px 20px;text-align:center}
+.rec-empty .ti{font-size:36px;color:var(--g300);display:block;margin-bottom:12px}
+.rec-empty h3{font-size:14px;font-weight:500;color:var(--n600);margin-bottom:5px}
+.rec-empty p{font-size:12px;color:var(--n400)}
+
+.back-btn{display:inline-flex;align-items:center;gap:5px;color:var(--n400);font-size:12px;padding:5px 9px;border-radius:var(--r6);border:none;background:transparent;cursor:pointer;margin-bottom:14px;transition:all .12s}
+.back-btn:hover{background:var(--n100);color:var(--n600)}
+.back-btn .ti{font-size:14px}
+
+/* MODALS */
+.overlay{display:none;position:fixed;inset:0;background:rgba(26,25,23,.45);z-index:300;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--white);border-radius:var(--r12);border:0.5px solid var(--n200);width:500px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+.modal.wide{width:580px}
+.mhd{padding:14px 18px;border-bottom:0.5px solid var(--n150);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.mhd-title{font-size:13px;font-weight:600;color:var(--n700)}
+.mclose{width:28px;height:28px;border-radius:var(--r4);border:none;background:transparent;cursor:pointer;color:var(--n300);display:flex;align-items:center;justify-content:center}
+.mclose:hover{background:var(--n100);color:var(--n600)}
+.mclose .ti{font-size:15px}
+.mbody{padding:16px 18px;overflow-y:auto;flex:1}
+.mfoot{padding:11px 18px;border-top:0.5px solid var(--n150);display:flex;justify-content:flex-end;gap:7px;flex-shrink:0}
+.ai-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:20px;background:var(--g50);color:var(--g700);border:0.5px solid var(--g200);margin-bottom:10px}
+.ai-badge .ti{font-size:11px;color:var(--g500)}
+.resumo-pre-m{font-family:var(--mono);font-size:11px;color:var(--n700);line-height:1.75;background:var(--n50);border:0.5px solid var(--n150);border-radius:var(--r8);padding:12px;white-space:pre-wrap;max-height:260px;overflow-y:auto}
+
+/* UPLOAD */
+.upload-zone{border:1.5px dashed var(--n200);border-radius:var(--r8);padding:20px;text-align:center;background:var(--n50);cursor:pointer;transition:all .14s;margin-bottom:10px}
+.upload-zone:hover{border-color:var(--g300);background:var(--g50)}
+.upload-zone .ti{font-size:24px;color:var(--n300);display:block;margin-bottom:6px}
+.upload-zone p{font-size:12px;color:var(--n400)}
+.upload-zone input[type=file]{display:none}
+.file-preview{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--g50);border:0.5px solid var(--g200);border-radius:var(--r6);margin-bottom:10px}
+.file-preview .ti{font-size:18px;color:var(--g500)}
+.file-preview span{font-size:12px;color:var(--n700);flex:1}
+
+/* PRINT */
+@media print{
+  .sidebar,.topbar,.tabs-row,.pth-actions,.atend-bar,.btn,
+  .reprocess-bar,.nota-personal-wrap,.back-btn,
+  button,.ai-bottom,.trans-bar,.ai-stage{display:none!important}
+  .shell{display:block}
+  .main{overflow:visible}
+  .content{overflow:visible;padding:0}
+  .tab-body{border:none!important;padding:0!important}
+  #print-header{display:block!important}
+  .nota-personal-section{display:none!important}
+  body{background:white}
+}
+#print-header{display:none}
+.print-hd{margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #ccc}
+.print-hd h2{font-size:16px;font-weight:700;margin-bottom:4px}
+.print-hd p{font-size:12px;color:#555;margin-top:2px}
+
+/* ANIMATIONS */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinning{animation:spin .8s linear infinite}
+
+/* ATEND PROGRESS INDICATOR */
+.atend-progress{display:none;padding:6px 12px;background:#fff7ed;border-bottom:0.5px solid #fcd09a;font-size:11px;color:#7c4a00;align-items:center;gap:6px;flex-shrink:0}
+.atend-progress.show{display:flex}
+.atend-progress .ti{font-size:13px;color:#e07800}
+</style>
+</head>
+<body>
+<div class="shell" id="shell">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sb-logo">
+    <div class="sb-mark"><i class="ti ti-heart-rate-monitor"></i></div>
+    <span class="sb-name">MediCopilot</span>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-item active" id="nav-patients" onclick="goScreen('patients')">
+      <i class="ti ti-users"></i><span class="sb-lbl">Pacientes</span>
+    </div>
+    <div class="sb-item" id="nav-receitas" onclick="goScreen('receitas')">
+      <i class="ti ti-file-description"></i><span class="sb-lbl">Receitas e Atestados</span>
+    </div>
+    <div class="sb-item" id="nav-indicadores" onclick="goScreen('indicadores')">
+      <i class="ti ti-chart-line"></i><span class="sb-lbl">Indicadores</span>
+    </div>
+  </nav>
+  <div class="sb-footer">
+    <div class="sb-item"><i class="ti ti-settings"></i><span class="sb-lbl">Configurações</span></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="page-title" id="page-title">Pacientes</span>
+      <div class="bc" id="breadcrumb"></div>
+    </div>
+    <div class="topbar-right">
+      <button class="ib" title="Notificações"><i class="ti ti-bell"></i><span class="notif-dot"></span></button>
+      <button class="ib" title="Configurações"><i class="ti ti-settings"></i></button>
+      <div class="avatar" title="Dr. Rafael Mendes"><span>DR</span></div>
+    </div>
+  </div>
+
+  <div class="content" id="content">
+
+    <!-- SCREEN: PATIENTS -->
+    <div id="s-patients" style="display:block">
+      <div class="search-wrap">
+        <div class="search-hero">
+          <div class="search-meta">
+            <span class="search-kicker">Buscar paciente</span>
+            <button class="adv-link" onclick="toggleAdv()"><i class="ti ti-adjustments-horizontal"></i> Filtro avançado</button>
+          </div>
+          <div class="search-bar">
+            <i class="ti ti-search"></i>
+            <input type="text" id="search-input" placeholder="Nome, CPF, telefone ou cartão SUS..." oninput="handleSearch(this.value)" autocomplete="off">
+          </div>
+          <div class="adv-filters" id="adv-filters">
+            <div class="ff wide"><label>Nome completo</label><input type="text" placeholder="Busca por nome..."></div>
+            <div class="ff"><label>Data de nascimento</label><input type="date"></div>
+            <div class="ff"><label>E-mail</label><input type="text" placeholder="email@..."></div>
+            <div class="ff"><label>Nome da mãe</label><input type="text"></div>
+            <div class="ff"><label>Nome do pai</label><input type="text"></div>
+            <div class="ff"><label>Última consulta</label><input type="date"></div>
+            <div class="ff"><label>Convênio</label>
+              <select><option value="">Todos</option><option>Particular</option><option>SUS</option><option>Unimed</option><option>Bradesco</option><option>Amil</option></select>
+            </div>
+            <div class="ff"><label>Cidade</label><input type="text"></div>
+            <div class="ff"><label>Sexo</label>
+              <select><option value="">Todos</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select>
+            </div>
+          </div>
+          <div class="nf-bar" id="nf-bar" style="display:none">
+            <p>Paciente <strong id="nf-name"></strong> não encontrado</p>
+            <button class="btn primary sm" onclick="openModal('new-patient')"><i class="ti ti-user-plus"></i> Adicionar novo</button>
+          </div>
+        </div>
+        <div class="results-card" id="results-card">
+          <div class="results-hd">
+            <span class="results-ct" id="results-ct">6 pacientes</span>
+            <button class="btn primary sm" onclick="openModal('new-patient')"><i class="ti ti-plus"></i> Novo paciente</button>
+          </div>
+          <div id="patient-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN: PATIENT DETAIL -->
+    <div id="s-patient-detail" style="display:none;flex-direction:column;height:calc(100vh - 94px)">
+      <!-- PRINT HEADER (only visible on print) -->
+      <div id="print-header" class="print-hd">
+        <h2 id="print-name">—</h2>
+        <p id="print-sub1">—</p>
+        <p id="print-sub2">—</p>
+        <p id="print-sub3">—</p>
+      </div>
+      <button class="back-btn" onclick="backToPatients()"><i class="ti ti-arrow-left"></i> Pacientes</button>
+
+      <!-- ATEND IN PROGRESS INDICATOR -->
+      <div class="atend-progress" id="atend-progress">
+        <i class="ti ti-clock-edit"></i>
+        <span>Atendimento em andamento — não salvo</span>
+        <button class="btn sm" style="margin-left:auto" onclick="openTabFromProgress()"><i class="ti ti-arrow-right"></i> Continuar</button>
+        <button class="btn sm primary" onclick="saveAtendFromProgress()"><i class="ti ti-device-floppy"></i> Salvar</button>
+      </div>
+
+      <div class="pt-hdr-card" id="pt-hdr-card">
+        <div class="pth-av" id="pth-av">--</div>
+        <div id="pth-full-info">
+          <div class="pth-name" id="pth-name">—</div>
+          <div class="pth-sub" id="pth-sub">—</div>
+          <div class="pth-badges">
+            <span class="pth-badge green" id="pth-conv">—</span>
+            <span class="pth-badge gray" id="pth-sus">SUS: —</span>
+            <span class="pth-badge gray" id="pth-idade">—</span>
+            <span class="pth-badge gray" id="pth-medico" style="display:none">—</span>
+          </div>
+        </div>
+        <div id="pth-mini-info" style="display:none;flex:1">
+          <span class="pth-name" id="pth-mini-name" style="font-size:13px">—</span>
+          <span class="pth-badge gray" style="margin-left:8px" id="pth-mini-idade">—</span>
+        </div>
+        <div class="pth-actions">
+          <button class="ib" onclick="togglePatientHeader()" title="Recolher cadastro" id="pth-collapse-btn"><i class="ti ti-chevron-up" id="pth-collapse-icon"></i></button>
+          <button class="btn sm"><i class="ti ti-edit"></i> Editar</button>
+          <button class="btn sm"><i class="ti ti-dots-vertical"></i></button>
+        </div>
+      </div>
+
+      <div class="tabs-row" id="tabs-row">
+        <div class="tab on" onclick="openTab('cadastro',this)">Cadastro</div>
+        <div class="tab" onclick="openTab('atendimentos',this)">Atendimentos</div>
+        <div class="tab" onclick="openTab('exames',this)">Exames</div>
+        <div class="tab" onclick="openTab('financeiro',this)">Hist. Financeiro</div>
+        <div class="tab" onclick="openTab('agenda',this)">Agenda</div>
+        <div class="tab" onclick="openTab('timeline',this)">Timeline</div>
+        <div class="tab" onclick="openTab('prontuario',this)">Prontuário</div>
+      </div>
+
+      <!-- TAB CADASTRO -->
+      <div class="tab-body" id="tb-cadastro">
+        <div class="form-grid">
+          <div class="fld wide"><label>Nome completo</label><input type="text" id="d-nome"></div>
+          <div class="fld"><label>CPF</label><input type="text" id="d-cpf"></div>
+          <div class="fld"><label>Data de nascimento</label><input type="date" id="d-nasc"></div>
+          <div class="fld"><label>Telefone</label><input type="text" id="d-tel"></div>
+          <div class="fld"><label>E-mail</label><input type="text" id="d-email"></div>
+          <div class="fld"><label>Nome da mãe</label><input type="text" id="d-mae"></div>
+          <div class="fld"><label>Nome do pai</label><input type="text" id="d-pai"></div>
+          <div class="fld"><label>Cartão SUS</label><input type="text" id="d-sus"></div>
+          <div class="fld wide"><label>Endereço</label><input type="text" id="d-end"></div>
+          <div class="fld"><label>Convênio</label>
+            <select id="d-conv"><option>Particular</option><option>SUS</option><option>Unimed</option><option>Bradesco</option><option>Amil</option></select>
+          </div>
+          <div class="fld"><label>Sexo</label>
+            <select id="d-sexo"><option>Feminino</option><option>Masculino</option><option>Outro</option></select>
+          </div>
+          <div class="fld wide">
+            <label>Médico preferencial <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
+            <select id="d-medico">
+              <option value="">— Nenhum preferencial —</option>
+              <option value="dr-rafael">Dr. Rafael Mendes — Clínica Geral</option>
+              <option value="dra-carla">Dra. Carla Fonseca — Cardiologia</option>
+              <option value="dr-marcos">Dr. Marcos Luz — Endocrinologia</option>
+              <option value="dra-beatriz">Dra. Beatriz Alves — Ginecologia</option>
+              <option value="dr-tiago">Dr. Tiago Rocha — Neurologia</option>
+            </select>
+          </div>
+        </div>
+        <div class="sec-hd">Documentos do cadastro</div>
+        <div class="attach-row">
+          <div class="attach-item"><i class="ti ti-file-text"></i> RG_paciente.pdf</div>
+          <div class="attach-item"><i class="ti ti-photo"></i> Cartao_SUS.jpg</div>
+          <div class="attach-item attach-add" onclick="openModal('add-exame')"><i class="ti ti-plus" style="color:var(--n400)"></i> Adicionar</div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:14px;gap:7px">
+          <button class="btn">Cancelar</button>
+          <button class="btn primary" onclick="saveCadastro()"><i class="ti ti-device-floppy"></i> Salvar cadastro</button>
+        </div>
+      </div>
+
+      <!-- TAB ATENDIMENTOS -->
+      <div class="tab-body" id="tb-atendimentos" style="display:none">
+        <div id="atend-list-view">
+          <div class="atend-bar">
+            <div class="atend-left">
+              <label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--n500);cursor:pointer">
+                <input type="checkbox" id="cb-all" onchange="toggleAll(this)" style="accent-color:var(--g500)"> Selecionar todos
+              </label>
+              <button class="btn sm ghost dossie-btn" id="dossie-btn" onclick="openModal('dossie')">
+                <i class="ti ti-file-report"></i> Gerar dossiê
+              </button>
+            </div>
+            <button class="btn primary sm" onclick="showNovoAtend()"><i class="ti ti-plus"></i> Novo atendimento</button>
+          </div>
+          <div id="atend-list"></div>
+        </div>
+
+        <div id="atend-detail-view" style="display:none">
+          <button class="back-btn" onclick="showAtendList()"><i class="ti ti-arrow-left"></i> Atendimentos</button>
+          <div class="atend-detail-hd">
+            <div>
+              <div class="atend-detail-title" id="adv-title">—</div>
+              <div class="atend-detail-date" id="adv-date">—</div>
+            </div>
+          </div>
+          <div class="ai-resume-block">
+            <div class="air-label"><i class="ti ti-sparkles"></i> Resumo gerado pela IA</div>
+            <div class="air-text" id="adv-resumo">—</div>
+          </div>
+          <div class="notes-block">
+            <div class="notes-label">Anotações internas</div>
+            <div class="notes-text" id="adv-notas">—</div>
+          </div>
+          <div class="atend-links">
+            <button class="btn sm ghost"><i class="ti ti-file-prescription"></i> Ver receita</button>
+            <button class="btn sm ghost"><i class="ti ti-certificate"></i> Ver atestado</button>
+            <button class="btn sm"><i class="ti ti-printer"></i> Imprimir</button>
+          </div>
+        </div>
+
+        <!-- NOVO ATENDIMENTO -->
+        <div id="atend-novo-view" style="display:none;flex-direction:column;height:560px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <button class="back-btn" style="margin-bottom:0" onclick="showAtendList()"><i class="ti ti-arrow-left"></i> Atendimentos</button>
+            <div style="display:flex;gap:6px">
+              <button class="btn sm primary" onclick="saveAtend()"><i class="ti ti-device-floppy"></i> Salvar atendimento</button>
+            </div>
+          </div>
+          <div class="split-wrap">
+            <!-- LEFT -->
+            <div class="split-left">
+              <div class="pront-header">
+                <span class="pront-label">Prontuário</span>
+              </div>
+              <div class="toolbar">
+                <button class="tbtn" title="Negrito"><b>B</b></button>
+                <button class="tbtn" title="Itálico" style="font-style:italic">I</button>
+                <button class="tbtn" title="Sublinhado" style="text-decoration:underline">U</button>
+                <div class="tsep"></div>
+                <button class="tbtn"><i class="ti ti-list"></i></button>
+                <button class="tbtn"><i class="ti ti-list-numbers"></i></button>
+                <div class="tsep"></div>
+                <button class="tbtn"><i class="ti ti-photo"></i></button>
+                <button class="tbtn"><i class="ti ti-paperclip"></i></button>
+                <div class="tbtn" style="width:auto;padding:0 6px;font-size:10px;color:var(--n300)">|</div>
+                <button class="tbtn nota-interna-btn" onclick="insertNotaInterna()" title="Inserir nota interna (grifado amarelo)" style="display:flex;align-items:center;gap:3px;width:auto;padding:0 6px;color:#92400e;background:#fef9c3;border-radius:4px;font-size:10.5px;font-weight:600;border:0.5px solid #fde047">
+                  <i class="ti ti-highlight" style="font-size:12px"></i> Nota
+                </button>
+              </div>
+              <!-- NOTA INTERNA POPUP -->
+              <div id="nota-interna-popup" style="display:none;border-bottom:0.5px solid #fde047;background:#fefce8;padding:6px 10px;flex-shrink:0">
+                <div style="font-size:10px;font-weight:600;color:#92400e;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px;display:flex;align-items:center;gap:5px">
+                  <i class="ti ti-highlight" style="font-size:12px"></i> Nota interna
+                  <span style="font-weight:400;color:#a16207;font-size:10px;text-transform:none;letter-spacing:0">(aparece grifada no prontuário)</span>
+                  <button onclick="cancelNotaInterna()" style="margin-left:auto;border:none;background:transparent;cursor:pointer;color:#a16207;font-size:13px;line-height:1;padding:0"><i class="ti ti-x"></i></button>
+                </div>
+                <div style="display:flex;gap:6px">
+                  <input id="nota-interna-input" type="text" placeholder="Digite a nota interna..." style="flex:1;border:0.5px solid #fde047;border-radius:6px;padding:5px 9px;font-size:12.5px;color:#78350f;background:#fff;outline:none;font-family:inherit" onkeydown="if(event.key==='Enter')confirmNotaInterna()">
+                  <button class="btn sm" onclick="confirmNotaInterna()" style="border-color:#fde047;color:#92400e;background:#fef08a"><i class="ti ti-check"></i> Inserir</button>
+                </div>
+              </div>
+              <textarea class="pront-area" id="pront-area" placeholder="Anote queixas, exame físico, hipóteses diagnósticas, evolução..." oninput="markAtendDirty()"></textarea>
+
+              <!-- NOTA PESSOAL hidden input (preserved for data) -->
+              <textarea id="nota-personal-ta" style="display:none"></textarea>
+
+              <div class="left-footer" style="padding:6px 10px">
+                <div class="lf-actions">
+                  <div class="dropdown" id="actions-dropdown">
+                    <button class="btn sm" onclick="toggleDropdown()"><i class="ti ti-dots"></i> Ações <i class="ti ti-chevron-up" style="font-size:10px"></i></button>
+                    <div class="dropdown-menu" id="actions-menu">
+                      <div class="dm-item green" onclick="closeDropdown()"><i class="ti ti-file-prescription"></i> Emitir receita</div>
+                      <div class="dm-item green" onclick="closeDropdown()"><i class="ti ti-certificate"></i> Emitir atestado</div>
+                      <div class="dm-item" onclick="closeDropdown()"><i class="ti ti-paperclip"></i> Anexar arquivo</div>
+                      <div class="dm-item" onclick="closeDropdown();openModal('resumo')"><i class="ti ti-file-check"></i> Gerar resumo IA</div>
+                    </div>
+                  </div>
+                  <button class="btn sm" onclick="transferFromAI()" title="Trazer resumo da IA ao final"><i class="ti ti-download"></i> Da IA</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT: AI -->
+            <div class="split-right">
+              <div class="trans-bar" id="trans-bar">
+                <div class="trans-bar-top">
+                  <span class="tdot" id="tdot"></span>
+                  <span class="trans-lbl" id="trans-lbl">Aguardando início...</span>
+                  <button class="trans-expand-btn" onclick="cycleTransExp()" title="Expandir transcrição" id="trans-exp-btn"><i class="ti ti-chevron-down"></i></button>
+                </div>
+                <div class="trans-content" id="trans-content"></div>
+              </div>
+              <div class="ai-stage" id="ai-stage">
+                <div class="ai-bg-icon"><i class="ti ti-brain"></i></div>
+                <!-- PINNED STRIP -->
+                <div class="pinned-strip" id="pinned-strip">
+                  <div class="pin-strip-hd"><i class="ti ti-pin"></i> Fixados</div>
+                  <div id="pinned-list"></div>
+                </div>
+                <!-- BUBBLES SCROLL -->
+                <div class="bubbles-scroll" id="bubbles-layer">
+                  <!-- orb centered when empty -->
+                  <div id="orb-center-placeholder" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                    <div class="orb-wrap" id="orb-wrap">
+                      <div class="wave w1"></div>
+                      <div class="wave w2"></div>
+                      <div class="wave w3"></div>
+                      <div class="orb" id="orb" onclick="toggleListen()">
+                        <i class="ti ti-microphone" id="orb-icon"></i>
+                      </div>
+                    </div>
+                    <span class="orb-lbl" id="orb-lbl">Toque para iniciar</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- RESUMO PANEL (inline overlay) -->
+              <div class="resumo-panel" id="resumo-panel">
+                <div class="resumo-panel-hd">
+                  <span class="ai-badge" style="margin-bottom:0"><i class="ti ti-sparkles"></i> Resumo da IA</span>
+                  <span class="resumo-panel-title"></span>
+                  <button class="btn sm" title="Copiar" onclick="copyResumo()"><i class="ti ti-copy"></i></button>
+                  <button class="btn sm ghost" onclick="resumoToNota()"><i class="ti ti-arrow-bar-down"></i> Para nota</button>
+                  <button class="mclose" onclick="closeResumoPanel()"><i class="ti ti-x"></i></button>
+                </div>
+                <div class="resumo-panel-body">
+                  <div class="resumo-pre" id="resumo-panel-text"></div>
+                </div>
+                <div class="resumo-panel-foot">
+                  <button class="btn sm" onclick="closeResumoPanel()">Fechar</button>
+                  <button class="btn sm primary" onclick="transferToPront()"><i class="ti ti-transfer"></i> Transferir ao prontuário</button>
+                </div>
+              </div>
+
+              <div class="ai-bottom">
+                <div class="ai-ctrls">
+                  <button class="btn sm" id="listen-btn" onclick="toggleListen()"><i class="ti ti-microphone" id="lt-ico"></i> <span id="lt-lbl">Escutar</span></button>
+                  <div class="csep"></div>
+                  <button class="btn sm ghost" onclick="suggestAction()"><i class="ti ti-bulb"></i> Sugerir</button>
+                  <button class="btn sm" id="toggle-bbl-btn" onclick="toggleBubbles()" title="Ocultar/mostrar mensagens"><i class="ti ti-eye" id="toggle-bbl-icon"></i></button>
+                  <button class="btn sm primary" onclick="openResumoPanel()"><i class="ti ti-file-check"></i> Resumo</button>
+                </div>
+                <div class="ai-input-row">
+                  <input class="ai-inp" id="ai-inp" type="text" placeholder="Mensagem para a IA..." onkeydown="if(event.key==='Enter')sendAIMsg()">
+                  <button class="ai-sbtn" onclick="sendAIMsg()"><i class="ti ti-send"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB EXAMES -->
+      <div class="tab-body" id="tb-exames" style="display:none">
+        <div class="exame-toolbar">
+          <span style="font-size:11px;color:var(--n400)" id="exame-ct">0 exames</span>
+          <button class="btn primary sm" onclick="openModal('add-exame')"><i class="ti ti-plus"></i> Adicionar</button>
+        </div>
+        <div id="exame-list"></div>
+      </div>
+
+      <!-- TAB FINANCEIRO -->
+      <div class="tab-body" id="tb-financeiro" style="display:none">
+        <div class="empty-st"><i class="ti ti-receipt"></i><p>Sem histórico financeiro</p></div>
+      </div>
+
+      <!-- TAB AGENDA -->
+      <div class="tab-body" id="tb-agenda" style="display:none">
+        <div class="empty-st"><i class="ti ti-calendar"></i><p>Nenhum agendamento</p></div>
+      </div>
+
+      <!-- TAB TIMELINE -->
+      <div class="tab-body" id="tb-timeline" style="display:none">
+        <div id="timeline-list"></div>
+      </div>
+
+      <!-- TAB PRONTUÁRIO -->
+      <div class="tab-body" id="tb-prontuario" style="display:none">
+        <!-- DADOS CLÍNICOS collapsible -->
+        <div style="border:0.5px solid #fde68a;border-radius:var(--r8);margin-bottom:12px;overflow:hidden">
+          <div onclick="toggleDadosClinicos()" style="background:#fffbeb;padding:8px 12px;display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none">
+            <i class="ti ti-alert-circle" style="font-size:14px;color:#d97706"></i>
+            <span style="font-size:11px;font-weight:600;color:#92400e;letter-spacing:.04em;text-transform:uppercase;flex:1">Dados Clínicos</span>
+            <span id="dc-preview" style="font-size:11px;color:#a16207;font-style:italic;flex:2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span>
+            <i class="ti ti-chevron-down" id="dc-chev" style="font-size:13px;color:#d97706;flex-shrink:0"></i>
+          </div>
+          <div id="dc-body" style="display:none;background:var(--white);padding:10px 12px;border-top:0.5px solid #fde68a">
+            <textarea id="dados-clinicos-ta" oninput="updateDcPreview()" style="width:100%;border:0.5px solid #fde68a;border-radius:var(--r6);padding:7px 10px;font-family:var(--font);font-size:12.5px;color:var(--n700);resize:none;outline:none;background:#fffbeb;line-height:1.65;min-height:64px" placeholder="Ex: Alérgico à Dipirona · HAS · Dislipidemia · Sem alergias conhecidas..."></textarea>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+              <p style="font-size:10px;color:var(--n300);font-style:italic"><i class="ti ti-info-circle" style="font-size:10px"></i> Aparece em todos os atendimentos e impressão</p>
+              <button class="btn sm" onclick="saveDadosClinicos();event.stopPropagation()"><i class="ti ti-device-floppy"></i> Salvar</button>
+            </div>
+          </div>
+        </div>
+        <div class="pront-toolbar">
+          <span class="pront-badge" id="pront-badge"><i class="ti ti-check"></i> Atualizado</span>
+          <div style="display:flex;gap:5px;align-items:center">
+            <button class="ib" onclick="reprocessHistory()" title="Reprocessar Resumo do Prontuário" style="width:28px;height:28px;border-radius:var(--r6);border:0.5px solid var(--n200);color:var(--n400)"><i class="ti ti-refresh" id="reprocess-icon"></i></button>
+            <button class="btn sm" onclick="printProntuario()"><i class="ti ti-printer"></i> Imprimir</button>
+            <button class="btn primary sm" onclick="savePront()"><i class="ti ti-device-floppy"></i> Salvar</button>
+          </div>
+        </div>
+        <div id="prontuario-main-area"></div>
+      </div>
+    </div>
+
+    <!-- SCREEN: RECEITAS -->
+    <div id="s-receitas" style="display:none">
+      <div class="rec-empty">
+        <i class="ti ti-file-prescription"></i>
+        <h3>Receitas e Atestados</h3>
+        <p>Selecione um paciente para acessar receitas e atestados</p>
+        <button class="btn ghost" style="margin-top:14px" onclick="goScreen('patients')"><i class="ti ti-users"></i> Ir para Pacientes</button>
+      </div>
+    </div>
+
+    <!-- SCREEN: INDICADORES -->
+    <div id="s-indicadores" style="display:none">
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-label">Atendimentos — maio</div><div class="kpi-val green">142</div><div class="kpi-sub">+12% vs abril</div></div>
+        <div class="kpi"><div class="kpi-label">Novos pacientes</div><div class="kpi-val">18</div><div class="kpi-sub">mês atual</div></div>
+        <div class="kpi"><div class="kpi-label">Receitas emitidas</div><div class="kpi-val">89</div><div class="kpi-sub">mês atual</div></div>
+        <div class="kpi"><div class="kpi-label">Atestados</div><div class="kpi-val">34</div><div class="kpi-sub">mês atual</div></div>
+        <div class="kpi"><div class="kpi-label">Tempo médio consulta</div><div class="kpi-val">24<span style="font-size:16px;color:var(--n400)">min</span></div><div class="kpi-sub">últimos 30 dias</div></div>
+        <div class="kpi"><div class="kpi-label">Pacientes ativos</div><div class="kpi-val">386</div><div class="kpi-sub">total cadastrado</div></div>
+      </div>
+      <div class="chart-placeholder">
+        <div style="font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--n400);margin-bottom:10px">Atendimentos por mês</div>
+        <div id="chart-bars"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="overlay" id="modal-overlay">
+  <!-- NOVO PACIENTE -->
+  <div class="modal" id="m-new-patient" style="display:none">
+    <div class="mhd"><span class="mhd-title">Novo paciente</span><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
+    <div class="mbody">
+      <div class="form-grid">
+        <div class="fld wide"><label>Nome completo *</label><input type="text" id="np-nome" placeholder="Nome completo do paciente"></div>
+        <div class="fld"><label>CPF</label><input type="text" placeholder="000.000.000-00"></div>
+        <div class="fld"><label>Data de nascimento</label><input type="date"></div>
+        <div class="fld"><label>Telefone *</label><input type="text" placeholder="(00) 00000-0000"></div>
+        <div class="fld"><label>E-mail</label><input type="text" placeholder="email@exemplo.com"></div>
+        <div class="fld"><label>Cartão SUS</label><input type="text" placeholder="000 0000 0000 0000"></div>
+        <div class="fld"><label>Nome da mãe</label><input type="text"></div>
+        <div class="fld"><label>Nome do pai</label><input type="text"></div>
+        <div class="fld wide"><label>Endereço</label><input type="text" placeholder="Rua, nº — Bairro, Cidade, UF"></div>
+        <div class="fld"><label>Convênio</label><select><option>Particular</option><option>SUS</option><option>Unimed</option><option>Bradesco</option><option>Amil</option></select></div>
+        <div class="fld"><label>Sexo</label><select><option>Selecionar</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select></div>
+        <div class="fld wide">
+          <label>Médico preferencial <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
+          <select><option value="">— Nenhum —</option><option>Dr. Rafael Mendes — Clínica Geral</option><option>Dra. Carla Fonseca — Cardiologia</option><option>Dr. Marcos Luz — Endocrinologia</option></select>
+        </div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" onclick="saveNewPatient()"><i class="ti ti-check"></i> Salvar paciente</button>
+    </div>
+  </div>
+
+  <!-- ADD EXAME -->
+  <div class="modal" id="m-add-exame" style="display:none">
+    <div class="mhd"><span class="mhd-title">Adicionar exame / anexo</span><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
+    <div class="mbody">
+      <div class="upload-zone" onclick="document.getElementById('file-input').click()">
+        <i class="ti ti-cloud-upload"></i>
+        <p>Clique para selecionar ou arraste o arquivo aqui</p>
+        <p style="margin-top:4px;font-size:11px;color:var(--n300)">PDF, JPG, PNG, DICOM — até 20 MB</p>
+        <input type="file" id="file-input" onchange="previewFile(this)" accept=".pdf,.jpg,.jpeg,.png">
+      </div>
+      <div id="file-preview-wrap" style="display:none">
+        <div class="file-preview">
+          <i class="ti ti-file-check" id="file-icon"></i>
+          <span id="file-name">—</span>
+          <button class="btn sm danger" onclick="clearFile()"><i class="ti ti-x"></i></button>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="fld wide"><label>Nome / título *</label><input type="text" id="exame-nome" placeholder="Ex: Hemograma completo, Raio-X tórax..."></div>
+        <div class="fld"><label>Data do exame</label><input type="date" id="exame-data"></div>
+        <div class="fld"><label>Tipo</label>
+          <select id="exame-tipo"><option>Laboratorial</option><option>Imagem</option><option>Laudo</option><option>Receita</option><option>Atestado</option><option>Documento</option><option>Outro</option></select>
+        </div>
+        <div class="fld wide"><label>Observação</label><input type="text" id="exame-obs" placeholder="Notas adicionais, valores relevantes..."></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" onclick="saveExame()"><i class="ti ti-device-floppy"></i> Salvar</button>
+    </div>
+  </div>
+
+  <!-- DOSSIÊ -->
+  <div class="modal wide" id="m-dossie" style="display:none">
+    <div class="mhd"><span class="mhd-title">Dossiê do paciente</span><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
+    <div class="mbody">
+      <span class="ai-badge"><i class="ti ti-sparkles"></i> Compilado pela IA</span>
+      <div class="resumo-pre-m" id="dossie-content">EVOLUÇÃO CLÍNICA — Maria Silva Santos
+Período: Jan/2024 a Mai/2025
+
+RESUMO GERAL:
+Paciente com HAS e dislipidemia em acompanhamento regular. Boa adesão medicamentosa.
+
+PONTOS DE ATENÇÃO:
+• Colesterol LDL acima da meta (142 mg/dL — meta: &lt;100)
+• Cefaleia de repetição — investigar causa secundária
+• Ausência de exame de fundo de olho há 18 meses
+
+PRÓXIMOS PASSOS:
+→ Solicitar lipidograma em 30 dias
+→ Encaminhar oftalmologista
+→ Revisar estatina na próxima consulta</div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeModal()">Fechar</button>
+      <button class="btn primary"><i class="ti ti-file-export"></i> Exportar PDF</button>
+    </div>
+  </div>
+
+  <!-- RESUMO IA (modal antigo — mantido para compatibilidade) -->
+  <div class="modal wide" id="m-resumo" style="display:none">
+    <div class="mhd"><span class="mhd-title">Resumo consolidado</span><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
+    <div class="mbody">
+      <span class="ai-badge"><i class="ti ti-sparkles"></i> Gerado pela IA</span>
+      <div class="resumo-pre-m" id="resumo-content">RESUMO DO ATENDIMENTO — 29/05/2025
+
+QUEIXA PRINCIPAL:
+Cefaleia intensa há 3 dias, associada a náuseas. Nega febre.
+
+EXAME FÍSICO:
+PA: 148/92 mmHg · FC: 78 bpm · Orientada, sem déficits neurológicos.
+
+HIPÓTESE DIAGNÓSTICA:
+Cefaleia tensional associada a crise hipertensiva leve (CID G44.2 / I10)
+
+CONDUTA:
+• Ajuste Losartana 50mg → 100mg (1x/dia)
+• Dipirona 500mg 6/6h por 3 dias SOS
+• Retorno em 7 dias para reavaliação de PA
+• Solicitar: hemograma + creatinina + Na/K
+
+ORIENTAÇÕES:
+Reduzir ingestão de sódio. Hidratação adequada. Evitar situações de estresse.</div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="copyResumoModal()"><i class="ti ti-copy"></i> Copiar</button>
+      <button class="btn" onclick="closeModal()">Editar</button>
+      <button class="btn primary" onclick="transferToProntFromModal()"><i class="ti ti-transfer"></i> Transferir ao prontuário</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ========== DATA ========== */
+const medicoNames={
+  'dr-rafael':'Dr. Rafael Mendes',
+  'dra-carla':'Dra. Carla Fonseca',
+  'dr-marcos':'Dr. Marcos Luz',
+  'dra-beatriz':'Dra. Beatriz Alves',
+  'dr-tiago':'Dr. Tiago Rocha'
+};
+const patients=[
+  {id:1,name:'Maria Silva Santos',dob:'14/03/1985',tel:'(47) 99999-1111',init:'MS',conv:'Unimed',sus:'123 4567 8901 0001',email:'maria@email.com',mae:'Ana Maria Silva',pai:'José Santos',end:'Rua das Flores, 123 — Timbó, SC',nasc:'1985-03-14',sexo:'Feminino',medico:'dr-rafael'},
+  {id:2,name:'João Pedro Alves',dob:'22/07/1972',tel:'(47) 98888-2222',init:'JP',conv:'Particular',sus:'—',email:'joao@email.com',mae:'Lucia Alves',pai:'Pedro Alves',end:'Av. Brasil, 456 — Blumenau, SC',nasc:'1972-07-22',sexo:'Masculino',medico:''},
+  {id:3,name:'Ana Beatriz Costa',dob:'05/11/1990',tel:'(47) 97777-3333',init:'AB',conv:'SUS',sus:'234 5678 9012 0002',email:'ana@email.com',mae:'Maria Costa',pai:'Carlos Costa',end:'Rua XV de Novembro, 78 — Joinville, SC',nasc:'1990-11-05',sexo:'Feminino',medico:'dra-carla'},
+  {id:4,name:'Carlos Eduardo Lima',dob:'18/02/1965',tel:'(47) 96666-4444',init:'CE',conv:'Bradesco',sus:'—',email:'carlos@email.com',mae:'Helena Lima',pai:'Antônio Lima',end:'Rua Ipiranga, 321 — Florianópolis, SC',nasc:'1965-02-18',sexo:'Masculino',medico:'dr-marcos'},
+  {id:5,name:'Fernanda Rocha',dob:'30/09/1998',tel:'(47) 95555-5555',init:'FR',conv:'Particular',sus:'—',email:'fernanda@email.com',mae:'Sônia Rocha',pai:'Marcos Rocha',end:'Rua das Palmeiras, 99 — Itajaí, SC',nasc:'1998-09-30',sexo:'Feminino',medico:''},
+  {id:6,name:'Roberto Mendes',dob:'12/04/1980',tel:'(47) 94444-6666',init:'RM',conv:'Unimed',sus:'345 6789 0123 0003',email:'roberto@email.com',mae:'Vera Mendes',pai:'Luís Mendes',end:'Av. Atlântica, 555 — Balneário Camboriú, SC',nasc:'1980-04-12',sexo:'Masculino',medico:'dr-rafael'},
+];
+let atendimentos=[
+  {id:1,title:'Hipertensão — ajuste de medicação',date:'22/05/2025',hora:'09:15',acao:'Prescrição',resumo:'Paciente apresentou PA elevada (152/96 mmHg) e queixa de cefaleia occipital há 2 dias. Histórico de HAS controlada. Ajustada dose de Losartana de 50mg para 100mg.',notas:'Paciente relata não ter tomado a medicação por 3 dias. Familiar presente.',notaPersonal:'Paciente demonstra ansiedade. Pode ser fator agravante.'},
+  {id:2,title:'Retorno — dislipidemia',date:'10/04/2025',hora:'14:30',acao:'Exame solicitado',resumo:'Retorno para análise de exames. Colesterol LDL: 142 mg/dL — meta não atingida. Reforço da estatina e orientação de dieta.',notas:'Trouxe diário alimentar. Dieta com excesso de gordura saturada.',notaPersonal:''},
+  {id:3,title:'Consulta de rotina — check-up anual',date:'15/01/2025',hora:'10:00',acao:'Preventivo',resumo:'Consulta de rotina sem queixas ativas. Exames dentro da normalidade. Vacinação atualizada.',notas:'Recomendado fundo de olho.',notaPersonal:''},
+];
+let exames=[
+  {id:1,nome:'Hemograma completo',tipo:'Laboratorial',data:'20/05/2025',obs:'Valores dentro da normalidade',file:'hemograma_mai25.pdf'},
+  {id:2,nome:'Colesterol e Triglicérides',tipo:'Laboratorial',data:'08/04/2025',obs:'LDL: 142 mg/dL. HDL: 48. TG: 165.',file:'lipidograma_abr25.pdf'},
+  {id:3,nome:'Raio-X de tórax',tipo:'Imagem',data:'15/01/2025',obs:'Sem alterações significativas.',file:'rx_torax_jan25.jpg'},
+];
+let timelineEvents=[
+  {date:'22/05/2025',type:'atend',icon:'ti-stethoscope',title:'Atendimento: Hipertensão — ajuste de medicação',sub:'Prescrição emitida · Dr. Rafael Mendes'},
+  {date:'20/05/2025',type:'exame',icon:'ti-flask',title:'Exame anexado: Hemograma completo',sub:'Resultado normal'},
+  {date:'10/04/2025',type:'atend',icon:'ti-stethoscope',title:'Atendimento: Retorno — dislipidemia',sub:'Exame solicitado · Dr. Rafael Mendes'},
+  {date:'08/04/2025',type:'exame',icon:'ti-flask',title:'Exame anexado: Colesterol e Triglicérides',sub:'LDL: 142 mg/dL — acima da meta'},
+  {date:'15/01/2025',type:'atend',icon:'ti-stethoscope',title:'Atendimento: Check-up anual',sub:'Preventivo · Dr. Rafael Mendes'},
+  {date:'02/01/2025',type:'cadastro',icon:'ti-user-edit',title:'Cadastro atualizado',sub:'Convênio: Particular → Unimed'},
+];
+
+/* ========== STATE ========== */
+let currentPatient=null;
+let checkedAtends=new Set();
+let listening=false;
+let aiPaused=false;
+let transExpanded=false;
+let bblCount=0;
+let transcriptInterval=null;
+let transcriptIdx=0;
+let aiRespIdx=0;
+let sugIdx=0;
+// Atendimento em andamento (persiste durante navegação)
+let atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[]};
+
+const transcripts=['Paciente refere cefaleia há 3 dias...','Nega febre. Relata náuseas matinais.','Em uso de Losartana 50mg.','Pressão aferida: 148 por 92 mmHg.','Queixa de insônia recente.','Paciente apresenta-se ansiosa...'];
+const aiSuggestions=['Há quanto tempo a crise persiste?','Verificar PA agora?','Uso de medicação SOS?','Fotofobia ou fonofobia?','Histórico familiar de enxaqueca?','Atividade física regular?'];
+const aiResponses=['Com base no relato, considere origem vascular. PA elevada é fator relevante.','PA 148/92 é hipertensão grau 1. Recomendo reaferir após 5 min.','Hipótese provável: cefaleia tensional + crise hipertensiva leve.','Conduta: analgesia + ajuste anti-hipertensivo. Confirma?','Solicitar hemograma e função renal na próxima consulta.'];
+
+const RESUMO_TEXT=`RESUMO DO ATENDIMENTO — ${new Date().toLocaleDateString('pt-BR')}
+
+QUEIXA PRINCIPAL:
+Cefaleia intensa há 3 dias, associada a náuseas. Nega febre.
+
+EXAME FÍSICO:
+PA: 148/92 mmHg · FC: 78 bpm · Orientada, sem déficits.
+
+HIPÓTESE DIAGNÓSTICA:
+Cefaleia tensional + crise hipertensiva leve (CID G44.2 / I10)
+
+CONDUTA:
+• Ajuste Losartana 50mg → 100mg (1x/dia)
+• Dipirona 500mg 6/6h por 3 dias SOS
+• Retorno em 7 dias para reavaliação de PA
+• Solicitar: hemograma + creatinina + Na/K
+
+ORIENTAÇÕES:
+Reduzir sódio. Hidratação adequada. Evitar estresse.`;
+
+/* ========== SCREEN NAV ========== */
+function goScreen(name){
+  ['patients','patient-detail','receitas','indicadores'].forEach(s=>{
+    const el=document.getElementById('s-'+s);
+    if(el)el.style.display='none';
+  });
+  const el=document.getElementById('s-'+name);
+  if(el)el.style.display=name==='patient-detail'?'flex':'block';
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  const nav=document.getElementById('nav-'+name);
+  if(nav)nav.classList.add('active');
+  const titles={patients:'Pacientes',receitas:'Receitas e Atestados',indicadores:'Indicadores'};
+  document.getElementById('page-title').textContent=titles[name]||'Paciente';
+  document.getElementById('breadcrumb').innerHTML='';
+  if(name==='indicadores')setTimeout(renderChart,50);
+}
+
+/* ========== SEARCH ========== */
+function renderPatients(list){
+  const el=document.getElementById('patient-list');
+  const ct=document.getElementById('results-ct');
+  if(!list.length){el.innerHTML='<div class="empty-st"><i class="ti ti-user-search"></i><p>Nenhum resultado encontrado</p></div>';ct.textContent='0 pacientes';return;}
+  ct.textContent=list.length+' paciente'+(list.length!==1?'s':'');
+  el.innerHTML=list.map(p=>`
+    <div class="pt-row" onclick="openPatient(${p.id})">
+      <div class="pt-av">${p.init}</div>
+      <div class="pt-info">
+        <div class="pt-name">${p.name}</div>
+        <div class="pt-meta">Nasc. ${p.dob} \u00a0\u00b7\u00a0 ${p.tel}</div>
+      </div>
+      <span class="pt-badge green">${p.conv}</span>
+      <div class="row-acts">
+        <button class="ra-btn" onclick="event.stopPropagation()" title="Agendar"><i class="ti ti-calendar-plus"></i></button>
+        <button class="ra-btn" onclick="event.stopPropagation()" title="Mais"><i class="ti ti-dots-vertical"></i></button>
+      </div>
+    </div>`).join('');
+}
+function handleSearch(v){
+  const nf=document.getElementById('nf-bar');
+  const rc=document.getElementById('results-card');
+  if(!v.trim()){nf.style.display='none';rc.style.display='';renderPatients(patients);return;}
+  const q=v.toLowerCase();
+  const f=patients.filter(p=>p.name.toLowerCase().includes(q)||p.tel.includes(q)||p.sus.includes(q));
+  if(!f.length){nf.style.display='flex';rc.style.display='none';document.getElementById('nf-name').textContent='"'+v+'"';}
+  else{nf.style.display='none';rc.style.display='';renderPatients(f);}
+}
+function toggleAdv(){document.getElementById('adv-filters').classList.toggle('open');}
+
+/* ========== PATIENT ========== */
+function openPatient(id){
+  currentPatient=patients.find(p=>p.id===id);
+  if(!currentPatient)return;
+  goScreen('patient-detail');
+  document.getElementById('nav-patients').classList.add('active');
+  document.getElementById('page-title').textContent='Paciente';
+  document.getElementById('breadcrumb').innerHTML='<span>/ '+currentPatient.name+'</span>';
+  document.getElementById('pth-av').textContent=currentPatient.init;
+  document.getElementById('pth-name').textContent=currentPatient.name;
+  document.getElementById('pth-sub').textContent='Nasc. '+currentPatient.dob+' · '+currentPatient.tel;
+  document.getElementById('pth-conv').textContent=currentPatient.conv;
+  document.getElementById('pth-sus').textContent='SUS: '+currentPatient.sus;
+  const yr=new Date().getFullYear();
+  const born=parseInt(currentPatient.dob.split('/')[2]);
+  document.getElementById('pth-idade').textContent=(yr-born)+' anos';
+  const mb=document.getElementById('pth-medico');
+  if(currentPatient.medico&&medicoNames[currentPatient.medico]){mb.textContent=medicoNames[currentPatient.medico];mb.style.display='';}
+  else mb.style.display='none';
+  document.getElementById('print-name').textContent=currentPatient.name;
+  document.getElementById('print-sub1').textContent='CPF: '+(currentPatient.cpf||'—')+' · Nasc.: '+currentPatient.dob+' · Tel.: '+currentPatient.tel;
+  document.getElementById('print-sub2').textContent='Endereço: '+currentPatient.end;
+  document.getElementById('print-sub3').textContent='Convênio: '+currentPatient.conv+(currentPatient.medico?' · Médico: '+medicoNames[currentPatient.medico]:'');
+  document.getElementById('d-nome').value=currentPatient.name;
+  document.getElementById('d-tel').value=currentPatient.tel;
+  document.getElementById('d-email').value=currentPatient.email;
+  document.getElementById('d-mae').value=currentPatient.mae;
+  document.getElementById('d-pai').value=currentPatient.pai;
+  document.getElementById('d-end').value=currentPatient.end;
+  document.getElementById('d-nasc').value=currentPatient.nasc;
+  document.getElementById('d-sus').value=currentPatient.sus==='—'?'':currentPatient.sus;
+  const ms=document.getElementById('d-medico');if(ms)ms.value=currentPatient.medico||'';
+  openTab('cadastro',document.querySelector('.tab'));
+  renderAtendimentos();renderExames();renderTimeline();updateAtendProgress();
+}
+function backToPatients(){saveAtendState();goScreen('patients');}
+function saveCadastro(){
+  const ms=document.getElementById('d-medico');
+  if(ms&&currentPatient){
+    currentPatient.medico=ms.value;
+    const mb=document.getElementById('pth-medico');
+    if(currentPatient.medico&&medicoNames[currentPatient.medico]){mb.textContent=medicoNames[currentPatient.medico];mb.style.display='';}
+    else mb.style.display='none';
+    timelineEvents.unshift({date:new Date().toLocaleDateString('pt-BR'),type:'cadastro',icon:'ti-user-edit',title:'Cadastro atualizado',sub:'Dados alterados'});
+  }
+}
+
+/* ========== TABS ========== */
+function openTab(name,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.tab-body').forEach(b=>b.style.display='none');
+  const names=['cadastro','atendimentos','exames','financeiro','agenda','timeline','prontuario'];
+  if(el)el.classList.add('on');
+  else{const idx=names.indexOf(name);if(idx>=0)document.querySelectorAll('.tab')[idx].classList.add('on');}
+  const body=document.getElementById('tb-'+name);
+  if(body)body.style.display='block';
+  if(name!=='atendimentos')saveAtendState();
+  if(name==='atendimentos')restoreAtendState();
+  if(name==='prontuario')renderProntuario();
+  if(name==='timeline')renderTimeline();
+}
+function saveAtendState(){
+  const pa=document.getElementById('pront-area');
+  const npta=document.getElementById('nota-personal-ta');
+  if(pa)atendEmAndamento.pront=pa.value;
+  if(npta)atendEmAndamento.notaPessoal=npta.value;
+}
+function restoreAtendState(){
+  if(atendEmAndamento.dirty)showNovoAtend(true);
+  else showAtendList();
+}
+function markAtendDirty(){if(!atendEmAndamento.dirty){atendEmAndamento.dirty=true;updateAtendProgress();}}
+function updateAtendProgress(){const p=document.getElementById('atend-progress');if(p)p.classList.toggle('show',atendEmAndamento.dirty);}
+function openTabFromProgress(){
+  openTab('atendimentos',null);
+  document.querySelectorAll('.tab').forEach((t,i)=>{if(['cadastro','atendimentos','exames','financeiro','agenda','timeline','prontuario'][i]==='atendimentos')t.classList.add('on');});
+  document.querySelectorAll('.tab-body').forEach(b=>b.style.display='none');
+  document.getElementById('tb-atendimentos').style.display='block';
+  restoreAtendState();
+}
+
+/* ========== ATENDIMENTOS ========== */
+function renderAtendimentos(){
+  checkedAtends=new Set();
+  const cbAll=document.getElementById('cb-all');if(cbAll)cbAll.checked=false;
+  updateDossieBtn();
+  document.getElementById('atend-list').innerHTML=atendimentos.map(a=>`
+    <div class="atend-item" onclick="openAtend(${a.id})">
+      <input type="checkbox" class="atend-cb" onclick="event.stopPropagation();toggleAtend(event,${a.id})" id="acb-${a.id}">
+      <div class="atend-body">
+        <div class="atend-title">${a.title}</div>
+        <div class="atend-sub"><span>${a.date} ${a.hora||''}</span><span class="atend-tag green">${a.acao}</span></div>
+      </div>
+      <i class="ti ti-chevron-right atend-chev"></i>
+    </div>`).join('');
+}
+function toggleAtend(e,id){if(e.target.checked)checkedAtends.add(id);else checkedAtends.delete(id);updateDossieBtn();}
+function toggleAll(cb){atendimentos.forEach(a=>{const el=document.getElementById('acb-'+a.id);if(el)el.checked=cb.checked;if(cb.checked)checkedAtends.add(a.id);else checkedAtends.delete(a.id);});updateDossieBtn();}
+function updateDossieBtn(){const b=document.getElementById('dossie-btn');if(b)b.classList.toggle('show',checkedAtends.size>0);}
+function showAtendList(){
+  document.getElementById('atend-list-view').style.display='block';
+  document.getElementById('atend-detail-view').style.display='none';
+  document.getElementById('atend-novo-view').style.display='none';
+  renderAtendimentos();
+}
+function openAtend(id){
+  const a=atendimentos.find(x=>x.id===id);
+  document.getElementById('atend-list-view').style.display='none';
+  document.getElementById('atend-detail-view').style.display='block';
+  document.getElementById('atend-novo-view').style.display='none';
+  document.getElementById('adv-title').textContent=a.title;
+  document.getElementById('adv-date').textContent=a.date+(a.hora?' — '+a.hora:'');
+  document.getElementById('adv-resumo').textContent=a.resumo;
+  document.getElementById('adv-notas').textContent=a.notas;
+}
+function showNovoAtend(restore){
+  document.getElementById('atend-list-view').style.display='none';
+  document.getElementById('atend-detail-view').style.display='none';
+  const nv=document.getElementById('atend-novo-view');
+  nv.style.display='flex';
+  if(!restore){
+    resetAI();
+    atendEmAndamento={pront:'',notaPessoal:'',dirty:false};
+    const pa=document.getElementById('pront-area');if(pa)pa.value='';
+    const npta=document.getElementById('nota-personal-ta');if(npta)npta.value='';
+  }else{
+    const pa=document.getElementById('pront-area');if(pa)pa.value=atendEmAndamento.pront;
+    const npta=document.getElementById('nota-personal-ta');if(npta)npta.value=atendEmAndamento.notaPessoal;
+  }
+}
+function saveAtendFromProgress(){const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;saveAtendInternal();}
+function saveAtendInternal(){
+  const now=new Date();
+  const dateStr=now.toLocaleDateString('pt-BR');
+  const timeStr=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const pront=atendEmAndamento.pront||document.getElementById('pront-area')?.value||'';
+  const notaPessoal=document.getElementById('nota-personal-ta')?.value||'';
+  atendimentos.unshift({id:Date.now(),title:'Consulta — '+dateStr,date:dateStr,hora:timeStr,acao:'Consulta',resumo:pront?pront.substring(0,200)+(pront.length>200?'...':''):'Atendimento registrado.',notas:pront||'Sem anotações.',notaPersonal:notaPessoal});
+  timelineEvents.unshift({date:dateStr,type:'atend',icon:'ti-stethoscope',title:'Atendimento registrado — '+timeStr,sub:'Dr. Rafael Mendes'});
+  atendEmAndamento={pront:'',notaPessoal:'',dirty:false};
+  updateAtendProgress();renderAtendimentos();
+}
+function saveAtend(){
+  const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;
+  saveAtendInternal();showAtendList();
+}
+
+/* ========== PATIENT HEADER COLLAPSE ========== */
+function togglePatientHeader(){
+  const hdr=document.getElementById('pt-hdr-card');
+  const full=document.getElementById('pth-full-info');
+  const mini=document.getElementById('pth-mini-info');
+  const av=document.getElementById('pth-av');
+  const icon=document.getElementById('pth-collapse-icon');
+  const collapsed=full.style.display==='none';
+  if(collapsed){
+    full.style.display='';mini.style.display='none';
+    av.style.display='';
+    hdr.style.padding='16px 20px';
+    icon.className='ti ti-chevron-up';
+  }else{
+    full.style.display='none';mini.style.display='';
+    av.style.display='none';
+    hdr.style.padding='8px 20px';
+    icon.className='ti ti-chevron-down';
+    // fill mini
+    const mn=document.getElementById('pth-mini-name');
+    const mi=document.getElementById('pth-mini-idade');
+    if(mn)mn.textContent=currentPatient?.name||'—';
+    if(mi)mi.textContent=document.getElementById('pth-idade')?.textContent||'—';
+  }
+}
+
+/* ========== NOTA INTERNA (grifado amarelo) ========== */
+function insertNotaInterna(){
+  const popup=document.getElementById('nota-interna-popup');
+  if(popup){popup.style.display='';document.getElementById('nota-interna-input').focus();}
+}
+function cancelNotaInterna(){
+  const popup=document.getElementById('nota-interna-popup');
+  if(popup)popup.style.display='none';
+  const inp=document.getElementById('nota-interna-input');
+  if(inp)inp.value='';
+}
+function confirmNotaInterna(){
+  const inp=document.getElementById('nota-interna-input');
+  if(!inp||!inp.value.trim())return;
+  const pa=document.getElementById('pront-area');
+  if(pa){
+    const ts=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const tag=`
+[NOTA INTERNA ${ts}] ${inp.value}
+`;
+    const pos=pa.selectionStart||pa.value.length;
+    pa.value=pa.value.slice(0,pos)+tag+pa.value.slice(pos);
+    markAtendDirty();
+  }
+  cancelNotaInterna();
+}
+
+/* ========== DADOS CLÍNICOS COLLAPSIBLE ========== */
+function toggleDadosClinicos(){
+  const body=document.getElementById('dc-body');
+  const chev=document.getElementById('dc-chev');
+  const open=body.style.display!=='none';
+  body.style.display=open?'none':'block';
+  chev.className=open?'ti ti-chevron-down':'ti ti-chevron-up';
+}
+function updateDcPreview(){
+  const ta=document.getElementById('dados-clinicos-ta');
+  const preview=document.getElementById('dc-preview');
+  if(ta&&preview)preview.textContent=ta.value.replace(/\n/g,' ').substring(0,80)+(ta.value.length>80?'…':'');
+}
+
+/* ========== NOTA PESSOAL (no-op kept for compat) ========== */
+function toggleNotaPersonal(){}
+
+/* ========== EXAMES ========== */
+function renderExames(){
+  const list=document.getElementById('exame-list');
+  const ct=document.getElementById('exame-ct');
+  if(!list)return;
+  ct.textContent=exames.length+' exame'+(exames.length!==1?'s':'');
+  const iconMap={Laboratorial:'ti-flask',Imagem:'ti-xray',Laudo:'ti-clipboard-text',Receita:'ti-file-prescription',Atestado:'ti-certificate',Documento:'ti-file-text',Outro:'ti-file'};
+  list.innerHTML=exames.map(e=>`
+    <div class="exame-item">
+      <div class="exame-icon"><i class="ti ${iconMap[e.tipo]||'ti-file'}"></i></div>
+      <div class="exame-body"><div class="exame-name">${e.nome}</div><div class="exame-obs">${e.obs}</div></div>
+      <span class="exame-date">${e.data}</span>
+      <div class="exame-acts">
+        <button class="ra-btn" title="Visualizar"><i class="ti ti-eye"></i></button>
+        <button class="ra-btn" title="Baixar"><i class="ti ti-download"></i></button>
+        <button class="ra-btn" title="Excluir" onclick="deleteExame(${e.id})"><i class="ti ti-trash"></i></button>
+      </div>
+    </div>`).join('');
+}
+function deleteExame(id){exames=exames.filter(e=>e.id!==id);renderExames();}
+function saveExame(){
+  const nome=document.getElementById('exame-nome').value.trim();if(!nome)return;
+  const fn=document.getElementById('file-name');
+  exames.unshift({id:Date.now(),nome,tipo:document.getElementById('exame-tipo').value,data:document.getElementById('exame-data').value||new Date().toLocaleDateString('pt-BR'),obs:document.getElementById('exame-obs').value,file:fn?fn.textContent:'—'});
+  timelineEvents.unshift({date:new Date().toLocaleDateString('pt-BR'),type:'exame',icon:'ti-flask',title:'Exame adicionado: '+nome,sub:document.getElementById('exame-obs').value||''});
+  renderExames();clearFile();
+  document.getElementById('exame-nome').value='';document.getElementById('exame-obs').value='';
+  closeModal();
+}
+function previewFile(input){
+  const wrap=document.getElementById('file-preview-wrap');
+  const name=document.getElementById('file-name');
+  const icon=document.getElementById('file-icon');
+  if(input.files.length){const f=input.files[0];name.textContent=f.name;icon.className='ti '+(f.type.includes('image')?'ti-photo':'ti-file-text');wrap.style.display='block';}
+}
+function clearFile(){document.getElementById('file-input').value='';document.getElementById('file-preview-wrap').style.display='none';}
+
+/* ========== TIMELINE ========== */
+function renderTimeline(){
+  const el=document.getElementById('timeline-list');if(!el)return;
+  const labelMap={atend:'Atendimento',exame:'Exame',cadastro:'Cadastro',anexo:'Anexo'};
+  el.innerHTML='<div class="tl-wrap">'+timelineEvents.map(ev=>`
+    <div class="tl-item">
+      <div class="tl-left"><div class="tl-dot ${ev.type==='atend'?'filled':''}"></div><div class="tl-line"></div></div>
+      <div class="tl-right">
+        <div class="tl-date">${ev.date}</div>
+        <div class="tl-card">
+          <div class="tl-card-title"><i class="ti ${ev.icon}"></i>${ev.title}<span class="tl-type ${ev.type}">${labelMap[ev.type]||ev.type}</span></div>
+          <div class="tl-card-sub">${ev.sub}</div>
+        </div>
+      </div>
+    </div>`).join('')+'</div>';
+}
+
+/* ========== PRONTUÁRIO ========== */
+function renderNotasWithHighlight(text){
+  if(!text)return '';
+  const esc=text.replace(/&/g,'&').replace(/\x3c/g,'<').replace(/\x3e/g,'>');
+  const re=new RegExp('\\[NOTA INTERNA (\\d{2}:\\d{2})\\] (.+)','g');
+  return esc.replace(re,function(m,time,note){
+    return '<mark style="background:#fef08a;color:#78350f;border-radius:3px;padding:1px 4px;font-style:italic">'
+      +note
+      +' <span style="font-size:9.5px;opacity:.6">['+time+']</span></mark>';
+  });
+}
+function renderProntuario(){
+  const area=document.getElementById('prontuario-main-area');if(!area)return;
+  // Dados clínicos
+  const dc=document.getElementById('dados-clinicos-ta')?.value;
+  let html='';
+  if(dc){
+    html+=`<div style="background:#fffbeb;border:0.5px solid #fde68a;border-radius:8px;padding:10px 13px;margin-bottom:12px;display:flex;align-items:flex-start;gap:8px">
+      <i class="ti ti-alert-circle" style="color:#d97706;font-size:16px;flex-shrink:0;margin-top:1px"></i>
+      <div><div style="font-size:10px;font-weight:600;color:#92400e;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px">Dados Clínicos</div>
+      <div style="font-size:12.5px;color:#78350f;line-height:1.65">${dc}</div></div></div>`;
+  }
+  atendimentos.forEach(a=>{
+    html+=`<div style="margin-bottom:12px;padding:12px 14px;border:0.5px solid var(--n150);border-radius:8px;background:var(--n50)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:12px;font-weight:600;color:var(--n700)">${a.date} ${a.hora?'— '+a.hora:''} \u00a0·\u00a0 ${a.title}</span>
+        <span style="font-size:10px;padding:2px 7px;border-radius:4px;background:var(--g50);color:var(--g700);border:0.5px solid var(--g200)">${a.acao}</span>
+      </div>
+      <div style="font-family:var(--mono);font-size:11.5px;color:var(--n700);line-height:1.75;white-space:pre-wrap">${renderNotasWithHighlight(a.notas)}</div>
+      ${a.notaPersonal?`<div class="nota-personal-section" style="margin-top:8px;padding:7px 10px;border:0.5px dashed var(--n200);border-radius:6px;background:var(--white)"><div style="font-size:10px;font-weight:600;color:var(--n400);letter-spacing:.04em;text-transform:uppercase;margin-bottom:3px"><i class="ti ti-lock" style="font-size:10px"></i> Nota pessoal</div><div style="font-size:11.5px;color:var(--n600);font-style:italic">${a.notaPersonal}</div></div>`:''}
+    </div>`;
+  });
+  area.innerHTML=html||'<div class="empty-st"><i class="ti ti-notes"></i><p>Nenhum atendimento registrado</p></div>';
+}
+function saveDadosClinicos(){
+  const badge=document.getElementById('pront-badge');
+  badge.innerHTML='<i class="ti ti-check"></i> Dados Clínicos salvos';
+  setTimeout(()=>badge.innerHTML='<i class="ti ti-check"></i> Atualizado',1500);
+}
+function reprocessHistory(){
+  const icon=document.getElementById('reprocess-icon');
+  const badge=document.getElementById('pront-badge');
+  icon.classList.add('spinning');
+  badge.innerHTML='<i class="ti ti-loader-2"></i> Processando...';
+  setTimeout(()=>{icon.classList.remove('spinning');badge.innerHTML='<i class="ti ti-check"></i> Reprocessado';renderProntuario();},2000);
+}
+function savePront(){const badge=document.getElementById('pront-badge');badge.innerHTML='<i class="ti ti-check"></i> Salvo';setTimeout(()=>badge.innerHTML='<i class="ti ti-check"></i> Atualizado',1500);}
+function printProntuario(){
+  document.querySelectorAll('.nota-personal-section').forEach(el=>el.style.display='none');
+  window.print();
+  setTimeout(()=>document.querySelectorAll('.nota-personal-section').forEach(el=>el.style.display=''),500);
+}
+
+/* ========== AI PANEL — TRANSCRIPTION ========== */
+let transState=0; // 0=collapsed(2lines), 1=expanded(5lines), 2=full(20lines)
+let transcriptLog=[];
+let bubblesVisible=true;
+let pinnedBbls=[];
+
+function cycleTransExp(){
+  transState=(transState+1)%3;
+  const bar=document.getElementById('trans-bar');
+  const btn=document.getElementById('trans-exp-btn');
+  bar.classList.remove('exp2','exp3');
+  if(transState===1){bar.classList.add('exp2');btn.innerHTML='<i class="ti ti-chevron-up"></i>';}
+  else if(transState===2){bar.classList.add('exp3');btn.innerHTML='<i class="ti ti-chevrons-up"></i>';}
+  else{btn.innerHTML='<i class="ti ti-chevron-down"></i>';}
+}
+
+function addTranscriptLine(text){
+  transcriptLog.push(text);
+  const content=document.getElementById('trans-content');
+  if(!content)return;
+  const line=document.createElement('div');
+  line.className='trans-line';
+  line.textContent=text;
+  content.appendChild(line);
+  content.scrollTop=content.scrollHeight;
+  // Update label with latest
+  const lbl=document.getElementById('trans-lbl');
+  if(lbl)lbl.textContent=text;
+}
+
+/* ========== AI PANEL — ORB + LISTEN ========== */
+function resetAI(){
+  listening=false;aiPaused=false;
+  clearInterval(transcriptInterval);
+  bblCount=0;sugIdx=0;aiRespIdx=0;transcriptIdx=0;
+  transcriptLog=[];pinnedBbls=[];bubblesVisible=true;
+  const bl=document.getElementById('bubbles-layer');
+  if(bl){
+    // Clear but keep placeholder
+    const ph=document.getElementById('orb-center-placeholder');
+    bl.innerHTML='';if(ph)bl.appendChild(ph);
+  }
+  refreshPinnedStrip();
+  setOrbState('idle');
+  const td=document.getElementById('tdot');if(td)td.classList.remove('live');
+  const lbl=document.getElementById('trans-lbl');if(lbl){lbl.textContent='Aguardando início...';lbl.className='trans-lbl';}
+  const tc=document.getElementById('trans-content');if(tc)tc.innerHTML='';
+  setListenBtnState('idle');
+  // Reset toggle btn
+  const tb=document.getElementById('toggle-bbl-icon');if(tb)tb.className='ti ti-eye';
+}
+
+function setOrbState(state){
+  const ow=document.getElementById('orb-wrap');
+  const orb=document.getElementById('orb');
+  const oi=document.getElementById('orb-icon');
+  const ol=document.getElementById('orb-lbl');
+  if(!ow)return;
+  if(state==='listening'){ow.classList.add('live');orb.classList.add('live');oi.className='ti ti-player-pause';ol.textContent='Escutando...';ol.className='orb-lbl live';}
+  else if(state==='paused'){ow.classList.remove('live');orb.classList.remove('live');oi.className='ti ti-microphone';ol.textContent='Pausado';ol.className='orb-lbl';}
+  else{ow.classList.remove('live');orb.classList.remove('live');oi.className='ti ti-microphone';ol.textContent='Toque para iniciar';ol.className='orb-lbl';}
+}
+
+function setListenBtnState(state){
+  const li=document.getElementById('lt-ico');
+  const ll=document.getElementById('lt-lbl');
+  if(!li)return;
+  if(state==='listening'){li.className='ti ti-player-pause';ll.textContent='Pausar';}
+  else if(state==='paused'){li.className='ti ti-microphone';ll.textContent='Retomar';}
+  else{li.className='ti ti-microphone';ll.textContent='Escutar';}
+}
+
+function toggleListen(){
+  if(!listening&&!aiPaused){
+    listening=true;aiPaused=false;
+    setOrbState('listening');setListenBtnState('listening');
+    const td=document.getElementById('tdot');if(td)td.classList.add('live');
+    const lbl=document.getElementById('trans-lbl');if(lbl){lbl.textContent='Transcrevendo em tempo real...';lbl.className='trans-lbl live-lbl';}
+    transcriptInterval=setInterval(()=>{
+      if(listening)addTranscriptLine(transcripts[transcriptIdx++%transcripts.length]);
+    },3400);
+    // Hide placeholder once started
+    const ph=document.getElementById('orb-center-placeholder');
+    if(ph){ph.style.transition='opacity .4s';ph.style.opacity='0.35';ph.style.pointerEvents='none';}
+    spawnBubbleTimers();
+  }else if(listening&&!aiPaused){
+    listening=false;aiPaused=true;
+    clearInterval(transcriptInterval);
+    setOrbState('paused');setListenBtnState('paused');
+    const td=document.getElementById('tdot');if(td)td.classList.remove('live');
+    const lbl=document.getElementById('trans-lbl');if(lbl){lbl.textContent='Pausado — histórico preservado';lbl.className='trans-lbl';}
+    addTranscriptLine('[ Gravação pausada ]');
+  }else if(!listening&&aiPaused){
+    listening=true;aiPaused=false;
+    setOrbState('listening');setListenBtnState('listening');
+    const td=document.getElementById('tdot');if(td)td.classList.add('live');
+    const lbl=document.getElementById('trans-lbl');if(lbl){lbl.textContent='Retomando transcrição...';lbl.className='trans-lbl live-lbl';}
+    transcriptInterval=setInterval(()=>{
+      if(listening)addTranscriptLine(transcripts[transcriptIdx++%transcripts.length]);
+    },3400);
+    addTranscriptLine('[ Gravação retomada ]');
+  }
+}
+function pauseAI(){toggleListen();}
+
+let bblTimers=[];
+function spawnBubbleTimers(){
+  bblTimers.forEach(t=>clearTimeout(t));bblTimers=[];
+  const times=[1600,5000,9000,13500,18000];
+  const types=['sug','sug','ia','sug','ia'];
+  times.forEach((t,i)=>bblTimers.push(setTimeout(()=>{if(listening||aiPaused)spawnBubble(types[i]);},t)));
+}
+
+function spawnBubble(type,customText){
+  const layer=document.getElementById('bubbles-layer');if(!layer)return;
+  // Hide placeholder
+  const ph=document.getElementById('orb-center-placeholder');if(ph)ph.style.display='none';
+  const text=customText||(type==='sug'?aiSuggestions[sugIdx++%aiSuggestions.length]:aiResponses[aiRespIdx++%aiResponses.length]);
+  const id='bbl-'+Date.now()+'-'+Math.random().toString(36).slice(2,6);
+  const el=document.createElement('div');
+  el.className='bbl '+type;
+  el.id=id;
+  el.innerHTML=`<span class="bbl-text">${text}</span><span class="bbl-actions"><button class="bbl-pin-btn" onclick="togglePin('${id}')" title="Fixar"><i class="ti ti-pin"></i></button></span>`;
+  if(!bubblesVisible&&type!=='usr')el.style.display='none';
+  layer.appendChild(el);
+  layer.scrollTop=layer.scrollHeight;
+  bblCount++;
+}
+
+function togglePin(id){
+  const el=document.getElementById(id);if(!el)return;
+  const isPinned=el.classList.contains('pinned');
+  if(isPinned){
+    el.classList.remove('pinned');
+    pinnedBbls=pinnedBbls.filter(p=>p.id!==id);
+  }else{
+    el.classList.add('pinned');
+    const text=el.querySelector('.bbl-text')?.textContent||'';
+    pinnedBbls.push({id,text});
+  }
+  // Change pin icon color
+  const btn=el.querySelector('.bbl-pin-btn .ti');
+  if(btn)btn.style.color=isPinned?'':'#d97706';
+  refreshPinnedStrip();
+}
+
+function refreshPinnedStrip(){
+  const strip=document.getElementById('pinned-strip');
+  const list=document.getElementById('pinned-list');
+  if(!strip||!list)return;
+  strip.classList.toggle('has-pins',pinnedBbls.length>0);
+  list.innerHTML=pinnedBbls.map(p=>`<div class="pin-strip-item"><i class="ti ti-pin"></i><span>${p.text}</span></div>`).join('');
+}
+
+function toggleBubbles(){
+  bubblesVisible=!bubblesVisible;
+  const layer=document.getElementById('bubbles-layer');
+  if(layer)layer.classList.toggle('hidden-bbl',!bubblesVisible);
+  const icon=document.getElementById('toggle-bbl-icon');
+  if(icon)icon.className=bubblesVisible?'ti ti-eye':'ti ti-eye-off';
+}
+
+function suggestAction(){
+  spawnBubble('ia','Sugestão de conduta: Ajustar Losartana 50mg → 100mg + Dipirona 500mg 6/6h + Retorno 7 dias. Confirmar?');
+}
+
+function sendAIMsg(){
+  const inp=document.getElementById('ai-inp');if(!inp||!inp.value.trim())return;
+  spawnBubble('usr',inp.value);inp.value='';
+  setTimeout(()=>spawnBubble('ia'),850);
+}
+
+/* ========== RESUMO PANEL ========== */
+function openResumoPanel(){
+  document.getElementById('resumo-panel-text').textContent=RESUMO_TEXT;
+  document.getElementById('resumo-panel').classList.add('open');
+}
+function closeResumoPanel(){document.getElementById('resumo-panel').classList.remove('open');}
+function copyResumo(){
+  navigator.clipboard.writeText(RESUMO_TEXT).catch(()=>{});
+  const btn=event.target.closest('button');
+  const orig=btn.innerHTML;btn.innerHTML='<i class="ti ti-check"></i> Copiado';
+  setTimeout(()=>btn.innerHTML=orig,1500);
+}
+function resumoToNota(){
+  const pa=document.getElementById('pront-area');
+  if(pa){const ts=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});pa.value+=(pa.value?'\n\n':'')+`[${ts}] RESUMO IA:\n`+RESUMO_TEXT;markAtendDirty();}
+  closeResumoPanel();
+}
+function transferToPront(){
+  const pa=document.getElementById('pront-area');
+  if(pa){
+    const ts=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const sep=pa.value?'\n\n':'';
+    pa.value+=sep+`[${ts}] RESUMO IA:\n`+RESUMO_TEXT;
+    pa.scrollTop=pa.scrollHeight;
+    markAtendDirty();
+  }
+  closeResumoPanel();
+}
+function transferToProntFromModal(){
+  const txt=document.getElementById('resumo-content').textContent;
+  const pa=document.getElementById('pront-area');
+  if(pa){
+    const ts=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const sep=pa.value?'\n\n':'';
+    pa.value+=sep+`[${ts}] RESUMO IA:\n`+txt;
+    pa.scrollTop=pa.scrollHeight;
+    markAtendDirty();
+  }
+  closeModal();
+}
+function transferFromAI(){
+  const pa=document.getElementById('pront-area');
+  if(pa){
+    const ts=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const sep=pa.value?'\n\n':'';
+    pa.value+=sep+`[${ts}] RESUMO IA:\n`+RESUMO_TEXT;
+    pa.scrollTop=pa.scrollHeight;
+    markAtendDirty();
+  }
+}
+function copyResumoModal(){const txt=document.getElementById('resumo-content').textContent;navigator.clipboard.writeText(txt).catch(()=>{});}
+
+/* ========== NOTA RÁPIDA ========== */
+function handleNota(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendNota();}}
+function sendNota(){
+  const ta=document.getElementById('nota-ta');const v=ta.value.trim();if(!v)return;
+  const pa=document.getElementById('pront-area');
+  const ts=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  pa.value+=(pa.value?'\n':'')+`[${ts}] `+v;
+  ta.value='';markAtendDirty();
+}
+
+/* ========== DROPDOWN AÇÕES ========== */
+function toggleDropdown(){document.getElementById('actions-menu').classList.toggle('open');}
+function closeDropdown(){document.getElementById('actions-menu').classList.remove('open');}
+document.addEventListener('click',function(e){
+  const dd=document.getElementById('actions-dropdown');
+  if(dd&&!dd.contains(e.target))closeDropdown();
+});
+
+/* ========== MODALS ========== */
+function openModal(name){
+  document.getElementById('modal-overlay').classList.add('open');
+  document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
+  const m=document.getElementById('m-'+name);if(m)m.style.display='flex';
+}
+function closeModal(){
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
+}
+document.getElementById('modal-overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+function saveNewPatient(){
+  const nome=document.getElementById('np-nome').value.trim();if(!nome)return;
+  patients.unshift({id:Date.now(),name:nome,dob:'—',tel:'—',init:nome.split(' ').slice(0,2).map(w=>w[0].toUpperCase()).join(''),conv:'Particular',sus:'—',email:'',mae:'',pai:'',end:'',nasc:'',sexo:'',medico:''});
+  renderPatients(patients);closeModal();
+}
+
+/* ========== CHART ========== */
+function renderChart(){
+  const data=[{m:'Jan',v:98},{m:'Fev',v:112},{m:'Mar',v:107},{m:'Abr',v:128},{m:'Mai',v:142}];
+  const max=160;
+  const el=document.getElementById('chart-bars');if(!el)return;
+  el.innerHTML=data.map(d=>`
+    <div class="chart-bar-row">
+      <span class="chart-lbl">${d.m}</span>
+      <div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${Math.round(d.v/max*100)}%"></div></div>
+      <span class="chart-val">${d.v}</span>
+    </div>`).join('');
+}
+
+/* ========== INIT ========== */
+renderPatients(patients);
+</script>
+</body>
+</html>
