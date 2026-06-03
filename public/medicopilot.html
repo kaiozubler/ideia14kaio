@@ -1796,10 +1796,13 @@ function closeModal(){
   document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
 }
 document.getElementById('modal-overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
-function saveNewPatient(){
+async function saveNewPatient(){
   const nome=document.getElementById('np-nome').value.trim();if(!nome)return;
-  patients.unshift({id:Date.now(),name:nome,dob:'—',tel:'—',init:nome.split(' ').slice(0,2).map(w=>w[0].toUpperCase()).join(''),conv:'Particular',sus:'—',email:'',mae:'',pai:'',end:'',nasc:'',sexo:'',medico:''});
-  renderPatients(patients);closeModal();
+  const dob=document.getElementById('np-dob')?.value||null;
+  const {error}=await sb.from('pacientes').insert({name:nome,data_nascimento:dob});
+  if(error){alert('Erro ao salvar paciente: '+error.message);return;}
+  closeModal();
+  await loadPatients();
 }
 
 /* ========== CHART ========== */
@@ -1816,7 +1819,7 @@ function renderChart(){
 }
 
 /* ========== INIT ========== */
-renderPatients(patients);
+bootstrap();
 </script>
 </body>
 </html>
