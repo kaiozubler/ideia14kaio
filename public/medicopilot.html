@@ -1073,7 +1073,10 @@ function goScreen(name){
   const nav=document.getElementById('nav-'+name);
   if(nav)nav.classList.add('active');
   const titles={patients:'Pacientes',receitas:'Receitas e Atestados',indicadores:'Indicadores'};
-  document.getElementById('page-title').textContent=titles[name]||'Paciente';
+  const pt=document.getElementById('page-title');
+  pt.textContent=titles[name]||'Paciente';
+  pt.style.cursor='';
+  pt.onclick=null;
   document.getElementById('breadcrumb').innerHTML='';
   if(name==='indicadores')setTimeout(renderChart,50);
 }
@@ -1115,7 +1118,11 @@ function openPatient(id){
   if(!currentPatient)return;
   goScreen('patient-detail');
   document.getElementById('nav-patients').classList.add('active');
-  document.getElementById('page-title').textContent='Paciente';
+  const pt2=document.getElementById('page-title');
+  pt2.textContent='Paciente';
+  pt2.style.cursor='pointer';
+  pt2.onclick=backToPatients;
+  pt2.title='Voltar para Pacientes';
   document.getElementById('breadcrumb').innerHTML='<span>/ '+currentPatient.name+'</span>';
   document.getElementById('pth-av').textContent=currentPatient.init;
   document.getElementById('pth-name').textContent=currentPatient.name;
