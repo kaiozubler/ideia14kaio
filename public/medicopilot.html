@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -874,7 +875,7 @@ input,textarea,select{font-family:var(--font)}
       <div class="form-grid">
         <div class="fld wide"><label>Nome completo *</label><input type="text" id="np-nome" placeholder="Nome completo do paciente"></div>
         <div class="fld"><label>CPF</label><input type="text" placeholder="000.000.000-00"></div>
-        <div class="fld"><label>Data de nascimento</label><input type="date"></div>
+        <div class="fld"><label>Data de nascimento</label><input type="date" id="np-dob"></div>
         <div class="fld"><label>Telefone *</label><input type="text" placeholder="(00) 00000-0000"></div>
         <div class="fld"><label>E-mail</label><input type="text" placeholder="email@exemplo.com"></div>
         <div class="fld"><label>Cartão SUS</label><input type="text" placeholder="000 0000 0000 0000"></div>
