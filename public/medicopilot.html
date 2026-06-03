@@ -1027,14 +1027,86 @@ const medicoNames={
   'dra-beatriz':'Dra. Beatriz Alves',
   'dr-tiago':'Dr. Tiago Rocha'
 };
-const patients=[
-  {id:1,name:'Maria Silva Santos',dob:'14/03/1985',tel:'(47) 99999-1111',init:'MS',conv:'Unimed',sus:'123 4567 8901 0001',email:'maria@email.com',mae:'Ana Maria Silva',pai:'José Santos',end:'Rua das Flores, 123 — Timbó, SC',nasc:'1985-03-14',sexo:'Feminino',medico:'dr-rafael'},
-  {id:2,name:'João Pedro Alves',dob:'22/07/1972',tel:'(47) 98888-2222',init:'JP',conv:'Particular',sus:'—',email:'joao@email.com',mae:'Lucia Alves',pai:'Pedro Alves',end:'Av. Brasil, 456 — Blumenau, SC',nasc:'1972-07-22',sexo:'Masculino',medico:''},
-  {id:3,name:'Ana Beatriz Costa',dob:'05/11/1990',tel:'(47) 97777-3333',init:'AB',conv:'SUS',sus:'234 5678 9012 0002',email:'ana@email.com',mae:'Maria Costa',pai:'Carlos Costa',end:'Rua XV de Novembro, 78 — Joinville, SC',nasc:'1990-11-05',sexo:'Feminino',medico:'dra-carla'},
-  {id:4,name:'Carlos Eduardo Lima',dob:'18/02/1965',tel:'(47) 96666-4444',init:'CE',conv:'Bradesco',sus:'—',email:'carlos@email.com',mae:'Helena Lima',pai:'Antônio Lima',end:'Rua Ipiranga, 321 — Florianópolis, SC',nasc:'1965-02-18',sexo:'Masculino',medico:'dr-marcos'},
-  {id:5,name:'Fernanda Rocha',dob:'30/09/1998',tel:'(47) 95555-5555',init:'FR',conv:'Particular',sus:'—',email:'fernanda@email.com',mae:'Sônia Rocha',pai:'Marcos Rocha',end:'Rua das Palmeiras, 99 — Itajaí, SC',nasc:'1998-09-30',sexo:'Feminino',medico:''},
-  {id:6,name:'Roberto Mendes',dob:'12/04/1980',tel:'(47) 94444-6666',init:'RM',conv:'Unimed',sus:'345 6789 0123 0003',email:'roberto@email.com',mae:'Vera Mendes',pai:'Luís Mendes',end:'Av. Atlântica, 555 — Balneário Camboriú, SC',nasc:'1980-04-12',sexo:'Masculino',medico:'dr-rafael'},
-];
+// Pacientes vêm do Supabase (tabela public.pacientes). O schema atual só tem
+// (id_paciente, name, data_nascimento) — os demais campos da UI ficam vazios
+// até você adicionar as colunas correspondentes no banco.
+let patients=[];
+
+/* ========== SUPABASE ========== */
+const SUPABASE_URL='https://cjlixjcwnadhzegaylhk.supabase.co';
+const SUPABASE_ANON_KEY='sb_publishable_mXVdD6v1g3cqv5V3XvCJKQ_h-LzO99-';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let currentUser=null;
+let authMode='signin'; // 'signin' | 'signup'
+
+function authToggle(){
+  authMode=authMode==='signin'?'signup':'signin';
+  document.getElementById('auth-title').textContent=authMode==='signin'?'Entrar':'Criar conta';
+  document.getElementById('auth-sub').textContent=authMode==='signin'?'Acesse com seu e-mail e senha.':'Cadastre-se para começar.';
+  document.getElementById('auth-submit').textContent=authMode==='signin'?'Entrar':'Criar conta';
+  document.getElementById('auth-toggle-q').textContent=authMode==='signin'?'Não tem conta?':'Já tem conta?';
+  document.getElementById('auth-toggle').textContent=authMode==='signin'?'Criar conta':'Entrar';
+  document.getElementById('auth-name-wrap').style.display=authMode==='signup'?'block':'none';
+  document.getElementById('auth-err').style.display='none';
+}
+function authError(msg){
+  const el=document.getElementById('auth-err');
+  el.textContent=msg;el.style.display='block';
+}
+async function authSubmit(){
+  const email=document.getElementById('auth-email').value.trim();
+  const pass=document.getElementById('auth-pass').value;
+  const name=document.getElementById('auth-name').value.trim();
+  if(!email||!pass){authError('Preencha e-mail e senha.');return;}
+  const btn=document.getElementById('auth-submit');btn.disabled=true;btn.textContent='Aguarde…';
+  try{
+    if(authMode==='signup'){
+      const {error}=await sb.auth.signUp({email,password:pass,options:{data:{name_user:name||email.split('@')[0],tipo_user:'medico'},emailRedirectTo:window.location.origin}});
+      if(error)throw error;
+      // tenta login direto (se confirm email estiver desligado)
+      const {error:e2}=await sb.auth.signInWithPassword({email,password:pass});
+      if(e2){authError('Conta criada. Verifique seu e-mail para confirmar e depois entre.');btn.disabled=false;btn.textContent='Entrar';authMode='signin';return;}
+    }else{
+      const {error}=await sb.auth.signInWithPassword({email,password:pass});
+      if(error)throw error;
+    }
+  }catch(e){authError(e.message||'Erro ao autenticar.');btn.disabled=false;btn.textContent=authMode==='signin'?'Entrar':'Criar conta';}
+}
+async function logout(){await sb.auth.signOut();location.reload();}
+
+function showAuthGate(){
+  document.getElementById('auth-gate').style.display='flex';
+  document.getElementById('shell').style.display='none';
+}
+function showApp(){
+  document.getElementById('auth-gate').style.display='none';
+  document.getElementById('shell').style.display='flex';
+}
+
+async function loadPatients(){
+  const {data,error}=await sb.from('pacientes').select('id_paciente,name,data_nascimento,created_at').order('created_at',{ascending:false});
+  if(error){console.error('Erro ao carregar pacientes:',error);patients=[];renderPatients(patients);return;}
+  patients=(data||[]).map(p=>({
+    id:p.id_paciente,
+    name:p.name||'(sem nome)',
+    dob:p.data_nascimento?p.data_nascimento.split('-').reverse().join('/'):'—',
+    nasc:p.data_nascimento||'',
+    tel:'—',init:(p.name||'?').split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('')||'?',
+    conv:'Particular',sus:'—',email:'',mae:'',pai:'',end:'—',sexo:'',medico:''
+  }));
+  renderPatients(patients);
+}
+
+async function bootstrap(){
+  const {data}=await sb.auth.getSession();
+  if(data.session){currentUser=data.session.user;showApp();await loadPatients();}
+  else{showAuthGate();}
+  sb.auth.onAuthStateChange((event,session)=>{
+    if(event==='SIGNED_IN'&&session){currentUser=session.user;showApp();loadPatients();}
+    if(event==='SIGNED_OUT'){location.reload();}
+  });
+}
+
 let atendimentos=[
   {id:1,title:'Hipertensão — ajuste de medicação',date:'22/05/2025',hora:'09:15',acao:'Prescrição',resumo:'Paciente apresentou PA elevada (152/96 mmHg) e queixa de cefaleia occipital há 2 dias. Histórico de HAS controlada. Ajustada dose de Losartana de 50mg para 100mg.',notas:'Paciente relata não ter tomado a medicação por 3 dias. Familiar presente.',notaPersonal:'Paciente demonstra ansiedade. Pode ser fator agravante.'},
   {id:2,title:'Retorno — dislipidemia',date:'10/04/2025',hora:'14:30',acao:'Exame solicitado',resumo:'Retorno para análise de exames. Colesterol LDL: 142 mg/dL — meta não atingida. Reforço da estatina e orientação de dieta.',notas:'Trouxe diário alimentar. Dieta com excesso de gordura saturada.',notaPersonal:''},
