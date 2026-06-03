@@ -438,7 +438,37 @@ input,textarea,select{font-family:var(--font)}
 </style>
 </head>
 <body>
-<div class="shell" id="shell">
+<!-- AUTH GATE -->
+<div id="auth-gate" style="display:none;position:fixed;inset:0;background:var(--n75);z-index:9999;align-items:center;justify-content:center;font-family:var(--font)">
+  <div style="background:#fff;border:1px solid var(--n150);border-radius:12px;padding:32px;width:380px;max-width:92vw;box-shadow:0 10px 30px rgba(0,0,0,.06)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <div style="width:36px;height:36px;border-radius:8px;background:var(--g500);color:#fff;display:flex;align-items:center;justify-content:center"><i class="ti ti-heart-rate-monitor"></i></div>
+      <div style="font-weight:600;font-size:16px;color:var(--n700)">MediCopilot</div>
+    </div>
+    <h2 id="auth-title" style="font-size:18px;font-weight:600;color:var(--n700);margin-bottom:4px">Entrar</h2>
+    <p id="auth-sub" style="font-size:12px;color:var(--n500);margin-bottom:18px">Acesse com seu e-mail e senha.</p>
+    <div id="auth-name-wrap" style="display:none;margin-bottom:10px">
+      <label style="display:block;font-size:11px;color:var(--n500);margin-bottom:4px">Nome</label>
+      <input id="auth-name" type="text" placeholder="Dr(a). Seu Nome" style="width:100%;padding:10px 12px;border:1px solid var(--n200);border-radius:8px;font-size:13px">
+    </div>
+    <div style="margin-bottom:10px">
+      <label style="display:block;font-size:11px;color:var(--n500);margin-bottom:4px">E-mail</label>
+      <input id="auth-email" type="email" autocomplete="email" placeholder="voce@exemplo.com" style="width:100%;padding:10px 12px;border:1px solid var(--n200);border-radius:8px;font-size:13px">
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:11px;color:var(--n500);margin-bottom:4px">Senha</label>
+      <input id="auth-pass" type="password" autocomplete="current-password" placeholder="••••••••" style="width:100%;padding:10px 12px;border:1px solid var(--n200);border-radius:8px;font-size:13px">
+    </div>
+    <div id="auth-err" style="display:none;color:#b42318;font-size:12px;margin-bottom:10px"></div>
+    <button id="auth-submit" onclick="authSubmit()" style="width:100%;padding:11px;background:var(--g500);color:#fff;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer">Entrar</button>
+    <div style="text-align:center;margin-top:14px;font-size:12px;color:var(--n500)">
+      <span id="auth-toggle-q">Não tem conta?</span>
+      <a id="auth-toggle" href="#" onclick="event.preventDefault();authToggle()" style="color:var(--g600);font-weight:500;text-decoration:none">Criar conta</a>
+    </div>
+  </div>
+</div>
+
+<div class="shell" id="shell" style="display:none">
 
 <!-- SIDEBAR -->
 <div class="sidebar">
