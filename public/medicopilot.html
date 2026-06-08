@@ -1567,6 +1567,7 @@ function renderProntuario(){
   loadResumoProntuarioIntoPanel();
 
   // Dados clínicos
+  renderInfoCompSummary();
   const dc=document.getElementById('dados-clinicos-ta')?.value;
   let html='';
   if(dc){
