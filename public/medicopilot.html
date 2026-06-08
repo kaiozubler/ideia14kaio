@@ -1886,12 +1886,13 @@ async function ensureResumoProntuario(idPaciente,opts){
   setResumoBadge('processing');
   try{
     // busca último resumo
-    const {data:rows}=await sb.from('resumo_prontuario')
+    const {data:rows,error:loadErr}=await sb.from('resumo_prontuario')
       .select('id,resumo,updated_at,paciente_updated_at')
       .eq('id_paciente',idPaciente)
       .order('updated_at',{ascending:false})
       .limit(1);
-    const last=rows&&rows[0];
+    if(loadErr&&loadErr.code!=='PGRST205')throw loadErr;
+    const last=(rows&&rows[0])||loadResumoLocal(idPaciente);
     // pega paciente para comparar timestamp
     const {data:pac}=await sb.from('pacientes').select('*').eq('id_paciente',idPaciente).single();
     const pacUpdated=pac?(pac.updated_at||pac.created_at||null):null;
@@ -1931,8 +1932,9 @@ async function ensureResumoProntuario(idPaciente,opts){
         paciente_updated_at:pacUpdated,
         updated_at:nowIso
       };
+      saveResumoLocal(idPaciente,payload);
       let saved=false;
-      if(last&&last.id){
+      if(last&&last.id&&!last._local){
         const {error}=await sb.from('resumo_prontuario').update(payload).eq('id',last.id);
         if(error)console.warn('update resumo falhou',error);else saved=true;
       }
