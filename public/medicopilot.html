@@ -1183,6 +1183,20 @@ let aiBusy=false;
 let currentResumoProntuario=''; // texto do resumo do paciente atual
 let resumoProcessando=false;
 
+function resumoLocalKey(idPaciente){return 'resumoProntuario_'+idPaciente;}
+function loadResumoLocal(idPaciente){
+  try{
+    const raw=localStorage.getItem(resumoLocalKey(idPaciente));
+    if(!raw)return null;
+    const row=JSON.parse(raw);
+    return row&&row.resumo?{...row,id:row.id||'local',_local:true}:null;
+  }catch{return null;}
+}
+function saveResumoLocal(idPaciente,payload){
+  try{localStorage.setItem(resumoLocalKey(idPaciente),JSON.stringify({...payload,id:'local',_local:true}));}
+  catch(e){console.warn('fallback local do resumo falhou',e);}
+}
+
 const transcripts=['Paciente refere cefaleia há 3 dias...','Nega febre. Relata náuseas matinais.','Em uso de Losartana 50mg.','Pressão aferida: 148 por 92 mmHg.','Queixa de insônia recente.','Paciente apresenta-se ansiosa...'];
 const aiSuggestions=['Há quanto tempo a crise persiste?','Verificar PA agora?','Uso de medicação SOS?','Fotofobia ou fonofobia?','Histórico familiar de enxaqueca?','Atividade física regular?'];
 const aiResponses=['Com base no relato, considere origem vascular. PA elevada é fator relevante.','PA 148/92 é hipertensão grau 1. Recomendo reaferir após 5 min.','Hipótese provável: cefaleia tensional + crise hipertensiva leve.','Conduta: analgesia + ajuste anti-hipertensivo. Confirma?','Solicitar hemograma e função renal na próxima consulta.'];
