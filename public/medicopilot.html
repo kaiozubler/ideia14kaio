@@ -1349,6 +1349,8 @@ function showNovoAtend(restore){
     atendEmAndamento={pront:'',notaPessoal:'',dirty:false};
     const pa=document.getElementById('pront-area');if(pa)pa.value='';
     const npta=document.getElementById('nota-personal-ta');if(npta)npta.value='';
+    aiChatHistory=[];
+    iniciarConsultaEResumo();
   }else{
     const pa=document.getElementById('pront-area');if(pa)pa.value=atendEmAndamento.pront;
     const npta=document.getElementById('nota-personal-ta');if(npta)npta.value=atendEmAndamento.notaPessoal;
