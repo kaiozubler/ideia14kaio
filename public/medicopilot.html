@@ -269,7 +269,7 @@ input,textarea,select{font-family:var(--font)}
 .bbl.ia{background:#dbeafe;border:0.5px solid #93c5fd;color:#1e3a5f;border-bottom-left-radius:3px;align-self:flex-start}
 .bbl.usr{background:var(--g500);color:var(--white);border-bottom-right-radius:3px;align-self:flex-end;flex-direction:row-reverse}
 .bbl.pinned{background:#fef9c3!important;border-color:#fde047!important;color:var(--n700)!important}
-.bbl-text{flex:1;min-width:0}
+.bbl-text{flex:1;min-width:0;white-space:pre-wrap}
 .bbl-actions{display:flex;gap:2px;opacity:0;transition:opacity .14s;flex-shrink:0;margin-top:0}
 .bbl:hover .bbl-actions{opacity:1}
 .bbl-pin-btn{width:18px;height:18px;border-radius:3px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--n300)}
@@ -1790,11 +1790,18 @@ function spawnBubbleTimers(){
   times.forEach((t,i)=>bblTimers.push(setTimeout(()=>{if(listening||aiPaused)spawnBubble(types[i]);},t)));
 }
 
+function fmtBubbleText(raw){
+  if(!raw)return'';
+  return raw
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>');
+}
 function spawnBubble(type,customText){
   const layer=document.getElementById('bubbles-layer');if(!layer)return;
-  // Hide placeholder
   const ph=document.getElementById('orb-center-placeholder');if(ph)ph.style.display='none';
-  const text=customText||(type==='sug'?aiSuggestions[sugIdx++%aiSuggestions.length]:aiResponses[aiRespIdx++%aiResponses.length]);
+  const rawText=customText||(type==='sug'?aiSuggestions[sugIdx++%aiSuggestions.length]:aiResponses[aiRespIdx++%aiResponses.length]);
+  const text=fmtBubbleText(rawText);
   const id='bbl-'+Date.now()+'-'+Math.random().toString(36).slice(2,6);
   const el=document.createElement('div');
   el.className='bbl '+type;
