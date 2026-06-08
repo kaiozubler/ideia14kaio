@@ -1770,8 +1770,9 @@ async function iniciarConsultaEResumo(){
   ensureResumoProntuario(currentPatient.id).catch(e=>console.error('resumo erro',e));
 }
 
-async function ensureResumoProntuario(idPaciente){
+async function ensureResumoProntuario(idPaciente,opts){
   if(resumoProcessando)return;
+  const force=opts&&opts.force;
   resumoProcessando=true;
   setResumoBadge('processing');
   try{
@@ -1786,17 +1787,18 @@ async function ensureResumoProntuario(idPaciente){
     const {data:pac}=await sb.from('pacientes').select('*').eq('id_paciente',idPaciente).single();
     const pacUpdated=pac?(pac.updated_at||pac.created_at||null):null;
     const now=Date.now();
-    let precisa=true;
+    let precisa=!!force;
     if(last){
       const ageDays=(now-new Date(last.updated_at).getTime())/(1000*60*60*24);
       const cadastroMudou=pacUpdated&&last.paciente_updated_at&&new Date(pacUpdated).getTime()>new Date(last.paciente_updated_at).getTime();
-      precisa=cadastroMudou||ageDays>60;
+      if(!force)precisa=cadastroMudou||ageDays>60;
       if(!precisa){
         currentResumoProntuario=last.resumo||'';
         setResumoBadge('done');
+        refreshPanelResumo(last.resumo||'',last.updated_at);
         return;
       }
-    }
+    }else if(!force){precisa=true;}
     // busca atendimentos e exames (best-effort; tabelas podem variar)
     let atends=[],exs=[];
     try{const{data}=await sb.from('consulta').select('*').eq('id_paciente',idPaciente).order('started_at',{ascending:false}).limit(10);atends=data||[];}catch(e){}
@@ -1809,6 +1811,7 @@ async function ensureResumoProntuario(idPaciente){
     if(!res.ok)throw new Error(await res.text());
     const {resumo}=await res.json();
     currentResumoProntuario=resumo||'';
+    const nowIso=new Date().toISOString();
     // upsert
     try{
       await sb.from('resumo_prontuario').insert({
@@ -1816,16 +1819,53 @@ async function ensureResumoProntuario(idPaciente){
         id_medico:currentUser?.id||null,
         resumo:currentResumoProntuario,
         paciente_updated_at:pacUpdated,
-        updated_at:new Date().toISOString()
+        updated_at:nowIso
       });
     }catch(e){console.warn('falha ao salvar resumo',e);}
     setResumoBadge('done');
+    refreshPanelResumo(currentResumoProntuario,nowIso);
   }catch(e){
     console.error('ensureResumoProntuario',e);
     setResumoBadge('error');
   }finally{
     resumoProcessando=false;
   }
+}
+
+function refreshPanelResumo(text,updatedAt){
+  const t=document.getElementById('pront-resumo-text');
+  const m=document.getElementById('pront-resumo-meta');
+  if(t)t.textContent=text||'(sem resumo)';
+  if(m&&updatedAt){
+    const d=new Date(updatedAt);
+    m.textContent='Atualizado em '+d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  }else if(m){m.textContent='—';}
+}
+
+async function loadResumoProntuarioIntoPanel(){
+  const t=document.getElementById('pront-resumo-text');
+  const m=document.getElementById('pront-resumo-meta');
+  if(!currentPatient){if(t)t.textContent='Selecione um paciente.';if(m)m.textContent='';return;}
+  try{
+    const {data}=await sb.from('resumo_prontuario')
+      .select('resumo,updated_at')
+      .eq('id_paciente',currentPatient.id)
+      .order('updated_at',{ascending:false}).limit(1);
+    const row=data&&data[0];
+    if(row){currentResumoProntuario=row.resumo||'';refreshPanelResumo(row.resumo,row.updated_at);}
+    else{refreshPanelResumo('(Nenhum resumo gerado ainda. Clique em Atualizar.)',null);}
+  }catch(e){if(t)t.textContent='Erro ao carregar resumo: '+(e.message||e);}
+}
+
+async function forceRefreshResumoProntuario(){
+  if(!currentPatient)return;
+  const ico=document.getElementById('pront-resumo-refresh-ico');
+  const btn=document.getElementById('pront-resumo-refresh');
+  if(ico)ico.classList.add('spinning');
+  if(btn)btn.disabled=true;
+  const t=document.getElementById('pront-resumo-text');if(t)t.textContent='Gerando resumo com IA…';
+  try{await ensureResumoProntuario(currentPatient.id,{force:true});}
+  finally{if(ico)ico.classList.remove('spinning');if(btn)btn.disabled=false;}
 }
 
 function sendAIMsg(){
