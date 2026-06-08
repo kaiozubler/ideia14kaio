@@ -9,6 +9,7 @@ type RequestBody = {
   paciente?: Record<string, unknown>;
   atendimentos?: unknown[];
   exames?: unknown[];
+  info_complementar?: Record<string, unknown> | null;
 };
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -69,6 +70,7 @@ export const Route = createFileRoute("/api/chat-ia")({
             const ctx = JSON.stringify(
               {
                 paciente: body.paciente ?? null,
+                info_complementar: body.info_complementar ?? null,
                 atendimentos: body.atendimentos ?? [],
                 exames: body.exames ?? [],
               },
