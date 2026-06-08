@@ -1972,11 +1972,12 @@ async function loadResumoProntuarioIntoPanel(){
   const m=document.getElementById('pront-resumo-meta');
   if(!currentPatient){if(t)t.textContent='Selecione um paciente.';if(m)m.textContent='';return;}
   try{
-    const {data}=await sb.from('resumo_prontuario')
+    const {data,error}=await sb.from('resumo_prontuario')
       .select('resumo,updated_at')
       .eq('id_paciente',currentPatient.id)
       .order('updated_at',{ascending:false}).limit(1);
-    const row=data&&data[0];
+    if(error&&error.code!=='PGRST205')throw error;
+    const row=(data&&data[0])||loadResumoLocal(currentPatient.id);
     if(row){currentResumoProntuario=row.resumo||'';refreshPanelResumo(row.resumo,row.updated_at);}
     else{refreshPanelResumo('(Nenhum resumo gerado ainda. Clique em Atualizar.)',null);}
   }catch(e){if(t)t.textContent='Erro ao carregar resumo: '+(e.message||e);}
