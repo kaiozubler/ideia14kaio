@@ -1297,7 +1297,7 @@ Reduzir sódio. Hidratação adequada. Evitar estresse.`;
 
 /* ========== SCREEN NAV ========== */
 function goScreen(name){
-  ['patients','patient-detail','receitas','indicadores'].forEach(s=>{
+  ['patients','patient-detail','receitas','indicadores','secretaria','anamnese','copiloto'].forEach(s=>{
     const el=document.getElementById('s-'+s);
     if(el)el.style.display='none';
   });
@@ -1306,14 +1306,19 @@ function goScreen(name){
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   const nav=document.getElementById('nav-'+name);
   if(nav)nav.classList.add('active');
-  const titles={patients:'Pacientes',receitas:'Receitas e Atestados',indicadores:'Indicadores'};
+  const titles={patients:'Pacientes',receitas:'Receitas e Atestados',indicadores:'Indicadores',secretaria:'Secretária digital',anamnese:'Gerador de Anamnese',copiloto:'Copiloto de consulta'};
   const pt=document.getElementById('page-title');
   pt.textContent=titles[name]||'Paciente';
   pt.style.cursor='';
   pt.onclick=null;
   document.getElementById('breadcrumb').innerHTML='';
   if(name==='indicadores')setTimeout(renderChart,50);
+  if(name==='anamnese')renderAnamneseList();
+  if(['secretaria','anamnese','copiloto'].includes(name)){
+    const g=document.getElementById('grp-ia');if(g)g.classList.add('open');
+  }
 }
+function toggleIAGroup(){document.getElementById('grp-ia').classList.toggle('open');}
 
 /* ========== SEARCH ========== */
 function renderPatients(list){
