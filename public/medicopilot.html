@@ -1790,11 +1790,18 @@ function spawnBubbleTimers(){
   times.forEach((t,i)=>bblTimers.push(setTimeout(()=>{if(listening||aiPaused)spawnBubble(types[i]);},t)));
 }
 
+function fmtBubbleText(raw){
+  if(!raw)return'';
+  return raw
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>');
+}
 function spawnBubble(type,customText){
   const layer=document.getElementById('bubbles-layer');if(!layer)return;
-  // Hide placeholder
   const ph=document.getElementById('orb-center-placeholder');if(ph)ph.style.display='none';
-  const text=customText||(type==='sug'?aiSuggestions[sugIdx++%aiSuggestions.length]:aiResponses[aiRespIdx++%aiResponses.length]);
+  const rawText=customText||(type==='sug'?aiSuggestions[sugIdx++%aiSuggestions.length]:aiResponses[aiRespIdx++%aiResponses.length]);
+  const text=fmtBubbleText(rawText);
   const id='bbl-'+Date.now()+'-'+Math.random().toString(36).slice(2,6);
   const el=document.createElement('div');
   el.className='bbl '+type;
