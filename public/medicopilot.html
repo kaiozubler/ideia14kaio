@@ -1901,21 +1901,35 @@ async function ensureResumoProntuario(idPaciente,opts){
 
     const res=await fetch('/api/chat-ia',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({mode:'resumo',paciente:pac,atendimentos:atends,exames:exs})
+      body:JSON.stringify({mode:'resumo',paciente:pac,atendimentos:atends,exames:exs,info_complementar:loadInfoComp()})
     });
     if(!res.ok)throw new Error(await res.text());
     const {resumo}=await res.json();
     currentResumoProntuario=resumo||'';
     const nowIso=new Date().toISOString();
-    // upsert
+    // persiste resumo (update se já existe, senão insert)
     try{
-      await sb.from('resumo_prontuario').insert({
+      const uid=currentUser?.id||null;
+      const payload={
         id_paciente:idPaciente,
-        id_medico:currentUser?.id||null,
+        id_medico:uid,
         resumo:currentResumoProntuario,
         paciente_updated_at:pacUpdated,
         updated_at:nowIso
-      });
+      };
+      let saved=false;
+      if(last&&last.id){
+        const {error}=await sb.from('resumo_prontuario').update(payload).eq('id',last.id);
+        if(error)console.warn('update resumo falhou',error);else saved=true;
+      }
+      if(!saved){
+        const {error}=await sb.from('resumo_prontuario').insert(payload);
+        if(error){
+          console.error('insert resumo falhou',error);
+          const badge=document.getElementById('pront-badge');
+          if(badge)badge.innerHTML='<i class="ti ti-alert-triangle"></i> Resumo gerado mas não salvo: '+(error.message||'erro');
+        }
+      }
     }catch(e){console.warn('falha ao salvar resumo',e);}
     setResumoBadge('done');
     refreshPanelResumo(currentResumoProntuario,nowIso);
