@@ -846,13 +846,18 @@ input,textarea,select{font-family:var(--font)}
             <i class="ti ti-alert-circle" style="font-size:14px;color:#d97706"></i>
             <span style="font-size:11px;font-weight:600;color:#92400e;letter-spacing:.04em;text-transform:uppercase;flex:1">Dados Clínicos</span>
             <span id="dc-preview" style="font-size:11px;color:#a16207;font-style:italic;flex:2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span>
+            <button class="ib" title="Informações complementares" onclick="event.stopPropagation();openInfoComp()" style="width:24px;height:24px;border-radius:var(--r6);border:0.5px solid #fde68a;color:#92400e;background:#fffbeb;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-clipboard-list" style="font-size:13px"></i></button>
             <i class="ti ti-chevron-down" id="dc-chev" style="font-size:13px;color:#d97706;flex-shrink:0"></i>
           </div>
           <div id="dc-body" style="display:none;background:var(--white);padding:10px 12px;border-top:0.5px solid #fde68a">
             <textarea id="dados-clinicos-ta" oninput="updateDcPreview()" style="width:100%;border:0.5px solid #fde68a;border-radius:var(--r6);padding:7px 10px;font-family:var(--font);font-size:12.5px;color:var(--n700);resize:none;outline:none;background:#fffbeb;line-height:1.65;min-height:64px" placeholder="Ex: Alérgico à Dipirona · HAS · Dislipidemia · Sem alergias conhecidas..."></textarea>
+            <div id="info-comp-summary" style="display:none;margin-top:8px;padding:8px 10px;border:0.5px dashed #fde68a;border-radius:var(--r6);background:#fffbeb;font-size:11.5px;color:#78350f;line-height:1.6"></div>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
               <p style="font-size:10px;color:var(--n300);font-style:italic"><i class="ti ti-info-circle" style="font-size:10px"></i> Aparece em todos os atendimentos e impressão</p>
+              <div style="display:flex;gap:6px;align-items:center">
+                <button class="btn sm ghost" onclick="event.stopPropagation();openInfoComp()"><i class="ti ti-clipboard-list"></i> Informações complementares</button>
               <button class="btn sm" onclick="saveDadosClinicos();event.stopPropagation()"><i class="ti ti-device-floppy"></i> Salvar</button>
+              </div>
             </div>
           </div>
         </div>
@@ -1014,6 +1019,39 @@ Reduzir ingestão de sódio. Hidratação adequada. Evitar situações de estres
       <button class="btn" onclick="copyResumoModal()"><i class="ti ti-copy"></i> Copiar</button>
       <button class="btn" onclick="closeModal()">Editar</button>
       <button class="btn primary" onclick="transferToProntFromModal()"><i class="ti ti-transfer"></i> Transferir ao prontuário</button>
+    </div>
+  </div>
+
+  <!-- INFORMAÇÕES COMPLEMENTARES -->
+  <div class="modal" id="m-info-comp" style="display:none">
+    <div class="mhd"><span class="mhd-title"><i class="ti ti-clipboard-list" style="font-size:14px;margin-right:5px"></i>Informações complementares</span><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
+    <div class="mbody">
+      <div class="form-grid">
+        <div class="fld"><label>Peso (kg)</label><input type="number" step="0.1" id="ic-peso" placeholder="Ex: 72.5"></div>
+        <div class="fld"><label>Altura (cm)</label><input type="number" step="1" id="ic-altura" placeholder="Ex: 170"></div>
+        <div class="fld"><label>IMC</label><input type="text" id="ic-imc" placeholder="—" readonly style="background:var(--n50)"></div>
+        <div class="fld"><label>Tipo sanguíneo</label>
+          <select id="ic-sangue"><option value="">—</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select>
+        </div>
+        <div class="fld"><label>Sedentarismo</label>
+          <select id="ic-sedent"><option value="">—</option><option>Sedentário</option><option>Atividade leve (1-2x/sem)</option><option>Atividade moderada (3-4x/sem)</option><option>Atividade intensa (5+x/sem)</option></select>
+        </div>
+        <div class="fld"><label>Tabagismo</label>
+          <select id="ic-tab"><option value="">—</option><option>Nunca fumou</option><option>Ex-tabagista</option><option>Tabagista ativo</option></select>
+        </div>
+        <div class="fld"><label>Etilismo</label>
+          <select id="ic-eti"><option value="">—</option><option>Não consome</option><option>Social / ocasional</option><option>Frequente</option><option>Etilista crônico</option></select>
+        </div>
+        <div class="fld"><label>Atividade ocupacional</label><input type="text" id="ic-ocup" placeholder="Ex: Trabalho de escritório"></div>
+        <div class="fld wide"><label>Medicamentos em uso</label><textarea id="ic-meds" rows="2" placeholder="Ex: Losartana 50mg 1x/dia; Sinvastatina 20mg à noite..." style="width:100%;font-family:var(--font);font-size:13px;padding:7px 10px;border:0.5px solid var(--n200);border-radius:var(--r6);resize:vertical"></textarea></div>
+        <div class="fld wide"><label>Alergias</label><input type="text" id="ic-alerg" placeholder="Ex: Dipirona, Penicilina, frutos do mar..."></div>
+        <div class="fld wide"><label>Antecedentes familiares</label><textarea id="ic-fam" rows="2" placeholder="Ex: Mãe — HAS e DM2; Pai — IAM aos 58 anos..." style="width:100%;font-family:var(--font);font-size:13px;padding:7px 10px;border:0.5px solid var(--n200);border-radius:var(--r6);resize:vertical"></textarea></div>
+        <div class="fld wide"><label>Outras observações relevantes</label><textarea id="ic-outros" rows="2" placeholder="Comorbidades, cirurgias prévias, gestação, hábitos alimentares, sono..." style="width:100%;font-family:var(--font);font-size:13px;padding:7px 10px;border:0.5px solid var(--n200);border-radius:var(--r6);resize:vertical"></textarea></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" onclick="saveInfoComp()"><i class="ti ti-device-floppy"></i> Salvar informações</button>
     </div>
   </div>
 </div>
@@ -1529,6 +1567,7 @@ function renderProntuario(){
   loadResumoProntuarioIntoPanel();
 
   // Dados clínicos
+  renderInfoCompSummary();
   const dc=document.getElementById('dados-clinicos-ta')?.value;
   let html='';
   if(dc){
@@ -1553,6 +1592,62 @@ function saveDadosClinicos(){
   const badge=document.getElementById('pront-badge');
   badge.innerHTML='<i class="ti ti-check"></i> Dados Clínicos salvos';
   setTimeout(()=>badge.innerHTML='<i class="ti ti-check"></i> Atualizado',1500);
+}
+/* ========== INFORMAÇÕES COMPLEMENTARES ========== */
+function infoCompKey(){return 'infoComp_'+((currentPatient&&currentPatient.id)||'anon');}
+function loadInfoComp(){
+  try{return JSON.parse(localStorage.getItem(infoCompKey())||'{}');}catch{return {};}
+}
+function calcIMC(){
+  const p=parseFloat(document.getElementById('ic-peso').value);
+  const a=parseFloat(document.getElementById('ic-altura').value);
+  const out=document.getElementById('ic-imc');
+  if(p>0&&a>0){const m=a/100;const imc=p/(m*m);let cl='';
+    if(imc<18.5)cl=' (baixo peso)';else if(imc<25)cl=' (eutrofia)';else if(imc<30)cl=' (sobrepeso)';else if(imc<35)cl=' (obesidade I)';else if(imc<40)cl=' (obesidade II)';else cl=' (obesidade III)';
+    out.value=imc.toFixed(1)+cl;
+  }else out.value='';
+}
+function openInfoComp(){
+  if(!currentPatient){alert('Selecione um paciente primeiro.');return;}
+  const d=loadInfoComp();
+  ['peso','altura','sangue','sedent','tab','eti','ocup','meds','alerg','fam','outros'].forEach(k=>{
+    const el=document.getElementById('ic-'+k);if(el)el.value=d[k]||'';
+  });
+  calcIMC();
+  ['ic-peso','ic-altura'].forEach(id=>{const el=document.getElementById(id);if(el){el.oninput=calcIMC;}});
+  openModal('info-comp');
+}
+function saveInfoComp(){
+  const d={};
+  ['peso','altura','sangue','sedent','tab','eti','ocup','meds','alerg','fam','outros'].forEach(k=>{
+    const el=document.getElementById('ic-'+k);if(el)d[k]=el.value.trim();
+  });
+  d.updated_at=new Date().toISOString();
+  localStorage.setItem(infoCompKey(),JSON.stringify(d));
+  renderInfoCompSummary();
+  closeModal();
+  const badge=document.getElementById('pront-badge');
+  if(badge){badge.innerHTML='<i class="ti ti-check"></i> Informações complementares salvas';setTimeout(()=>badge.innerHTML='<i class="ti ti-check"></i> Atualizado',1800);}
+}
+function renderInfoCompSummary(){
+  const box=document.getElementById('info-comp-summary');
+  if(!box)return;
+  const d=loadInfoComp();
+  const parts=[];
+  if(d.peso)parts.push('<b>Peso:</b> '+d.peso+' kg');
+  if(d.altura)parts.push('<b>Altura:</b> '+d.altura+' cm');
+  if(d.peso&&d.altura){const m=parseFloat(d.altura)/100;const imc=parseFloat(d.peso)/(m*m);if(isFinite(imc))parts.push('<b>IMC:</b> '+imc.toFixed(1));}
+  if(d.sangue)parts.push('<b>Sangue:</b> '+d.sangue);
+  if(d.sedent)parts.push('<b>Atividade:</b> '+d.sedent);
+  if(d.tab)parts.push('<b>Tabagismo:</b> '+d.tab);
+  if(d.eti)parts.push('<b>Etilismo:</b> '+d.eti);
+  if(d.ocup)parts.push('<b>Ocupação:</b> '+d.ocup);
+  if(d.meds)parts.push('<b>Medicamentos:</b> '+d.meds);
+  if(d.alerg)parts.push('<b>Alergias:</b> '+d.alerg);
+  if(d.fam)parts.push('<b>Antec. familiares:</b> '+d.fam);
+  if(d.outros)parts.push('<b>Outras:</b> '+d.outros);
+  if(parts.length){box.innerHTML='<div style="font-weight:600;color:#92400e;font-size:10px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px"><i class="ti ti-clipboard-list" style="font-size:11px"></i> Informações complementares</div>'+parts.join(' &nbsp;·&nbsp; ');box.style.display='block';}
+  else{box.innerHTML='';box.style.display='none';}
 }
 function reprocessHistory(){
   const icon=document.getElementById('reprocess-icon');
