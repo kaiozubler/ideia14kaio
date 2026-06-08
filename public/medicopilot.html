@@ -1510,6 +1510,24 @@ function renderNotasWithHighlight(text){
 }
 function renderProntuario(){
   const area=document.getElementById('prontuario-main-area');if(!area)return;
+  // Bloco de Resumo do Prontuário (IA) — carregado do banco
+  const resumoBlockId='pront-resumo-block';
+  if(!document.getElementById(resumoBlockId)){
+    const wrap=document.createElement('div');
+    wrap.id=resumoBlockId;
+    wrap.style.cssText='margin-bottom:14px;border:0.5px solid var(--g200);background:var(--g50);border-radius:10px;padding:12px 14px';
+    wrap.innerHTML=`
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <i class="ti ti-sparkles" style="color:var(--g600)"></i>
+        <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--g700)">Resumo do Prontuário (IA)</div>
+        <span id="pront-resumo-meta" style="font-size:10.5px;color:var(--n500);margin-left:4px">—</span>
+        <button id="pront-resumo-refresh" class="btn sm" style="margin-left:auto" onclick="forceRefreshResumoProntuario()" title="Forçar atualização"><i class="ti ti-refresh" id="pront-resumo-refresh-ico"></i> Atualizar</button>
+      </div>
+      <div id="pront-resumo-text" style="font-size:12.5px;color:var(--n700);line-height:1.7;white-space:pre-wrap">Carregando…</div>`;
+    area.parentNode.insertBefore(wrap,area);
+  }
+  loadResumoProntuarioIntoPanel();
+
   // Dados clínicos
   const dc=document.getElementById('dados-clinicos-ta')?.value;
   let html='';
