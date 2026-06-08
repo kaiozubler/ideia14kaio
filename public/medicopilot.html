@@ -46,6 +46,14 @@ input,textarea,select{font-family:var(--font)}
 .sb-lbl{font-size:12.5px;opacity:0;transition:opacity .18s .04s}
 .sidebar:hover .sb-lbl{opacity:1}
 .sb-footer{padding:6px 0;border-top:0.5px solid var(--n100);flex-shrink:0}
+.sb-group{overflow:hidden}
+.sb-sub{max-height:0;overflow:hidden;transition:max-height .2s ease}
+.sb-group.open .sb-sub{max-height:240px}
+.sb-sub .sb-item{padding-left:38px}
+.sb-sub .sb-item .ti{font-size:15px}
+.sb-chev{margin-left:auto;font-size:14px!important;transition:transform .18s;opacity:0}
+.sidebar:hover .sb-chev{opacity:1}
+.sb-group.open .sb-chev{transform:rotate(90deg)}
 
 /* TOPBAR */
 .topbar{height:54px;background:var(--white);border-bottom:0.5px solid var(--n150);display:flex;align-items:center;padding:0 20px;gap:10px;flex-shrink:0}
@@ -486,6 +494,22 @@ input,textarea,select{font-family:var(--font)}
     <div class="sb-item" id="nav-indicadores" onclick="goScreen('indicadores')">
       <i class="ti ti-chart-line"></i><span class="sb-lbl">Indicadores</span>
     </div>
+    <div class="sb-group" id="grp-ia">
+      <div class="sb-item" onclick="toggleIAGroup()">
+        <i class="ti ti-robot"></i><span class="sb-lbl">Minhas IA's</span><i class="ti ti-chevron-right sb-chev"></i>
+      </div>
+      <div class="sb-sub">
+        <div class="sb-item" id="nav-secretaria" onclick="goScreen('secretaria')">
+          <i class="ti ti-headset"></i><span class="sb-lbl">Secretária digital</span>
+        </div>
+        <div class="sb-item" id="nav-anamnese" onclick="goScreen('anamnese')">
+          <i class="ti ti-file-text-ai"></i><span class="sb-lbl">Gerador de Anamnese</span>
+        </div>
+        <div class="sb-item" id="nav-copiloto" onclick="goScreen('copiloto')">
+          <i class="ti ti-stethoscope"></i><span class="sb-lbl">Copiloto de consulta</span>
+        </div>
+      </div>
+    </div>
   </nav>
   <div class="sb-footer">
     <div class="sb-item"><i class="ti ti-settings"></i><span class="sb-lbl">Configurações</span></div>
@@ -898,6 +922,36 @@ input,textarea,select{font-family:var(--font)}
         <div id="chart-bars"></div>
       </div>
     </div>
+
+    <!-- SCREEN: SECRETÁRIA DIGITAL -->
+    <div id="s-secretaria" style="display:none">
+      <div class="rec-empty">
+        <i class="ti ti-headset"></i>
+        <h3>Secretária digital</h3>
+        <p>Em breve: agendamentos, confirmações e triagem automatizados por IA.</p>
+      </div>
+    </div>
+
+    <!-- SCREEN: COPILOTO -->
+    <div id="s-copiloto" style="display:none">
+      <div class="rec-empty">
+        <i class="ti ti-stethoscope"></i>
+        <h3>Copiloto de consulta</h3>
+        <p>Acesse o copiloto durante um atendimento aberto no prontuário do paciente.</p>
+      </div>
+    </div>
+
+    <!-- SCREEN: ANAMNESE -->
+    <div id="s-anamnese" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--n700)">Gerador de Anamnese</div>
+          <div style="font-size:11.5px;color:var(--n400);margin-top:2px">Modelos de prompt usados pela IA para gerar a anamnese do paciente.</div>
+        </div>
+        <button class="btn primary" onclick="openNewPromptModal()"><i class="ti ti-plus"></i> Novo prompt</button>
+      </div>
+      <div id="anamnese-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
   </div>
 </div>
 
@@ -1052,6 +1106,26 @@ Reduzir ingestão de sódio. Hidratação adequada. Evitar situações de estres
     <div class="mfoot">
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn primary" onclick="saveInfoComp()"><i class="ti ti-device-floppy"></i> Salvar informações</button>
+    </div>
+  </div>
+
+  <!-- NOVO/EDITAR PROMPT ANAMNESE -->
+  <div class="modal wide" id="m-anamnese-prompt" style="display:none">
+    <div class="mhd"><span class="mhd-title" id="map-title"><i class="ti ti-file-text-ai" style="font-size:14px;margin-right:5px"></i>Novo prompt de anamnese</span><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
+    <div class="mbody">
+      <input type="hidden" id="map-id">
+      <div class="fld" style="margin-bottom:10px"><label>Nome do modelo</label>
+        <input type="text" id="map-name" placeholder="Ex: Anamnese cardiologia">
+      </div>
+      <div style="font-size:11px;color:var(--n500);margin-bottom:6px">Variáveis do sistema (clique para inserir):</div>
+      <div id="map-vars" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div>
+      <div class="fld"><label>Prompt</label>
+        <textarea id="map-prompt" rows="14" placeholder="Escreva o prompt. Use as variáveis acima para injetar os dados do paciente." style="width:100%;font-family:var(--mono);font-size:12px;padding:10px;border:0.5px solid var(--n200);border-radius:var(--r6);resize:vertical;line-height:1.55"></textarea>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" onclick="saveAnamnesePrompt()"><i class="ti ti-device-floppy"></i> Salvar prompt</button>
     </div>
   </div>
 </div>
@@ -1223,7 +1297,7 @@ Reduzir sódio. Hidratação adequada. Evitar estresse.`;
 
 /* ========== SCREEN NAV ========== */
 function goScreen(name){
-  ['patients','patient-detail','receitas','indicadores'].forEach(s=>{
+  ['patients','patient-detail','receitas','indicadores','secretaria','anamnese','copiloto'].forEach(s=>{
     const el=document.getElementById('s-'+s);
     if(el)el.style.display='none';
   });
@@ -1232,14 +1306,19 @@ function goScreen(name){
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   const nav=document.getElementById('nav-'+name);
   if(nav)nav.classList.add('active');
-  const titles={patients:'Pacientes',receitas:'Receitas e Atestados',indicadores:'Indicadores'};
+  const titles={patients:'Pacientes',receitas:'Receitas e Atestados',indicadores:'Indicadores',secretaria:'Secretária digital',anamnese:'Gerador de Anamnese',copiloto:'Copiloto de consulta'};
   const pt=document.getElementById('page-title');
   pt.textContent=titles[name]||'Paciente';
   pt.style.cursor='';
   pt.onclick=null;
   document.getElementById('breadcrumb').innerHTML='';
   if(name==='indicadores')setTimeout(renderChart,50);
+  if(name==='anamnese')renderAnamneseList();
+  if(['secretaria','anamnese','copiloto'].includes(name)){
+    const g=document.getElementById('grp-ia');if(g)g.classList.add('open');
+  }
 }
+function toggleIAGroup(){document.getElementById('grp-ia').classList.toggle('open');}
 
 /* ========== SEARCH ========== */
 function renderPatients(list){
@@ -2136,6 +2215,172 @@ function renderChart(){
 
 /* ========== INIT ========== */
 bootstrap();
+
+/* ========== ANAMNESE PROMPTS ========== */
+const ANAMNESE_VARS=[
+  {k:'{resumo_paciente}',d:'Resumo do prontuário'},
+  {k:'{paciente_nome}',d:'Nome do paciente'},
+  {k:'{paciente_idade}',d:'Idade'},
+  {k:'{paciente_sexo}',d:'Sexo'},
+  {k:'{data_atendimento}',d:'Data do atendimento'},
+  {k:'{queixa_principal}',d:'Queixa principal'},
+  {k:'{info_complementar}',d:'Informações complementares'},
+  {k:'{ultimos_exames}',d:'Últimos exames'},
+  {k:'{medico_nome}',d:'Nome do médico'}
+];
+const DEFAULT_ANAMNESE_PROMPT=`Você é um assistente médico clínico avançado, integrado a um sistema de saúde digital.
+
+Seu objetivo é apoiar o médico — nunca substituí-lo. Todas as suas sugestões são recomendações baseadas em evidências e devem ser obrigatoriamente validadas pelo profissional responsável.
+
+# CONTEXTO DO PACIENTE
+
+Abaixo está o resumo clínico do paciente, incluindo dados de anamnese, atendimentos anteriores, exames e evoluções registradas no prontuário:
+
+<resumo_paciente>
+{resumo_paciente}
+</resumo_paciente>
+
+# INSTRUÇÕES DE COMPORTAMENTO
+
+Você deve aguardar o comando do médico antes de agir. Responda apenas ao que for explicitamente solicitado.
+
+Comandos possíveis (não exaustivo):
+
+## ANAMNESE E SOAP
+- "elabore a anamnese" → Gere o SOAP completo (S/O/A/P) com base nos dados disponíveis. Campos sem informação devem ser marcados como [PENDENTE], [DADO AUSENTE — perguntar ao paciente] ou [AGUARDANDO EXAME]. Nunca inferir ou inventar.
+- "sugira perguntas para a anamnese" → Liste perguntas abertas e direcionadas, organizadas por HDA, Revisão de sistemas, Hábitos de vida, Antecedentes pessoais, Antecedentes familiares, Contexto social, Saúde mental.
+- "revise o SOAP" → Identifique campos ausentes, inconsistências, contradições e lacunas relevantes.
+
+## RACIOCÍNIO DIAGNÓSTICO
+- "sugira hipóteses diagnósticas" → Liste hipóteses em ordem de probabilidade, informando grau de confiança (Alta/Moderada/Baixa), achados que sustentam e enfraquecem, dados para confirmação e diferenciais. Incluir CID-10 quando aplicável.
+- "analise os exames" → Correlacione achados laboratoriais, imagem, exame físico e queixa, destacando alterações significativas e limitações.
+- "estratifique o risco" → Aplique a ferramenta adequada (Wells, HEART, CURB-65, Framingham, SCORE, ASA, CHILD-PUGH).
+
+## CONDUTA
+- "sugira conduta" → Exames complementares, condutas terapêuticas, encaminhamentos, orientações, prazo de retorno — sempre justificados.
+- "proponha esquema terapêutico" → Para cada opção: medicamento, dose, via, frequência, duração, contraindicações, interações, ajustes por idade/peso/função renal/hepática/gestação/lactação.
+- "sugira exames" → Justificativa, objetivo diagnóstico, prioridade (urgente/prioritário/eletivo).
+- "elabore encaminhamento" → Resumo clínico, achados, hipótese, motivo, grau de urgência.
+
+## PREVENÇÃO
+- "sugira rastreamentos" → Baseado em idade, sexo, comorbidades, antecedentes; incluir recomendados, pendentes e em atraso; citar diretriz.
+- "avalie vacinas" → Registradas, pendentes, reforços, grupos especiais.
+
+## RESUMO E COMUNICAÇÃO
+- "resuma o caso" → Até 150 palavras, para contrarreferência/transferência/interconsulta.
+- "elabore orientações para o paciente" → Linguagem acessível, sem jargão.
+- "elabore atestado" → Modelo com campos padronizados.
+
+# TRIAGEM DE SINAIS DE ALARME (RED FLAGS)
+
+Antes de qualquer sugestão, avalie sinais de alarme (dor torácica aguda, dispneia importante, hipoxemia, alteração de consciência, déficit focal, AVC, sepse, hemorragia digestiva, abdome agudo, anafilaxia, convulsão, emergências obstétricas, ideação suicida, violência, suspeita de abuso). Quando identificados, crie a seção:
+
+# ALERTAS CLÍNICOS IMPORTANTES
+- sinal de alarme identificado
+- justificativa clínica
+- necessidade de avaliação urgente
+
+# REGRAS GERAIS
+1. Nunca tomar decisões clínicas autônomas.
+2. Toda recomendação é apoio ao médico responsável.
+3. Nunca inventar informações.
+4. Ausência de dados → use [DADO AUSENTE — perguntar ao paciente], [AGUARDANDO EXAME] ou [PENDENTE].
+5. Basear-se prioritariamente em PCDT, Ministério da Saúde, diretrizes brasileiras vigentes e sociedades médicas reconhecidas.
+6. Na ausência de diretriz nacional, usar guidelines internacionais atualizados.
+7. Fontes secundárias apoiam, não prevalecem sobre diretrizes oficiais.
+8. Sinalize ativamente interações graves, alergias, contraindicações, sinais de alarme e notificação compulsória.
+9. Pediatria: considerar peso corporal.
+10. Gestantes/lactantes: avaliar segurança conforme evidências e regulação vigente.
+11. Justifique dados que sustentam cada hipótese, exame ou recomendação.
+12. Diferencie fatos do prontuário, inferências clínicas e informações ausentes.
+13. Declare limitações quando os dados forem insuficientes.
+14. Hipóteses: informar grau de confiança e justificativa.
+15. Nunca apresentar hipótese como diagnóstico confirmado sem evidência.
+16. Linguagem técnica, objetiva, estruturada e adequada ao registro clínico.
+17. Ao elaborar SOAP, seguir rigorosamente o modelo estrutural do sistema.
+18. Respeitar integralmente a LGPD.`;
+
+function loadAnamneseModels(){
+  let arr=[];
+  try{arr=JSON.parse(localStorage.getItem('anamnese_models')||'[]');}catch{arr=[];}
+  if(!arr.find(m=>m.id==='default')){
+    arr.unshift({id:'default',name:'Modelo padrão',prompt:DEFAULT_ANAMNESE_PROMPT,readonly:true,createdAt:Date.now()});
+    saveAnamneseModels(arr);
+  }
+  return arr;
+}
+function saveAnamneseModels(arr){localStorage.setItem('anamnese_models',JSON.stringify(arr));}
+function renderAnamneseList(){
+  const el=document.getElementById('anamnese-list');if(!el)return;
+  const models=loadAnamneseModels();
+  el.innerHTML=models.map(m=>{
+    const isDef=m.id==='default';
+    const preview=(m.prompt||'').slice(0,140).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))+((m.prompt||'').length>140?'…':'');
+    return `<div style="border:0.5px solid var(--n200);border-radius:var(--r8);padding:12px 14px;background:var(--white);display:flex;align-items:flex-start;gap:12px">
+      <div style="width:32px;height:32px;border-radius:var(--r6);background:var(--g50);color:var(--g600);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-file-text-ai" style="font-size:16px"></i></div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:600;color:var(--n700)">${m.name}</span>${isDef?'<span style="font-size:9.5px;padding:1px 6px;border-radius:10px;background:var(--g50);color:var(--g600);border:0.5px solid var(--g200);font-weight:600">PADRÃO</span>':''}</div>
+        <div style="font-size:11.5px;color:var(--n400);margin-top:4px;line-height:1.5">${preview}</div>
+      </div>
+      <div style="display:flex;gap:4px;flex-shrink:0">
+        <button class="ib" title="Visualizar / editar" onclick="openEditPromptModal('${m.id}')"><i class="ti ti-${isDef?'eye':'edit'}"></i></button>
+        ${isDef?'':`<button class="ib" title="Excluir" onclick="deleteAnamnesePrompt('${m.id}')"><i class="ti ti-trash"></i></button>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+function openNewPromptModal(){
+  document.getElementById('map-id').value='';
+  document.getElementById('map-name').value='';
+  document.getElementById('map-prompt').value='';
+  document.getElementById('map-title').innerHTML='<i class="ti ti-file-text-ai" style="font-size:14px;margin-right:5px"></i>Novo prompt de anamnese';
+  document.getElementById('map-name').readOnly=false;
+  document.getElementById('map-prompt').readOnly=false;
+  renderVarChips();
+  openModal('m-anamnese-prompt');
+}
+function openEditPromptModal(id){
+  const m=loadAnamneseModels().find(x=>x.id===id);if(!m)return;
+  document.getElementById('map-id').value=m.id;
+  document.getElementById('map-name').value=m.name;
+  document.getElementById('map-prompt').value=m.prompt;
+  const ro=!!m.readonly;
+  document.getElementById('map-name').readOnly=ro;
+  document.getElementById('map-prompt').readOnly=ro;
+  document.getElementById('map-title').innerHTML='<i class="ti ti-file-text-ai" style="font-size:14px;margin-right:5px"></i>'+(ro?'Modelo padrão (somente leitura)':'Editar prompt');
+  renderVarChips();
+  openModal('m-anamnese-prompt');
+}
+function renderVarChips(){
+  const c=document.getElementById('map-vars');
+  c.innerHTML=ANAMNESE_VARS.map(v=>`<button type="button" onclick="insertVar('${v.k}')" title="${v.d}" style="font-size:10.5px;font-family:var(--mono);padding:3px 8px;border:0.5px solid var(--n200);border-radius:12px;background:var(--n50);color:var(--n600);cursor:pointer">${v.k}</button>`).join('');
+}
+function insertVar(k){
+  const ta=document.getElementById('map-prompt');if(ta.readOnly)return;
+  const s=ta.selectionStart,e=ta.selectionEnd;
+  ta.value=ta.value.slice(0,s)+k+ta.value.slice(e);
+  ta.focus();ta.selectionStart=ta.selectionEnd=s+k.length;
+}
+function saveAnamnesePrompt(){
+  const id=document.getElementById('map-id').value;
+  const name=document.getElementById('map-name').value.trim();
+  const prompt=document.getElementById('map-prompt').value.trim();
+  const arr=loadAnamneseModels();
+  const existing=id?arr.find(m=>m.id===id):null;
+  if(existing&&existing.readonly){closeModal();return;}
+  if(!name||!prompt){alert('Preencha nome e prompt.');return;}
+  if(existing){existing.name=name;existing.prompt=prompt;}
+  else arr.push({id:'p'+Date.now(),name,prompt,createdAt:Date.now()});
+  saveAnamneseModels(arr);
+  closeModal();
+  renderAnamneseList();
+}
+function deleteAnamnesePrompt(id){
+  if(!confirm('Excluir este prompt?'))return;
+  const arr=loadAnamneseModels().filter(m=>m.id!==id);
+  saveAnamneseModels(arr);
+  renderAnamneseList();
+}
 </script>
 </body>
 </html>
