@@ -1716,8 +1716,32 @@ function suggestAction(){
 
 function sendAIMsg(){
   const inp=document.getElementById('ai-inp');if(!inp||!inp.value.trim())return;
-  spawnBubble('usr',inp.value);inp.value='';
-  setTimeout(()=>spawnBubble('ia'),850);
+  if(aiBusy)return;
+  const userText=inp.value.trim();inp.value='';
+  spawnBubble('usr',userText);
+  aiChatHistory.push({role:'user',content:userText});
+  aiBusy=true;
+  const btn=document.querySelector('.ai-sbtn');if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>';}
+  fetch('/api/chat-ia',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({mode:'chat',messages:aiChatHistory,resumo_prontuario:currentResumoProntuario||''})
+  })
+  .then(async r=>{if(!r.ok)throw new Error(await r.text());return r.json();})
+  .then(d=>{
+    const reply=(d.reply||'').trim()||'(sem resposta)';
+    aiChatHistory.push({role:'assistant',content:reply});
+    spawnBubble('ia',reply);
+    // Persiste mensagens da consulta atual (best-effort)
+    if(window._idConsultaAtual){
+      sb.from('mensagens_consulta').insert([
+        {id_consulta:window._idConsultaAtual,role:'user',content:userText},
+        {id_consulta:window._idConsultaAtual,role:'assistant',content:reply}
+      ]).then(()=>{}).catch(()=>{});
+    }
+  })
+  .catch(e=>{spawnBubble('ia','⚠️ Erro ao consultar a IA: '+(e.message||e));})
+  .finally(()=>{aiBusy=false;if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-send"></i>';}});
 }
 
 /* ========== RESUMO PANEL ========== */
