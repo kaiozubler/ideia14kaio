@@ -1139,6 +1139,11 @@ let aiRespIdx=0;
 let sugIdx=0;
 // Atendimento em andamento (persiste durante navegação)
 let atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[]};
+// IA conversacional do atendimento em andamento
+let aiChatHistory=[]; // [{role:'user'|'assistant',content:string}]
+let aiBusy=false;
+let currentResumoProntuario=''; // texto do resumo do paciente atual
+let resumoProcessando=false;
 
 const transcripts=['Paciente refere cefaleia há 3 dias...','Nega febre. Relata náuseas matinais.','Em uso de Losartana 50mg.','Pressão aferida: 148 por 92 mmHg.','Queixa de insônia recente.','Paciente apresenta-se ansiosa...'];
 const aiSuggestions=['Há quanto tempo a crise persiste?','Verificar PA agora?','Uso de medicação SOS?','Fotofobia ou fonofobia?','Histórico familiar de enxaqueca?','Atividade física regular?'];
