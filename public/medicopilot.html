@@ -1592,6 +1592,62 @@ function saveDadosClinicos(){
   badge.innerHTML='<i class="ti ti-check"></i> Dados Clínicos salvos';
   setTimeout(()=>badge.innerHTML='<i class="ti ti-check"></i> Atualizado',1500);
 }
+/* ========== INFORMAÇÕES COMPLEMENTARES ========== */
+function infoCompKey(){return 'infoComp_'+((currentPatient&&currentPatient.id)||'anon');}
+function loadInfoComp(){
+  try{return JSON.parse(localStorage.getItem(infoCompKey())||'{}');}catch{return {};}
+}
+function calcIMC(){
+  const p=parseFloat(document.getElementById('ic-peso').value);
+  const a=parseFloat(document.getElementById('ic-altura').value);
+  const out=document.getElementById('ic-imc');
+  if(p>0&&a>0){const m=a/100;const imc=p/(m*m);let cl='';
+    if(imc<18.5)cl=' (baixo peso)';else if(imc<25)cl=' (eutrofia)';else if(imc<30)cl=' (sobrepeso)';else if(imc<35)cl=' (obesidade I)';else if(imc<40)cl=' (obesidade II)';else cl=' (obesidade III)';
+    out.value=imc.toFixed(1)+cl;
+  }else out.value='';
+}
+function openInfoComp(){
+  if(!currentPatient){alert('Selecione um paciente primeiro.');return;}
+  const d=loadInfoComp();
+  ['peso','altura','sangue','sedent','tab','eti','ocup','meds','alerg','fam','outros'].forEach(k=>{
+    const el=document.getElementById('ic-'+k);if(el)el.value=d[k]||'';
+  });
+  calcIMC();
+  ['ic-peso','ic-altura'].forEach(id=>{const el=document.getElementById(id);if(el){el.oninput=calcIMC;}});
+  openModal('info-comp');
+}
+function saveInfoComp(){
+  const d={};
+  ['peso','altura','sangue','sedent','tab','eti','ocup','meds','alerg','fam','outros'].forEach(k=>{
+    const el=document.getElementById('ic-'+k);if(el)d[k]=el.value.trim();
+  });
+  d.updated_at=new Date().toISOString();
+  localStorage.setItem(infoCompKey(),JSON.stringify(d));
+  renderInfoCompSummary();
+  closeModal();
+  const badge=document.getElementById('pront-badge');
+  if(badge){badge.innerHTML='<i class="ti ti-check"></i> Informações complementares salvas';setTimeout(()=>badge.innerHTML='<i class="ti ti-check"></i> Atualizado',1800);}
+}
+function renderInfoCompSummary(){
+  const box=document.getElementById('info-comp-summary');
+  if(!box)return;
+  const d=loadInfoComp();
+  const parts=[];
+  if(d.peso)parts.push('<b>Peso:</b> '+d.peso+' kg');
+  if(d.altura)parts.push('<b>Altura:</b> '+d.altura+' cm');
+  if(d.peso&&d.altura){const m=parseFloat(d.altura)/100;const imc=parseFloat(d.peso)/(m*m);if(isFinite(imc))parts.push('<b>IMC:</b> '+imc.toFixed(1));}
+  if(d.sangue)parts.push('<b>Sangue:</b> '+d.sangue);
+  if(d.sedent)parts.push('<b>Atividade:</b> '+d.sedent);
+  if(d.tab)parts.push('<b>Tabagismo:</b> '+d.tab);
+  if(d.eti)parts.push('<b>Etilismo:</b> '+d.eti);
+  if(d.ocup)parts.push('<b>Ocupação:</b> '+d.ocup);
+  if(d.meds)parts.push('<b>Medicamentos:</b> '+d.meds);
+  if(d.alerg)parts.push('<b>Alergias:</b> '+d.alerg);
+  if(d.fam)parts.push('<b>Antec. familiares:</b> '+d.fam);
+  if(d.outros)parts.push('<b>Outras:</b> '+d.outros);
+  if(parts.length){box.innerHTML='<div style="font-weight:600;color:#92400e;font-size:10px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px"><i class="ti ti-clipboard-list" style="font-size:11px"></i> Informações complementares</div>'+parts.join(' &nbsp;·&nbsp; ');box.style.display='block';}
+  else{box.innerHTML='';box.style.display='none';}
+}
 function reprocessHistory(){
   const icon=document.getElementById('reprocess-icon');
   const badge=document.getElementById('pront-badge');
