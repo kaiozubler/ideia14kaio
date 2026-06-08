@@ -1716,6 +1716,100 @@ function suggestAction(){
   spawnBubble('ia','Sugestão de conduta: Ajustar Losartana 50mg → 100mg + Dipirona 500mg 6/6h + Retorno 7 dias. Confirmar?');
 }
 
+/* ========== CONSULTA + RESUMO PRONTUÁRIO (IA) ========== */
+function setResumoBadge(state){
+  // state: 'idle' | 'processing' | 'done' | 'error'
+  let badge=document.getElementById('resumo-badge');
+  if(!badge){
+    const host=document.querySelector('#atend-novo-view > div'); // header row
+    if(!host)return;
+    badge=document.createElement('span');
+    badge.id='resumo-badge';
+    badge.style.cssText='display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:3px 9px;border-radius:20px;border:0.5px solid var(--n200);background:var(--n50);color:var(--n600);margin-right:8px';
+    host.insertBefore(badge,host.lastElementChild);
+  }
+  if(state==='processing'){badge.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Atualizando resumo do prontuário…';badge.style.color='#92400e';badge.style.background='#fef9c3';badge.style.borderColor='#fde047';}
+  else if(state==='done'){badge.innerHTML='<i class="ti ti-sparkles"></i> Resumo do prontuário pronto';badge.style.color='var(--g700)';badge.style.background='var(--g50)';badge.style.borderColor='var(--g200)';setTimeout(()=>{if(badge)badge.style.display='none';},4000);}
+  else if(state==='error'){badge.innerHTML='<i class="ti ti-alert-triangle"></i> Falha ao gerar resumo';badge.style.color='#991b1b';badge.style.background='#fee2e2';badge.style.borderColor='#fecaca';}
+  else{badge.style.display='none';}
+  badge.style.display='inline-flex';
+}
+
+async function iniciarConsultaEResumo(){
+  window._idConsultaAtual=null;
+  if(!currentPatient||!currentUser)return;
+  // 1) cria registro de consulta (best-effort; se falhar segue sem persistir)
+  try{
+    const {data,error}=await sb.from('consulta').insert({
+      id_paciente:currentPatient.id,
+      id_medico:currentUser.id,
+      started_at:new Date().toISOString()
+    }).select('id').single();
+    if(!error&&data)window._idConsultaAtual=data.id;
+  }catch(e){console.warn('consulta insert falhou',e);}
+
+  // 2) garante resumo do prontuário conforme regra (cadastro alterado OU >60 dias)
+  ensureResumoProntuario(currentPatient.id).catch(e=>console.error('resumo erro',e));
+}
+
+async function ensureResumoProntuario(idPaciente){
+  if(resumoProcessando)return;
+  resumoProcessando=true;
+  setResumoBadge('processing');
+  try{
+    // busca último resumo
+    const {data:rows}=await sb.from('resumo_prontuario')
+      .select('id,resumo,updated_at,paciente_updated_at')
+      .eq('id_paciente',idPaciente)
+      .order('updated_at',{ascending:false})
+      .limit(1);
+    const last=rows&&rows[0];
+    // pega paciente para comparar timestamp
+    const {data:pac}=await sb.from('pacientes').select('*').eq('id_paciente',idPaciente).single();
+    const pacUpdated=pac?(pac.updated_at||pac.created_at||null):null;
+    const now=Date.now();
+    let precisa=true;
+    if(last){
+      const ageDays=(now-new Date(last.updated_at).getTime())/(1000*60*60*24);
+      const cadastroMudou=pacUpdated&&last.paciente_updated_at&&new Date(pacUpdated).getTime()>new Date(last.paciente_updated_at).getTime();
+      precisa=cadastroMudou||ageDays>60;
+      if(!precisa){
+        currentResumoProntuario=last.resumo||'';
+        setResumoBadge('done');
+        return;
+      }
+    }
+    // busca atendimentos e exames (best-effort; tabelas podem variar)
+    let atends=[],exs=[];
+    try{const{data}=await sb.from('consulta').select('*').eq('id_paciente',idPaciente).order('started_at',{ascending:false}).limit(10);atends=data||[];}catch(e){}
+    try{const{data}=await sb.from('exames').select('*').eq('id_paciente',idPaciente).order('created_at',{ascending:false}).limit(20);exs=data||[];}catch(e){}
+
+    const res=await fetch('/api/chat-ia',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({mode:'resumo',paciente:pac,atendimentos:atends,exames:exs})
+    });
+    if(!res.ok)throw new Error(await res.text());
+    const {resumo}=await res.json();
+    currentResumoProntuario=resumo||'';
+    // upsert
+    try{
+      await sb.from('resumo_prontuario').insert({
+        id_paciente:idPaciente,
+        id_medico:currentUser?.id||null,
+        resumo:currentResumoProntuario,
+        paciente_updated_at:pacUpdated,
+        updated_at:new Date().toISOString()
+      });
+    }catch(e){console.warn('falha ao salvar resumo',e);}
+    setResumoBadge('done');
+  }catch(e){
+    console.error('ensureResumoProntuario',e);
+    setResumoBadge('error');
+  }finally{
+    resumoProcessando=false;
+  }
+}
+
 function sendAIMsg(){
   const inp=document.getElementById('ai-inp');if(!inp||!inp.value.trim())return;
   if(aiBusy)return;
