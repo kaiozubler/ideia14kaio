@@ -1191,7 +1191,7 @@ function renderPatients(list){
   if(!list.length){el.innerHTML='<div class="empty-st"><i class="ti ti-user-search"></i><p>Nenhum resultado encontrado</p></div>';ct.textContent='0 pacientes';return;}
   ct.textContent=list.length+' paciente'+(list.length!==1?'s':'');
   el.innerHTML=list.map(p=>`
-    <div class="pt-row" onclick="openPatient(${p.id})">
+    <div class="pt-row" onclick='openPatient(${JSON.stringify(p.id)})'>
       <div class="pt-av">${p.init}</div>
       <div class="pt-info">
         <div class="pt-name">${p.name}</div>
