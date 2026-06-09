@@ -1009,6 +1009,25 @@ input,textarea,select{font-family:var(--font)}
         <div class="fld"><label>Tipo</label>
           <select id="exame-tipo"><option>Laboratorial</option><option>Imagem</option><option>Laudo</option><option>Receita</option><option>Atestado</option><option>Documento</option><option>Outro</option></select>
         </div>
+        <div class="fld"><label>Tempo de validade</label>
+          <select id="exame-dur" onchange="toggleExameDurCustom()">
+            <option value="indef">Indefinido</option>
+            <option value="30">30 dias</option>
+            <option value="60">60 dias</option>
+            <option value="90">3 meses</option>
+            <option value="180">6 meses</option>
+            <option value="365">12 meses</option>
+            <option value="730">24 meses</option>
+            <option value="custom">Personalizado…</option>
+          </select>
+        </div>
+        <div class="fld" id="exame-dur-custom-wrap" style="display:none">
+          <label>Dias</label>
+          <input type="number" min="1" id="exame-dur-custom" placeholder="Ex: 45">
+        </div>
+        <div class="fld wide" style="margin-top:-4px">
+          <p style="font-size:10.5px;color:var(--n400);font-style:italic;margin:0"><i class="ti ti-info-circle" style="font-size:11px"></i> Este será o prazo em que a IA considerará este exame.</p>
+        </div>
         <div class="fld wide"><label>Observação</label><input type="text" id="exame-obs" placeholder="Notas adicionais, valores relevantes..."></div>
       </div>
     </div>
