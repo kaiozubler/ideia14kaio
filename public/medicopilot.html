@@ -1668,6 +1668,8 @@ function renderProntuario(){
       <div id="pront-resumo-text" style="font-size:12.5px;color:var(--n700);line-height:1.7;white-space:pre-wrap">Carregando…</div>`;
     area.parentNode.insertBefore(wrap,area);
   }
+  // Alerta de prontuário desatualizado (>90 dias)
+  renderProntStaleAlert();
   loadResumoProntuarioIntoPanel();
 
   // Dados clínicos
