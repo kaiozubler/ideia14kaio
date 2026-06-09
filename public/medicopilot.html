@@ -642,6 +642,7 @@ input,textarea,select{font-family:var(--font)}
           <div class="fld"><label>Sexo</label>
             <select id="d-sexo"><option>Feminino</option><option>Masculino</option><option>Outro</option></select>
           </div>
+          <div class="fld wide"><label>Ocupação</label><input type="text" id="d-ocup" placeholder="Ex: Trabalho de escritório, professora, motorista..."></div>
           <div class="fld wide">
             <label>Médico preferencial <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
             <select id="d-medico">
@@ -1008,6 +1009,25 @@ input,textarea,select{font-family:var(--font)}
         <div class="fld"><label>Tipo</label>
           <select id="exame-tipo"><option>Laboratorial</option><option>Imagem</option><option>Laudo</option><option>Receita</option><option>Atestado</option><option>Documento</option><option>Outro</option></select>
         </div>
+        <div class="fld"><label>Tempo de validade</label>
+          <select id="exame-dur" onchange="toggleExameDurCustom()">
+            <option value="indef">Indefinido</option>
+            <option value="30">30 dias</option>
+            <option value="60">60 dias</option>
+            <option value="90">3 meses</option>
+            <option value="180">6 meses</option>
+            <option value="365">12 meses</option>
+            <option value="730">24 meses</option>
+            <option value="custom">Personalizado…</option>
+          </select>
+        </div>
+        <div class="fld" id="exame-dur-custom-wrap" style="display:none">
+          <label>Dias</label>
+          <input type="number" min="1" id="exame-dur-custom" placeholder="Ex: 45">
+        </div>
+        <div class="fld wide" style="margin-top:-4px">
+          <p style="font-size:10.5px;color:var(--n400);font-style:italic;margin:0"><i class="ti ti-info-circle" style="font-size:11px"></i> Este será o prazo em que a IA considerará este exame.</p>
+        </div>
         <div class="fld wide"><label>Observação</label><input type="text" id="exame-obs" placeholder="Notas adicionais, valores relevantes..."></div>
       </div>
     </div>
@@ -1096,7 +1116,9 @@ Reduzir ingestão de sódio. Hidratação adequada. Evitar situações de estres
         <div class="fld"><label>Etilismo</label>
           <select id="ic-eti"><option value="">—</option><option>Não consome</option><option>Social / ocasional</option><option>Frequente</option><option>Etilista crônico</option></select>
         </div>
-        <div class="fld"><label>Atividade ocupacional</label><input type="text" id="ic-ocup" placeholder="Ex: Trabalho de escritório"></div>
+        <div class="fld"><label>Sono</label>
+          <select id="ic-sono"><option value="">—</option><option>Bom / reparador</option><option>Regular</option><option>Insônia ocasional</option><option>Insônia frequente</option><option>Sonolência diurna excessiva</option><option>Suspeita de apneia do sono</option></select>
+        </div>
         <div class="fld wide"><label>Medicamentos em uso</label><textarea id="ic-meds" rows="2" placeholder="Ex: Losartana 50mg 1x/dia; Sinvastatina 20mg à noite..." style="width:100%;font-family:var(--font);font-size:13px;padding:7px 10px;border:0.5px solid var(--n200);border-radius:var(--r6);resize:vertical"></textarea></div>
         <div class="fld wide"><label>Alergias</label><input type="text" id="ic-alerg" placeholder="Ex: Dipirona, Penicilina, frutos do mar..."></div>
         <div class="fld wide"><label>Antecedentes familiares</label><textarea id="ic-fam" rows="2" placeholder="Ex: Mãe — HAS e DM2; Pai — IAM aos 58 anos..." style="width:100%;font-family:var(--font);font-size:13px;padding:7px 10px;border:0.5px solid var(--n200);border-radius:var(--r6);resize:vertical"></textarea></div>
@@ -1196,10 +1218,10 @@ function showApp(){
 }
 
 async function loadPatients(){
-  const {data,error}=await sb.from('pacientes').select('id_paciente,name,data_nascimento,created_at').order('created_at',{ascending:false});
+  const {data,error}=await sb.from('pacientes').select('paciente_id,name,data_nascimento,created_at').order('created_at',{ascending:false});
   if(error){console.error('Erro ao carregar pacientes:',error);patients=[];renderPatients(patients);return;}
   patients=(data||[]).map(p=>({
-    id:p.id_paciente,
+    id:p.paciente_id,
     name:p.name||'(sem nome)',
     dob:p.data_nascimento?p.data_nascimento.split('-').reverse().join('/'):'—',
     nasc:p.data_nascimento||'',
@@ -1387,6 +1409,7 @@ function openPatient(id){
   document.getElementById('d-nasc').value=currentPatient.nasc;
   document.getElementById('d-sus').value=currentPatient.sus==='—'?'':currentPatient.sus;
   const ms=document.getElementById('d-medico');if(ms)ms.value=currentPatient.medico||'';
+  const op=document.getElementById('d-ocup');if(op)op.value=loadCadastroExtra().ocup||'';
   openTab('cadastro',document.querySelector('.tab'));
   renderAtendimentos();renderExames();renderTimeline();updateAtendProgress();
 }
@@ -1400,7 +1423,14 @@ function saveCadastro(){
     else mb.style.display='none';
     timelineEvents.unshift({date:new Date().toLocaleDateString('pt-BR'),type:'cadastro',icon:'ti-user-edit',title:'Cadastro atualizado',sub:'Dados alterados'});
   }
+  const op=document.getElementById('d-ocup');
+  if(op&&currentPatient){
+    const extra=loadCadastroExtra();extra.ocup=op.value.trim();extra.updated_at=new Date().toISOString();
+    localStorage.setItem(cadastroExtraKey(),JSON.stringify(extra));
+  }
 }
+function cadastroExtraKey(){return 'cadastroExtra_'+((currentPatient&&currentPatient.id)||'anon');}
+function loadCadastroExtra(){try{return JSON.parse(localStorage.getItem(cadastroExtraKey())||'{}');}catch{return {};}}
 
 /* ========== TABS ========== */
 function openTab(name,el){
@@ -1584,7 +1614,7 @@ function renderExames(){
   list.innerHTML=exames.map(e=>`
     <div class="exame-item">
       <div class="exame-icon"><i class="ti ${iconMap[e.tipo]||'ti-file'}"></i></div>
-      <div class="exame-body"><div class="exame-name">${e.nome}</div><div class="exame-obs">${e.obs}</div></div>
+      <div class="exame-body"><div class="exame-name">${e.nome}</div><div class="exame-obs">${e.obs}${e.validade?' \u00b7 Validade IA: '+e.validade:''}</div></div>
       <span class="exame-date">${e.data}</span>
       <div class="exame-acts">
         <button class="ra-btn" title="Visualizar"><i class="ti ti-eye"></i></button>
@@ -1597,11 +1627,29 @@ function deleteExame(id){exames=exames.filter(e=>e.id!==id);renderExames();}
 function saveExame(){
   const nome=document.getElementById('exame-nome').value.trim();if(!nome)return;
   const fn=document.getElementById('file-name');
-  exames.unshift({id:Date.now(),nome,tipo:document.getElementById('exame-tipo').value,data:document.getElementById('exame-data').value||new Date().toLocaleDateString('pt-BR'),obs:document.getElementById('exame-obs').value,file:fn?fn.textContent:'—'});
+  const durSel=document.getElementById('exame-dur');
+  const durVal=durSel?durSel.value:'indef';
+  let validade='Indefinido',validadeDias=null;
+  if(durVal==='custom'){
+    const n=parseInt(document.getElementById('exame-dur-custom').value,10);
+    if(n>0){validadeDias=n;validade=n+' dias';}
+  }else if(durVal!=='indef'){
+    validadeDias=parseInt(durVal,10);
+    const map={'30':'30 dias','60':'60 dias','90':'3 meses','180':'6 meses','365':'12 meses','730':'24 meses'};
+    validade=map[durVal]||(validadeDias+' dias');
+  }
+  exames.unshift({id:Date.now(),nome,tipo:document.getElementById('exame-tipo').value,data:document.getElementById('exame-data').value||new Date().toLocaleDateString('pt-BR'),obs:document.getElementById('exame-obs').value,file:fn?fn.textContent:'—',validade,validadeDias});
   timelineEvents.unshift({date:new Date().toLocaleDateString('pt-BR'),type:'exame',icon:'ti-flask',title:'Exame adicionado: '+nome,sub:document.getElementById('exame-obs').value||''});
   renderExames();clearFile();
   document.getElementById('exame-nome').value='';document.getElementById('exame-obs').value='';
+  if(durSel)durSel.value='indef';
+  const dcw=document.getElementById('exame-dur-custom-wrap');if(dcw)dcw.style.display='none';
+  const dci=document.getElementById('exame-dur-custom');if(dci)dci.value='';
   closeModal();
+}
+function toggleExameDurCustom(){
+  const v=document.getElementById('exame-dur').value;
+  document.getElementById('exame-dur-custom-wrap').style.display=v==='custom'?'':'none';
 }
 function previewFile(input){
   const wrap=document.getElementById('file-preview-wrap');
@@ -1657,6 +1705,8 @@ function renderProntuario(){
       <div id="pront-resumo-text" style="font-size:12.5px;color:var(--n700);line-height:1.7;white-space:pre-wrap">Carregando…</div>`;
     area.parentNode.insertBefore(wrap,area);
   }
+  // Alerta de prontuário desatualizado (>90 dias)
+  renderProntStaleAlert();
   loadResumoProntuarioIntoPanel();
 
   // Dados clínicos
@@ -1685,6 +1735,39 @@ function saveDadosClinicos(){
   const badge=document.getElementById('pront-badge');
   badge.innerHTML='<i class="ti ti-check"></i> Dados Clínicos salvos';
   setTimeout(()=>badge.innerHTML='<i class="ti ti-check"></i> Atualizado',1500);
+  try{
+    const k='dadosClinicosUpd_'+((currentPatient&&currentPatient.id)||'anon');
+    localStorage.setItem(k,new Date().toISOString());
+  }catch{}
+  renderProntStaleAlert();
+}
+function lastProntUpdateISO(){
+  if(!currentPatient)return null;
+  const ic=loadInfoComp().updated_at||null;
+  const ce=loadCadastroExtra().updated_at||null;
+  let dc=null;try{dc=localStorage.getItem('dadosClinicosUpd_'+currentPatient.id);}catch{}
+  const dates=[ic,ce,dc].filter(Boolean).map(s=>new Date(s).getTime()).filter(n=>!isNaN(n));
+  if(!dates.length)return null;
+  return new Date(Math.max(...dates)).toISOString();
+}
+function renderProntStaleAlert(){
+  const host=document.getElementById('tb-prontuario');
+  if(!host)return;
+  let el=document.getElementById('pront-stale-alert');
+  const last=lastProntUpdateISO();
+  const THRESHOLD_DAYS=90;
+  const stale=!last||((Date.now()-new Date(last).getTime())/(1000*60*60*24)>THRESHOLD_DAYS);
+  if(!stale){if(el)el.remove();return;}
+  const msg=last
+    ? 'Dados do prontuário sem atualização há mais de 3 meses (última: '+new Date(last).toLocaleDateString('pt-BR')+'). Revise e atualize se necessário.'
+    : 'Os dados clínicos deste paciente ainda não foram atualizados. Preencha as informações complementares.';
+  if(!el){
+    el=document.createElement('div');
+    el.id='pront-stale-alert';
+    el.style.cssText='display:flex;align-items:flex-start;gap:8px;background:#fef2f2;border:0.5px solid #fecaca;color:#991b1b;border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:12px;line-height:1.5';
+    host.insertBefore(el,host.firstChild);
+  }
+  el.innerHTML='<i class="ti ti-alert-triangle" style="font-size:15px;color:#dc2626;flex-shrink:0;margin-top:1px"></i><div style="flex:1"><b>Prontuário desatualizado.</b> '+msg+'</div><button class="btn sm" onclick="openInfoComp()" style="flex-shrink:0"><i class="ti ti-edit"></i> Atualizar</button>';
 }
 /* ========== INFORMAÇÕES COMPLEMENTARES ========== */
 function infoCompKey(){return 'infoComp_'+((currentPatient&&currentPatient.id)||'anon');}
@@ -1703,7 +1786,7 @@ function calcIMC(){
 function openInfoComp(){
   if(!currentPatient){alert('Selecione um paciente primeiro.');return;}
   const d=loadInfoComp();
-  ['peso','altura','sangue','sedent','tab','eti','ocup','meds','alerg','fam','outros'].forEach(k=>{
+  ['peso','altura','sangue','sedent','tab','eti','sono','meds','alerg','fam','outros'].forEach(k=>{
     const el=document.getElementById('ic-'+k);if(el)el.value=d[k]||'';
   });
   calcIMC();
@@ -1712,12 +1795,13 @@ function openInfoComp(){
 }
 function saveInfoComp(){
   const d={};
-  ['peso','altura','sangue','sedent','tab','eti','ocup','meds','alerg','fam','outros'].forEach(k=>{
+  ['peso','altura','sangue','sedent','tab','eti','sono','meds','alerg','fam','outros'].forEach(k=>{
     const el=document.getElementById('ic-'+k);if(el)d[k]=el.value.trim();
   });
   d.updated_at=new Date().toISOString();
   localStorage.setItem(infoCompKey(),JSON.stringify(d));
   renderInfoCompSummary();
+  renderProntStaleAlert();
   closeModal();
   const badge=document.getElementById('pront-badge');
   if(badge){badge.innerHTML='<i class="ti ti-check"></i> Informações complementares salvas';setTimeout(()=>badge.innerHTML='<i class="ti ti-check"></i> Atualizado',1800);}
@@ -1734,7 +1818,7 @@ function renderInfoCompSummary(){
   if(d.sedent)parts.push('<b>Atividade:</b> '+d.sedent);
   if(d.tab)parts.push('<b>Tabagismo:</b> '+d.tab);
   if(d.eti)parts.push('<b>Etilismo:</b> '+d.eti);
-  if(d.ocup)parts.push('<b>Ocupação:</b> '+d.ocup);
+  if(d.sono)parts.push('<b>Sono:</b> '+d.sono);
   if(d.meds)parts.push('<b>Medicamentos:</b> '+d.meds);
   if(d.alerg)parts.push('<b>Alergias:</b> '+d.alerg);
   if(d.fam)parts.push('<b>Antec. familiares:</b> '+d.fam);
@@ -1954,7 +2038,7 @@ async function iniciarConsultaEResumo(){
   // 1) cria registro de consulta (best-effort; se falhar segue sem persistir)
   try{
     const {data,error}=await sb.from('consulta').insert({
-      id_paciente:currentPatient.id,
+      paciente_id:currentPatient.id,
       id_medico:currentUser.id,
       started_at:new Date().toISOString()
     }).select('id').single();
@@ -1974,13 +2058,13 @@ async function ensureResumoProntuario(idPaciente,opts){
     // busca último resumo
     const {data:rows,error:loadErr}=await sb.from('resumo_prontuario')
       .select('id,resumo,updated_at,paciente_updated_at')
-      .eq('id_paciente',idPaciente)
+      .eq('paciente_id',idPaciente)
       .order('updated_at',{ascending:false})
       .limit(1);
     if(loadErr&&loadErr.code!=='PGRST205')throw loadErr;
     const last=(rows&&rows[0])||loadResumoLocal(idPaciente);
     // pega paciente para comparar timestamp
-    const {data:pac}=await sb.from('pacientes').select('*').eq('id_paciente',idPaciente).single();
+    const {data:pac}=await sb.from('pacientes').select('*').eq('paciente_id',idPaciente).single();
     const pacUpdated=pac?(pac.updated_at||pac.created_at||null):null;
     const now=Date.now();
     let precisa=!!force;
@@ -1997,8 +2081,8 @@ async function ensureResumoProntuario(idPaciente,opts){
     }else if(!force){precisa=true;}
     // busca atendimentos e exames (best-effort; tabelas podem variar)
     let atends=[],exs=[];
-    try{const{data}=await sb.from('consulta').select('*').eq('id_paciente',idPaciente).order('started_at',{ascending:false}).limit(10);atends=data||[];}catch(e){}
-    try{const{data}=await sb.from('exames').select('*').eq('id_paciente',idPaciente).order('created_at',{ascending:false}).limit(20);exs=data||[];}catch(e){}
+    try{const{data}=await sb.from('consulta').select('*').eq('paciente_id',idPaciente).order('started_at',{ascending:false}).limit(10);atends=data||[];}catch(e){}
+    try{const{data}=await sb.from('exames').select('*').eq('paciente_id',idPaciente).order('created_at',{ascending:false}).limit(20);exs=data||[];}catch(e){}
 
     const res=await fetch('/api/chat-ia',{
       method:'POST',headers:{'Content-Type':'application/json'},
@@ -2012,7 +2096,7 @@ async function ensureResumoProntuario(idPaciente,opts){
     try{
       const uid=currentUser?.id||null;
       const payload={
-        id_paciente:idPaciente,
+        paciente_id:idPaciente,
         id_medico:uid,
         resumo:currentResumoProntuario,
         paciente_updated_at:pacUpdated,
@@ -2060,7 +2144,7 @@ async function loadResumoProntuarioIntoPanel(){
   try{
     const {data,error}=await sb.from('resumo_prontuario')
       .select('resumo,updated_at')
-      .eq('id_paciente',currentPatient.id)
+      .eq('paciente_id',currentPatient.id)
       .order('updated_at',{ascending:false}).limit(1);
     if(error&&error.code!=='PGRST205')throw error;
     const row=(data&&data[0])||loadResumoLocal(currentPatient.id);
