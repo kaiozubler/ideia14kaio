@@ -1706,7 +1706,7 @@ function calcIMC(){
 function openInfoComp(){
   if(!currentPatient){alert('Selecione um paciente primeiro.');return;}
   const d=loadInfoComp();
-  ['peso','altura','sangue','sedent','tab','eti','ocup','meds','alerg','fam','outros'].forEach(k=>{
+  ['peso','altura','sangue','sedent','tab','eti','sono','meds','alerg','fam','outros'].forEach(k=>{
     const el=document.getElementById('ic-'+k);if(el)el.value=d[k]||'';
   });
   calcIMC();
@@ -1715,12 +1715,13 @@ function openInfoComp(){
 }
 function saveInfoComp(){
   const d={};
-  ['peso','altura','sangue','sedent','tab','eti','ocup','meds','alerg','fam','outros'].forEach(k=>{
+  ['peso','altura','sangue','sedent','tab','eti','sono','meds','alerg','fam','outros'].forEach(k=>{
     const el=document.getElementById('ic-'+k);if(el)d[k]=el.value.trim();
   });
   d.updated_at=new Date().toISOString();
   localStorage.setItem(infoCompKey(),JSON.stringify(d));
   renderInfoCompSummary();
+  renderProntStaleAlert();
   closeModal();
   const badge=document.getElementById('pront-badge');
   if(badge){badge.innerHTML='<i class="ti ti-check"></i> Informações complementares salvas';setTimeout(()=>badge.innerHTML='<i class="ti ti-check"></i> Atualizado',1800);}
@@ -1737,7 +1738,7 @@ function renderInfoCompSummary(){
   if(d.sedent)parts.push('<b>Atividade:</b> '+d.sedent);
   if(d.tab)parts.push('<b>Tabagismo:</b> '+d.tab);
   if(d.eti)parts.push('<b>Etilismo:</b> '+d.eti);
-  if(d.ocup)parts.push('<b>Ocupação:</b> '+d.ocup);
+  if(d.sono)parts.push('<b>Sono:</b> '+d.sono);
   if(d.meds)parts.push('<b>Medicamentos:</b> '+d.meds);
   if(d.alerg)parts.push('<b>Alergias:</b> '+d.alerg);
   if(d.fam)parts.push('<b>Antec. familiares:</b> '+d.fam);
