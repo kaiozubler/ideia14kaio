@@ -1627,11 +1627,29 @@ function deleteExame(id){exames=exames.filter(e=>e.id!==id);renderExames();}
 function saveExame(){
   const nome=document.getElementById('exame-nome').value.trim();if(!nome)return;
   const fn=document.getElementById('file-name');
-  exames.unshift({id:Date.now(),nome,tipo:document.getElementById('exame-tipo').value,data:document.getElementById('exame-data').value||new Date().toLocaleDateString('pt-BR'),obs:document.getElementById('exame-obs').value,file:fn?fn.textContent:'—'});
+  const durSel=document.getElementById('exame-dur');
+  const durVal=durSel?durSel.value:'indef';
+  let validade='Indefinido',validadeDias=null;
+  if(durVal==='custom'){
+    const n=parseInt(document.getElementById('exame-dur-custom').value,10);
+    if(n>0){validadeDias=n;validade=n+' dias';}
+  }else if(durVal!=='indef'){
+    validadeDias=parseInt(durVal,10);
+    const map={'30':'30 dias','60':'60 dias','90':'3 meses','180':'6 meses','365':'12 meses','730':'24 meses'};
+    validade=map[durVal]||(validadeDias+' dias');
+  }
+  exames.unshift({id:Date.now(),nome,tipo:document.getElementById('exame-tipo').value,data:document.getElementById('exame-data').value||new Date().toLocaleDateString('pt-BR'),obs:document.getElementById('exame-obs').value,file:fn?fn.textContent:'—',validade,validadeDias});
   timelineEvents.unshift({date:new Date().toLocaleDateString('pt-BR'),type:'exame',icon:'ti-flask',title:'Exame adicionado: '+nome,sub:document.getElementById('exame-obs').value||''});
   renderExames();clearFile();
   document.getElementById('exame-nome').value='';document.getElementById('exame-obs').value='';
+  if(durSel)durSel.value='indef';
+  const dcw=document.getElementById('exame-dur-custom-wrap');if(dcw)dcw.style.display='none';
+  const dci=document.getElementById('exame-dur-custom');if(dci)dci.value='';
   closeModal();
+}
+function toggleExameDurCustom(){
+  const v=document.getElementById('exame-dur').value;
+  document.getElementById('exame-dur-custom-wrap').style.display=v==='custom'?'':'none';
 }
 function previewFile(input){
   const wrap=document.getElementById('file-preview-wrap');
