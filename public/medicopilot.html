@@ -1614,7 +1614,7 @@ function renderExames(){
   list.innerHTML=exames.map(e=>`
     <div class="exame-item">
       <div class="exame-icon"><i class="ti ${iconMap[e.tipo]||'ti-file'}"></i></div>
-      <div class="exame-body"><div class="exame-name">${e.nome}</div><div class="exame-obs">${e.obs}</div></div>
+      <div class="exame-body"><div class="exame-name">${e.nome}</div><div class="exame-obs">${e.obs}${e.validade?' \u00b7 Validade IA: '+e.validade:''}</div></div>
       <span class="exame-date">${e.data}</span>
       <div class="exame-acts">
         <button class="ra-btn" title="Visualizar"><i class="ti ti-eye"></i></button>
