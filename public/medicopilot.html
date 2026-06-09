@@ -1698,6 +1698,39 @@ function saveDadosClinicos(){
   const badge=document.getElementById('pront-badge');
   badge.innerHTML='<i class="ti ti-check"></i> Dados Clínicos salvos';
   setTimeout(()=>badge.innerHTML='<i class="ti ti-check"></i> Atualizado',1500);
+  try{
+    const k='dadosClinicosUpd_'+((currentPatient&&currentPatient.id)||'anon');
+    localStorage.setItem(k,new Date().toISOString());
+  }catch{}
+  renderProntStaleAlert();
+}
+function lastProntUpdateISO(){
+  if(!currentPatient)return null;
+  const ic=loadInfoComp().updated_at||null;
+  const ce=loadCadastroExtra().updated_at||null;
+  let dc=null;try{dc=localStorage.getItem('dadosClinicosUpd_'+currentPatient.id);}catch{}
+  const dates=[ic,ce,dc].filter(Boolean).map(s=>new Date(s).getTime()).filter(n=>!isNaN(n));
+  if(!dates.length)return null;
+  return new Date(Math.max(...dates)).toISOString();
+}
+function renderProntStaleAlert(){
+  const host=document.getElementById('tb-prontuario');
+  if(!host)return;
+  let el=document.getElementById('pront-stale-alert');
+  const last=lastProntUpdateISO();
+  const THRESHOLD_DAYS=90;
+  const stale=!last||((Date.now()-new Date(last).getTime())/(1000*60*60*24)>THRESHOLD_DAYS);
+  if(!stale){if(el)el.remove();return;}
+  const msg=last
+    ? 'Dados do prontuário sem atualização há mais de 3 meses (última: '+new Date(last).toLocaleDateString('pt-BR')+'). Revise e atualize se necessário.'
+    : 'Os dados clínicos deste paciente ainda não foram atualizados. Preencha as informações complementares.';
+  if(!el){
+    el=document.createElement('div');
+    el.id='pront-stale-alert';
+    el.style.cssText='display:flex;align-items:flex-start;gap:8px;background:#fef2f2;border:0.5px solid #fecaca;color:#991b1b;border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:12px;line-height:1.5';
+    host.insertBefore(el,host.firstChild);
+  }
+  el.innerHTML='<i class="ti ti-alert-triangle" style="font-size:15px;color:#dc2626;flex-shrink:0;margin-top:1px"></i><div style="flex:1"><b>Prontuário desatualizado.</b> '+msg+'</div><button class="btn sm" onclick="openInfoComp()" style="flex-shrink:0"><i class="ti ti-edit"></i> Atualizar</button>';
 }
 /* ========== INFORMAÇÕES COMPLEMENTARES ========== */
 function infoCompKey(){return 'infoComp_'+((currentPatient&&currentPatient.id)||'anon');}
