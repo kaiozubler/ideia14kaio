@@ -118,6 +118,8 @@ input,textarea,select{font-family:var(--font)}
 .pt-meta{font-size:11px;color:var(--n400);margin-top:1px}
 .pt-badge{font-size:10px;padding:2px 7px;border-radius:var(--r4);background:var(--n75);color:var(--n500);border:0.5px solid var(--n200);flex-shrink:0}
 .pt-badge.green{background:var(--g50);color:var(--g700);border-color:var(--g200)}
+.pt-badge.grupo{background:#eef2ff;color:#3730a3;border-color:#c7d2fe}
+select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff;font-weight:600}
 .row-acts{display:flex;gap:3px;opacity:0;transition:opacity .14s}
 .ra-btn{width:26px;height:26px;border-radius:var(--r4);border:0.5px solid var(--n200);background:transparent;display:flex;align-items:center;justify-content:center;color:var(--n400);cursor:pointer}
 .ra-btn:hover{background:var(--n100);color:var(--n600)}
@@ -566,6 +568,9 @@ input,textarea,select{font-family:var(--font)}
             <div class="ff"><label>Sexo</label>
               <select><option value="">Todos</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select>
             </div>
+            <div class="ff"><label>Grupo</label>
+              <select id="adv-grupo" onchange="onGrupoSelectChange(this);applyAdvFilters&&applyAdvFilters()"></select>
+            </div>
           </div>
           <div class="nf-bar" id="nf-bar" style="display:none">
             <p>Paciente <strong id="nf-name"></strong> não encontrado</p>
@@ -651,7 +656,7 @@ input,textarea,select{font-family:var(--font)}
             <select id="d-sexo"><option>Feminino</option><option>Masculino</option><option>Outro</option></select>
           </div>
           <div class="fld wide"><label>Ocupação</label><input type="text" id="d-ocup" placeholder="Ex: Trabalho de escritório, professora, motorista..."></div>
-          <div class="fld wide">
+          <div class="fld">
             <label>Médico preferencial <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
             <select id="d-medico">
               <option value="">— Nenhum preferencial —</option>
@@ -661,6 +666,10 @@ input,textarea,select{font-family:var(--font)}
               <option value="dra-beatriz">Dra. Beatriz Alves — Ginecologia</option>
               <option value="dr-tiago">Dr. Tiago Rocha — Neurologia</option>
             </select>
+          </div>
+          <div class="fld">
+            <label>Grupo <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
+            <select id="d-grupo" onchange="onGrupoSelectChange(this)"></select>
           </div>
         </div>
         <div class="sec-hd">Documentos do cadastro</div>
@@ -982,9 +991,13 @@ input,textarea,select{font-family:var(--font)}
         <div class="fld wide"><label>Endereço</label><input type="text" placeholder="Rua, nº — Bairro, Cidade, UF"></div>
         <div class="fld"><label>Convênio</label><select><option>Particular</option><option>SUS</option><option>Unimed</option><option>Bradesco</option><option>Amil</option></select></div>
         <div class="fld"><label>Sexo</label><select><option>Selecionar</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select></div>
-        <div class="fld wide">
+        <div class="fld">
           <label>Médico preferencial <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
           <select><option value="">— Nenhum —</option><option>Dr. Rafael Mendes — Clínica Geral</option><option>Dra. Carla Fonseca — Cardiologia</option><option>Dr. Marcos Luz — Endocrinologia</option></select>
+        </div>
+        <div class="fld">
+          <label>Grupo <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
+          <select id="np-grupo" onchange="onGrupoSelectChange(this)"></select>
         </div>
       </div>
     </div>
@@ -1351,6 +1364,36 @@ function goScreen(name){
 function toggleIAGroup(){document.getElementById('grp-ia').classList.toggle('open');}
 
 /* ========== SEARCH ========== */
+/* ========== GRUPOS ========== */
+const GRUPOS_KEY='gruposList';
+const PAT_GRUPO_KEY='patientGrupo';
+function loadGrupos(){try{return JSON.parse(localStorage.getItem(GRUPOS_KEY)||'[]');}catch{return [];}}
+function saveGrupos(arr){localStorage.setItem(GRUPOS_KEY,JSON.stringify(arr));}
+function getPatientGrupo(id){try{return (JSON.parse(localStorage.getItem(PAT_GRUPO_KEY)||'{}'))[id]||'';}catch{return '';}}
+function setPatientGrupo(id,g){let m={};try{m=JSON.parse(localStorage.getItem(PAT_GRUPO_KEY)||'{}');}catch{}if(g)m[id]=g;else delete m[id];localStorage.setItem(PAT_GRUPO_KEY,JSON.stringify(m));}
+function populateGrupoSelect(sel,opts){
+  if(!sel)return;
+  const current=sel.value;
+  const grupos=loadGrupos();
+  const isFilter=sel.id==='adv-grupo';
+  let html=isFilter?'<option value="">Todos</option>':'<option value="">— Nenhum —</option>';
+  grupos.forEach(g=>{html+=`<option value="${g}">${g}</option>`;});
+  html+='<option value="__novo__" class="opt-criar-grupo">+ Criar novo grupo</option>';
+  sel.innerHTML=html;
+  if(current&&grupos.includes(current))sel.value=current;
+}
+function refreshAllGrupoSelects(){['d-grupo','np-grupo','adv-grupo'].forEach(id=>{const s=document.getElementById(id);if(s)populateGrupoSelect(s);});}
+function onGrupoSelectChange(sel){
+  if(sel.value==='__novo__'){
+    const nome=(prompt('Nome do novo grupo:')||'').trim();
+    if(!nome){sel.value='';return;}
+    const grupos=loadGrupos();
+    if(!grupos.includes(nome)){grupos.push(nome);saveGrupos(grupos);}
+    refreshAllGrupoSelects();
+    sel.value=nome;
+  }
+}
+
 function renderPatients(list){
   const el=document.getElementById('patient-list');
   const ct=document.getElementById('results-ct');
@@ -1364,6 +1407,7 @@ function renderPatients(list){
         <div class="pt-meta">Nasc. ${p.dob} \u00a0\u00b7\u00a0 ${p.tel}</div>
       </div>
       <span class="pt-badge green">${p.conv}</span>
+      ${getPatientGrupo(p.id)?`<span class="pt-badge grupo" title="Grupo"><i class="ti ti-users"></i> ${getPatientGrupo(p.id)}</span>`:''}
       <div class="row-acts">
         <button class="ra-btn" onclick="event.stopPropagation()" title="Agendar"><i class="ti ti-calendar-plus"></i></button>
         <button class="ra-btn" onclick="event.stopPropagation()" title="Mais"><i class="ti ti-dots-vertical"></i></button>
@@ -1379,7 +1423,17 @@ function handleSearch(v){
   if(!f.length){nf.style.display='flex';rc.style.display='none';document.getElementById('nf-name').textContent='"'+v+'"';}
   else{nf.style.display='none';rc.style.display='';renderPatients(f);}
 }
-function toggleAdv(){document.getElementById('adv-filters').classList.toggle('open');}
+function toggleAdv(){
+  document.getElementById('adv-filters').classList.toggle('open');
+  const g=document.getElementById('adv-grupo');if(g)populateGrupoSelect(g);
+}
+function applyAdvFilters(){
+  const g=document.getElementById('adv-grupo');
+  const grupo=g?g.value:'';
+  let f=patients;
+  if(grupo)f=f.filter(p=>getPatientGrupo(p.id)===grupo);
+  renderPatients(f);
+}
 
 /* ========== PATIENT ========== */
 function openPatient(id){
@@ -1418,6 +1472,7 @@ function openPatient(id){
   document.getElementById('d-sus').value=currentPatient.sus==='—'?'':currentPatient.sus;
   const ms=document.getElementById('d-medico');if(ms)ms.value=currentPatient.medico||'';
   const op=document.getElementById('d-ocup');if(op)op.value=loadCadastroExtra().ocup||'';
+  const gs=document.getElementById('d-grupo');if(gs){populateGrupoSelect(gs);gs.value=getPatientGrupo(currentPatient.id)||'';}
   openTab('cadastro',document.querySelector('.tab'));
   renderAtendimentos();renderExames();renderTimeline();updateAtendProgress();
 }
@@ -1436,6 +1491,8 @@ function saveCadastro(){
     const extra=loadCadastroExtra();extra.ocup=op.value.trim();extra.updated_at=new Date().toISOString();
     localStorage.setItem(cadastroExtraKey(),JSON.stringify(extra));
   }
+  const gs=document.getElementById('d-grupo');
+  if(gs&&currentPatient){setPatientGrupo(currentPatient.id,gs.value||'');renderPatients(patients);}
 }
 function cadastroExtraKey(){return 'cadastroExtra_'+((currentPatient&&currentPatient.id)||'anon');}
 function loadCadastroExtra(){try{return JSON.parse(localStorage.getItem(cadastroExtraKey())||'{}');}catch{return {};}}
@@ -2419,6 +2476,7 @@ function openModal(name){
   document.getElementById('modal-overlay').classList.add('open');
   document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
   const m=document.getElementById('m-'+name);if(m)m.style.display='flex';
+  if(name==='new-patient'){const g=document.getElementById('np-grupo');if(g){populateGrupoSelect(g);g.value='';}}
 }
 function closeModal(){
   document.getElementById('modal-overlay').classList.remove('open');
@@ -2428,8 +2486,10 @@ document.getElementById('modal-overlay').addEventListener('click',function(e){if
 async function saveNewPatient(){
   const nome=document.getElementById('np-nome').value.trim();if(!nome)return;
   const dob=document.getElementById('np-dob')?.value||null;
-  const {error}=await sb.from('pacientes').insert({name:nome,data_nascimento:dob});
+  const grupo=document.getElementById('np-grupo')?.value||'';
+  const {data,error}=await sb.from('pacientes').insert({name:nome,data_nascimento:dob}).select('paciente_id').single();
   if(error){alert('Erro ao salvar paciente: '+error.message);return;}
+  if(grupo&&data?.paciente_id)setPatientGrupo(data.paciente_id,grupo);
   closeModal();
   await loadPatients();
 }
