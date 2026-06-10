@@ -827,7 +827,7 @@ input,textarea,select{font-family:var(--font)}
                   <div class="csep"></div>
                   <button class="btn sm ghost" onclick="suggestAction()"><i class="ti ti-bulb"></i> Sugerir</button>
                   <button class="btn sm" id="toggle-bbl-btn" onclick="toggleBubbles()" title="Ocultar/mostrar mensagens"><i class="ti ti-eye" id="toggle-bbl-icon"></i></button>
-                  <button class="btn sm primary" onclick="openResumoPanel()"><i class="ti ti-file-check"></i> Resumo</button>
+                  <button class="btn sm primary" onclick="openAnamnesePanel()"><i class="ti ti-file-text-ai"></i> Anamnese</button>
                 </div>
                 <div class="ai-input-row">
                   <input class="ai-inp" id="ai-inp" type="text" placeholder="Mensagem para a IA..." onkeydown="if(event.key==='Enter')sendAIMsg()">
@@ -2199,16 +2199,80 @@ function openResumoPanel(){
   document.getElementById('resumo-panel-text').textContent=RESUMO_TEXT;
   document.getElementById('resumo-panel').classList.add('open');
 }
+function buildAnamneseContext(){
+  const p=currentPatient||{};
+  const idade=(()=>{try{const y=parseInt((p.dob||'').split('/')[2]);if(!y)return '';return (new Date().getFullYear()-y)+' anos';}catch{return '';}})();
+  const dadosCliente=[
+    p.name?'Nome: '+p.name:'',
+    p.dob?'Nascimento: '+p.dob:'',
+    idade?'Idade: '+idade:'',
+    p.sexo?'Sexo: '+p.sexo:'',
+    p.tel?'Telefone: '+p.tel:'',
+    p.conv?'Convênio: '+p.conv:'',
+    p.cpf?'CPF: '+p.cpf:'',
+    p.end?'Endereço: '+p.end:'',
+    p.mae?'Mãe: '+p.mae:'',
+    p.pai?'Pai: '+p.pai:''
+  ].filter(Boolean).join('\n');
+  let infoComp='';
+  try{
+    const raw=localStorage.getItem('infoComplementar_'+(p.id||''));
+    if(raw){const o=JSON.parse(raw);infoComp=Object.entries(o).filter(([,v])=>v).map(([k,v])=>k+': '+v).join('\n');}
+  }catch{}
+  const resumoPront=(currentResumoProntuario||'').trim()||'(sem resumo do prontuário disponível)';
+  const atend=(document.getElementById('pront-area')?.value||'').trim()||'(sem anotações no atendimento atual)';
+  const dataAt=new Date().toLocaleDateString('pt-BR');
+  return {p,idade,dadosCliente,infoComp,resumoPront,atend,dataAt};
+}
+function applyAnamneseVars(prompt,ctx){
+  const map={
+    '{resumo_paciente}':ctx.resumoPront,
+    '{paciente_nome}':ctx.p.name||'',
+    '{paciente_idade}':ctx.idade||'',
+    '{paciente_sexo}':ctx.p.sexo||'',
+    '{data_atendimento}':ctx.dataAt,
+    '{queixa_principal}':'',
+    '{info_complementar}':ctx.infoComp||'',
+    '{ultimos_exames}':'',
+    '{medico_nome}':''
+  };
+  let out=prompt;
+  Object.entries(map).forEach(([k,v])=>{out=out.split(k).join(v);});
+  return out;
+}
+function openAnamnesePanel(){
+  const panel=document.getElementById('resumo-panel');
+  const txtEl=document.getElementById('resumo-panel-text');
+  panel.classList.add('open');
+  txtEl.textContent='Gerando anamnese com a IA...';
+  const models=loadAnamneseModels();
+  const model=models.find(m=>m.id==='default')||models[0];
+  const ctx=buildAnamneseContext();
+  const systemPrompt=applyAnamneseVars(model.prompt,ctx);
+  const userContent=
+    '# DADOS DO PACIENTE\n'+(ctx.dadosCliente||'(sem dados)')+
+    (ctx.infoComp?'\n\n# INFORMAÇÕES COMPLEMENTARES\n'+ctx.infoComp:'')+
+    '\n\n# RESUMO DO PRONTUÁRIO\n'+ctx.resumoPront+
+    '\n\n# RESUMO DO ATENDIMENTO ATUAL ('+ctx.dataAt+')\n'+ctx.atend+
+    '\n\nCom base nessas informações, elabore a anamnese (SOAP) seguindo as instruções do sistema.';
+  window.__lastAnamnese='';
+  fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})})
+    .then(r=>r.ok?r.json():r.text().then(t=>{throw new Error(t);}))
+    .then(d=>{const t=(d.reply||d.resumo||'').trim()||'(sem resposta)';window.__lastAnamnese=t;txtEl.textContent=t;})
+    .catch(e=>{txtEl.textContent='⚠️ Erro ao gerar anamnese: '+(e.message||e);});
+}
 function closeResumoPanel(){document.getElementById('resumo-panel').classList.remove('open');}
 function copyResumo(){
-  navigator.clipboard.writeText(RESUMO_TEXT).catch(()=>{});
+  const txt=window.__lastAnamnese||document.getElementById('resumo-panel-text').textContent||RESUMO_TEXT;
+  navigator.clipboard.writeText(txt).catch(()=>{});
   const btn=event.target.closest('button');
   const orig=btn.innerHTML;btn.innerHTML='<i class="ti ti-check"></i> Copiado';
   setTimeout(()=>btn.innerHTML=orig,1500);
 }
 function resumoToNota(){
   const pa=document.getElementById('pront-area');
-  if(pa){const ts=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});pa.value+=(pa.value?'\n\n':'')+`[${ts}] RESUMO IA:\n`+RESUMO_TEXT;markAtendDirty();}
+  const txt=window.__lastAnamnese||document.getElementById('resumo-panel-text').textContent||RESUMO_TEXT;
+  if(pa){const ts=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});pa.value+=(pa.value?'\n\n':'')+`[${ts}] ANAMNESE IA:\n`+txt;markAtendDirty();}
   closeResumoPanel();
 }
 function transferToPront(){
