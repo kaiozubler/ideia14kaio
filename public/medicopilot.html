@@ -2466,6 +2466,7 @@ function openModal(name){
   document.getElementById('modal-overlay').classList.add('open');
   document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
   const m=document.getElementById('m-'+name);if(m)m.style.display='flex';
+  if(name==='new-patient'){const g=document.getElementById('np-grupo');if(g){populateGrupoSelect(g);g.value='';}}
 }
 function closeModal(){
   document.getElementById('modal-overlay').classList.remove('open');
@@ -2475,8 +2476,10 @@ document.getElementById('modal-overlay').addEventListener('click',function(e){if
 async function saveNewPatient(){
   const nome=document.getElementById('np-nome').value.trim();if(!nome)return;
   const dob=document.getElementById('np-dob')?.value||null;
-  const {error}=await sb.from('pacientes').insert({name:nome,data_nascimento:dob});
+  const grupo=document.getElementById('np-grupo')?.value||'';
+  const {data,error}=await sb.from('pacientes').insert({name:nome,data_nascimento:dob}).select('paciente_id').single();
   if(error){alert('Erro ao salvar paciente: '+error.message);return;}
+  if(grupo&&data?.paciente_id)setPatientGrupo(data.paciente_id,grupo);
   closeModal();
   await loadPatients();
 }
