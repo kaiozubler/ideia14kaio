@@ -1438,11 +1438,36 @@ function toggleAdv(){
   const g=document.getElementById('adv-grupo');if(g)populateGrupoSelect(g);
 }
 function applyAdvFilters(){
-  const g=document.getElementById('adv-grupo');
-  const grupo=g?g.value:'';
   let f=patients;
+  const nome=(document.getElementById('adv-nome')?.value||'').toLowerCase().trim();
+  if(nome)f=f.filter(p=>p.name.toLowerCase().includes(nome));
+  const nasc=(document.getElementById('adv-nasc')?.value||'').trim();
+  if(nasc){const dobAlt=nasc.split('-').reverse().join('/');f=f.filter(p=>p.dob===dobAlt||p.nasc===nasc);}
+  const email=(document.getElementById('adv-email')?.value||'').toLowerCase().trim();
+  if(email)f=f.filter(p=>(p.email||'').toLowerCase().includes(email));
+  const mae=(document.getElementById('adv-mae')?.value||'').toLowerCase().trim();
+  if(mae)f=f.filter(p=>(p.mae||'').toLowerCase().includes(mae));
+  const pai=(document.getElementById('adv-pai')?.value||'').toLowerCase().trim();
+  if(pai)f=f.filter(p=>(p.pai||'').toLowerCase().includes(pai));
+  const convenio=(document.getElementById('adv-convenio')?.value||'');
+  if(convenio)f=f.filter(p=>p.conv===convenio);
+  const sexo=(document.getElementById('adv-sexo')?.value||'');
+  if(sexo)f=f.filter(p=>p.sexo===sexo);
+  const grupo=(document.getElementById('adv-grupo')?.value||'');
   if(grupo)f=f.filter(p=>getPatientGrupo(p.id)===grupo);
   renderPatients(f);
+}
+function clearAdvFilters(){
+  document.getElementById('adv-nome').value='';
+  document.getElementById('adv-nasc').value='';
+  document.getElementById('adv-email').value='';
+  document.getElementById('adv-mae').value='';
+  document.getElementById('adv-pai').value='';
+  document.getElementById('adv-convenio').value='';
+  document.getElementById('adv-cidade').value='';
+  document.getElementById('adv-sexo').value='';
+  const g=document.getElementById('adv-grupo');if(g)g.value='';
+  renderPatients(patients);
 }
 
 /* ========== PATIENT ========== */
