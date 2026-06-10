@@ -1377,6 +1377,7 @@ function renderPatients(list){
         <div class="pt-meta">Nasc. ${p.dob} \u00a0\u00b7\u00a0 ${p.tel}</div>
       </div>
       <span class="pt-badge green">${p.conv}</span>
+      ${getPatientGrupo(p.id)?`<span class="pt-badge grupo" title="Grupo"><i class="ti ti-users"></i> ${getPatientGrupo(p.id)}</span>`:''}
       <div class="row-acts">
         <button class="ra-btn" onclick="event.stopPropagation()" title="Agendar"><i class="ti ti-calendar-plus"></i></button>
         <button class="ra-btn" onclick="event.stopPropagation()" title="Mais"><i class="ti ti-dots-vertical"></i></button>
