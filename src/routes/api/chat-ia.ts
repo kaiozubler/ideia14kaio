@@ -3,13 +3,15 @@ import { createFileRoute } from "@tanstack/react-router";
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
 type RequestBody = {
-  mode?: "chat" | "resumo";
+  mode?: "chat" | "resumo" | "anamnese";
   messages?: ChatMessage[];
   resumo_prontuario?: string;
   paciente?: Record<string, unknown>;
   atendimentos?: unknown[];
   exames?: unknown[];
   info_complementar?: Record<string, unknown> | null;
+  system_prompt?: string;
+  user_content?: string;
 };
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -89,6 +91,22 @@ export const Route = createFileRoute("/api/chat-ia")({
               apiKey,
             );
             return Response.json({ resumo: text });
+          }
+
+          if (mode === "anamnese") {
+            const sys = (body.system_prompt || "").trim();
+            const usr = (body.user_content || "").trim();
+            if (!sys || !usr) {
+              return new Response("Missing system_prompt or user_content", { status: 400 });
+            }
+            const text = await callGateway(
+              [
+                { role: "system", content: sys },
+                { role: "user", content: usr },
+              ],
+              apiKey,
+            );
+            return Response.json({ reply: text });
           }
 
           // chat mode
