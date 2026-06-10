@@ -453,9 +453,15 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .atend-progress{display:none;padding:6px 12px;background:#fff7ed;border-bottom:0.5px solid #fcd09a;font-size:11px;color:#7c4a00;align-items:center;gap:6px;flex-shrink:0}
 .atend-progress.show{display:flex}
 .atend-progress .ti{font-size:13px;color:#e07800}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--n700);color:var(--white);padding:10px 16px;border-radius:var(--r8);font-size:12px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:9999;opacity:0;transform:translateY(12px);transition:opacity .3s,transform .3s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.success{background:var(--g600)}
 </style>
 </head>
 <body>
+<div id="toast" class="toast"></div>
 <!-- AUTH GATE -->
 <div id="auth-gate" style="display:none;position:fixed;inset:0;background:var(--n75);z-index:9999;align-items:center;justify-content:center;font-family:var(--font)">
   <div style="background:#fff;border:1px solid var(--n150);border-radius:12px;padding:32px;width:380px;max-width:92vw;box-shadow:0 10px 30px rgba(0,0,0,.06)">
@@ -555,21 +561,25 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
             <input type="text" id="search-input" placeholder="Nome, CPF, telefone ou cartão SUS..." oninput="handleSearch(this.value)" autocomplete="off">
           </div>
           <div class="adv-filters" id="adv-filters">
-            <div class="ff wide"><label>Nome completo</label><input type="text" placeholder="Busca por nome..."></div>
-            <div class="ff"><label>Data de nascimento</label><input type="date"></div>
-            <div class="ff"><label>E-mail</label><input type="text" placeholder="email@..."></div>
-            <div class="ff"><label>Nome da mãe</label><input type="text"></div>
-            <div class="ff"><label>Nome do pai</label><input type="text"></div>
-            <div class="ff"><label>Última consulta</label><input type="date"></div>
+            <div class="ff wide"><label>Nome completo</label><input type="text" id="adv-nome" placeholder="Busca por nome..."></div>
+            <div class="ff"><label>Data de nascimento</label><input type="date" id="adv-nasc"></div>
+            <div class="ff"><label>E-mail</label><input type="text" id="adv-email" placeholder="email@..."></div>
+            <div class="ff"><label>Nome da mãe</label><input type="text" id="adv-mae"></div>
+            <div class="ff"><label>Nome do pai</label><input type="text" id="adv-pai"></div>
+            <div class="ff"><label>Última consulta</label><input type="date" id="adv-consulta"></div>
             <div class="ff"><label>Convênio</label>
-              <select><option value="">Todos</option><option>Particular</option><option>SUS</option><option>Unimed</option><option>Bradesco</option><option>Amil</option></select>
+              <select id="adv-convenio"><option value="">Todos</option><option>Particular</option><option>SUS</option><option>Unimed</option><option>Bradesco</option><option>Amil</option></select>
             </div>
-            <div class="ff"><label>Cidade</label><input type="text"></div>
+            <div class="ff"><label>Cidade</label><input type="text" id="adv-cidade"></div>
             <div class="ff"><label>Sexo</label>
-              <select><option value="">Todos</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select>
+              <select id="adv-sexo"><option value="">Todos</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select>
             </div>
             <div class="ff"><label>Grupo</label>
-              <select id="adv-grupo" onchange="onGrupoSelectChange(this);applyAdvFilters&&applyAdvFilters()"></select>
+              <select id="adv-grupo" onchange="onGrupoSelectChange(this)"></select>
+            </div>
+            <div class="ff wide" style="display:flex;align-items:flex-end;justify-content:flex-end;gap:8px">
+              <button class="btn" onclick="clearAdvFilters()"><i class="ti ti-x"></i> Limpar</button>
+              <button class="btn primary" onclick="applyAdvFilters()"><i class="ti ti-search"></i> Pesquisar</button>
             </div>
           </div>
           <div class="nf-bar" id="nf-bar" style="display:none">
@@ -1428,11 +1438,36 @@ function toggleAdv(){
   const g=document.getElementById('adv-grupo');if(g)populateGrupoSelect(g);
 }
 function applyAdvFilters(){
-  const g=document.getElementById('adv-grupo');
-  const grupo=g?g.value:'';
   let f=patients;
+  const nome=(document.getElementById('adv-nome')?.value||'').toLowerCase().trim();
+  if(nome)f=f.filter(p=>p.name.toLowerCase().includes(nome));
+  const nasc=(document.getElementById('adv-nasc')?.value||'').trim();
+  if(nasc){const dobAlt=nasc.split('-').reverse().join('/');f=f.filter(p=>p.dob===dobAlt||p.nasc===nasc);}
+  const email=(document.getElementById('adv-email')?.value||'').toLowerCase().trim();
+  if(email)f=f.filter(p=>(p.email||'').toLowerCase().includes(email));
+  const mae=(document.getElementById('adv-mae')?.value||'').toLowerCase().trim();
+  if(mae)f=f.filter(p=>(p.mae||'').toLowerCase().includes(mae));
+  const pai=(document.getElementById('adv-pai')?.value||'').toLowerCase().trim();
+  if(pai)f=f.filter(p=>(p.pai||'').toLowerCase().includes(pai));
+  const convenio=(document.getElementById('adv-convenio')?.value||'');
+  if(convenio)f=f.filter(p=>p.conv===convenio);
+  const sexo=(document.getElementById('adv-sexo')?.value||'');
+  if(sexo)f=f.filter(p=>p.sexo===sexo);
+  const grupo=(document.getElementById('adv-grupo')?.value||'');
   if(grupo)f=f.filter(p=>getPatientGrupo(p.id)===grupo);
   renderPatients(f);
+}
+function clearAdvFilters(){
+  document.getElementById('adv-nome').value='';
+  document.getElementById('adv-nasc').value='';
+  document.getElementById('adv-email').value='';
+  document.getElementById('adv-mae').value='';
+  document.getElementById('adv-pai').value='';
+  document.getElementById('adv-convenio').value='';
+  document.getElementById('adv-cidade').value='';
+  document.getElementById('adv-sexo').value='';
+  const g=document.getElementById('adv-grupo');if(g)g.value='';
+  renderPatients(patients);
 }
 
 /* ========== PATIENT ========== */
@@ -1477,6 +1512,14 @@ function openPatient(id){
   renderAtendimentos();renderExames();renderTimeline();updateAtendProgress();
 }
 function backToPatients(){saveAtendState();goScreen('patients');}
+function showToast(msg,type){
+  const el=document.getElementById('toast');
+  if(!el)return;
+  el.textContent=msg;
+  el.className='toast '+(type||'');
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2800);
+}
 function saveCadastro(){
   const ms=document.getElementById('d-medico');
   if(ms&&currentPatient){
@@ -1493,6 +1536,7 @@ function saveCadastro(){
   }
   const gs=document.getElementById('d-grupo');
   if(gs&&currentPatient){setPatientGrupo(currentPatient.id,gs.value||'');renderPatients(patients);}
+  showToast('Dados do paciente salvos com sucesso','success');
 }
 function cadastroExtraKey(){return 'cadastroExtra_'+((currentPatient&&currentPatient.id)||'anon');}
 function loadCadastroExtra(){try{return JSON.parse(localStorage.getItem(cadastroExtraKey())||'{}');}catch{return {};}}
