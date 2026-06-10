@@ -1364,6 +1364,36 @@ function goScreen(name){
 function toggleIAGroup(){document.getElementById('grp-ia').classList.toggle('open');}
 
 /* ========== SEARCH ========== */
+/* ========== GRUPOS ========== */
+const GRUPOS_KEY='gruposList';
+const PAT_GRUPO_KEY='patientGrupo';
+function loadGrupos(){try{return JSON.parse(localStorage.getItem(GRUPOS_KEY)||'[]');}catch{return [];}}
+function saveGrupos(arr){localStorage.setItem(GRUPOS_KEY,JSON.stringify(arr));}
+function getPatientGrupo(id){try{return (JSON.parse(localStorage.getItem(PAT_GRUPO_KEY)||'{}'))[id]||'';}catch{return '';}}
+function setPatientGrupo(id,g){let m={};try{m=JSON.parse(localStorage.getItem(PAT_GRUPO_KEY)||'{}');}catch{}if(g)m[id]=g;else delete m[id];localStorage.setItem(PAT_GRUPO_KEY,JSON.stringify(m));}
+function populateGrupoSelect(sel,opts){
+  if(!sel)return;
+  const current=sel.value;
+  const grupos=loadGrupos();
+  const isFilter=sel.id==='adv-grupo';
+  let html=isFilter?'<option value="">Todos</option>':'<option value="">— Nenhum —</option>';
+  grupos.forEach(g=>{html+=`<option value="${g}">${g}</option>`;});
+  html+='<option value="__novo__" class="opt-criar-grupo">+ Criar novo grupo</option>';
+  sel.innerHTML=html;
+  if(current&&grupos.includes(current))sel.value=current;
+}
+function refreshAllGrupoSelects(){['d-grupo','np-grupo','adv-grupo'].forEach(id=>{const s=document.getElementById(id);if(s)populateGrupoSelect(s);});}
+function onGrupoSelectChange(sel){
+  if(sel.value==='__novo__'){
+    const nome=(prompt('Nome do novo grupo:')||'').trim();
+    if(!nome){sel.value='';return;}
+    const grupos=loadGrupos();
+    if(!grupos.includes(nome)){grupos.push(nome);saveGrupos(grupos);}
+    refreshAllGrupoSelects();
+    sel.value=nome;
+  }
+}
+
 function renderPatients(list){
   const el=document.getElementById('patient-list');
   const ct=document.getElementById('results-ct');
