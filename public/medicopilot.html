@@ -651,7 +651,7 @@ input,textarea,select{font-family:var(--font)}
             <select id="d-sexo"><option>Feminino</option><option>Masculino</option><option>Outro</option></select>
           </div>
           <div class="fld wide"><label>Ocupação</label><input type="text" id="d-ocup" placeholder="Ex: Trabalho de escritório, professora, motorista..."></div>
-          <div class="fld wide">
+          <div class="fld">
             <label>Médico preferencial <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
             <select id="d-medico">
               <option value="">— Nenhum preferencial —</option>
@@ -661,6 +661,10 @@ input,textarea,select{font-family:var(--font)}
               <option value="dra-beatriz">Dra. Beatriz Alves — Ginecologia</option>
               <option value="dr-tiago">Dr. Tiago Rocha — Neurologia</option>
             </select>
+          </div>
+          <div class="fld">
+            <label>Grupo <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
+            <select id="d-grupo" onchange="onGrupoSelectChange(this)"></select>
           </div>
         </div>
         <div class="sec-hd">Documentos do cadastro</div>
