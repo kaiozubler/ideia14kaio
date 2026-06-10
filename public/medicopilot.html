@@ -1512,6 +1512,14 @@ function openPatient(id){
   renderAtendimentos();renderExames();renderTimeline();updateAtendProgress();
 }
 function backToPatients(){saveAtendState();goScreen('patients');}
+function showToast(msg,type){
+  const el=document.getElementById('toast');
+  if(!el)return;
+  el.textContent=msg;
+  el.className='toast '+(type||'');
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2800);
+}
 function saveCadastro(){
   const ms=document.getElementById('d-medico');
   if(ms&&currentPatient){
@@ -1528,6 +1536,7 @@ function saveCadastro(){
   }
   const gs=document.getElementById('d-grupo');
   if(gs&&currentPatient){setPatientGrupo(currentPatient.id,gs.value||'');renderPatients(patients);}
+  showToast('Dados do paciente salvos com sucesso','success');
 }
 function cadastroExtraKey(){return 'cadastroExtra_'+((currentPatient&&currentPatient.id)||'anon');}
 function loadCadastroExtra(){try{return JSON.parse(localStorage.getItem(cadastroExtraKey())||'{}');}catch{return {};}}
