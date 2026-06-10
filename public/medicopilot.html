@@ -986,9 +986,13 @@ input,textarea,select{font-family:var(--font)}
         <div class="fld wide"><label>Endereço</label><input type="text" placeholder="Rua, nº — Bairro, Cidade, UF"></div>
         <div class="fld"><label>Convênio</label><select><option>Particular</option><option>SUS</option><option>Unimed</option><option>Bradesco</option><option>Amil</option></select></div>
         <div class="fld"><label>Sexo</label><select><option>Selecionar</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select></div>
-        <div class="fld wide">
+        <div class="fld">
           <label>Médico preferencial <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
           <select><option value="">— Nenhum —</option><option>Dr. Rafael Mendes — Clínica Geral</option><option>Dra. Carla Fonseca — Cardiologia</option><option>Dr. Marcos Luz — Endocrinologia</option></select>
+        </div>
+        <div class="fld">
+          <label>Grupo <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
+          <select id="np-grupo" onchange="onGrupoSelectChange(this)"></select>
         </div>
       </div>
     </div>
