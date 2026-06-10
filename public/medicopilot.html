@@ -2335,7 +2335,9 @@ function transferToPront(){
   if(pa){
     const ts=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
     const sep=pa.value?'\n\n':'';
-    pa.value+=sep+`[${ts}] RESUMO IA:\n`+RESUMO_TEXT;
+    const txt=window.__lastAnamnese||document.getElementById('resumo-panel-text').textContent||RESUMO_TEXT;
+    const label=window.__lastAnamnese?'ANAMNESE IA':'RESUMO IA';
+    pa.value+=sep+`[${ts}] ${label}:\n`+mdToPlain(txt);
     pa.scrollTop=pa.scrollHeight;
     markAtendDirty();
   }
