@@ -561,21 +561,25 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
             <input type="text" id="search-input" placeholder="Nome, CPF, telefone ou cartão SUS..." oninput="handleSearch(this.value)" autocomplete="off">
           </div>
           <div class="adv-filters" id="adv-filters">
-            <div class="ff wide"><label>Nome completo</label><input type="text" placeholder="Busca por nome..."></div>
-            <div class="ff"><label>Data de nascimento</label><input type="date"></div>
-            <div class="ff"><label>E-mail</label><input type="text" placeholder="email@..."></div>
-            <div class="ff"><label>Nome da mãe</label><input type="text"></div>
-            <div class="ff"><label>Nome do pai</label><input type="text"></div>
-            <div class="ff"><label>Última consulta</label><input type="date"></div>
+            <div class="ff wide"><label>Nome completo</label><input type="text" id="adv-nome" placeholder="Busca por nome..."></div>
+            <div class="ff"><label>Data de nascimento</label><input type="date" id="adv-nasc"></div>
+            <div class="ff"><label>E-mail</label><input type="text" id="adv-email" placeholder="email@..."></div>
+            <div class="ff"><label>Nome da mãe</label><input type="text" id="adv-mae"></div>
+            <div class="ff"><label>Nome do pai</label><input type="text" id="adv-pai"></div>
+            <div class="ff"><label>Última consulta</label><input type="date" id="adv-consulta"></div>
             <div class="ff"><label>Convênio</label>
-              <select><option value="">Todos</option><option>Particular</option><option>SUS</option><option>Unimed</option><option>Bradesco</option><option>Amil</option></select>
+              <select id="adv-convenio"><option value="">Todos</option><option>Particular</option><option>SUS</option><option>Unimed</option><option>Bradesco</option><option>Amil</option></select>
             </div>
-            <div class="ff"><label>Cidade</label><input type="text"></div>
+            <div class="ff"><label>Cidade</label><input type="text" id="adv-cidade"></div>
             <div class="ff"><label>Sexo</label>
-              <select><option value="">Todos</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select>
+              <select id="adv-sexo"><option value="">Todos</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select>
             </div>
             <div class="ff"><label>Grupo</label>
-              <select id="adv-grupo" onchange="onGrupoSelectChange(this);applyAdvFilters&&applyAdvFilters()"></select>
+              <select id="adv-grupo" onchange="onGrupoSelectChange(this)"></select>
+            </div>
+            <div class="ff wide" style="display:flex;align-items:flex-end;justify-content:flex-end;gap:8px">
+              <button class="btn" onclick="clearAdvFilters()"><i class="ti ti-x"></i> Limpar</button>
+              <button class="btn primary" onclick="applyAdvFilters()"><i class="ti ti-search"></i> Pesquisar</button>
             </div>
           </div>
           <div class="nf-bar" id="nf-bar" style="display:none">
