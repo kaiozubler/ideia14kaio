@@ -1456,6 +1456,7 @@ function applyAdvFilters(){
   const grupo=(document.getElementById('adv-grupo')?.value||'');
   if(grupo)f=f.filter(p=>getPatientGrupo(p.id)===grupo);
   renderPatients(f);
+  document.getElementById('adv-filters').classList.remove('open');
 }
 function clearAdvFilters(){
   document.getElementById('adv-nome').value='';
