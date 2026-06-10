@@ -566,6 +566,9 @@ input,textarea,select{font-family:var(--font)}
             <div class="ff"><label>Sexo</label>
               <select><option value="">Todos</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select>
             </div>
+            <div class="ff"><label>Grupo</label>
+              <select id="adv-grupo" onchange="onGrupoSelectChange(this);applyAdvFilters&&applyAdvFilters()"></select>
+            </div>
           </div>
           <div class="nf-bar" id="nf-bar" style="display:none">
             <p>Paciente <strong id="nf-name"></strong> não encontrado</p>
