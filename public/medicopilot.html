@@ -310,6 +310,14 @@ input,textarea,select{font-family:var(--font)}
 .resumo-panel-title{font-size:12px;font-weight:600;color:var(--n700);flex:1}
 .resumo-panel-body{flex:1;overflow-y:auto;padding:12px 13px}
 .resumo-pre{font-family:var(--mono);font-size:11px;color:var(--n700);line-height:1.75;white-space:pre-wrap}
+.resumo-pre.rich{white-space:normal;font-family:inherit;font-size:13px}
+.resumo-pre.rich p{margin:0 0 8px 0}
+.resumo-pre.rich strong{font-weight:600;color:var(--n800)}
+.resumo-pre.rich em{font-style:italic}
+.resumo-pre.rich h1,.resumo-pre.rich h2,.resumo-pre.rich h3{font-weight:700;color:var(--n800);margin:12px 0 6px 0;font-size:14px}
+.resumo-pre.rich ul,.resumo-pre.rich ol{margin:4px 0 8px 20px;padding:0}
+.resumo-pre.rich li{margin:2px 0}
+.resumo-pre.rich code{font-family:var(--mono);background:var(--n100);padding:1px 4px;border-radius:4px;font-size:12px}
 .resumo-panel-foot{padding:10px 13px;border-top:0.5px solid var(--n150);display:flex;gap:6px;flex-wrap:wrap}
 
 /* AI CONTROLS */
@@ -2244,6 +2252,7 @@ function openAnamnesePanel(){
   const panel=document.getElementById('resumo-panel');
   const txtEl=document.getElementById('resumo-panel-text');
   panel.classList.add('open');
+  txtEl.classList.remove('rich');
   txtEl.textContent='Gerando anamnese com a IA...';
   const models=loadAnamneseModels();
   const model=models.find(m=>m.id==='default')||models[0];
@@ -2258,8 +2267,32 @@ function openAnamnesePanel(){
   window.__lastAnamnese='';
   fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})})
     .then(r=>r.ok?r.json():r.text().then(t=>{throw new Error(t);}))
-    .then(d=>{const t=(d.reply||d.resumo||'').trim()||'(sem resposta)';window.__lastAnamnese=t;txtEl.textContent=t;})
-    .catch(e=>{txtEl.textContent='⚠️ Erro ao gerar anamnese: '+(e.message||e);});
+    .then(d=>{const t=(d.reply||d.resumo||'').trim()||'(sem resposta)';window.__lastAnamnese=t;txtEl.classList.add('rich');txtEl.innerHTML=mdToHtml(t);})
+    .catch(e=>{txtEl.classList.remove('rich');txtEl.textContent='⚠️ Erro ao gerar anamnese: '+(e.message||e);});
+}
+function mdToHtml(md){
+  const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  let s=esc(md||'');
+  // code spans
+  s=s.replace(/`([^`]+)`/g,'<code>$1</code>');
+  // bold then italic
+  s=s.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+  s=s.replace(/__([^_]+)__/g,'<strong>$1</strong>');
+  s=s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g,'$1<em>$2</em>');
+  s=s.replace(/(^|[^_])_([^_\n]+)_(?!_)/g,'$1<em>$2</em>');
+  const lines=s.split(/\r?\n/);
+  const out=[];let i=0;
+  while(i<lines.length){
+    const ln=lines[i];
+    let m;
+    if(/^\s*$/.test(ln)){i++;continue;}
+    if((m=ln.match(/^(#{1,6})\s+(.*)$/))){const lv=Math.min(m[1].length,3);out.push(`<h${lv}>${m[2]}</h${lv}>`);i++;continue;}
+    if(/^\s*[-*+]\s+/.test(ln)){const items=[];while(i<lines.length&&/^\s*[-*+]\s+/.test(lines[i])){items.push('<li>'+lines[i].replace(/^\s*[-*+]\s+/,'')+'</li>');i++;}out.push('<ul>'+items.join('')+'</ul>');continue;}
+    if(/^\s*\d+\.\s+/.test(ln)){const items=[];while(i<lines.length&&/^\s*\d+\.\s+/.test(lines[i])){items.push('<li>'+lines[i].replace(/^\s*\d+\.\s+/,'')+'</li>');i++;}out.push('<ol>'+items.join('')+'</ol>');continue;}
+    const para=[];while(i<lines.length&&!/^\s*$/.test(lines[i])&&!/^(#{1,6})\s+/.test(lines[i])&&!/^\s*[-*+]\s+/.test(lines[i])&&!/^\s*\d+\.\s+/.test(lines[i])){para.push(lines[i]);i++;}
+    out.push('<p>'+para.join('<br>')+'</p>');
+  }
+  return out.join('');
 }
 function closeResumoPanel(){document.getElementById('resumo-panel').classList.remove('open');}
 function copyResumo(){
