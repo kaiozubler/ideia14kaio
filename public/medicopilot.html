@@ -2305,8 +2305,30 @@ function copyResumo(){
 function resumoToNota(){
   const pa=document.getElementById('pront-area');
   const txt=window.__lastAnamnese||document.getElementById('resumo-panel-text').textContent||RESUMO_TEXT;
-  if(pa){const ts=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});pa.value+=(pa.value?'\n\n':'')+`[${ts}] ANAMNESE IA:\n`+txt;markAtendDirty();}
+  if(pa){const ts=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});pa.value+=(pa.value?'\n\n':'')+`[${ts}] ANAMNESE IA:\n`+mdToPlain(txt);markAtendDirty();}
   closeResumoPanel();
+}
+function mdToPlain(md){
+  if(!md) return '';
+  let s=String(md);
+  // remove code fences
+  s=s.replace(/```[\s\S]*?```/g,m=>m.replace(/```/g,'').trim());
+  // headings: "## Titulo" -> "Titulo" (uppercase opcional? mantém)
+  s=s.replace(/^\s{0,3}#{1,6}\s+/gm,'');
+  // bold/italic markers
+  s=s.replace(/\*\*\*(.+?)\*\*\*/g,'$1');
+  s=s.replace(/\*\*(.+?)\*\*/g,'$1');
+  s=s.replace(/__(.+?)__/g,'$1');
+  s=s.replace(/(^|[\s(])\*(?!\s)([^\*\n]+?)\*(?=[\s).,;:!?]|$)/g,'$1$2');
+  s=s.replace(/(^|[\s(])_(?!\s)([^_\n]+?)_(?=[\s).,;:!?]|$)/g,'$1$2');
+  // inline code
+  s=s.replace(/`([^`]+)`/g,'$1');
+  // list bullets: "- item" or "* item" -> "• item"
+  s=s.replace(/^\s*[-*+]\s+/gm,'• ');
+  // numeric lists kept as-is
+  // collapse 3+ blank lines
+  s=s.replace(/\n{3,}/g,'\n\n');
+  return s.trim();
 }
 function transferToPront(){
   const pa=document.getElementById('pront-area');
