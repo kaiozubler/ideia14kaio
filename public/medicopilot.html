@@ -453,6 +453,11 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .atend-progress{display:none;padding:6px 12px;background:#fff7ed;border-bottom:0.5px solid #fcd09a;font-size:11px;color:#7c4a00;align-items:center;gap:6px;flex-shrink:0}
 .atend-progress.show{display:flex}
 .atend-progress .ti{font-size:13px;color:#e07800}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--n700);color:var(--white);padding:10px 16px;border-radius:var(--r8);font-size:12px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:9999;opacity:0;transform:translateY(12px);transition:opacity .3s,transform .3s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.success{background:var(--g600)}
 </style>
 </head>
 <body>
