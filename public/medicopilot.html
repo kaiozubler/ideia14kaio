@@ -2228,7 +2228,36 @@ function buildAnamneseContext(){
     if(raw){const o=JSON.parse(raw);infoComp=Object.entries(o).filter(([,v])=>v).map(([k,v])=>k+': '+v).join('\n');}
   }catch{}
   const resumoPront=(currentResumoProntuario||'').trim()||'(sem resumo do prontuário disponível)';
-  const atend=(document.getElementById('pront-area')?.value||'').trim()||'(sem anotações no atendimento atual)';
+  // Resumo do atendimento atual: junta anotações do prontuário, transcrição
+  // capturada e bolhas (fala do paciente + sugestões/respostas da IA).
+  const partes=[];
+  const pront=(document.getElementById('pront-area')?.value||'').trim();
+  if(pront)partes.push('## Anotações do prontuário\n'+pront);
+  const transEl=document.getElementById('trans-content');
+  const trans=(transEl?.innerText||transEl?.textContent||'').trim();
+  if(trans)partes.push('## Transcrição da consulta\n'+trans);
+  try{
+    const bbls=Array.from(document.querySelectorAll('#bubbles-layer .bbl'))
+      .map(b=>{
+        const t=(b.querySelector('.bbl-text')?.innerText||'').trim();
+        if(!t)return '';
+        const tipo=b.classList.contains('usr')?'Paciente/Médico'
+          :b.classList.contains('sug')?'Sugestão IA':'IA';
+        return '- ['+tipo+'] '+t;
+      }).filter(Boolean);
+    if(bbls.length)partes.push('## Diálogo/IA durante a consulta\n'+bbls.join('\n'));
+  }catch{}
+  try{
+    if(Array.isArray(pinnedBbls)&&pinnedBbls.length){
+      partes.push('## Itens fixados\n'+pinnedBbls.map(p=>'- '+p.text).join('\n'));
+    }
+  }catch{}
+  // Fallback: usa o resumo demo somente quando não há nenhum sinal real do atendimento.
+  let atend=partes.join('\n\n').trim();
+  if(!atend){
+    try{atend=(typeof RESUMO_TEXT==='string'?RESUMO_TEXT:'')||'';}catch{atend='';}
+  }
+  if(!atend)atend='(sem dados do atendimento atual)';
   const dataAt=new Date().toLocaleDateString('pt-BR');
   return {p,idade,dadosCliente,infoComp,resumoPront,atend,dataAt};
 }
