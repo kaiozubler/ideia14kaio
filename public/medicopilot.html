@@ -1423,7 +1423,17 @@ function handleSearch(v){
   if(!f.length){nf.style.display='flex';rc.style.display='none';document.getElementById('nf-name').textContent='"'+v+'"';}
   else{nf.style.display='none';rc.style.display='';renderPatients(f);}
 }
-function toggleAdv(){document.getElementById('adv-filters').classList.toggle('open');}
+function toggleAdv(){
+  document.getElementById('adv-filters').classList.toggle('open');
+  const g=document.getElementById('adv-grupo');if(g)populateGrupoSelect(g);
+}
+function applyAdvFilters(){
+  const g=document.getElementById('adv-grupo');
+  const grupo=g?g.value:'';
+  let f=patients;
+  if(grupo)f=f.filter(p=>getPatientGrupo(p.id)===grupo);
+  renderPatients(f);
+}
 
 /* ========== PATIENT ========== */
 function openPatient(id){
