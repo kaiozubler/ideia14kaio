@@ -1192,17 +1192,36 @@ const medicoNames={
   'dra-beatriz':'Dra. Beatriz Alves',
   'dr-tiago':'Dr. Tiago Rocha'
 };
-// Pacientes vêm do Supabase (tabela public.pacientes). O schema atual só tem
-// (id_paciente, name, data_nascimento) — os demais campos da UI ficam vazios
-// até você adicionar as colunas correspondentes no banco.
+// Pacientes e prontuário vêm do Lovable Cloud e ficam vinculados ao usuário logado.
 let patients=[];
 
 /* ========== SUPABASE ========== */
-const SUPABASE_URL='https://cjlixjcwnadhzegaylhk.supabase.co';
-const SUPABASE_ANON_KEY='sb_publishable_mXVdD6v1g3cqv5V3XvCJKQ_h-LzO99-';
+const SUPABASE_URL='https://lgsywisgyvgorppuoehy.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIc3kiLCJyZWYiOiJsZ3N5d2lzZ3l2Z29ycHB1b2VoeSIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzgxMTc2NTY4LCJleHAiOjIwOTY3NTI1Njh9.1bHdi8zXHDg8oxNWbqr8pcAadAVBfDEktSd6SchYCPw'.replace('Hs','supabase');
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 let currentUser=null;
 let authMode='signin'; // 'signin' | 'signup'
+let gruposCache=[];
+
+function patientInitials(name){return (name||'?').split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('')||'?';}
+function dateToBR(v){return v?v.split('-').reverse().join('/'):'—';}
+function isoFromAnyDate(v){
+  if(!v)return null;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(v))return v;
+  const m=String(v).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return m?`${m[3]}-${m[2]}-${m[1]}`:null;
+}
+function mapPatientRow(p){
+  return {
+    id:p.paciente_id,
+    name:p.name||'(sem nome)',
+    dob:dateToBR(p.data_nascimento),
+    nasc:p.data_nascimento||'',
+    tel:p.telefone||'—',init:patientInitials(p.name),
+    conv:p.convenio||'Particular',sus:p.sus||'—',email:p.email||'',mae:p.mae||'',pai:p.pai||'',end:p.endereco||'—',sexo:p.sexo||'',medico:p.medico||'',
+    grupo:p.grupo||'',ocup:p.ocupacao||'',cpf:p.cpf||'',dadosClinicos:p.dados_clinicos||'',infoComp:p.info_complementar||{},updated_at:p.updated_at||p.created_at||null
+  };
+}
 
 function authToggle(){
   authMode=authMode==='signin'?'signup':'signin';
@@ -1249,16 +1268,10 @@ function showApp(){
 }
 
 async function loadPatients(){
-  const {data,error}=await sb.from('pacientes').select('paciente_id,name,data_nascimento,created_at').order('created_at',{ascending:false});
+  const {data,error}=await sb.from('pacientes').select('*').order('created_at',{ascending:false});
   if(error){console.error('Erro ao carregar pacientes:',error);patients=[];renderPatients(patients);return;}
-  patients=(data||[]).map(p=>({
-    id:p.paciente_id,
-    name:p.name||'(sem nome)',
-    dob:p.data_nascimento?p.data_nascimento.split('-').reverse().join('/'):'—',
-    nasc:p.data_nascimento||'',
-    tel:'—',init:(p.name||'?').split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('')||'?',
-    conv:'Particular',sus:'—',email:'',mae:'',pai:'',end:'—',sexo:'',medico:''
-  }));
+  patients=(data||[]).map(mapPatientRow);
+  gruposCache=[...new Set(patients.map(p=>p.grupo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
   renderPatients(patients);
 }
 
@@ -1272,24 +1285,9 @@ async function bootstrap(){
   });
 }
 
-let atendimentos=[
-  {id:1,title:'Hipertensão — ajuste de medicação',date:'22/05/2025',hora:'09:15',acao:'Prescrição',resumo:'Paciente apresentou PA elevada (152/96 mmHg) e queixa de cefaleia occipital há 2 dias. Histórico de HAS controlada. Ajustada dose de Losartana de 50mg para 100mg.',notas:'Paciente relata não ter tomado a medicação por 3 dias. Familiar presente.',notaPersonal:'Paciente demonstra ansiedade. Pode ser fator agravante.'},
-  {id:2,title:'Retorno — dislipidemia',date:'10/04/2025',hora:'14:30',acao:'Exame solicitado',resumo:'Retorno para análise de exames. Colesterol LDL: 142 mg/dL — meta não atingida. Reforço da estatina e orientação de dieta.',notas:'Trouxe diário alimentar. Dieta com excesso de gordura saturada.',notaPersonal:''},
-  {id:3,title:'Consulta de rotina — check-up anual',date:'15/01/2025',hora:'10:00',acao:'Preventivo',resumo:'Consulta de rotina sem queixas ativas. Exames dentro da normalidade. Vacinação atualizada.',notas:'Recomendado fundo de olho.',notaPersonal:''},
-];
-let exames=[
-  {id:1,nome:'Hemograma completo',tipo:'Laboratorial',data:'20/05/2025',obs:'Valores dentro da normalidade',file:'hemograma_mai25.pdf'},
-  {id:2,nome:'Colesterol e Triglicérides',tipo:'Laboratorial',data:'08/04/2025',obs:'LDL: 142 mg/dL. HDL: 48. TG: 165.',file:'lipidograma_abr25.pdf'},
-  {id:3,nome:'Raio-X de tórax',tipo:'Imagem',data:'15/01/2025',obs:'Sem alterações significativas.',file:'rx_torax_jan25.jpg'},
-];
-let timelineEvents=[
-  {date:'22/05/2025',type:'atend',icon:'ti-stethoscope',title:'Atendimento: Hipertensão — ajuste de medicação',sub:'Prescrição emitida · Dr. Rafael Mendes'},
-  {date:'20/05/2025',type:'exame',icon:'ti-flask',title:'Exame anexado: Hemograma completo',sub:'Resultado normal'},
-  {date:'10/04/2025',type:'atend',icon:'ti-stethoscope',title:'Atendimento: Retorno — dislipidemia',sub:'Exame solicitado · Dr. Rafael Mendes'},
-  {date:'08/04/2025',type:'exame',icon:'ti-flask',title:'Exame anexado: Colesterol e Triglicérides',sub:'LDL: 142 mg/dL — acima da meta'},
-  {date:'15/01/2025',type:'atend',icon:'ti-stethoscope',title:'Atendimento: Check-up anual',sub:'Preventivo · Dr. Rafael Mendes'},
-  {date:'02/01/2025',type:'cadastro',icon:'ti-user-edit',title:'Cadastro atualizado',sub:'Convênio: Particular → Unimed'},
-];
+let atendimentos=[];
+let exames=[];
+let timelineEvents=[];
 
 /* ========== STATE ========== */
 let currentPatient=null;
