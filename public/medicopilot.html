@@ -1373,12 +1373,10 @@ function toggleIAGroup(){document.getElementById('grp-ia').classList.toggle('ope
 
 /* ========== SEARCH ========== */
 /* ========== GRUPOS ========== */
-const GRUPOS_KEY='gruposList';
-const PAT_GRUPO_KEY='patientGrupo';
-function loadGrupos(){try{return JSON.parse(localStorage.getItem(GRUPOS_KEY)||'[]');}catch{return [];}}
-function saveGrupos(arr){localStorage.setItem(GRUPOS_KEY,JSON.stringify(arr));}
-function getPatientGrupo(id){try{return (JSON.parse(localStorage.getItem(PAT_GRUPO_KEY)||'{}'))[id]||'';}catch{return '';}}
-function setPatientGrupo(id,g){let m={};try{m=JSON.parse(localStorage.getItem(PAT_GRUPO_KEY)||'{}');}catch{}if(g)m[id]=g;else delete m[id];localStorage.setItem(PAT_GRUPO_KEY,JSON.stringify(m));}
+function loadGrupos(){return gruposCache;}
+function saveGrupos(arr){gruposCache=[...new Set(arr.filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));}
+function getPatientGrupo(id){return patients.find(p=>p.id===id)?.grupo||'';}
+function setPatientGrupo(id,g){const p=patients.find(x=>x.id===id);if(p)p.grupo=g||'';if(g&&!gruposCache.includes(g))saveGrupos([...gruposCache,g]);}
 function populateGrupoSelect(sel,opts){
   if(!sel)return;
   const current=sel.value;
