@@ -2386,10 +2386,7 @@ function buildAnamneseContext(){
     p.pai?'Pai: '+p.pai:''
   ].filter(Boolean).join('\n');
   let infoComp='';
-  try{
-    const raw=localStorage.getItem('infoComplementar_'+(p.id||''));
-    if(raw){const o=JSON.parse(raw);infoComp=Object.entries(o).filter(([,v])=>v).map(([k,v])=>k+': '+v).join('\n');}
-  }catch{}
+  try{infoComp=Object.entries(loadInfoComp()).filter(([,v])=>v).map(([k,v])=>k+': '+v).join('\n');}catch{}
   const resumoPront=(currentResumoProntuario||'').trim()||'(sem resumo do prontuário disponível)';
   // Resumo do atendimento atual: junta anotações do prontuário, transcrição
   // capturada e bolhas (fala do paciente + sugestões/respostas da IA).
@@ -2593,9 +2590,8 @@ async function saveNewPatient(){
   const nome=document.getElementById('np-nome').value.trim();if(!nome)return;
   const dob=document.getElementById('np-dob')?.value||null;
   const grupo=document.getElementById('np-grupo')?.value||'';
-  const {data,error}=await sb.from('pacientes').insert({name:nome,data_nascimento:dob}).select('paciente_id').single();
+  const {data,error}=await sb.from('pacientes').insert({name:nome,data_nascimento:dob,grupo:grupo||null,user_id:currentUser.id}).select('*').single();
   if(error){alert('Erro ao salvar paciente: '+error.message);return;}
-  if(grupo&&data?.paciente_id)setPatientGrupo(data.paciente_id,grupo);
   closeModal();
   await loadPatients();
 }
