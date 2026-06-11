@@ -1468,9 +1468,39 @@ function clearAdvFilters(){
 }
 
 /* ========== PATIENT ========== */
-function openPatient(id){
+function mapConsultaRow(a){
+  const d=a.started_at?new Date(a.started_at):new Date();
+  const dateStr=d.toLocaleDateString('pt-BR');
+  const timeStr=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  return {id:a.id,title:a.title||('Consulta — '+dateStr),date:dateStr,hora:timeStr,acao:a.acao||'Consulta',resumo:a.resumo||'Atendimento registrado.',notas:a.notas||'Sem anotações.',notaPersonal:a.nota_personal||'',anamneseIa:a.anamnese_ia||''};
+}
+function mapExameRow(e){return {id:e.id,nome:e.nome,tipo:e.tipo||'Outro',data:e.data||'',obs:e.obs||'',file:e.file_name||'—',validade:e.validade||'',validadeDias:e.validade_dias||null};}
+function mapTimelineRow(ev){return {id:ev.id,date:ev.event_date,type:ev.type,icon:ev.icon,title:ev.title,sub:ev.sub||''};}
+async function loadPatientRecords(id){
+  const [atRes,exRes,tlRes]=await Promise.all([
+    sb.from('consulta').select('*').eq('paciente_id',id).order('started_at',{ascending:false}),
+    sb.from('exames').select('*').eq('paciente_id',id).order('created_at',{ascending:false}),
+    sb.from('timeline_events').select('*').eq('paciente_id',id).order('created_at',{ascending:false})
+  ]);
+  if(atRes.error)console.warn('Erro ao carregar atendimentos',atRes.error);
+  if(exRes.error)console.warn('Erro ao carregar exames',exRes.error);
+  if(tlRes.error)console.warn('Erro ao carregar timeline',tlRes.error);
+  atendimentos=(atRes.data||[]).map(mapConsultaRow);
+  exames=(exRes.data||[]).map(mapExameRow);
+  timelineEvents=(tlRes.data||[]).map(mapTimelineRow);
+}
+async function addTimelineEvent(ev){
+  timelineEvents.unshift(ev);
+  if(currentPatient&&currentUser){
+    const {error}=await sb.from('timeline_events').insert({paciente_id:currentPatient.id,user_id:currentUser.id,event_date:ev.date,type:ev.type,icon:ev.icon,title:ev.title,sub:ev.sub||''});
+    if(error)console.warn('Erro ao salvar timeline',error);
+  }
+}
+async function openPatient(id){
   currentPatient=patients.find(p=>p.id===id);
   if(!currentPatient)return;
+  currentResumoProntuario='';
+  await loadPatientRecords(id);
   goScreen('patient-detail');
   document.getElementById('nav-patients').classList.add('active');
   const pt2=document.getElementById('page-title');
@@ -1502,9 +1532,12 @@ function openPatient(id){
   document.getElementById('d-end').value=currentPatient.end;
   document.getElementById('d-nasc').value=currentPatient.nasc;
   document.getElementById('d-sus').value=currentPatient.sus==='—'?'':currentPatient.sus;
+  const cv=document.getElementById('d-conv');if(cv)cv.value=currentPatient.conv||'Particular';
+  const sx=document.getElementById('d-sexo');if(sx)sx.value=currentPatient.sexo||'Feminino';
   const ms=document.getElementById('d-medico');if(ms)ms.value=currentPatient.medico||'';
-  const op=document.getElementById('d-ocup');if(op)op.value=loadCadastroExtra().ocup||'';
+  const op=document.getElementById('d-ocup');if(op)op.value=currentPatient.ocup||'';
   const gs=document.getElementById('d-grupo');if(gs){populateGrupoSelect(gs);gs.value=getPatientGrupo(currentPatient.id)||'';}
+  const dc=document.getElementById('dados-clinicos-ta');if(dc){dc.value=currentPatient.dadosClinicos||'';updateDcPreview();}
   openTab('cadastro',document.querySelector('.tab'));
   renderAtendimentos();renderExames();renderTimeline();updateAtendProgress();
 }
