@@ -14,7 +14,331 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      anamnese_models: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          prompt: string
+          readonly: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          prompt: string
+          readonly?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          prompt?: string
+          readonly?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      consulta: {
+        Row: {
+          acao: string | null
+          anamnese_ia: string | null
+          created_at: string
+          ended_at: string | null
+          id: string
+          id_medico: string
+          nota_personal: string | null
+          notas: string | null
+          paciente_id: string
+          resumo: string | null
+          started_at: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          acao?: string | null
+          anamnese_ia?: string | null
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          id_medico?: string
+          nota_personal?: string | null
+          notas?: string | null
+          paciente_id: string
+          resumo?: string | null
+          started_at?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          acao?: string | null
+          anamnese_ia?: string | null
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          id_medico?: string
+          nota_personal?: string | null
+          notas?: string | null
+          paciente_id?: string
+          resumo?: string | null
+          started_at?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consulta_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["paciente_id"]
+          },
+        ]
+      }
+      exames: {
+        Row: {
+          created_at: string
+          data: string | null
+          file_name: string | null
+          id: string
+          nome: string
+          obs: string | null
+          paciente_id: string
+          tipo: string | null
+          updated_at: string
+          user_id: string
+          validade: string | null
+          validade_dias: number | null
+        }
+        Insert: {
+          created_at?: string
+          data?: string | null
+          file_name?: string | null
+          id?: string
+          nome: string
+          obs?: string | null
+          paciente_id: string
+          tipo?: string | null
+          updated_at?: string
+          user_id?: string
+          validade?: string | null
+          validade_dias?: number | null
+        }
+        Update: {
+          created_at?: string
+          data?: string | null
+          file_name?: string | null
+          id?: string
+          nome?: string
+          obs?: string | null
+          paciente_id?: string
+          tipo?: string | null
+          updated_at?: string
+          user_id?: string
+          validade?: string | null
+          validade_dias?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exames_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["paciente_id"]
+          },
+        ]
+      }
+      mensagens_consulta: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          id_consulta: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          id_consulta: string
+          role: string
+          user_id?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          id_consulta?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensagens_consulta_id_consulta_fkey"
+            columns: ["id_consulta"]
+            isOneToOne: false
+            referencedRelation: "consulta"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pacientes: {
+        Row: {
+          convenio: string | null
+          cpf: string | null
+          created_at: string
+          dados_clinicos: string | null
+          data_nascimento: string | null
+          email: string | null
+          endereco: string | null
+          grupo: string | null
+          info_complementar: Json
+          mae: string | null
+          medico: string | null
+          name: string
+          ocupacao: string | null
+          paciente_id: string
+          pai: string | null
+          sexo: string | null
+          sus: string | null
+          telefone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          convenio?: string | null
+          cpf?: string | null
+          created_at?: string
+          dados_clinicos?: string | null
+          data_nascimento?: string | null
+          email?: string | null
+          endereco?: string | null
+          grupo?: string | null
+          info_complementar?: Json
+          mae?: string | null
+          medico?: string | null
+          name: string
+          ocupacao?: string | null
+          paciente_id?: string
+          pai?: string | null
+          sexo?: string | null
+          sus?: string | null
+          telefone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          convenio?: string | null
+          cpf?: string | null
+          created_at?: string
+          dados_clinicos?: string | null
+          data_nascimento?: string | null
+          email?: string | null
+          endereco?: string | null
+          grupo?: string | null
+          info_complementar?: Json
+          mae?: string | null
+          medico?: string | null
+          name?: string
+          ocupacao?: string | null
+          paciente_id?: string
+          pai?: string | null
+          sexo?: string | null
+          sus?: string | null
+          telefone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      resumo_prontuario: {
+        Row: {
+          created_at: string
+          id: string
+          id_medico: string
+          paciente_id: string
+          paciente_updated_at: string | null
+          resumo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          id_medico?: string
+          paciente_id: string
+          paciente_updated_at?: string | null
+          resumo: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          id_medico?: string
+          paciente_id?: string
+          paciente_updated_at?: string | null
+          resumo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resumo_prontuario_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["paciente_id"]
+          },
+        ]
+      }
+      timeline_events: {
+        Row: {
+          created_at: string
+          event_date: string
+          icon: string
+          id: string
+          paciente_id: string
+          sub: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_date: string
+          icon: string
+          id?: string
+          paciente_id: string
+          sub?: string | null
+          title: string
+          type: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          event_date?: string
+          icon?: string
+          id?: string
+          paciente_id?: string
+          sub?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timeline_events_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["paciente_id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
