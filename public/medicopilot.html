@@ -1550,26 +1550,38 @@ function showToast(msg,type){
   el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2800);
 }
-function saveCadastro(){
-  const ms=document.getElementById('d-medico');
-  if(ms&&currentPatient){
-    currentPatient.medico=ms.value;
-    const mb=document.getElementById('pth-medico');
-    if(currentPatient.medico&&medicoNames[currentPatient.medico]){mb.textContent=medicoNames[currentPatient.medico];mb.style.display='';}
-    else mb.style.display='none';
-    timelineEvents.unshift({date:new Date().toLocaleDateString('pt-BR'),type:'cadastro',icon:'ti-user-edit',title:'Cadastro atualizado',sub:'Dados alterados'});
-  }
-  const op=document.getElementById('d-ocup');
-  if(op&&currentPatient){
-    const extra=loadCadastroExtra();extra.ocup=op.value.trim();extra.updated_at=new Date().toISOString();
-    localStorage.setItem(cadastroExtraKey(),JSON.stringify(extra));
-  }
-  const gs=document.getElementById('d-grupo');
-  if(gs&&currentPatient){setPatientGrupo(currentPatient.id,gs.value||'');renderPatients(patients);}
+async function saveCadastro(){
+  if(!currentPatient||!currentUser)return;
+  const payload={
+    name:document.getElementById('d-nome')?.value.trim()||currentPatient.name,
+    telefone:document.getElementById('d-tel')?.value.trim()||null,
+    email:document.getElementById('d-email')?.value.trim()||null,
+    mae:document.getElementById('d-mae')?.value.trim()||null,
+    pai:document.getElementById('d-pai')?.value.trim()||null,
+    endereco:document.getElementById('d-end')?.value.trim()||null,
+    data_nascimento:document.getElementById('d-nasc')?.value||null,
+    sus:document.getElementById('d-sus')?.value.trim()||null,
+    convenio:document.getElementById('d-conv')?.value||'Particular',
+    sexo:document.getElementById('d-sexo')?.value||null,
+    medico:document.getElementById('d-medico')?.value||null,
+    grupo:document.getElementById('d-grupo')?.value||null,
+    ocupacao:document.getElementById('d-ocup')?.value.trim()||null
+  };
+  const {data,error}=await sb.from('pacientes').update(payload).eq('paciente_id',currentPatient.id).select('*').single();
+  if(error){showToast('Erro ao salvar paciente: '+error.message,'error');return;}
+  const updated=mapPatientRow(data);
+  Object.assign(currentPatient,updated);
+  patients=patients.map(p=>p.id===updated.id?updated:p);
+  if(updated.grupo&&!gruposCache.includes(updated.grupo))saveGrupos([...gruposCache,updated.grupo]);
+  const mb=document.getElementById('pth-medico');
+  if(currentPatient.medico&&medicoNames[currentPatient.medico]){mb.textContent=medicoNames[currentPatient.medico];mb.style.display='';}
+  else mb.style.display='none';
+  await addTimelineEvent({date:new Date().toLocaleDateString('pt-BR'),type:'cadastro',icon:'ti-user-edit',title:'Cadastro atualizado',sub:'Dados alterados'});
+  renderPatients(patients);renderTimeline();
   showToast('Dados do paciente salvos com sucesso','success');
 }
 function cadastroExtraKey(){return 'cadastroExtra_'+((currentPatient&&currentPatient.id)||'anon');}
-function loadCadastroExtra(){try{return JSON.parse(localStorage.getItem(cadastroExtraKey())||'{}');}catch{return {};}}
+function loadCadastroExtra(){return {ocup:currentPatient?.ocup||'',updated_at:currentPatient?.updated_at||null};}
 
 /* ========== TABS ========== */
 function openTab(name,el){
