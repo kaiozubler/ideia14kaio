@@ -1889,21 +1889,23 @@ function renderProntuario(){
   });
   area.innerHTML=html||'<div class="empty-st"><i class="ti ti-notes"></i><p>Nenhum atendimento registrado</p></div>';
 }
-function saveDadosClinicos(){
+async function saveDadosClinicos(){
+  if(!currentPatient)return;
+  const value=document.getElementById('dados-clinicos-ta')?.value||'';
+  const {data,error}=await sb.from('pacientes').update({dados_clinicos:value}).eq('paciente_id',currentPatient.id).select('*').single();
+  if(error){showToast('Erro ao salvar dados clínicos: '+error.message,'error');return;}
+  Object.assign(currentPatient,mapPatientRow(data));
+  patients=patients.map(p=>p.id===currentPatient.id?currentPatient:p);
   const badge=document.getElementById('pront-badge');
   badge.innerHTML='<i class="ti ti-check"></i> Dados Clínicos salvos';
   setTimeout(()=>badge.innerHTML='<i class="ti ti-check"></i> Atualizado',1500);
-  try{
-    const k='dadosClinicosUpd_'+((currentPatient&&currentPatient.id)||'anon');
-    localStorage.setItem(k,new Date().toISOString());
-  }catch{}
   renderProntStaleAlert();
 }
 function lastProntUpdateISO(){
   if(!currentPatient)return null;
   const ic=loadInfoComp().updated_at||null;
   const ce=loadCadastroExtra().updated_at||null;
-  let dc=null;try{dc=localStorage.getItem('dadosClinicosUpd_'+currentPatient.id);}catch{}
+  const dc=currentPatient.updated_at||null;
   const dates=[ic,ce,dc].filter(Boolean).map(s=>new Date(s).getTime()).filter(n=>!isNaN(n));
   if(!dates.length)return null;
   return new Date(Math.max(...dates)).toISOString();
@@ -1930,7 +1932,7 @@ function renderProntStaleAlert(){
 /* ========== INFORMAÇÕES COMPLEMENTARES ========== */
 function infoCompKey(){return 'infoComp_'+((currentPatient&&currentPatient.id)||'anon');}
 function loadInfoComp(){
-  try{return JSON.parse(localStorage.getItem(infoCompKey())||'{}');}catch{return {};}
+  return currentPatient?.infoComp||{};
 }
 function calcIMC(){
   const p=parseFloat(document.getElementById('ic-peso').value);
