@@ -1192,17 +1192,36 @@ const medicoNames={
   'dra-beatriz':'Dra. Beatriz Alves',
   'dr-tiago':'Dr. Tiago Rocha'
 };
-// Pacientes vêm do Supabase (tabela public.pacientes). O schema atual só tem
-// (id_paciente, name, data_nascimento) — os demais campos da UI ficam vazios
-// até você adicionar as colunas correspondentes no banco.
+// Pacientes e prontuário vêm do Lovable Cloud e ficam vinculados ao usuário logado.
 let patients=[];
 
 /* ========== SUPABASE ========== */
-const SUPABASE_URL='https://cjlixjcwnadhzegaylhk.supabase.co';
-const SUPABASE_ANON_KEY='sb_publishable_mXVdD6v1g3cqv5V3XvCJKQ_h-LzO99-';
+const SUPABASE_URL='https://lgsywisgyvgorppuoehy.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxnc3l3aXNneXZnb3JwcHVvZWh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNzY1NjgsImV4cCI6MjA5Njc1MjU2OH0.1bHdi8zXHDg8oxNWbqr8pcAadAVBfDEktSd6SchYCPw';
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 let currentUser=null;
 let authMode='signin'; // 'signin' | 'signup'
+let gruposCache=[];
+
+function patientInitials(name){return (name||'?').split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('')||'?';}
+function dateToBR(v){return v?v.split('-').reverse().join('/'):'—';}
+function isoFromAnyDate(v){
+  if(!v)return null;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(v))return v;
+  const m=String(v).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return m?`${m[3]}-${m[2]}-${m[1]}`:null;
+}
+function mapPatientRow(p){
+  return {
+    id:p.paciente_id,
+    name:p.name||'(sem nome)',
+    dob:dateToBR(p.data_nascimento),
+    nasc:p.data_nascimento||'',
+    tel:p.telefone||'—',init:patientInitials(p.name),
+    conv:p.convenio||'Particular',sus:p.sus||'—',email:p.email||'',mae:p.mae||'',pai:p.pai||'',end:p.endereco||'—',sexo:p.sexo||'',medico:p.medico||'',
+    grupo:p.grupo||'',ocup:p.ocupacao||'',cpf:p.cpf||'',dadosClinicos:p.dados_clinicos||'',infoComp:p.info_complementar||{},updated_at:p.updated_at||p.created_at||null
+  };
+}
 
 function authToggle(){
   authMode=authMode==='signin'?'signup':'signin';
@@ -1249,16 +1268,10 @@ function showApp(){
 }
 
 async function loadPatients(){
-  const {data,error}=await sb.from('pacientes').select('paciente_id,name,data_nascimento,created_at').order('created_at',{ascending:false});
+  const {data,error}=await sb.from('pacientes').select('*').order('created_at',{ascending:false});
   if(error){console.error('Erro ao carregar pacientes:',error);patients=[];renderPatients(patients);return;}
-  patients=(data||[]).map(p=>({
-    id:p.paciente_id,
-    name:p.name||'(sem nome)',
-    dob:p.data_nascimento?p.data_nascimento.split('-').reverse().join('/'):'—',
-    nasc:p.data_nascimento||'',
-    tel:'—',init:(p.name||'?').split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('')||'?',
-    conv:'Particular',sus:'—',email:'',mae:'',pai:'',end:'—',sexo:'',medico:''
-  }));
+  patients=(data||[]).map(mapPatientRow);
+  gruposCache=[...new Set(patients.map(p=>p.grupo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
   renderPatients(patients);
 }
 
@@ -1272,24 +1285,9 @@ async function bootstrap(){
   });
 }
 
-let atendimentos=[
-  {id:1,title:'Hipertensão — ajuste de medicação',date:'22/05/2025',hora:'09:15',acao:'Prescrição',resumo:'Paciente apresentou PA elevada (152/96 mmHg) e queixa de cefaleia occipital há 2 dias. Histórico de HAS controlada. Ajustada dose de Losartana de 50mg para 100mg.',notas:'Paciente relata não ter tomado a medicação por 3 dias. Familiar presente.',notaPersonal:'Paciente demonstra ansiedade. Pode ser fator agravante.'},
-  {id:2,title:'Retorno — dislipidemia',date:'10/04/2025',hora:'14:30',acao:'Exame solicitado',resumo:'Retorno para análise de exames. Colesterol LDL: 142 mg/dL — meta não atingida. Reforço da estatina e orientação de dieta.',notas:'Trouxe diário alimentar. Dieta com excesso de gordura saturada.',notaPersonal:''},
-  {id:3,title:'Consulta de rotina — check-up anual',date:'15/01/2025',hora:'10:00',acao:'Preventivo',resumo:'Consulta de rotina sem queixas ativas. Exames dentro da normalidade. Vacinação atualizada.',notas:'Recomendado fundo de olho.',notaPersonal:''},
-];
-let exames=[
-  {id:1,nome:'Hemograma completo',tipo:'Laboratorial',data:'20/05/2025',obs:'Valores dentro da normalidade',file:'hemograma_mai25.pdf'},
-  {id:2,nome:'Colesterol e Triglicérides',tipo:'Laboratorial',data:'08/04/2025',obs:'LDL: 142 mg/dL. HDL: 48. TG: 165.',file:'lipidograma_abr25.pdf'},
-  {id:3,nome:'Raio-X de tórax',tipo:'Imagem',data:'15/01/2025',obs:'Sem alterações significativas.',file:'rx_torax_jan25.jpg'},
-];
-let timelineEvents=[
-  {date:'22/05/2025',type:'atend',icon:'ti-stethoscope',title:'Atendimento: Hipertensão — ajuste de medicação',sub:'Prescrição emitida · Dr. Rafael Mendes'},
-  {date:'20/05/2025',type:'exame',icon:'ti-flask',title:'Exame anexado: Hemograma completo',sub:'Resultado normal'},
-  {date:'10/04/2025',type:'atend',icon:'ti-stethoscope',title:'Atendimento: Retorno — dislipidemia',sub:'Exame solicitado · Dr. Rafael Mendes'},
-  {date:'08/04/2025',type:'exame',icon:'ti-flask',title:'Exame anexado: Colesterol e Triglicérides',sub:'LDL: 142 mg/dL — acima da meta'},
-  {date:'15/01/2025',type:'atend',icon:'ti-stethoscope',title:'Atendimento: Check-up anual',sub:'Preventivo · Dr. Rafael Mendes'},
-  {date:'02/01/2025',type:'cadastro',icon:'ti-user-edit',title:'Cadastro atualizado',sub:'Convênio: Particular → Unimed'},
-];
+let atendimentos=[];
+let exames=[];
+let timelineEvents=[];
 
 /* ========== STATE ========== */
 let currentPatient=null;
@@ -1375,12 +1373,10 @@ function toggleIAGroup(){document.getElementById('grp-ia').classList.toggle('ope
 
 /* ========== SEARCH ========== */
 /* ========== GRUPOS ========== */
-const GRUPOS_KEY='gruposList';
-const PAT_GRUPO_KEY='patientGrupo';
-function loadGrupos(){try{return JSON.parse(localStorage.getItem(GRUPOS_KEY)||'[]');}catch{return [];}}
-function saveGrupos(arr){localStorage.setItem(GRUPOS_KEY,JSON.stringify(arr));}
-function getPatientGrupo(id){try{return (JSON.parse(localStorage.getItem(PAT_GRUPO_KEY)||'{}'))[id]||'';}catch{return '';}}
-function setPatientGrupo(id,g){let m={};try{m=JSON.parse(localStorage.getItem(PAT_GRUPO_KEY)||'{}');}catch{}if(g)m[id]=g;else delete m[id];localStorage.setItem(PAT_GRUPO_KEY,JSON.stringify(m));}
+function loadGrupos(){return gruposCache;}
+function saveGrupos(arr){gruposCache=[...new Set(arr.filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));}
+function getPatientGrupo(id){return patients.find(p=>p.id===id)?.grupo||'';}
+function setPatientGrupo(id,g){const p=patients.find(x=>x.id===id);if(p)p.grupo=g||'';if(g&&!gruposCache.includes(g))saveGrupos([...gruposCache,g]);}
 function populateGrupoSelect(sel,opts){
   if(!sel)return;
   const current=sel.value;
@@ -1472,9 +1468,39 @@ function clearAdvFilters(){
 }
 
 /* ========== PATIENT ========== */
-function openPatient(id){
+function mapConsultaRow(a){
+  const d=a.started_at?new Date(a.started_at):new Date();
+  const dateStr=d.toLocaleDateString('pt-BR');
+  const timeStr=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  return {id:a.id,title:a.title||('Consulta — '+dateStr),date:dateStr,hora:timeStr,acao:a.acao||'Consulta',resumo:a.resumo||'Atendimento registrado.',notas:a.notas||'Sem anotações.',notaPersonal:a.nota_personal||'',anamneseIa:a.anamnese_ia||''};
+}
+function mapExameRow(e){return {id:e.id,nome:e.nome,tipo:e.tipo||'Outro',data:e.data||'',obs:e.obs||'',file:e.file_name||'—',validade:e.validade||'',validadeDias:e.validade_dias||null};}
+function mapTimelineRow(ev){return {id:ev.id,date:ev.event_date,type:ev.type,icon:ev.icon,title:ev.title,sub:ev.sub||''};}
+async function loadPatientRecords(id){
+  const [atRes,exRes,tlRes]=await Promise.all([
+    sb.from('consulta').select('*').eq('paciente_id',id).order('started_at',{ascending:false}),
+    sb.from('exames').select('*').eq('paciente_id',id).order('created_at',{ascending:false}),
+    sb.from('timeline_events').select('*').eq('paciente_id',id).order('created_at',{ascending:false})
+  ]);
+  if(atRes.error)console.warn('Erro ao carregar atendimentos',atRes.error);
+  if(exRes.error)console.warn('Erro ao carregar exames',exRes.error);
+  if(tlRes.error)console.warn('Erro ao carregar timeline',tlRes.error);
+  atendimentos=(atRes.data||[]).map(mapConsultaRow);
+  exames=(exRes.data||[]).map(mapExameRow);
+  timelineEvents=(tlRes.data||[]).map(mapTimelineRow);
+}
+async function addTimelineEvent(ev){
+  timelineEvents.unshift(ev);
+  if(currentPatient&&currentUser){
+    const {error}=await sb.from('timeline_events').insert({paciente_id:currentPatient.id,user_id:currentUser.id,event_date:ev.date,type:ev.type,icon:ev.icon,title:ev.title,sub:ev.sub||''});
+    if(error)console.warn('Erro ao salvar timeline',error);
+  }
+}
+async function openPatient(id){
   currentPatient=patients.find(p=>p.id===id);
   if(!currentPatient)return;
+  currentResumoProntuario='';
+  await loadPatientRecords(id);
   goScreen('patient-detail');
   document.getElementById('nav-patients').classList.add('active');
   const pt2=document.getElementById('page-title');
@@ -1506,9 +1532,12 @@ function openPatient(id){
   document.getElementById('d-end').value=currentPatient.end;
   document.getElementById('d-nasc').value=currentPatient.nasc;
   document.getElementById('d-sus').value=currentPatient.sus==='—'?'':currentPatient.sus;
+  const cv=document.getElementById('d-conv');if(cv)cv.value=currentPatient.conv||'Particular';
+  const sx=document.getElementById('d-sexo');if(sx)sx.value=currentPatient.sexo||'Feminino';
   const ms=document.getElementById('d-medico');if(ms)ms.value=currentPatient.medico||'';
-  const op=document.getElementById('d-ocup');if(op)op.value=loadCadastroExtra().ocup||'';
+  const op=document.getElementById('d-ocup');if(op)op.value=currentPatient.ocup||'';
   const gs=document.getElementById('d-grupo');if(gs){populateGrupoSelect(gs);gs.value=getPatientGrupo(currentPatient.id)||'';}
+  const dc=document.getElementById('dados-clinicos-ta');if(dc){dc.value=currentPatient.dadosClinicos||'';updateDcPreview();}
   openTab('cadastro',document.querySelector('.tab'));
   renderAtendimentos();renderExames();renderTimeline();updateAtendProgress();
 }
@@ -1521,26 +1550,38 @@ function showToast(msg,type){
   el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2800);
 }
-function saveCadastro(){
-  const ms=document.getElementById('d-medico');
-  if(ms&&currentPatient){
-    currentPatient.medico=ms.value;
-    const mb=document.getElementById('pth-medico');
-    if(currentPatient.medico&&medicoNames[currentPatient.medico]){mb.textContent=medicoNames[currentPatient.medico];mb.style.display='';}
-    else mb.style.display='none';
-    timelineEvents.unshift({date:new Date().toLocaleDateString('pt-BR'),type:'cadastro',icon:'ti-user-edit',title:'Cadastro atualizado',sub:'Dados alterados'});
-  }
-  const op=document.getElementById('d-ocup');
-  if(op&&currentPatient){
-    const extra=loadCadastroExtra();extra.ocup=op.value.trim();extra.updated_at=new Date().toISOString();
-    localStorage.setItem(cadastroExtraKey(),JSON.stringify(extra));
-  }
-  const gs=document.getElementById('d-grupo');
-  if(gs&&currentPatient){setPatientGrupo(currentPatient.id,gs.value||'');renderPatients(patients);}
+async function saveCadastro(){
+  if(!currentPatient||!currentUser)return;
+  const payload={
+    name:document.getElementById('d-nome')?.value.trim()||currentPatient.name,
+    telefone:document.getElementById('d-tel')?.value.trim()||null,
+    email:document.getElementById('d-email')?.value.trim()||null,
+    mae:document.getElementById('d-mae')?.value.trim()||null,
+    pai:document.getElementById('d-pai')?.value.trim()||null,
+    endereco:document.getElementById('d-end')?.value.trim()||null,
+    data_nascimento:document.getElementById('d-nasc')?.value||null,
+    sus:document.getElementById('d-sus')?.value.trim()||null,
+    convenio:document.getElementById('d-conv')?.value||'Particular',
+    sexo:document.getElementById('d-sexo')?.value||null,
+    medico:document.getElementById('d-medico')?.value||null,
+    grupo:document.getElementById('d-grupo')?.value||null,
+    ocupacao:document.getElementById('d-ocup')?.value.trim()||null
+  };
+  const {data,error}=await sb.from('pacientes').update(payload).eq('paciente_id',currentPatient.id).select('*').single();
+  if(error){showToast('Erro ao salvar paciente: '+error.message,'error');return;}
+  const updated=mapPatientRow(data);
+  Object.assign(currentPatient,updated);
+  patients=patients.map(p=>p.id===updated.id?updated:p);
+  if(updated.grupo&&!gruposCache.includes(updated.grupo))saveGrupos([...gruposCache,updated.grupo]);
+  const mb=document.getElementById('pth-medico');
+  if(currentPatient.medico&&medicoNames[currentPatient.medico]){mb.textContent=medicoNames[currentPatient.medico];mb.style.display='';}
+  else mb.style.display='none';
+  await addTimelineEvent({date:new Date().toLocaleDateString('pt-BR'),type:'cadastro',icon:'ti-user-edit',title:'Cadastro atualizado',sub:'Dados alterados'});
+  renderPatients(patients);renderTimeline();
   showToast('Dados do paciente salvos com sucesso','success');
 }
 function cadastroExtraKey(){return 'cadastroExtra_'+((currentPatient&&currentPatient.id)||'anon');}
-function loadCadastroExtra(){try{return JSON.parse(localStorage.getItem(cadastroExtraKey())||'{}');}catch{return {};}}
+function loadCadastroExtra(){return {ocup:currentPatient?.ocup||'',updated_at:currentPatient?.updated_at||null};}
 
 /* ========== TABS ========== */
 function openTab(name,el){
@@ -1627,21 +1668,28 @@ function showNovoAtend(restore){
     const npta=document.getElementById('nota-personal-ta');if(npta)npta.value=atendEmAndamento.notaPessoal;
   }
 }
-function saveAtendFromProgress(){const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;saveAtendInternal();}
-function saveAtendInternal(){
+async function saveAtendFromProgress(){const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;await saveAtendInternal();}
+async function saveAtendInternal(){
   const now=new Date();
   const dateStr=now.toLocaleDateString('pt-BR');
   const timeStr=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   const pront=atendEmAndamento.pront||document.getElementById('pront-area')?.value||'';
   const notaPessoal=document.getElementById('nota-personal-ta')?.value||'';
-  atendimentos.unshift({id:Date.now(),title:'Consulta — '+dateStr,date:dateStr,hora:timeStr,acao:'Consulta',resumo:pront?pront.substring(0,200)+(pront.length>200?'...':''):'Atendimento registrado.',notas:pront||'Sem anotações.',notaPersonal:notaPessoal});
-  timelineEvents.unshift({date:dateStr,type:'atend',icon:'ti-stethoscope',title:'Atendimento registrado — '+timeStr,sub:'Dr. Rafael Mendes'});
+  const payload={paciente_id:currentPatient.id,id_medico:currentUser.id,ended_at:now.toISOString(),title:'Consulta — '+dateStr,acao:'Consulta',resumo:pront?pront.substring(0,200)+(pront.length>200?'...':''):'Atendimento registrado.',notas:pront||'Sem anotações.',nota_personal:notaPessoal,anamnese_ia:window.__lastAnamnese||null};
+  let data=null,error=null;
+  if(window._idConsultaAtual){({data,error}=await sb.from('consulta').update(payload).eq('id',window._idConsultaAtual).select('*').single());}
+  if(error||!data){({data,error}=await sb.from('consulta').insert(payload).select('*').single());}
+  if(error){showToast('Erro ao salvar atendimento: '+error.message,'error');return;}
+  atendimentos=atendimentos.filter(a=>a.id!==data.id);
+  atendimentos.unshift(mapConsultaRow(data));
+  await addTimelineEvent({date:dateStr,type:'atend',icon:'ti-stethoscope',title:'Atendimento registrado — '+timeStr,sub:medicoNames[currentPatient.medico]||'Médico responsável'});
   atendEmAndamento={pront:'',notaPessoal:'',dirty:false};
-  updateAtendProgress();renderAtendimentos();
+  window._idConsultaAtual=null;
+  updateAtendProgress();renderAtendimentos();renderTimeline();renderProntuario();showToast('Atendimento salvo com sucesso','success');
 }
-function saveAtend(){
+async function saveAtend(){
   const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;
-  saveAtendInternal();showAtendList();
+  await saveAtendInternal();showAtendList();
 }
 
 /* ========== PATIENT HEADER COLLAPSE ========== */
@@ -1733,8 +1781,12 @@ function renderExames(){
       </div>
     </div>`).join('');
 }
-function deleteExame(id){exames=exames.filter(e=>e.id!==id);renderExames();}
-function saveExame(){
+async function deleteExame(id){
+  const {error}=await sb.from('exames').delete().eq('id',id);
+  if(error){showToast('Erro ao excluir exame: '+error.message,'error');return;}
+  exames=exames.filter(e=>e.id!==id);renderExames();
+}
+async function saveExame(){
   const nome=document.getElementById('exame-nome').value.trim();if(!nome)return;
   const fn=document.getElementById('file-name');
   const durSel=document.getElementById('exame-dur');
@@ -1748,14 +1800,17 @@ function saveExame(){
     const map={'30':'30 dias','60':'60 dias','90':'3 meses','180':'6 meses','365':'12 meses','730':'24 meses'};
     validade=map[durVal]||(validadeDias+' dias');
   }
-  exames.unshift({id:Date.now(),nome,tipo:document.getElementById('exame-tipo').value,data:document.getElementById('exame-data').value||new Date().toLocaleDateString('pt-BR'),obs:document.getElementById('exame-obs').value,file:fn?fn.textContent:'—',validade,validadeDias});
-  timelineEvents.unshift({date:new Date().toLocaleDateString('pt-BR'),type:'exame',icon:'ti-flask',title:'Exame adicionado: '+nome,sub:document.getElementById('exame-obs').value||''});
-  renderExames();clearFile();
+  const examePayload={paciente_id:currentPatient.id,user_id:currentUser.id,nome,tipo:document.getElementById('exame-tipo').value,data:document.getElementById('exame-data').value||new Date().toLocaleDateString('pt-BR'),obs:document.getElementById('exame-obs').value,file_name:fn?fn.textContent:'—',validade,validade_dias:validadeDias};
+  const {data,error}=await sb.from('exames').insert(examePayload).select('*').single();
+  if(error){showToast('Erro ao salvar exame: '+error.message,'error');return;}
+  exames.unshift(mapExameRow(data));
+  await addTimelineEvent({date:new Date().toLocaleDateString('pt-BR'),type:'exame',icon:'ti-flask',title:'Exame adicionado: '+nome,sub:document.getElementById('exame-obs').value||''});
+  renderExames();renderTimeline();clearFile();
   document.getElementById('exame-nome').value='';document.getElementById('exame-obs').value='';
   if(durSel)durSel.value='indef';
   const dcw=document.getElementById('exame-dur-custom-wrap');if(dcw)dcw.style.display='none';
   const dci=document.getElementById('exame-dur-custom');if(dci)dci.value='';
-  closeModal();
+  closeModal();showToast('Exame salvo com sucesso','success');
 }
 function toggleExameDurCustom(){
   const v=document.getElementById('exame-dur').value;
@@ -1841,21 +1896,23 @@ function renderProntuario(){
   });
   area.innerHTML=html||'<div class="empty-st"><i class="ti ti-notes"></i><p>Nenhum atendimento registrado</p></div>';
 }
-function saveDadosClinicos(){
+async function saveDadosClinicos(){
+  if(!currentPatient)return;
+  const value=document.getElementById('dados-clinicos-ta')?.value||'';
+  const {data,error}=await sb.from('pacientes').update({dados_clinicos:value}).eq('paciente_id',currentPatient.id).select('*').single();
+  if(error){showToast('Erro ao salvar dados clínicos: '+error.message,'error');return;}
+  Object.assign(currentPatient,mapPatientRow(data));
+  patients=patients.map(p=>p.id===currentPatient.id?currentPatient:p);
   const badge=document.getElementById('pront-badge');
   badge.innerHTML='<i class="ti ti-check"></i> Dados Clínicos salvos';
   setTimeout(()=>badge.innerHTML='<i class="ti ti-check"></i> Atualizado',1500);
-  try{
-    const k='dadosClinicosUpd_'+((currentPatient&&currentPatient.id)||'anon');
-    localStorage.setItem(k,new Date().toISOString());
-  }catch{}
   renderProntStaleAlert();
 }
 function lastProntUpdateISO(){
   if(!currentPatient)return null;
   const ic=loadInfoComp().updated_at||null;
   const ce=loadCadastroExtra().updated_at||null;
-  let dc=null;try{dc=localStorage.getItem('dadosClinicosUpd_'+currentPatient.id);}catch{}
+  const dc=currentPatient.updated_at||null;
   const dates=[ic,ce,dc].filter(Boolean).map(s=>new Date(s).getTime()).filter(n=>!isNaN(n));
   if(!dates.length)return null;
   return new Date(Math.max(...dates)).toISOString();
@@ -1882,7 +1939,7 @@ function renderProntStaleAlert(){
 /* ========== INFORMAÇÕES COMPLEMENTARES ========== */
 function infoCompKey(){return 'infoComp_'+((currentPatient&&currentPatient.id)||'anon');}
 function loadInfoComp(){
-  try{return JSON.parse(localStorage.getItem(infoCompKey())||'{}');}catch{return {};}
+  return currentPatient?.infoComp||{};
 }
 function calcIMC(){
   const p=parseFloat(document.getElementById('ic-peso').value);
@@ -1903,18 +1960,22 @@ function openInfoComp(){
   ['ic-peso','ic-altura'].forEach(id=>{const el=document.getElementById(id);if(el){el.oninput=calcIMC;}});
   openModal('info-comp');
 }
-function saveInfoComp(){
+async function saveInfoComp(){
   const d={};
   ['peso','altura','sangue','sedent','tab','eti','sono','meds','alerg','fam','outros'].forEach(k=>{
     const el=document.getElementById('ic-'+k);if(el)d[k]=el.value.trim();
   });
   d.updated_at=new Date().toISOString();
-  localStorage.setItem(infoCompKey(),JSON.stringify(d));
+  const {data,error}=await sb.from('pacientes').update({info_complementar:d}).eq('paciente_id',currentPatient.id).select('*').single();
+  if(error){showToast('Erro ao salvar informações: '+error.message,'error');return;}
+  Object.assign(currentPatient,mapPatientRow(data));
+  patients=patients.map(p=>p.id===currentPatient.id?currentPatient:p);
   renderInfoCompSummary();
   renderProntStaleAlert();
   closeModal();
   const badge=document.getElementById('pront-badge');
   if(badge){badge.innerHTML='<i class="ti ti-check"></i> Informações complementares salvas';setTimeout(()=>badge.innerHTML='<i class="ti ti-check"></i> Atualizado',1800);}
+  showToast('Informações salvas com sucesso','success');
 }
 function renderInfoCompSummary(){
   const box=document.getElementById('info-comp-summary');
@@ -2325,10 +2386,7 @@ function buildAnamneseContext(){
     p.pai?'Pai: '+p.pai:''
   ].filter(Boolean).join('\n');
   let infoComp='';
-  try{
-    const raw=localStorage.getItem('infoComplementar_'+(p.id||''));
-    if(raw){const o=JSON.parse(raw);infoComp=Object.entries(o).filter(([,v])=>v).map(([k,v])=>k+': '+v).join('\n');}
-  }catch{}
+  try{infoComp=Object.entries(loadInfoComp()).filter(([,v])=>v).map(([k,v])=>k+': '+v).join('\n');}catch{}
   const resumoPront=(currentResumoProntuario||'').trim()||'(sem resumo do prontuário disponível)';
   // Resumo do atendimento atual: junta anotações do prontuário, transcrição
   // capturada e bolhas (fala do paciente + sugestões/respostas da IA).
@@ -2532,9 +2590,8 @@ async function saveNewPatient(){
   const nome=document.getElementById('np-nome').value.trim();if(!nome)return;
   const dob=document.getElementById('np-dob')?.value||null;
   const grupo=document.getElementById('np-grupo')?.value||'';
-  const {data,error}=await sb.from('pacientes').insert({name:nome,data_nascimento:dob}).select('paciente_id').single();
+  const {data,error}=await sb.from('pacientes').insert({name:nome,data_nascimento:dob,grupo:grupo||null,user_id:currentUser.id}).select('*').single();
   if(error){alert('Erro ao salvar paciente: '+error.message);return;}
-  if(grupo&&data?.paciente_id)setPatientGrupo(data.paciente_id,grupo);
   closeModal();
   await loadPatients();
 }
