@@ -1781,8 +1781,12 @@ function renderExames(){
       </div>
     </div>`).join('');
 }
-function deleteExame(id){exames=exames.filter(e=>e.id!==id);renderExames();}
-function saveExame(){
+async function deleteExame(id){
+  const {error}=await sb.from('exames').delete().eq('id',id);
+  if(error){showToast('Erro ao excluir exame: '+error.message,'error');return;}
+  exames=exames.filter(e=>e.id!==id);renderExames();
+}
+async function saveExame(){
   const nome=document.getElementById('exame-nome').value.trim();if(!nome)return;
   const fn=document.getElementById('file-name');
   const durSel=document.getElementById('exame-dur');
@@ -1796,14 +1800,17 @@ function saveExame(){
     const map={'30':'30 dias','60':'60 dias','90':'3 meses','180':'6 meses','365':'12 meses','730':'24 meses'};
     validade=map[durVal]||(validadeDias+' dias');
   }
-  exames.unshift({id:Date.now(),nome,tipo:document.getElementById('exame-tipo').value,data:document.getElementById('exame-data').value||new Date().toLocaleDateString('pt-BR'),obs:document.getElementById('exame-obs').value,file:fn?fn.textContent:'—',validade,validadeDias});
-  timelineEvents.unshift({date:new Date().toLocaleDateString('pt-BR'),type:'exame',icon:'ti-flask',title:'Exame adicionado: '+nome,sub:document.getElementById('exame-obs').value||''});
-  renderExames();clearFile();
+  const examePayload={paciente_id:currentPatient.id,user_id:currentUser.id,nome,tipo:document.getElementById('exame-tipo').value,data:document.getElementById('exame-data').value||new Date().toLocaleDateString('pt-BR'),obs:document.getElementById('exame-obs').value,file_name:fn?fn.textContent:'—',validade,validade_dias:validadeDias};
+  const {data,error}=await sb.from('exames').insert(examePayload).select('*').single();
+  if(error){showToast('Erro ao salvar exame: '+error.message,'error');return;}
+  exames.unshift(mapExameRow(data));
+  await addTimelineEvent({date:new Date().toLocaleDateString('pt-BR'),type:'exame',icon:'ti-flask',title:'Exame adicionado: '+nome,sub:document.getElementById('exame-obs').value||''});
+  renderExames();renderTimeline();clearFile();
   document.getElementById('exame-nome').value='';document.getElementById('exame-obs').value='';
   if(durSel)durSel.value='indef';
   const dcw=document.getElementById('exame-dur-custom-wrap');if(dcw)dcw.style.display='none';
   const dci=document.getElementById('exame-dur-custom');if(dci)dci.value='';
-  closeModal();
+  closeModal();showToast('Exame salvo com sucesso','success');
 }
 function toggleExameDurCustom(){
   const v=document.getElementById('exame-dur').value;
@@ -1953,18 +1960,22 @@ function openInfoComp(){
   ['ic-peso','ic-altura'].forEach(id=>{const el=document.getElementById(id);if(el){el.oninput=calcIMC;}});
   openModal('info-comp');
 }
-function saveInfoComp(){
+async function saveInfoComp(){
   const d={};
   ['peso','altura','sangue','sedent','tab','eti','sono','meds','alerg','fam','outros'].forEach(k=>{
     const el=document.getElementById('ic-'+k);if(el)d[k]=el.value.trim();
   });
   d.updated_at=new Date().toISOString();
-  localStorage.setItem(infoCompKey(),JSON.stringify(d));
+  const {data,error}=await sb.from('pacientes').update({info_complementar:d}).eq('paciente_id',currentPatient.id).select('*').single();
+  if(error){showToast('Erro ao salvar informações: '+error.message,'error');return;}
+  Object.assign(currentPatient,mapPatientRow(data));
+  patients=patients.map(p=>p.id===currentPatient.id?currentPatient:p);
   renderInfoCompSummary();
   renderProntStaleAlert();
   closeModal();
   const badge=document.getElementById('pront-badge');
   if(badge){badge.innerHTML='<i class="ti ti-check"></i> Informações complementares salvas';setTimeout(()=>badge.innerHTML='<i class="ti ti-check"></i> Atualizado',1800);}
+  showToast('Informações salvas com sucesso','success');
 }
 function renderInfoCompSummary(){
   const box=document.getElementById('info-comp-summary');
