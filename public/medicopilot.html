@@ -2739,7 +2739,7 @@ function openNewPromptModal(){
   document.getElementById('map-name').readOnly=false;
   document.getElementById('map-prompt').readOnly=false;
   renderVarChips();
-  openModal('m-anamnese-prompt');
+  openModal('anamnese-prompt');
 }
 function openEditPromptModal(id){
   const m=loadAnamneseModels().find(x=>x.id===id);if(!m)return;
@@ -2750,7 +2750,7 @@ function openEditPromptModal(id){
   document.getElementById('map-prompt').readOnly=false;
   document.getElementById('map-title').innerHTML='<i class="ti ti-file-text-ai" style="font-size:14px;margin-right:5px"></i>'+(m.id==='default'?'Editar Modelo padrão':'Editar prompt');
   renderVarChips();
-  openModal('m-anamnese-prompt');
+  openModal('anamnese-prompt');
 }
 function renderVarChips(){
   const c=document.getElementById('map-vars');
