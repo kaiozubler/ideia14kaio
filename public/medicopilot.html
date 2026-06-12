@@ -2442,9 +2442,28 @@ function openAnamnesePanel(){
   const txtEl=document.getElementById('resumo-panel-text');
   panel.classList.add('open');
   txtEl.classList.remove('rich');
+  const models=loadAnamneseModels();
+  if(models.length>1){
+    const opts=models.map(m=>`<option value="${m.id}">${(m.name||'(sem nome)').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]))}</option>`).join('');
+    txtEl.innerHTML=`<div style="display:flex;flex-direction:column;gap:10px;font-family:var(--sans)">
+      <div style="font-size:13px;font-weight:600;color:var(--n700)">Selecione o modelo de prompt</div>
+      <div style="font-size:12px;color:var(--n500)">Você possui mais de um modelo salvo. Escolha qual usar para gerar esta anamnese.</div>
+      <select id="anamnese-model-pick" style="padding:8px 10px;border:0.5px solid var(--n200);border-radius:var(--r6);font-size:13px">${opts}</select>
+      <button class="btn primary" style="align-self:flex-start" onclick="(function(){var id=document.getElementById('anamnese-model-pick').value;runAnamneseGeneration(id);})()"><i class="ti ti-sparkles"></i> Gerar anamnese</button>
+    </div>`;
+    return;
+  }
+  const model=models.find(m=>m.id==='default')||models[0];
+  runAnamneseGeneration(model.id);
+}
+function runAnamneseGeneration(modelId){
+  const txtEl=document.getElementById('resumo-panel-text');
+  txtEl.classList.remove('rich');
+  txtEl.innerHTML='';
   txtEl.textContent='Gerando anamnese com a IA...';
   const models=loadAnamneseModels();
-  const model=models.find(m=>m.id==='default')||models[0];
+  const model=models.find(m=>m.id===modelId)||models.find(m=>m.id==='default')||models[0];
+  if(!model){txtEl.textContent='⚠️ Nenhum modelo de prompt disponível.';return;}
   const ctx=buildAnamneseContext();
   const systemPrompt=applyAnamneseVars(model.prompt,ctx);
   const userContent=
