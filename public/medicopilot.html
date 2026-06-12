@@ -2466,12 +2466,12 @@ function runAnamneseGeneration(modelId){
   if(!model){txtEl.textContent='⚠️ Nenhum modelo de prompt disponível.';return;}
   const ctx=buildAnamneseContext();
   const systemPrompt=applyAnamneseVars(model.prompt,ctx);
-  const userContent=
-    '# DADOS DO PACIENTE\n'+(ctx.dadosCliente||'(sem dados)')+
-    (ctx.infoComp?'\n\n# INFORMAÇÕES COMPLEMENTARES\n'+ctx.infoComp:'')+
-    '\n\n# RESUMO DO PRONTUÁRIO\n'+ctx.resumoPront+
-    '\n\n# RESUMO DO ATENDIMENTO ATUAL ('+ctx.dataAt+')\n'+ctx.atend+
-    '\n\nCom base nessas informações, elabore a anamnese (SOAP) seguindo as instruções do sistema.';
+  // Só enviamos os dados que o prompt explicitamente referenciou via {variáveis}.
+  // Qualquer dado não citado no prompt NÃO é enviado para a IA — evita que ela
+  // misture informações do prontuário/atendimento que o usuário não configurou.
+  const userContent='Gere a resposta agora, seguindo estritamente as instruções acima. '
+    +'Use apenas os dados já fornecidos no prompt do sistema; não invente nem complemente '
+    +'com informações ausentes.';
   window.__lastAnamnese='';
   fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})})
     .then(r=>r.ok?r.json():r.text().then(t=>{throw new Error(t);}))
