@@ -2702,8 +2702,12 @@ function loadAnamneseModels(){
   let arr=[];
   try{arr=JSON.parse(localStorage.getItem('anamnese_models')||'[]');}catch{arr=[];}
   if(!arr.find(m=>m.id==='default')){
-    arr.unshift({id:'default',name:'Modelo padrão',prompt:DEFAULT_ANAMNESE_PROMPT,readonly:true,createdAt:Date.now()});
+    arr.unshift({id:'default',name:'Modelo padrão',prompt:DEFAULT_ANAMNESE_PROMPT,createdAt:Date.now()});
     saveAnamneseModels(arr);
+  } else {
+    // garante que o modelo padrão deixou de ser somente leitura
+    const def=arr.find(m=>m.id==='default');
+    if(def&&def.readonly){delete def.readonly;saveAnamneseModels(arr);}
   }
   return arr;
 }
@@ -2742,10 +2746,9 @@ function openEditPromptModal(id){
   document.getElementById('map-id').value=m.id;
   document.getElementById('map-name').value=m.name;
   document.getElementById('map-prompt').value=m.prompt;
-  const ro=!!m.readonly;
-  document.getElementById('map-name').readOnly=ro;
-  document.getElementById('map-prompt').readOnly=ro;
-  document.getElementById('map-title').innerHTML='<i class="ti ti-file-text-ai" style="font-size:14px;margin-right:5px"></i>'+(ro?'Modelo padrão (somente leitura)':'Editar prompt');
+  document.getElementById('map-name').readOnly=false;
+  document.getElementById('map-prompt').readOnly=false;
+  document.getElementById('map-title').innerHTML='<i class="ti ti-file-text-ai" style="font-size:14px;margin-right:5px"></i>'+(m.id==='default'?'Editar Modelo padrão':'Editar prompt');
   renderVarChips();
   openModal('m-anamnese-prompt');
 }
@@ -2765,13 +2768,13 @@ function saveAnamnesePrompt(){
   const prompt=document.getElementById('map-prompt').value.trim();
   const arr=loadAnamneseModels();
   const existing=id?arr.find(m=>m.id===id):null;
-  if(existing&&existing.readonly){closeModal();return;}
   if(!name||!prompt){alert('Preencha nome e prompt.');return;}
   if(existing){existing.name=name;existing.prompt=prompt;}
   else arr.push({id:'p'+Date.now(),name,prompt,createdAt:Date.now()});
   saveAnamneseModels(arr);
   closeModal();
   renderAnamneseList();
+  if(typeof showToast==='function')showToast('Prompt salvo com sucesso','success');
 }
 function deleteAnamnesePrompt(id){
   if(!confirm('Excluir este prompt?'))return;
