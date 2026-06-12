@@ -2594,6 +2594,8 @@ async function saveNewPatient(){
   if(error){alert('Erro ao salvar paciente: '+error.message);return;}
   closeModal();
   await loadPatients();
+  showToast('Paciente criado com sucesso','success');
+  if(data&&data.paciente_id) openPatient(data.paciente_id);
 }
 
 /* ========== CHART ========== */
