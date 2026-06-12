@@ -2388,6 +2388,33 @@ function buildAnamneseContext(){
   let infoComp='';
   try{infoComp=Object.entries(loadInfoComp()).filter(([,v])=>v).map(([k,v])=>k+': '+v).join('\n');}catch{}
   const resumoPront=(currentResumoProntuario||'').trim()||'(sem resumo do prontuário disponível)';
+  // Queixa principal: primeira linha não vazia das anotações do prontuário atual.
+  let queixa='';
+  try{
+    const pront=(document.getElementById('pront-area')?.value||'').trim();
+    if(pront){queixa=pront.split(/\r?\n/).map(s=>s.trim()).filter(Boolean)[0]||'';}
+  }catch{}
+  // Últimos exames cadastrados no paciente.
+  let ultimosExames='';
+  try{
+    if(Array.isArray(exames)&&exames.length){
+      ultimosExames=exames.slice(0,10).map(e=>{
+        const parts=[e.data||'',e.nome||'',e.tipo||'',e.obs||''].filter(Boolean);
+        return '- '+parts.join(' | ');
+      }).join('\n');
+    }
+  }catch{}
+  // Nome do médico logado (metadata > email).
+  let medicoNome='';
+  try{
+    const u=currentUser||{};
+    medicoNome=(u.user_metadata&&(u.user_metadata.full_name||u.user_metadata.name))||u.email||'';
+  }catch{}
+  // Dados clínicos consolidados (resumo do prontuário + complementares).
+  const dadosClinicos=[
+    resumoPront&&'## Resumo do prontuário\n'+resumoPront,
+    infoComp&&'## Dados clínicos complementares\n'+infoComp
+  ].filter(Boolean).join('\n\n')||'(sem dados clínicos disponíveis)';
   // Resumo do atendimento atual: junta anotações do prontuário, transcrição
   // capturada e bolhas (fala do paciente + sugestões/respostas da IA).
   const partes=[];
@@ -2419,19 +2446,21 @@ function buildAnamneseContext(){
   }
   if(!atend)atend='(sem dados do atendimento atual)';
   const dataAt=new Date().toLocaleDateString('pt-BR');
-  return {p,idade,dadosCliente,infoComp,resumoPront,atend,dataAt};
+  return {p,idade,dadosCliente,infoComp,resumoPront,atend,dataAt,queixa,ultimosExames,medicoNome,dadosClinicos};
 }
 function applyAnamneseVars(prompt,ctx){
   const map={
     '{resumo_paciente}':ctx.resumoPront,
+    '{resumo_prontuario}':ctx.resumoPront,
+    '{dados_clinicos}':ctx.dadosClinicos,
     '{paciente_nome}':ctx.p.name||'',
     '{paciente_idade}':ctx.idade||'',
     '{paciente_sexo}':ctx.p.sexo||'',
     '{data_atendimento}':ctx.dataAt,
-    '{queixa_principal}':'',
+    '{queixa_principal}':ctx.queixa||'',
     '{info_complementar}':ctx.infoComp||'',
-    '{ultimos_exames}':'',
-    '{medico_nome}':''
+    '{ultimos_exames}':ctx.ultimosExames||'',
+    '{medico_nome}':ctx.medicoNome||''
   };
   let out=prompt;
   Object.entries(map).forEach(([k,v])=>{out=out.split(k).join(v);});
@@ -2636,6 +2665,8 @@ bootstrap();
 /* ========== ANAMNESE PROMPTS ========== */
 const ANAMNESE_VARS=[
   {k:'{resumo_paciente}',d:'Resumo do prontuário'},
+  {k:'{resumo_prontuario}',d:'Resumo do prontuário'},
+  {k:'{dados_clinicos}',d:'Dados clínicos (resumo + complementares)'},
   {k:'{paciente_nome}',d:'Nome do paciente'},
   {k:'{paciente_idade}',d:'Idade'},
   {k:'{paciente_sexo}',d:'Sexo'},
