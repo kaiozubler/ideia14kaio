@@ -1472,7 +1472,7 @@ function mapConsultaRow(a){
   const d=a.started_at?new Date(a.started_at):new Date();
   const dateStr=d.toLocaleDateString('pt-BR');
   const timeStr=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  return {id:a.id,title:a.title||('Consulta — '+dateStr),date:dateStr,hora:timeStr,acao:a.acao||'Consulta',resumo:a.resumo||'Atendimento registrado.',notas:a.notas||'Sem anotações.',notaPersonal:a.nota_personal||'',anamneseIa:a.anamnese_ia||''};
+  return {id:a.id,id_medico:a.id_medico||null,title:a.title||('Consulta — '+dateStr),date:dateStr,hora:timeStr,acao:a.acao||'Consulta',resumo:a.resumo||'Atendimento registrado.',notas:a.notas||'Sem anotações.',notaPersonal:a.nota_personal||'',anamneseIa:a.anamnese_ia||''};
 }
 function mapExameRow(e){return {id:e.id,nome:e.nome,tipo:e.tipo||'Outro',data:e.data||'',obs:e.obs||'',file:e.file_name||'—',validade:e.validade||'',validadeDias:e.validade_dias||null};}
 function mapTimelineRow(ev){return {id:ev.id,date:ev.event_date,type:ev.type,icon:ev.icon,title:ev.title,sub:ev.sub||''};}
@@ -1623,8 +1623,8 @@ function renderAtendimentos(){
   const cbAll=document.getElementById('cb-all');if(cbAll)cbAll.checked=false;
   updateDossieBtn();
   document.getElementById('atend-list').innerHTML=atendimentos.map(a=>`
-    <div class="atend-item" onclick="openAtend(${a.id})">
-      <input type="checkbox" class="atend-cb" onclick="event.stopPropagation();toggleAtend(event,${a.id})" id="acb-${a.id}">
+    <div class="atend-item" onclick="openAtend('${a.id}')">
+      <input type="checkbox" class="atend-cb" onclick="event.stopPropagation();toggleAtend(event,'${a.id}')" id="acb-${a.id}">
       <div class="atend-body">
         <div class="atend-title">${a.title}</div>
         <div class="atend-sub"><span>${a.date} ${a.hora||''}</span><span class="atend-tag green">${a.acao}</span></div>
@@ -1642,7 +1642,8 @@ function showAtendList(){
   renderAtendimentos();
 }
 function openAtend(id){
-  const a=atendimentos.find(x=>x.id===id);
+  const a=atendimentos.find(x=>String(x.id)===String(id));
+  if(!a){console.warn('Atendimento não encontrado',id);return;}
   document.getElementById('atend-list-view').style.display='none';
   document.getElementById('atend-detail-view').style.display='block';
   document.getElementById('atend-novo-view').style.display='none';
@@ -1650,6 +1651,77 @@ function openAtend(id){
   document.getElementById('adv-date').textContent=a.date+(a.hora?' — '+a.hora:'');
   document.getElementById('adv-resumo').textContent=a.resumo;
   document.getElementById('adv-notas').textContent=a.notas;
+  // Médico responsável
+  const med=document.getElementById('adv-medico');
+  if(med){
+    let nome='—';
+    if(currentUser&&a.id_medico===currentUser.id){
+      nome=currentUser.user_metadata?.full_name||currentUser.email||'Médico responsável';
+    }else if(currentPatient&&currentPatient.medico&&medicoNames[currentPatient.medico]){
+      nome=medicoNames[currentPatient.medico];
+    }
+    med.textContent=nome;
+  }
+  // Anamnese gerada (se houver)
+  const anam=document.getElementById('adv-anamnese');
+  const anamBlock=document.getElementById('adv-anamnese-block');
+  if(anam&&anamBlock){
+    if(a.anamneseIa){anam.textContent=a.anamneseIa;anamBlock.style.display='';}
+    else{anamBlock.style.display='none';}
+  }
+  // Inicia chat IA contextual da consulta
+  initAtendChatIA(a);
+}
+
+/* ===== Chat IA da consulta realizada ===== */
+let atendChatHistory=[];
+let atendChatContext='';
+function initAtendChatIA(a){
+  atendChatHistory=[];
+  const p=currentPatient||{};
+  const yr=new Date().getFullYear();
+  const idade=p.dob?(yr-parseInt(String(p.dob).split('/')[2]||0))+' anos':'';
+  const partes=[];
+  partes.push('## Paciente');
+  partes.push(`Nome: ${p.name||'—'}\nIdade: ${idade||'—'}\nSexo: ${p.sexo||'—'}\nConvênio: ${p.conv||'—'}`);
+  if(p.dadosClinicos)partes.push('## Dados clínicos\n'+p.dadosClinicos);
+  if(currentResumoProntuario)partes.push('## Resumo do prontuário\n'+currentResumoProntuario);
+  partes.push('## Consulta selecionada\n'+a.title+' ('+a.date+(a.hora?' '+a.hora:'')+')');
+  if(a.notas&&a.notas!=='Sem anotações.')partes.push('## Prontuário desta consulta\n'+a.notas);
+  if(a.notaPersonal)partes.push('## Notas internas\n'+a.notaPersonal);
+  if(a.anamneseIa)partes.push('## Anamnese gerada nesta consulta\n'+a.anamneseIa);
+  atendChatContext=partes.join('\n\n');
+  const log=document.getElementById('adv-chat-log');
+  if(log)log.innerHTML='<div class="adv-chat-hint" style="font-size:11px;color:var(--n400);padding:6px 0">Converse com a IA sobre esta consulta. Ela já recebeu paciente, prontuário, resumo e anamnese.</div>';
+  const inp=document.getElementById('adv-chat-inp');
+  if(inp)inp.value='';
+}
+function appendAdvChat(role,text){
+  const log=document.getElementById('adv-chat-log');
+  if(!log)return;
+  const div=document.createElement('div');
+  div.className='adv-chat-msg '+role;
+  div.style.cssText='margin:6px 0;padding:8px 10px;border-radius:8px;font-size:12px;line-height:1.45;'+(role==='user'?'background:var(--g50);color:var(--n700);align-self:flex-end':'background:var(--n75);color:var(--n700)');
+  div.textContent=text;
+  log.appendChild(div);
+  log.scrollTop=log.scrollHeight;
+}
+function sendAdvChat(){
+  const inp=document.getElementById('adv-chat-inp');
+  if(!inp)return;
+  const txt=inp.value.trim();if(!txt)return;
+  inp.value='';
+  appendAdvChat('user',txt);
+  atendChatHistory.push({role:'user',content:txt});
+  appendAdvChat('assistant','...');
+  const loading=document.getElementById('adv-chat-log').lastChild;
+  fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'chat',messages:atendChatHistory,resumo_prontuario:atendChatContext})})
+    .then(r=>r.json()).then(j=>{
+      const reply=j.reply||'(sem resposta)';
+      if(loading)loading.remove();
+      atendChatHistory.push({role:'assistant',content:reply});
+      appendAdvChat('assistant',reply);
+    }).catch(e=>{if(loading)loading.remove();appendAdvChat('assistant','⚠️ Erro: '+(e.message||e));});
 }
 function showNovoAtend(restore){
   document.getElementById('atend-list-view').style.display='none';
