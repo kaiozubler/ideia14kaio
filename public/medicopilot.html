@@ -720,14 +720,6 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
               <div style="font-size:11px;color:var(--n500);margin-top:4px"><i class="ti ti-user-circle" style="font-size:12px"></i> Médico: <span id="adv-medico">—</span></div>
             </div>
           </div>
-          <div class="ai-resume-block">
-            <div class="air-label"><i class="ti ti-sparkles"></i> Resumo gerado pela IA</div>
-            <div class="air-text" id="adv-resumo">—</div>
-          </div>
-          <div class="notes-block">
-            <div class="notes-label">Prontuário desta consulta</div>
-            <div class="notes-text" id="adv-notas">—</div>
-          </div>
           <div class="notes-block" id="adv-anamnese-block" style="display:none;margin-top:10px">
             <div class="notes-label"><i class="ti ti-file-text"></i> Anamnese gerada</div>
             <div class="notes-text" id="adv-anamnese" style="white-space:pre-wrap">—</div>
@@ -1662,8 +1654,6 @@ function openAtend(id){
   document.getElementById('atend-novo-view').style.display='none';
   document.getElementById('adv-title').textContent=a.title;
   document.getElementById('adv-date').textContent=a.date+(a.hora?' — '+a.hora:'');
-  document.getElementById('adv-resumo').textContent=a.resumo;
-  document.getElementById('adv-notas').textContent=a.notas;
   // Médico responsável
   const med=document.getElementById('adv-medico');
   if(med){
