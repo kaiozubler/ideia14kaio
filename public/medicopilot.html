@@ -992,14 +992,16 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
           <input type="checkbox" id="cop-conduta">
           <span style="font-size:13px;color:var(--n700)">Sugerir conduta ao médico</span>
         </label>
-        <div style="border-top:1px solid var(--n200)"></div>
-        <div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-            <div style="font-size:13px;font-weight:600;color:var(--n700)">Frequência de atualização</div>
-            <div style="font-size:12px;color:var(--n500)"><span id="cop-freq-lbl">30</span>s</div>
+        <div id="cop-freq-wrap" style="display:none">
+          <div style="border-top:1px solid var(--n200);margin-bottom:16px"></div>
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <div style="font-size:13px;font-weight:600;color:var(--n700)">Frequência de atualização</div>
+              <div style="font-size:12px;color:var(--n500)"><span id="cop-freq-lbl">2min</span></div>
+            </div>
+            <input type="range" id="cop-freq" min="15" max="600" step="5" value="120" style="width:100%">
+            <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--n400);margin-top:2px"><span>15s</span><span>10min</span></div>
           </div>
-          <input type="range" id="cop-freq" min="15" max="300" step="5" value="30" style="width:100%">
-          <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--n400);margin-top:2px"><span>15s</span><span>5min</span></div>
         </div>
         <div style="display:flex;justify-content:flex-end">
           <button class="btn primary" onclick="saveCopilotoCfg()"><i class="ti ti-device-floppy"></i> Salvar</button>
@@ -1409,17 +1411,24 @@ function goScreen(name){
   }
 }
 function toggleIAGroup(){document.getElementById('grp-ia').classList.toggle('open');}
-function _copFmt(s){s=Number(s)||30;if(s>=60){const m=Math.floor(s/60),r=s%60;return r?`${m}min ${r}s`:`${m}min`;}return `${s}s`;}
+function _copFmt(s){s=Number(s)||120;if(s>=60){const m=Math.floor(s/60),r=s%60;return r?`${m}min ${r}s`:`${m}min`;}return `${s}s`;}
+function updateCopFreqVisibility(){
+  const perguntas=document.getElementById('cop-perguntas').checked;
+  const conduta=document.getElementById('cop-conduta').checked;
+  document.getElementById('cop-freq-wrap').style.display=(perguntas||conduta)?'block':'none';
+}
 function loadCopilotoCfg(){
   let cfg={};try{cfg=JSON.parse(localStorage.getItem('copilotoCfg')||'{}');}catch(e){}
   const en=document.getElementById('cop-enabled');if(!en)return;
   en.checked=cfg.enabled!==false;
-  document.getElementById('cop-voz').checked=!!cfg.voz;
-  document.getElementById('cop-perguntas').checked=!!cfg.perguntas;
-  document.getElementById('cop-conduta').checked=!!cfg.conduta;
-  const f=document.getElementById('cop-freq');f.value=cfg.freq||30;
+  document.getElementById('cop-voz').checked=cfg.voz!==false;
+  const cp=document.getElementById('cop-perguntas');cp.checked=cfg.perguntas!==false;
+  const cc=document.getElementById('cop-conduta');cc.checked=cfg.conduta!==false;
+  cp.onchange=updateCopFreqVisibility;cc.onchange=updateCopFreqVisibility;
+  const f=document.getElementById('cop-freq');f.value=cfg.freq||120;
   const lbl=document.getElementById('cop-freq-lbl');lbl.textContent=_copFmt(f.value);
   f.oninput=()=>lbl.textContent=_copFmt(f.value);
+  updateCopFreqVisibility();
 }
 function saveCopilotoCfg(){
   const cfg={
@@ -1427,7 +1436,7 @@ function saveCopilotoCfg(){
     voz:document.getElementById('cop-voz').checked,
     perguntas:document.getElementById('cop-perguntas').checked,
     conduta:document.getElementById('cop-conduta').checked,
-    freq:Number(document.getElementById('cop-freq').value)||30,
+    freq:Number(document.getElementById('cop-freq').value)||120,
   };
   localStorage.setItem('copilotoCfg',JSON.stringify(cfg));
   if(typeof toast==='function')toast('Configurações salvas');
