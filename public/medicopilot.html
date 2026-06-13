@@ -717,6 +717,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
             <div>
               <div class="atend-detail-title" id="adv-title">—</div>
               <div class="atend-detail-date" id="adv-date">—</div>
+              <div style="font-size:11px;color:var(--n500);margin-top:4px"><i class="ti ti-user-circle" style="font-size:12px"></i> Médico: <span id="adv-medico">—</span></div>
             </div>
           </div>
           <div class="ai-resume-block">
@@ -724,13 +725,25 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
             <div class="air-text" id="adv-resumo">—</div>
           </div>
           <div class="notes-block">
-            <div class="notes-label">Anotações internas</div>
+            <div class="notes-label">Prontuário desta consulta</div>
             <div class="notes-text" id="adv-notas">—</div>
+          </div>
+          <div class="notes-block" id="adv-anamnese-block" style="display:none;margin-top:10px">
+            <div class="notes-label"><i class="ti ti-file-text"></i> Anamnese gerada</div>
+            <div class="notes-text" id="adv-anamnese" style="white-space:pre-wrap">—</div>
           </div>
           <div class="atend-links">
             <button class="btn sm ghost"><i class="ti ti-file-prescription"></i> Ver receita</button>
             <button class="btn sm ghost"><i class="ti ti-certificate"></i> Ver atestado</button>
             <button class="btn sm"><i class="ti ti-printer"></i> Imprimir</button>
+          </div>
+          <div style="margin-top:16px;border:0.5px solid var(--n150);border-radius:var(--r8);overflow:hidden">
+            <div style="padding:8px 12px;background:var(--n50);font-size:12px;font-weight:600;color:var(--n700);display:flex;align-items:center;gap:6px;border-bottom:0.5px solid var(--n150)"><i class="ti ti-message-chatbot"></i> Conversar com a IA sobre esta consulta</div>
+            <div id="adv-chat-log" style="max-height:280px;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;background:#fff"></div>
+            <div style="display:flex;gap:6px;padding:8px;border-top:0.5px solid var(--n150);background:var(--n50)">
+              <input id="adv-chat-inp" type="text" placeholder="Pergunte algo sobre esta consulta..." onkeydown="if(event.key==='Enter')sendAdvChat()" style="flex:1;padding:7px 10px;border:0.5px solid var(--n200);border-radius:var(--r4);font-size:12px;outline:none">
+              <button class="btn sm primary" onclick="sendAdvChat()"><i class="ti ti-send"></i></button>
+            </div>
           </div>
         </div>
 
