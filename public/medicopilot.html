@@ -967,10 +967,43 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 
     <!-- SCREEN: COPILOTO -->
     <div id="s-copiloto" style="display:none">
-      <div class="rec-empty">
-        <i class="ti ti-stethoscope"></i>
-        <h3>Copiloto de consulta</h3>
-        <p>Acesse o copiloto durante um atendimento aberto no prontuário do paciente.</p>
+      <div style="margin-bottom:14px">
+        <div style="font-size:14px;font-weight:600;color:var(--n700)">Copiloto de consulta</div>
+        <div style="font-size:11.5px;color:var(--n400);margin-top:2px">Configure o comportamento do copiloto durante o atendimento.</div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--n200);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:16px;max-width:640px">
+        <label style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--n700)">Ativar copiloto</div>
+            <div style="font-size:11.5px;color:var(--n400)">Liga ou desliga o copiloto durante a consulta.</div>
+          </div>
+          <input type="checkbox" id="cop-enabled" role="switch" style="width:38px;height:22px;cursor:pointer">
+        </label>
+        <div style="border-top:1px solid var(--n200)"></div>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <input type="checkbox" id="cop-voz">
+          <span style="font-size:13px;color:var(--n700)">Permitir gravação de voz</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <input type="checkbox" id="cop-perguntas">
+          <span style="font-size:13px;color:var(--n700)">Gerar perguntas automaticamente</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <input type="checkbox" id="cop-conduta">
+          <span style="font-size:13px;color:var(--n700)">Sugerir conduta ao médico</span>
+        </label>
+        <div style="border-top:1px solid var(--n200)"></div>
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <div style="font-size:13px;font-weight:600;color:var(--n700)">Frequência de atualização</div>
+            <div style="font-size:12px;color:var(--n500)"><span id="cop-freq-lbl">30</span>s</div>
+          </div>
+          <input type="range" id="cop-freq" min="15" max="300" step="5" value="30" style="width:100%">
+          <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--n400);margin-top:2px"><span>15s</span><span>5min</span></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end">
+          <button class="btn primary" onclick="saveCopilotoCfg()"><i class="ti ti-device-floppy"></i> Salvar</button>
+        </div>
       </div>
     </div>
 
