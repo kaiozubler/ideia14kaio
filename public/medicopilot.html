@@ -992,14 +992,16 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
           <input type="checkbox" id="cop-conduta">
           <span style="font-size:13px;color:var(--n700)">Sugerir conduta ao médico</span>
         </label>
-        <div style="border-top:1px solid var(--n200)"></div>
-        <div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-            <div style="font-size:13px;font-weight:600;color:var(--n700)">Frequência de atualização</div>
-            <div style="font-size:12px;color:var(--n500)"><span id="cop-freq-lbl">30</span>s</div>
+        <div id="cop-freq-wrap" style="display:none">
+          <div style="border-top:1px solid var(--n200);margin-bottom:16px"></div>
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <div style="font-size:13px;font-weight:600;color:var(--n700)">Frequência de atualização</div>
+              <div style="font-size:12px;color:var(--n500)"><span id="cop-freq-lbl">2min</span></div>
+            </div>
+            <input type="range" id="cop-freq" min="15" max="600" step="5" value="120" style="width:100%">
+            <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--n400);margin-top:2px"><span>15s</span><span>10min</span></div>
           </div>
-          <input type="range" id="cop-freq" min="15" max="300" step="5" value="30" style="width:100%">
-          <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--n400);margin-top:2px"><span>15s</span><span>5min</span></div>
         </div>
         <div style="display:flex;justify-content:flex-end">
           <button class="btn primary" onclick="saveCopilotoCfg()"><i class="ti ti-device-floppy"></i> Salvar</button>
