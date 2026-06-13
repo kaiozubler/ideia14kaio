@@ -1654,8 +1654,6 @@ function openAtend(id){
   document.getElementById('atend-novo-view').style.display='none';
   document.getElementById('adv-title').textContent=a.title;
   document.getElementById('adv-date').textContent=a.date+(a.hora?' — '+a.hora:'');
-  document.getElementById('adv-resumo').textContent=a.resumo;
-  document.getElementById('adv-notas').textContent=a.notas;
   // Médico responsável
   const med=document.getElementById('adv-medico');
   if(med){
