@@ -135,10 +135,8 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .atd-search:focus-within{border-color:var(--g400)}
 .atd-search .ti{color:var(--n300);font-size:16px}
 .atd-search input{flex:1;border:none;background:transparent;outline:none;font-size:12.5px;color:var(--n700)}
-.atd-filter{display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap}
-.atd-chip{font-size:11.5px;padding:6px 10px;border-radius:var(--r6);border:0.5px solid var(--n200);background:var(--white);color:var(--n600);cursor:pointer;transition:all .14s}
-.atd-chip:hover{background:var(--n50)}
-.atd-chip.on{background:var(--g500);border-color:var(--g500);color:var(--white)}
+.atd-period-select{margin-left:auto;height:36px;border:0.5px solid var(--n200);border-radius:var(--r6);padding:0 10px;font-size:12px;color:var(--n700);background:var(--white);outline:none;cursor:pointer}
+.atd-period-select:focus{border-color:var(--g400)}
 .atd-custom{display:none;align-items:center;gap:6px;font-size:11px;color:var(--n500)}
 .atd-custom.show{display:flex}
 .atd-custom input{height:30px;border:0.5px solid var(--n200);border-radius:var(--r6);padding:0 8px;font-size:11.5px;background:var(--white);color:var(--n700);outline:none}
@@ -595,18 +593,18 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
           </div>
           <button class="btn" onclick="openModal('new-patient')"><i class="ti ti-user-plus"></i> Novo paciente</button>
           <button class="btn primary" onclick="iniciarNovoAtendimento()"><i class="ti ti-plus"></i> Iniciar atendimento</button>
-          <div class="atd-filter" id="atd-filter">
-            <button class="atd-chip on" data-f="hoje" onclick="setKanbanFilter('hoje',this)">Hoje</button>
-            <button class="atd-chip" data-f="semana" onclick="setKanbanFilter('semana',this)">Essa semana</button>
-            <button class="atd-chip" data-f="proxsemana" onclick="setKanbanFilter('proxsemana',this)">Próxima semana</button>
-            <button class="atd-chip" data-f="anterior" onclick="setKanbanFilter('anterior',this)">Semana anterior</button>
-            <button class="atd-chip" data-f="mes" onclick="setKanbanFilter('mes',this)">Este mês</button>
-            <button class="atd-chip" data-f="custom" onclick="setKanbanFilter('custom',this)">Data personalizada</button>
-            <div class="atd-custom" id="atd-custom">
-              <input type="date" id="atd-custom-from" onchange="renderKanban()">
-              <span>até</span>
-              <input type="date" id="atd-custom-to" onchange="renderKanban()">
-            </div>
+          <select class="atd-period-select" id="atd-period-select" onchange="setKanbanFilter(this.value)">
+            <option value="hoje" selected>Hoje</option>
+            <option value="semana">Essa semana</option>
+            <option value="proxsemana">Próxima semana</option>
+            <option value="anterior">Semana anterior</option>
+            <option value="mes">Este mês</option>
+            <option value="custom">Data personalizada</option>
+          </select>
+          <div class="atd-custom" id="atd-custom">
+            <input type="date" id="atd-custom-from" onchange="renderKanban()">
+            <span>até</span>
+            <input type="date" id="atd-custom-to" onchange="renderKanban()">
           </div>
         </div>
         <div class="kanban">
@@ -3073,10 +3071,10 @@ function seedKanbanIfEmpty(){
   });
   saveKanban(seeded);
 }
-function setKanbanFilter(f,btn){
+function setKanbanFilter(f){
   kanbanFilter=f;
-  document.querySelectorAll('#atd-filter .atd-chip').forEach(c=>c.classList.remove('on'));
-  if(btn)btn.classList.add('on');
+  const sel=document.getElementById('atd-period-select');
+  if(sel)sel.value=f;
   document.getElementById('atd-custom').classList.toggle('show',f==='custom');
   renderKanban();
 }
