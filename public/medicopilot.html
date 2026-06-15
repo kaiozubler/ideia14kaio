@@ -3211,8 +3211,32 @@ function renderKanban(){
   });
 }
 function iniciarNovoAtendimento(){
-  currentPatient=null;
-  goScreen('copiloto');
+  currentPatient={id:null,name:'',init:'',dob:'',tel:'',conv:'Particular',sus:'—',cpf:'',end:'',email:'',mae:'',pai:'',nasc:'',sexo:'Feminino',medico:'',ocup:'',dadosClinicos:''};
+  atendimentos=[];exames=[];timelineEvents=[];currentResumoProntuario='';
+  atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[]};
+  goScreen('patient-detail');
+  document.getElementById('page-title').textContent='Paciente';
+  document.getElementById('page-title').style.cursor='';
+  document.getElementById('page-title').onclick=null;
+  document.getElementById('breadcrumb').innerHTML='<span>/ Novo paciente</span>';
+  document.getElementById('pth-av').textContent='+';document.getElementById('pth-name').textContent='Novo paciente';
+  document.getElementById('pth-sub').textContent='';document.getElementById('pth-conv').textContent='Particular';
+  document.getElementById('pth-sus').textContent='SUS: —';document.getElementById('pth-idade').textContent='';
+  const mb=document.getElementById('pth-medico');if(mb)mb.style.display='none';
+  document.getElementById('print-name').textContent='';document.getElementById('print-sub1').textContent='';
+  document.getElementById('print-sub2').textContent='';document.getElementById('print-sub3').textContent='';
+  document.getElementById('d-nome').value='';document.getElementById('d-tel').value='';
+  document.getElementById('d-email').value='';document.getElementById('d-mae').value='';
+  document.getElementById('d-pai').value='';document.getElementById('d-end').value='';
+  document.getElementById('d-nasc').value='';document.getElementById('d-sus').value='';
+  const cv=document.getElementById('d-conv');if(cv)cv.value='Particular';
+  const sx=document.getElementById('d-sexo');if(sx)sx.value='Feminino';
+  const ms=document.getElementById('d-medico');if(ms)ms.value='';
+  const op=document.getElementById('d-ocup');if(op)op.value='';
+  const gs=document.getElementById('d-grupo');if(gs)gs.value='';
+  const dc=document.getElementById('dados-clinicos-ta');if(dc){dc.value='';updateDcPreview();}
+  renderAtendimentos();renderExames();renderTimeline();updateAtendProgress();
+  openTab('atendimentos',null);
 }
 </script>
 </body>
