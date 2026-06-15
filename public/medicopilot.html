@@ -595,18 +595,18 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
           </div>
           <button class="btn" onclick="openModal('new-patient')"><i class="ti ti-user-plus"></i> Novo paciente</button>
           <button class="btn primary" onclick="iniciarNovoAtendimento()"><i class="ti ti-plus"></i> Iniciar atendimento</button>
-          <div class="atd-filter" id="atd-filter">
-            <button class="atd-chip on" data-f="hoje" onclick="setKanbanFilter('hoje',this)">Hoje</button>
-            <button class="atd-chip" data-f="semana" onclick="setKanbanFilter('semana',this)">Essa semana</button>
-            <button class="atd-chip" data-f="proxsemana" onclick="setKanbanFilter('proxsemana',this)">Próxima semana</button>
-            <button class="atd-chip" data-f="anterior" onclick="setKanbanFilter('anterior',this)">Semana anterior</button>
-            <button class="atd-chip" data-f="mes" onclick="setKanbanFilter('mes',this)">Este mês</button>
-            <button class="atd-chip" data-f="custom" onclick="setKanbanFilter('custom',this)">Data personalizada</button>
-            <div class="atd-custom" id="atd-custom">
-              <input type="date" id="atd-custom-from" onchange="renderKanban()">
-              <span>até</span>
-              <input type="date" id="atd-custom-to" onchange="renderKanban()">
-            </div>
+          <select class="atd-period-select" id="atd-period-select" onchange="setKanbanFilter(this.value)">
+            <option value="hoje" selected>Hoje</option>
+            <option value="semana">Essa semana</option>
+            <option value="proxsemana">Próxima semana</option>
+            <option value="anterior">Semana anterior</option>
+            <option value="mes">Este mês</option>
+            <option value="custom">Data personalizada</option>
+          </select>
+          <div class="atd-custom" id="atd-custom">
+            <input type="date" id="atd-custom-from" onchange="renderKanban()">
+            <span>até</span>
+            <input type="date" id="atd-custom-to" onchange="renderKanban()">
           </div>
         </div>
         <div class="kanban">
