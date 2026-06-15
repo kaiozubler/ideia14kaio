@@ -3054,6 +3054,95 @@ function deleteAnamnesePrompt(id){
   saveAnamneseModels(arr);
   renderAnamneseList();
 }
+
+/* ========== KANBAN ATENDIMENTOS ========== */
+let kanbanFilter='hoje';
+function loadKanban(){try{return JSON.parse(localStorage.getItem('kanbanAtend')||'[]');}catch(e){return [];}}
+function saveKanban(arr){localStorage.setItem('kanbanAtend',JSON.stringify(arr));}
+function seedKanbanIfEmpty(){
+  const arr=loadKanban();
+  if(arr.length||!patients.length)return;
+  const statuses=['agendado','aguardando','atendido'];
+  const now=new Date();
+  const sample=patients.slice(0,Math.min(9,patients.length));
+  const seeded=sample.map((p,i)=>{
+    const dayOffset=(i%3)-1; // -1, 0, 1
+    const d=new Date(now);d.setDate(d.getDate()+dayOffset);
+    d.setHours(8+(i*2)%10,(i*15)%60,0,0);
+    return {id:'k'+Date.now()+'_'+i,patient_id:p.id,scheduled_at:d.toISOString(),status:statuses[i%3]};
+  });
+  saveKanban(seeded);
+}
+function setKanbanFilter(f,btn){
+  kanbanFilter=f;
+  document.querySelectorAll('#atd-filter .atd-chip').forEach(c=>c.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  document.getElementById('atd-custom').classList.toggle('show',f==='custom');
+  renderKanban();
+}
+function _kRange(){
+  const now=new Date();const start=new Date(now);start.setHours(0,0,0,0);
+  const end=new Date(now);end.setHours(23,59,59,999);
+  const day=start.getDay();const monOffset=day===0?-6:1-day;
+  if(kanbanFilter==='hoje')return [start,end];
+  if(kanbanFilter==='semana'){const s=new Date(start);s.setDate(s.getDate()+monOffset);const e=new Date(s);e.setDate(e.getDate()+6);e.setHours(23,59,59,999);return [s,e];}
+  if(kanbanFilter==='proxsemana'){const s=new Date(start);s.setDate(s.getDate()+monOffset+7);const e=new Date(s);e.setDate(e.getDate()+6);e.setHours(23,59,59,999);return [s,e];}
+  if(kanbanFilter==='anterior'){const s=new Date(start);s.setDate(s.getDate()+monOffset-7);const e=new Date(s);e.setDate(e.getDate()+6);e.setHours(23,59,59,999);return [s,e];}
+  if(kanbanFilter==='mes'){const s=new Date(now.getFullYear(),now.getMonth(),1);const e=new Date(now.getFullYear(),now.getMonth()+1,0,23,59,59,999);return [s,e];}
+  if(kanbanFilter==='custom'){
+    const f=document.getElementById('atd-custom-from').value;
+    const t=document.getElementById('atd-custom-to').value;
+    const s=f?new Date(f+'T00:00:00'):new Date(0);
+    const e=t?new Date(t+'T23:59:59'):new Date(8640000000000000);
+    return [s,e];
+  }
+  return [start,end];
+}
+function renderKanban(){
+  const [s,e]=_kRange();
+  const q=(document.getElementById('atd-search-input')?.value||'').trim().toLowerCase();
+  const items=loadKanban().filter(k=>{
+    const d=new Date(k.scheduled_at);
+    if(d<s||d>e)return false;
+    if(q){
+      const p=patients.find(x=>x.id===k.patient_id);
+      if(!p||!p.name.toLowerCase().includes(q))return false;
+    }
+    return true;
+  });
+  const cols={agendado:[],aguardando:[],atendido:[]};
+  items.forEach(k=>{if(cols[k.status])cols[k.status].push(k);});
+  Object.keys(cols).forEach(st=>{
+    cols[st].sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));
+    const body=document.getElementById('kcol-'+st);
+    const ct=document.getElementById('kct-'+st);
+    if(ct)ct.textContent=cols[st].length;
+    if(!body)return;
+    if(!cols[st].length){body.innerHTML='<div class="kcol-empty">Nenhum atendimento</div>';return;}
+    body.innerHTML=cols[st].map(k=>{
+      const p=patients.find(x=>x.id===k.patient_id);
+      if(!p)return '';
+      const d=new Date(k.scheduled_at);
+      const dateStr=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+      const timeStr=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      return `<div class="kcard" onclick="openPatient('${p.id}')">
+        <div class="kcard-top">
+          <div class="kcard-av">${p.init}</div>
+          <div class="kcard-name">${p.name}</div>
+        </div>
+        <div class="kcard-meta">
+          <i class="ti ti-calendar"></i><span>${dateStr}</span>
+          <i class="ti ti-clock"></i><span>${timeStr}</span>
+          <span class="kcard-tag">${p.conv||'Particular'}</span>
+        </div>
+      </div>`;
+    }).join('');
+  });
+}
+function iniciarNovoAtendimento(){
+  currentPatient=null;
+  goScreen('copiloto');
+}
 </script>
 </body>
 </html>
