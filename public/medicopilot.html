@@ -3071,10 +3071,10 @@ function seedKanbanIfEmpty(){
   });
   saveKanban(seeded);
 }
-function setKanbanFilter(f,btn){
+function setKanbanFilter(f){
   kanbanFilter=f;
-  document.querySelectorAll('#atd-filter .atd-chip').forEach(c=>c.classList.remove('on'));
-  if(btn)btn.classList.add('on');
+  const sel=document.getElementById('atd-period-select');
+  if(sel)sel.value=f;
   document.getElementById('atd-custom').classList.toggle('show',f==='custom');
   renderKanban();
 }
