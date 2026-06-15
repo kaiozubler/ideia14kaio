@@ -585,8 +585,49 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 
   <div class="content" id="content">
 
+    <!-- SCREEN: ATENDIMENTOS (KANBAN) -->
+    <div id="s-atendimentos" style="display:block;height:calc(100vh - 94px)">
+      <div class="atd-wrap">
+        <div class="atd-bar">
+          <div class="atd-search">
+            <i class="ti ti-search"></i>
+            <input type="text" id="atd-search-input" placeholder="Buscar por nome..." oninput="renderKanban()" autocomplete="off">
+          </div>
+          <button class="btn" onclick="openModal('new-patient')"><i class="ti ti-user-plus"></i> Novo paciente</button>
+          <button class="btn primary" onclick="iniciarNovoAtendimento()"><i class="ti ti-plus"></i> Iniciar atendimento</button>
+          <div class="atd-filter" id="atd-filter">
+            <button class="atd-chip on" data-f="hoje" onclick="setKanbanFilter('hoje',this)">Hoje</button>
+            <button class="atd-chip" data-f="semana" onclick="setKanbanFilter('semana',this)">Essa semana</button>
+            <button class="atd-chip" data-f="proxsemana" onclick="setKanbanFilter('proxsemana',this)">Próxima semana</button>
+            <button class="atd-chip" data-f="anterior" onclick="setKanbanFilter('anterior',this)">Semana anterior</button>
+            <button class="atd-chip" data-f="mes" onclick="setKanbanFilter('mes',this)">Este mês</button>
+            <button class="atd-chip" data-f="custom" onclick="setKanbanFilter('custom',this)">Data personalizada</button>
+            <div class="atd-custom" id="atd-custom">
+              <input type="date" id="atd-custom-from" onchange="renderKanban()">
+              <span>até</span>
+              <input type="date" id="atd-custom-to" onchange="renderKanban()">
+            </div>
+          </div>
+        </div>
+        <div class="kanban">
+          <div class="kcol">
+            <div class="kcol-hd"><span class="kcol-dot ag"></span><span class="kcol-title">Agendados</span><span class="kcol-ct" id="kct-agendado">0</span></div>
+            <div class="kcol-body" id="kcol-agendado"></div>
+          </div>
+          <div class="kcol">
+            <div class="kcol-hd"><span class="kcol-dot aw"></span><span class="kcol-title">Aguardando</span><span class="kcol-ct" id="kct-aguardando">0</span></div>
+            <div class="kcol-body" id="kcol-aguardando"></div>
+          </div>
+          <div class="kcol">
+            <div class="kcol-hd"><span class="kcol-dot at"></span><span class="kcol-title">Atendidos</span><span class="kcol-ct" id="kct-atendido">0</span></div>
+            <div class="kcol-body" id="kcol-atendido"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- SCREEN: PATIENTS -->
-    <div id="s-patients" style="display:block">
+    <div id="s-patients" style="display:none">
       <div class="search-wrap">
         <div class="search-hero">
           <div class="search-meta">
