@@ -2713,11 +2713,14 @@ function runAnamneseGeneration(modelId){
   const models=loadAnamneseModels();
   const model=models.find(m=>m.id===modelId)||models.find(m=>m.id==='default')||models[0];
   if(!model){txtEl.textContent='⚠️ Nenhum modelo de prompt disponível.';return;}
+  const sources=model.sources||inferSourcesFromPrompt(model.prompt||'');
+  // Compatibilidade: se o prompt antigo ainda usar tokens {variáveis}, substitui.
   const ctx=buildAnamneseContext();
-  const systemPrompt=applyAnamneseVars(model.prompt,ctx);
-  // Só enviamos os dados que o prompt explicitamente referenciou via {variáveis}.
-  // Qualquer dado não citado no prompt NÃO é enviado para a IA — evita que ela
-  // misture informações do prontuário/atendimento que o usuário não configurou.
+  let basePrompt=applyAnamneseVars(model.prompt,ctx);
+  // Monta o bloco de contexto a partir das fontes selecionadas pelo usuário.
+  // Apenas as fontes marcadas são enviadas à IA.
+  const ctxBlock=buildAnamneseContextBlock(sources);
+  const systemPrompt=basePrompt+'\n\n---\n# CONTEXTO DISPONÍVEL\n\n'+(ctxBlock||'(nenhuma fonte de contexto selecionada)');
   const userContent='Gere a resposta agora, seguindo estritamente as instruções acima. '
     +'Use apenas os dados já fornecidos no prompt do sistema; não invente nem complemente '
     +'com informações ausentes.';
