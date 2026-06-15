@@ -1391,6 +1391,8 @@ async function loadPatients(){
   patients=(data||[]).map(mapPatientRow);
   gruposCache=[...new Set(patients.map(p=>p.grupo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
   renderPatients(patients);
+  seedKanbanIfEmpty();
+  if(document.getElementById('s-atendimentos')?.style.display!=='none')renderKanban();
 }
 
 async function bootstrap(){
