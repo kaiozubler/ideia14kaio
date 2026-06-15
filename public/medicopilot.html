@@ -1286,10 +1286,10 @@ Reduzir ingestão de sódio. Hidratação adequada. Evitar situações de estres
       <div class="fld" style="margin-bottom:10px"><label>Nome do modelo</label>
         <input type="text" id="map-name" placeholder="Ex: Anamnese cardiologia">
       </div>
-      <div style="font-size:11px;color:var(--n500);margin-bottom:6px">Variáveis do sistema (clique para inserir):</div>
-      <div id="map-vars" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div>
+      <div style="font-size:11px;color:var(--n500);margin-bottom:6px">Fontes de contexto que a IA pode usar:</div>
+      <div id="map-sources" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;padding:10px 12px;border:0.5px solid var(--n200);border-radius:var(--r6);background:var(--n50)"></div>
       <div class="fld"><label>Prompt</label>
-        <textarea id="map-prompt" rows="14" placeholder="Escreva o prompt. Use as variáveis acima para injetar os dados do paciente." style="width:100%;font-family:var(--mono);font-size:12px;padding:10px;border:0.5px solid var(--n200);border-radius:var(--r6);resize:vertical;line-height:1.55"></textarea>
+        <textarea id="map-prompt" rows="14" placeholder="Escreva apenas as instruções para a IA. Os dados marcados acima serão fornecidos automaticamente." style="width:100%;font-family:var(--mono);font-size:12px;padding:10px;border:0.5px solid var(--n200);border-radius:var(--r6);resize:vertical;line-height:1.55"></textarea>
       </div>
     </div>
     <div class="mfoot">
@@ -2713,11 +2713,14 @@ function runAnamneseGeneration(modelId){
   const models=loadAnamneseModels();
   const model=models.find(m=>m.id===modelId)||models.find(m=>m.id==='default')||models[0];
   if(!model){txtEl.textContent='⚠️ Nenhum modelo de prompt disponível.';return;}
+  const sources=model.sources||inferSourcesFromPrompt(model.prompt||'');
+  // Compatibilidade: se o prompt antigo ainda usar tokens {variáveis}, substitui.
   const ctx=buildAnamneseContext();
-  const systemPrompt=applyAnamneseVars(model.prompt,ctx);
-  // Só enviamos os dados que o prompt explicitamente referenciou via {variáveis}.
-  // Qualquer dado não citado no prompt NÃO é enviado para a IA — evita que ela
-  // misture informações do prontuário/atendimento que o usuário não configurou.
+  let basePrompt=applyAnamneseVars(model.prompt,ctx);
+  // Monta o bloco de contexto a partir das fontes selecionadas pelo usuário.
+  // Apenas as fontes marcadas são enviadas à IA.
+  const ctxBlock=buildAnamneseContextBlock(sources);
+  const systemPrompt=basePrompt+'\n\n---\n# CONTEXTO DISPONÍVEL\n\n'+(ctxBlock||'(nenhuma fonte de contexto selecionada)');
   const userContent='Gere a resposta agora, seguindo estritamente as instruções acima. '
     +'Use apenas os dados já fornecidos no prompt do sistema; não invente nem complemente '
     +'com informações ausentes.';
@@ -2896,17 +2899,20 @@ const ANAMNESE_VARS=[
   {k:'{ultimos_exames}',d:'Últimos exames'},
   {k:'{medico_nome}',d:'Nome do médico'}
 ];
+const ANAMNESE_SOURCES=[
+  {k:'cadastrais',     label:'Dados cadastrais do paciente',      desc:'Nome, nascimento, idade, sexo, telefone, convênio, CPF, endereço, filiação.'},
+  {k:'complementares', label:'Dados complementares do paciente',  desc:'Alergias, medicações em uso, antecedentes e demais informações complementares.'},
+  {k:'prontuario',     label:'Resumo do prontuário',              desc:'Resumo consolidado do prontuário do paciente.'},
+  {k:'exames',         label:'Resumo dos exames',                 desc:'Últimos exames cadastrados para o paciente.'},
+  {k:'atendimento',    label:'Resumo do atendimento atual',       desc:'Anotações do prontuário em aberto, transcrição da consulta e itens do Copiloto.'},
+  {k:'longitudinal',   label:'Memória longitudinal do paciente',  desc:'Histórico consolidado de longo prazo do paciente.', soon:true}
+];
+const DEFAULT_ANAMNESE_SOURCES={cadastrais:true,complementares:true,prontuario:true,exames:true,atendimento:true,longitudinal:false};
 const DEFAULT_ANAMNESE_PROMPT=`Você é um assistente médico clínico avançado, integrado a um sistema de saúde digital.
 
 Seu objetivo é apoiar o médico — nunca substituí-lo. Todas as suas sugestões são recomendações baseadas em evidências e devem ser obrigatoriamente validadas pelo profissional responsável.
 
-# CONTEXTO DO PACIENTE
-
-Abaixo está o resumo clínico do paciente, incluindo dados de anamnese, atendimentos anteriores, exames e evoluções registradas no prontuário:
-
-<resumo_paciente>
-{resumo_paciente}
-</resumo_paciente>
+Use exclusivamente as informações fornecidas na seção "CONTEXTO DISPONÍVEL" ao final deste prompt. Nunca invente ou complemente com dados ausentes.
 
 # INSTRUÇÕES DE COMPORTAMENTO
 
@@ -2968,17 +2974,67 @@ Antes de qualquer sugestão, avalie sinais de alarme (dor torácica aguda, dispn
 17. Ao elaborar SOAP, seguir rigorosamente o modelo estrutural do sistema.
 18. Respeitar integralmente a LGPD.`;
 
+function inferSourcesFromPrompt(text){
+  const t=(text||'').toLowerCase();
+  const has=k=>t.indexOf(k)!==-1;
+  const any=has('{paciente_nome}')||has('{paciente_idade}')||has('{paciente_sexo}')||has('{medico_nome}')||has('{data_atendimento}')||has('{queixa_principal}')||has('{resumo_paciente}')||has('{resumo_prontuario}')||has('{dados_clinicos}')||has('{info_complementar}')||has('{ultimos_exames}');
+  if(!any){return {...DEFAULT_ANAMNESE_SOURCES};}
+  return {
+    cadastrais: has('{paciente_nome}')||has('{paciente_idade}')||has('{paciente_sexo}')||has('{medico_nome}')||has('{data_atendimento}')||has('{queixa_principal}'),
+    complementares: has('{info_complementar}')||has('{dados_clinicos}'),
+    prontuario: has('{resumo_paciente}')||has('{resumo_prontuario}')||has('{dados_clinicos}'),
+    exames: has('{ultimos_exames}'),
+    atendimento: true,
+    longitudinal: false
+  };
+}
+function buildAnamneseContextBlock(sources){
+  const ctx=buildAnamneseContext();
+  const blocks=[];
+  if(sources.cadastrais){
+    const dataAt=ctx.dataAt?('Data do atendimento: '+ctx.dataAt):'';
+    const med=ctx.medicoNome?('Médico responsável: '+ctx.medicoNome):'';
+    const head=[dataAt,med].filter(Boolean).join('\n');
+    blocks.push('## Dados cadastrais do paciente\n'+(head?head+'\n':'')+(ctx.dadosCliente||'(sem dados cadastrais)'));
+  }
+  if(sources.complementares){
+    blocks.push('## Dados complementares do paciente\n'+(ctx.infoComp||'(sem dados complementares)'));
+  }
+  if(sources.prontuario){
+    blocks.push('## Resumo do prontuário\n'+(ctx.resumoPront||'(sem resumo do prontuário)'));
+  }
+  if(sources.exames){
+    blocks.push('## Resumo dos exames\n'+(ctx.ultimosExames||'(sem exames cadastrados)'));
+  }
+  if(sources.atendimento){
+    blocks.push('## Resumo do atendimento atual\n'+(ctx.atend||'(sem dados do atendimento atual)'));
+  }
+  if(sources.longitudinal){
+    blocks.push('## Memória longitudinal do paciente\n(recurso em desenvolvimento — sem dados ainda)');
+  }
+  return blocks.join('\n\n');
+}
+
 function loadAnamneseModels(){
   let arr=[];
   try{arr=JSON.parse(localStorage.getItem('anamnese_models')||'[]');}catch{arr=[];}
   if(!arr.find(m=>m.id==='default')){
-    arr.unshift({id:'default',name:'Modelo padrão',prompt:DEFAULT_ANAMNESE_PROMPT,createdAt:Date.now()});
+    arr.unshift({id:'default',name:'Modelo padrão',prompt:DEFAULT_ANAMNESE_PROMPT,sources:{...DEFAULT_ANAMNESE_SOURCES},createdAt:Date.now()});
     saveAnamneseModels(arr);
   } else {
     // garante que o modelo padrão deixou de ser somente leitura
     const def=arr.find(m=>m.id==='default');
     if(def&&def.readonly){delete def.readonly;saveAnamneseModels(arr);}
   }
+  // Migração: garantir que todo modelo tenha o campo "sources".
+  let migrated=false;
+  arr.forEach(m=>{
+    if(!m.sources||typeof m.sources!=='object'){
+      m.sources=inferSourcesFromPrompt(m.prompt||'');
+      migrated=true;
+    }
+  });
+  if(migrated)saveAnamneseModels(arr);
   return arr;
 }
 function saveAnamneseModels(arr){localStorage.setItem('anamnese_models',JSON.stringify(arr));}
@@ -2988,11 +3044,14 @@ function renderAnamneseList(){
   el.innerHTML=models.map(m=>{
     const isDef=m.id==='default';
     const preview=(m.prompt||'').slice(0,140).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))+((m.prompt||'').length>140?'…':'');
+    const srcs=m.sources||{};
+    const chips=ANAMNESE_SOURCES.filter(s=>srcs[s.k]).map(s=>`<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--n50);color:var(--n600);border:0.5px solid var(--n200)">${s.label}</span>`).join('');
     return `<div style="border:0.5px solid var(--n200);border-radius:var(--r8);padding:12px 14px;background:var(--white);display:flex;align-items:flex-start;gap:12px">
       <div style="width:32px;height:32px;border-radius:var(--r6);background:var(--g50);color:var(--g600);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-file-text-ai" style="font-size:16px"></i></div>
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:600;color:var(--n700)">${m.name}</span>${isDef?'<span style="font-size:9.5px;padding:1px 6px;border-radius:10px;background:var(--g50);color:var(--g600);border:0.5px solid var(--g200);font-weight:600">PADRÃO</span>':''}</div>
         <div style="font-size:11.5px;color:var(--n400);margin-top:4px;line-height:1.5">${preview}</div>
+        ${chips?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">${chips}</div>`:''}
       </div>
       <div style="display:flex;gap:4px;flex-shrink:0">
         <button class="ib" title="Editar" onclick="openEditPromptModal('${m.id}')"><i class="ti ti-edit"></i></button>
@@ -3008,7 +3067,7 @@ function openNewPromptModal(){
   document.getElementById('map-title').innerHTML='<i class="ti ti-file-text-ai" style="font-size:14px;margin-right:5px"></i>Novo prompt de anamnese';
   document.getElementById('map-name').readOnly=false;
   document.getElementById('map-prompt').readOnly=false;
-  renderVarChips();
+  renderSourceChecks({...DEFAULT_ANAMNESE_SOURCES});
   openModal('anamnese-prompt');
 }
 function openEditPromptModal(id){
@@ -3019,28 +3078,42 @@ function openEditPromptModal(id){
   document.getElementById('map-name').readOnly=false;
   document.getElementById('map-prompt').readOnly=false;
   document.getElementById('map-title').innerHTML='<i class="ti ti-file-text-ai" style="font-size:14px;margin-right:5px"></i>'+(m.id==='default'?'Editar Modelo padrão':'Editar prompt');
-  renderVarChips();
+  renderSourceChecks(m.sources||inferSourcesFromPrompt(m.prompt||''));
   openModal('anamnese-prompt');
 }
-function renderVarChips(){
-  const c=document.getElementById('map-vars');
-  c.innerHTML=ANAMNESE_VARS.map(v=>`<button type="button" onclick="insertVar('${v.k}')" title="${v.d}" style="font-size:10.5px;font-family:var(--mono);padding:3px 8px;border:0.5px solid var(--n200);border-radius:12px;background:var(--n50);color:var(--n600);cursor:pointer">${v.k}</button>`).join('');
+function renderSourceChecks(sources){
+  const c=document.getElementById('map-sources');if(!c)return;
+  const s=sources||{};
+  c.innerHTML=ANAMNESE_SOURCES.map(src=>{
+    const checked=s[src.k]?'checked':'';
+    const disabled=src.soon?'disabled':'';
+    const soonTag=src.soon?'<span style="font-size:9.5px;padding:1px 6px;border-radius:10px;background:var(--n100);color:var(--n500);border:0.5px solid var(--n200);font-weight:600;margin-left:6px">EM BREVE</span>':'';
+    const opacity=src.soon?'opacity:.55;':'';
+    return `<label style="display:flex;align-items:flex-start;gap:8px;cursor:${src.soon?'not-allowed':'pointer'};${opacity}">
+      <input type="checkbox" data-src="${src.k}" ${checked} ${disabled} style="margin-top:3px">
+      <span style="flex:1;min-width:0">
+        <span style="font-size:12.5px;font-weight:600;color:var(--n700)">${src.label}</span>${soonTag}
+        <span style="display:block;font-size:11px;color:var(--n500);margin-top:2px;line-height:1.4">${src.desc}</span>
+      </span>
+    </label>`;
+  }).join('');
 }
-function insertVar(k){
-  const ta=document.getElementById('map-prompt');if(ta.readOnly)return;
-  const s=ta.selectionStart,e=ta.selectionEnd;
-  ta.value=ta.value.slice(0,s)+k+ta.value.slice(e);
-  ta.focus();ta.selectionStart=ta.selectionEnd=s+k.length;
+function readSourcesFromForm(){
+  const out={};
+  ANAMNESE_SOURCES.forEach(s=>{out[s.k]=false;});
+  document.querySelectorAll('#map-sources input[type=checkbox]').forEach(cb=>{out[cb.dataset.src]=cb.checked;});
+  return out;
 }
 function saveAnamnesePrompt(){
   const id=document.getElementById('map-id').value;
   const name=document.getElementById('map-name').value.trim();
   const prompt=document.getElementById('map-prompt').value.trim();
+  const sources=readSourcesFromForm();
   const arr=loadAnamneseModels();
   const existing=id?arr.find(m=>m.id===id):null;
   if(!name||!prompt){alert('Preencha nome e prompt.');return;}
-  if(existing){existing.name=name;existing.prompt=prompt;}
-  else arr.push({id:'p'+Date.now(),name,prompt,createdAt:Date.now()});
+  if(existing){existing.name=name;existing.prompt=prompt;existing.sources=sources;}
+  else arr.push({id:'p'+Date.now(),name,prompt,sources,createdAt:Date.now()});
   saveAnamneseModels(arr);
   closeModal();
   renderAnamneseList();
