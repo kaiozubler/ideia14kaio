@@ -1764,6 +1764,23 @@ async function saveCadastro(){
   showToast('Dados do paciente salvos com sucesso','success');
 }
 function cadastroExtraKey(){return 'cadastroExtra_'+((currentPatient&&currentPatient.id)||'anon');}
+function memoriaPacienteKey(){return 'memoriaPaciente_'+((currentPatient&&currentPatient.id)||'anon');}
+function openMemoriaPaciente(){
+  const m=document.getElementById('m-memoria-paciente');if(!m)return;
+  let saved={text:'',updatedAt:null};
+  try{const raw=localStorage.getItem(memoriaPacienteKey());if(raw)saved=JSON.parse(raw)||saved;}catch(e){}
+  const ta=document.getElementById('mp-text');if(ta)ta.value=saved.text||'';
+  const meta=document.getElementById('mp-meta');
+  if(meta)meta.textContent=saved.updatedAt?('Última atualização: '+new Date(saved.updatedAt).toLocaleString('pt-BR')):'Ainda sem registros — as IAs irão alimentar este espaço ao longo dos atendimentos.';
+  m.style.display='flex';
+}
+function saveMemoriaPaciente(){
+  const ta=document.getElementById('mp-text');if(!ta)return;
+  const payload={text:ta.value||'',updatedAt:new Date().toISOString()};
+  try{localStorage.setItem(memoriaPacienteKey(),JSON.stringify(payload));}catch(e){}
+  if(typeof showToast==='function')showToast('Memória do paciente salva','success');
+  closeModal();
+}
 function loadCadastroExtra(){return {ocup:currentPatient?.ocup||'',updated_at:currentPatient?.updated_at||null};}
 
 /* ========== TABS ========== */
