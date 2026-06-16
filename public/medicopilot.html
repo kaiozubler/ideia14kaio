@@ -2187,6 +2187,10 @@ function openInfoComp(){
   });
   calcIMC();
   ['ic-peso','ic-altura'].forEach(id=>{const el=document.getElementById(id);if(el){el.oninput=calcIMC;}});
+  _editCids=Array.isArray(currentPatient.cids)?currentPatient.cids.slice():[];
+  const inp=document.getElementById('ic-cids-input');if(inp)inp.value='';
+  renderCidChips();
+  const sg=document.getElementById('ic-cids-suggest');if(sg){sg.style.display='none';sg.innerHTML='';}
   openModal('info-comp');
 }
 async function saveInfoComp(){
@@ -2195,7 +2199,8 @@ async function saveInfoComp(){
     const el=document.getElementById('ic-'+k);if(el)d[k]=el.value.trim();
   });
   d.updated_at=new Date().toISOString();
-  const {data,error}=await sb.from('pacientes').update({info_complementar:d}).eq('paciente_id',currentPatient.id).select('*').single();
+  const cids=Array.isArray(_editCids)?_editCids:[];
+  const {data,error}=await sb.from('pacientes').update({info_complementar:d,cids:cids}).eq('paciente_id',currentPatient.id).select('*').single();
   if(error){showToast('Erro ao salvar informações: '+error.message,'error');return;}
   Object.assign(currentPatient,mapPatientRow(data));
   patients=patients.map(p=>p.id===currentPatient.id?currentPatient:p);
