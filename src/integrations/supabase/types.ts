@@ -190,6 +190,7 @@ export type Database = {
       }
       pacientes: {
         Row: {
+          cids: Json
           convenio: string | null
           cpf: string | null
           created_at: string
@@ -212,6 +213,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          cids?: Json
           convenio?: string | null
           cpf?: string | null
           created_at?: string
@@ -234,6 +236,7 @@ export type Database = {
           user_id?: string
         }
         Update: {
+          cids?: Json
           convenio?: string | null
           cpf?: string | null
           created_at?: string
