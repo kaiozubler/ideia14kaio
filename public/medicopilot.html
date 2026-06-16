@@ -1061,14 +1061,13 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
           <input type="checkbox" id="cop-voz" checked>
           <span style="font-size:13px;color:var(--n700)">Permitir gravação de voz</span>
         </label>
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
-          <input type="checkbox" id="cop-perguntas">
-          <span style="font-size:13px;color:var(--n700)">Gerar perguntas automaticamente</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
-          <input type="checkbox" id="cop-conduta">
-          <span style="font-size:13px;color:var(--n700)">Sugerir conduta ao médico</span>
-        </label>
+        <div class="fld" style="margin-top:4px">
+          <label for="cop-tipo">Tipo de copiloto</label>
+          <select id="cop-tipo">
+            <option value="ativo">Ativo</option>
+            <option value="reativo">Reativo</option>
+          </select>
+        </div>
         <div id="cop-freq-wrap" style="display:none">
           <div style="border-top:1px solid var(--n200);margin-bottom:16px"></div>
           <div>
