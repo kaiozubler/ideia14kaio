@@ -1765,18 +1765,88 @@ async function saveCadastro(){
 }
 function cadastroExtraKey(){return 'cadastroExtra_'+((currentPatient&&currentPatient.id)||'anon');}
 function memoriaPacienteKey(){return 'memoriaPaciente_'+((currentPatient&&currentPatient.id)||'anon');}
+const MEMORIA_SECTIONS=[
+  {k:'perfil',       label:'Perfil e preferências',        icon:'ti-user-heart',    desc:'Como o paciente gosta de ser tratado, apelido, idioma, tom de comunicação preferido.', ph:'Ex: Prefere ser chamado de "Seu João". Comunicação direta e objetiva. Não gosta de termos médicos complexos.'},
+  {k:'emocional',    label:'Contexto emocional e social', icon:'ti-heart-handshake',desc:'Estado emocional recorrente, suporte familiar, situação social, eventos sensíveis.',  ph:'Ex: Vive sozinho desde 2023. Filha mora em outro estado. Ansiedade ao receber resultados.'},
+  {k:'vinculos',     label:'Vínculos e cuidadores',        icon:'ti-users',         desc:'Cuidador principal, familiares envolvidos, contatos de emergência.',                  ph:'Ex: Cuidadora principal: filha Marina (11 9xxxx). Acompanha consultas mensalmente.'},
+  {k:'clinico',      label:'Observações clínicas longitudinais', icon:'ti-stethoscope', desc:'Evoluções relevantes ao longo do tempo, padrões clínicos, gatilhos.',           ph:'Ex: Pressão tende a subir em períodos de estresse no trabalho. Adesão melhora com lembretes por SMS.'},
+  {k:'comportamento',label:'Hábitos e adesão',             icon:'ti-activity',      desc:'Adesão a tratamentos, hábitos, comportamentos relevantes para o cuidado.',            ph:'Ex: Tem dificuldade com medicação à noite. Faz caminhada 3x/sem. Recusa injetáveis.'},
+  {k:'eventos',      label:'Eventos e marcos importantes', icon:'ti-flag',          desc:'Datas, marcos, episódios clínicos ou pessoais relevantes para o cuidado.',           ph:'Ex: Internação por IAM em mar/2024. Aniversário em julho — costuma faltar a consultas.'},
+  {k:'observacoes',  label:'Observações livres',           icon:'ti-notes',         desc:'Qualquer informação adicional que ajude a personalizar o atendimento.',              ph:'Ex: Trabalha em turnos. Gosta de receber material impresso.'}
+];
+function loadMemoriaPacienteData(){
+  let saved={sections:{},custom:[],updatedAt:null};
+  try{const raw=localStorage.getItem(memoriaPacienteKey());if(raw){const p=JSON.parse(raw)||{};
+    // Migração: versão anterior tinha {text, updatedAt}
+    if(p.text&&!p.sections){saved.sections={observacoes:p.text};saved.updatedAt=p.updatedAt||null;}
+    else{saved.sections=p.sections||{};saved.custom=Array.isArray(p.custom)?p.custom:[];saved.updatedAt=p.updatedAt||null;}
+  }}catch(e){}
+  return saved;
+}
+function renderMemoriaSection(k,label,icon,desc,ph,value,isCustom,idx){
+  const id='mp-sec-'+(isCustom?'c'+idx:k);
+  const removeBtn=isCustom?'<button class="ib" title="Remover seção" onclick="removeMemoriaCustomSection('+idx+')" style="width:22px;height:22px;color:#dc2626;border-color:#fecaca;background:#fef2f2;margin-left:auto"><i class="ti ti-trash" style="font-size:12px"></i></button>':'';
+  const labelHtml=isCustom
+    ?'<input type="text" data-custom-label="'+idx+'" value="'+(label||'').replace(/"/g,'&quot;')+'" placeholder="Nome da seção" style="flex:1;border:0.5px solid var(--n200);border-radius:var(--r6);padding:4px 8px;font-size:12px;font-weight:600;color:var(--n700);background:#fff">'
+    :'<span style="font-size:12px;font-weight:600;color:var(--n700)">'+label+'</span>';
+  return '<div style="border:0.5px solid var(--n200);border-radius:var(--r8);overflow:hidden;background:#fff">'
+    +'<div style="display:flex;align-items:center;gap:7px;padding:8px 10px;background:#faf9ff;border-bottom:0.5px solid var(--n200)">'
+      +'<i class="ti '+icon+'" style="font-size:14px;color:#7c3aed"></i>'
+      +labelHtml
+      +removeBtn
+    +'</div>'
+    +'<div style="padding:8px 10px">'
+      +(desc&&!isCustom?'<div style="font-size:10.5px;color:var(--n400);margin-bottom:5px;font-style:italic">'+desc+'</div>':'')
+      +'<textarea id="'+id+'" data-mp-key="'+(isCustom?'__custom__':k)+'" data-mp-idx="'+(isCustom?idx:'')+'" rows="3" placeholder="'+(ph||'Escreva ou deixe a IA preencher...').replace(/"/g,'&quot;')+'" style="width:100%;font-family:var(--font);font-size:12.5px;padding:7px 9px;border:0.5px solid var(--n200);border-radius:var(--r6);resize:vertical;line-height:1.55">'+(value||'').replace(/</g,'&lt;')+'</textarea>'
+    +'</div>'
+  +'</div>';
+}
+function renderMemoriaSections(data){
+  const box=document.getElementById('mp-sections');if(!box)return;
+  const parts=MEMORIA_SECTIONS.map(s=>renderMemoriaSection(s.k,s.label,s.icon,s.desc,s.ph,(data.sections||{})[s.k]||'',false,null));
+  (data.custom||[]).forEach((c,i)=>{parts.push(renderMemoriaSection(null,c.label||'',c.icon||'ti-note',null,'Conteúdo...',c.text||'',true,i));});
+  box.innerHTML=parts.join('');
+}
 function openMemoriaPaciente(){
   const m=document.getElementById('m-memoria-paciente');if(!m)return;
-  let saved={text:'',updatedAt:null};
-  try{const raw=localStorage.getItem(memoriaPacienteKey());if(raw)saved=JSON.parse(raw)||saved;}catch(e){}
-  const ta=document.getElementById('mp-text');if(ta)ta.value=saved.text||'';
+  const data=loadMemoriaPacienteData();
+  window._mpCustom=(data.custom||[]).map(c=>({label:c.label||'',text:c.text||'',icon:c.icon||'ti-note'}));
+  renderMemoriaSections({sections:data.sections,custom:window._mpCustom});
   const meta=document.getElementById('mp-meta');
-  if(meta)meta.textContent=saved.updatedAt?('Última atualização: '+new Date(saved.updatedAt).toLocaleString('pt-BR')):'Ainda sem registros — as IAs irão alimentar este espaço ao longo dos atendimentos.';
+  if(meta)meta.textContent=data.updatedAt?('Última atualização: '+new Date(data.updatedAt).toLocaleString('pt-BR')):'Ainda sem registros — as IAs irão alimentar este espaço ao longo dos atendimentos.';
   m.style.display='flex';
 }
+function addMemoriaCustomSection(){
+  // Capture current textarea state before re-render
+  const current=collectMemoriaFromDOM();
+  window._mpCustom=current.custom;
+  window._mpCustom.push({label:'Nova seção',text:'',icon:'ti-note'});
+  renderMemoriaSections({sections:current.sections,custom:window._mpCustom});
+}
+function removeMemoriaCustomSection(idx){
+  const current=collectMemoriaFromDOM();
+  current.custom.splice(idx,1);
+  window._mpCustom=current.custom;
+  renderMemoriaSections({sections:current.sections,custom:window._mpCustom});
+}
+function collectMemoriaFromDOM(){
+  const sections={};const custom=[];
+  document.querySelectorAll('#mp-sections textarea[data-mp-key]').forEach(ta=>{
+    const k=ta.getAttribute('data-mp-key');
+    if(k==='__custom__'){
+      const idx=parseInt(ta.getAttribute('data-mp-idx'),10);
+      const labelEl=document.querySelector('#mp-sections input[data-custom-label="'+idx+'"]');
+      custom[idx]={label:(labelEl&&labelEl.value.trim())||'Seção','text':ta.value||'',icon:'ti-note'};
+    }else{
+      const v=(ta.value||'').trim();
+      if(v)sections[k]=ta.value;
+    }
+  });
+  return {sections,custom:custom.filter(Boolean)};
+}
 function saveMemoriaPaciente(){
-  const ta=document.getElementById('mp-text');if(!ta)return;
-  const payload={text:ta.value||'',updatedAt:new Date().toISOString()};
+  const collected=collectMemoriaFromDOM();
+  const payload={sections:collected.sections,custom:collected.custom,updatedAt:new Date().toISOString()};
   try{localStorage.setItem(memoriaPacienteKey(),JSON.stringify(payload));}catch(e){}
   if(typeof showToast==='function')showToast('Memória do paciente salva','success');
   closeModal();
