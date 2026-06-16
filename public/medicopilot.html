@@ -1058,7 +1058,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
         </label>
         <div style="border-top:1px solid var(--n200)"></div>
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
-          <input type="checkbox" id="cop-voz">
+          <input type="checkbox" id="cop-voz" checked>
           <span style="font-size:13px;color:var(--n700)">Permitir gravação de voz</span>
         </label>
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
@@ -2457,6 +2457,121 @@ let transcriptLog=[];
 let bubblesVisible=true;
 let pinnedBbls=[];
 
+/* ========== DEEPGRAM LIVE TRANSCRIPTION ========== */
+const dgLive = {
+  ws: null,
+  mediaRecorder: null,
+  stream: null,
+  keepAliveTimer: null,
+  interimEl: null,
+  starting: false,
+  active: false,
+  async fetchToken(){
+    const r = await fetch('/api/deepgram-token', { method:'GET' });
+    if(!r.ok){ throw new Error('Token error '+r.status+': '+await r.text()); }
+    return r.json();
+  },
+  async start(){
+    if(this.starting || this.active) return;
+    this.starting = true;
+    try{
+      const { access_token } = await this.fetchToken();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true } });
+      this.stream = stream;
+      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4');
+      const rec = new MediaRecorder(stream, { mimeType: mime });
+      this.mediaRecorder = rec;
+      const params = new URLSearchParams({
+        model:'nova-2', language:'pt-BR', smart_format:'true',
+        interim_results:'true', punctuate:'true', endpointing:'300', vad_events:'true'
+      });
+      const ws = new WebSocket('wss://api.deepgram.com/v1/listen?'+params.toString(), ['token', access_token]);
+      this.ws = ws;
+      await new Promise((resolve, reject)=>{
+        ws.onopen = ()=>resolve();
+        ws.onerror = (e)=>reject(new Error('WebSocket erro'));
+        setTimeout(()=>reject(new Error('WebSocket timeout')), 7000);
+      });
+      ws.onmessage = (ev)=>{
+        let msg; try{ msg = JSON.parse(ev.data); }catch{ return; }
+        if(msg.type === 'Results'){
+          const alt = msg.channel && msg.channel.alternatives && msg.channel.alternatives[0];
+          const text = (alt && alt.transcript || '').trim();
+          if(!text) return;
+          if(msg.is_final){
+            this.removeInterim();
+            addTranscriptLine(text);
+          } else {
+            this.showInterim(text);
+          }
+        }
+      };
+      ws.onclose = ()=>{ this.cleanupAfterClose(); };
+      rec.ondataavailable = (e)=>{
+        if(e.data && e.data.size > 0 && ws.readyState === 1){ ws.send(e.data); }
+      };
+      rec.start(250);
+      this.keepAliveTimer = setInterval(()=>{
+        if(ws.readyState === 1) ws.send(JSON.stringify({ type:'KeepAlive' }));
+      }, 8000);
+      this.active = true;
+    } finally {
+      this.starting = false;
+    }
+  },
+  showInterim(text){
+    const content = document.getElementById('trans-content');
+    if(!content) return;
+    if(!this.interimEl || !this.interimEl.isConnected){
+      this.interimEl = document.createElement('div');
+      this.interimEl.className = 'trans-line';
+      this.interimEl.style.opacity = '0.6';
+      this.interimEl.style.fontStyle = 'italic';
+      content.appendChild(this.interimEl);
+    }
+    this.interimEl.textContent = text;
+    content.scrollTop = content.scrollHeight;
+    const lbl = document.getElementById('trans-lbl');
+    if(lbl) lbl.textContent = text;
+  },
+  removeInterim(){
+    if(this.interimEl && this.interimEl.isConnected) this.interimEl.remove();
+    this.interimEl = null;
+  },
+  pause(){
+    if(this.mediaRecorder && this.mediaRecorder.state === 'recording'){
+      try{ this.mediaRecorder.pause(); }catch{}
+    }
+  },
+  resume(){
+    if(this.mediaRecorder && this.mediaRecorder.state === 'paused'){
+      try{ this.mediaRecorder.resume(); }catch{}
+    }
+  },
+  async stop(){
+    if(this.keepAliveTimer){ clearInterval(this.keepAliveTimer); this.keepAliveTimer=null; }
+    try{
+      if(this.mediaRecorder && this.mediaRecorder.state !== 'inactive') this.mediaRecorder.stop();
+    }catch{}
+    try{
+      if(this.ws && this.ws.readyState === 1){
+        this.ws.send(JSON.stringify({ type:'CloseStream' }));
+        // give Deepgram a moment to flush
+        await new Promise(r=>setTimeout(r, 250));
+        this.ws.close();
+      }
+    }catch{}
+    this.cleanupAfterClose();
+  },
+  cleanupAfterClose(){
+    if(this.stream){ this.stream.getTracks().forEach(t=>{ try{ t.stop(); }catch{} }); this.stream=null; }
+    this.mediaRecorder=null; this.ws=null; this.active=false;
+    this.removeInterim();
+  }
+};
+
 function cycleTransExp(){
   transState=(transState+1)%3;
   const bar=document.getElementById('trans-bar');
@@ -2485,6 +2600,7 @@ function addTranscriptLine(text){
 function resetAI(){
   listening=false;aiPaused=false;
   clearInterval(transcriptInterval);
+  if(dgLive.active || dgLive.starting){ dgLive.stop(); }
   bblCount=0;sugIdx=0;aiRespIdx=0;transcriptIdx=0;
   transcriptLog=[];pinnedBbls=[];bubblesVisible=true;
   const bl=document.getElementById('bubbles-layer');
@@ -2524,14 +2640,24 @@ function setListenBtnState(state){
 }
 
 function toggleListen(){
+  const voiceAllowed = (document.getElementById('cop-voz')||{}).checked !== false;
   if(!listening&&!aiPaused){
     listening=true;aiPaused=false;
     setOrbState('listening');setListenBtnState('listening');
     const td=document.getElementById('tdot');if(td)td.classList.add('live');
-    const lbl=document.getElementById('trans-lbl');if(lbl){lbl.textContent='Transcrevendo em tempo real...';lbl.className='trans-lbl live-lbl';}
-    transcriptInterval=setInterval(()=>{
-      if(listening)addTranscriptLine(transcripts[transcriptIdx++%transcripts.length]);
-    },3400);
+    const lbl=document.getElementById('trans-lbl');if(lbl){lbl.textContent='Conectando ao Deepgram...';lbl.className='trans-lbl live-lbl';}
+    if(voiceAllowed){
+      dgLive.start().then(()=>{
+        const l=document.getElementById('trans-lbl');if(l){l.textContent='Transcrevendo em tempo real...';l.className='trans-lbl live-lbl';}
+      }).catch(err=>{
+        const l=document.getElementById('trans-lbl');if(l){l.textContent='Erro no microfone: '+err.message;l.className='trans-lbl';}
+        addTranscriptLine('[ Erro ao iniciar gravação: '+err.message+' ]');
+      });
+    } else {
+      transcriptInterval=setInterval(()=>{
+        if(listening)addTranscriptLine(transcripts[transcriptIdx++%transcripts.length]);
+      },3400);
+    }
     // Hide placeholder once started
     const ph=document.getElementById('orb-center-placeholder');
     if(ph){ph.style.transition='opacity .4s';ph.style.opacity='0.35';ph.style.pointerEvents='none';}
@@ -2539,6 +2665,7 @@ function toggleListen(){
   }else if(listening&&!aiPaused){
     listening=false;aiPaused=true;
     clearInterval(transcriptInterval);
+    dgLive.pause();
     setOrbState('paused');setListenBtnState('paused');
     const td=document.getElementById('tdot');if(td)td.classList.remove('live');
     const lbl=document.getElementById('trans-lbl');if(lbl){lbl.textContent='Pausado — histórico preservado';lbl.className='trans-lbl';}
@@ -2548,9 +2675,17 @@ function toggleListen(){
     setOrbState('listening');setListenBtnState('listening');
     const td=document.getElementById('tdot');if(td)td.classList.add('live');
     const lbl=document.getElementById('trans-lbl');if(lbl){lbl.textContent='Retomando transcrição...';lbl.className='trans-lbl live-lbl';}
-    transcriptInterval=setInterval(()=>{
-      if(listening)addTranscriptLine(transcripts[transcriptIdx++%transcripts.length]);
-    },3400);
+    if(voiceAllowed){
+      if(dgLive.mediaRecorder && dgLive.mediaRecorder.state==='paused'){
+        dgLive.resume();
+      } else {
+        dgLive.start().catch(err=>addTranscriptLine('[ Erro: '+err.message+' ]'));
+      }
+    } else {
+      transcriptInterval=setInterval(()=>{
+        if(listening)addTranscriptLine(transcripts[transcriptIdx++%transcripts.length]);
+      },3400);
+    }
     addTranscriptLine('[ Gravação retomada ]');
   }
 }
