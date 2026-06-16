@@ -2321,6 +2321,8 @@ function renderInfoCompSummary(){
   if(d.alerg)parts.push('<b>Alergias:</b> '+d.alerg);
   if(d.fam)parts.push('<b>Antec. familiares:</b> '+d.fam);
   if(d.outros)parts.push('<b>Outras:</b> '+d.outros);
+  const cids=Array.isArray(currentPatient?.cids)?currentPatient.cids:[];
+  if(cids.length)parts.push('<b>CIDs:</b> '+cids.map(c=>c.code+(c.description?' ('+c.description+')':'')).join(', '));
   if(parts.length){box.innerHTML='<div style="font-weight:600;color:#92400e;font-size:10px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px"><i class="ti ti-clipboard-list" style="font-size:11px"></i> Informações complementares</div>'+parts.join(' &nbsp;·&nbsp; ');box.style.display='block';}
   else{box.innerHTML='';box.style.display='none';}
 }
