@@ -2475,7 +2475,10 @@ const dgLive = {
     if(this.starting || this.active) return;
     this.starting = true;
     try{
-      const { access_token } = await this.fetchToken();
+      const tk = await this.fetchToken();
+      const access_token = tk.access_token;
+      // grant => JWT (subprotocol 'bearer'); ephemeral_key => API key (subprotocol 'token')
+      const subproto = tk.mode === 'grant' ? 'bearer' : 'token';
       const stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true } });
       this.stream = stream;
       const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
@@ -2487,11 +2490,11 @@ const dgLive = {
         model:'nova-2', language:'pt-BR', smart_format:'true',
         interim_results:'true', punctuate:'true', endpointing:'300', vad_events:'true'
       });
-      const ws = new WebSocket('wss://api.deepgram.com/v1/listen?'+params.toString(), ['token', access_token]);
+      const ws = new WebSocket('wss://api.deepgram.com/v1/listen?'+params.toString(), [subproto, access_token]);
       this.ws = ws;
       await new Promise((resolve, reject)=>{
         ws.onopen = ()=>resolve();
-        ws.onerror = (e)=>reject(new Error('WebSocket erro'));
+        ws.onerror = ()=>reject(new Error('WebSocket erro ('+subproto+')'));
         setTimeout(()=>reject(new Error('WebSocket timeout')), 7000);
       });
       ws.onmessage = (ev)=>{
