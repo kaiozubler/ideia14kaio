@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiDeepgramTokenRouteImport } from './routes/api/deepgram-token'
 import { Route as ApiChatIaRouteImport } from './routes/api/chat-ia'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDeepgramTokenRoute = ApiDeepgramTokenRouteImport.update({
+  id: '/api/deepgram-token',
+  path: '/api/deepgram-token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChatIaRoute = ApiChatIaRouteImport.update({
@@ -26,27 +32,31 @@ const ApiChatIaRoute = ApiChatIaRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/chat-ia': typeof ApiChatIaRoute
+  '/api/deepgram-token': typeof ApiDeepgramTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/chat-ia': typeof ApiChatIaRoute
+  '/api/deepgram-token': typeof ApiDeepgramTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/chat-ia': typeof ApiChatIaRoute
+  '/api/deepgram-token': typeof ApiDeepgramTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/chat-ia'
+  fullPaths: '/' | '/api/chat-ia' | '/api/deepgram-token'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/chat-ia'
-  id: '__root__' | '/' | '/api/chat-ia'
+  to: '/' | '/api/chat-ia' | '/api/deepgram-token'
+  id: '__root__' | '/' | '/api/chat-ia' | '/api/deepgram-token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiChatIaRoute: typeof ApiChatIaRoute
+  ApiDeepgramTokenRoute: typeof ApiDeepgramTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/deepgram-token': {
+      id: '/api/deepgram-token'
+      path: '/api/deepgram-token'
+      fullPath: '/api/deepgram-token'
+      preLoaderRoute: typeof ApiDeepgramTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/chat-ia': {
@@ -71,17 +88,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiChatIaRoute: ApiChatIaRoute,
+  ApiDeepgramTokenRoute: ApiDeepgramTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
