@@ -1270,6 +1270,14 @@ Reduzir ingestão de sódio. Hidratação adequada. Evitar situações de estres
         <div class="fld wide"><label>Alergias</label><input type="text" id="ic-alerg" placeholder="Ex: Dipirona, Penicilina, frutos do mar..."></div>
         <div class="fld wide"><label>Antecedentes familiares</label><textarea id="ic-fam" rows="2" placeholder="Ex: Mãe — HAS e DM2; Pai — IAM aos 58 anos..." style="width:100%;font-family:var(--font);font-size:13px;padding:7px 10px;border:0.5px solid var(--n200);border-radius:var(--r6);resize:vertical"></textarea></div>
         <div class="fld wide"><label>Outras observações relevantes</label><textarea id="ic-outros" rows="2" placeholder="Comorbidades, cirurgias prévias, gestação, hábitos alimentares, sono..." style="width:100%;font-family:var(--font);font-size:13px;padding:7px 10px;border:0.5px solid var(--n200);border-radius:var(--r6);resize:vertical"></textarea></div>
+        <div class="fld wide">
+          <label>CIDs (CID-10)</label>
+          <div id="ic-cids-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px"></div>
+          <div style="position:relative">
+            <input type="text" id="ic-cids-input" placeholder="Buscar CID por código ou descrição (ex: I10, diabetes). Enter adiciona." autocomplete="off" oninput="renderCidSuggestions()" onkeydown="cidInputKeydown(event)" onblur="setTimeout(()=>{const s=document.getElementById('ic-cids-suggest');if(s)s.style.display='none';},150)">
+            <div id="ic-cids-suggest" style="display:none;position:absolute;z-index:50;background:#fff;border:0.5px solid var(--n200);border-radius:var(--r6);max-height:220px;overflow:auto;left:0;right:0;top:100%;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,.08)"></div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="mfoot">
