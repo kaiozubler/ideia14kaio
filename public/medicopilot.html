@@ -1344,6 +1344,7 @@ function mapPatientRow(p){
     tel:p.telefone||'—',init:patientInitials(p.name),
     conv:p.convenio||'Particular',sus:p.sus||'—',email:p.email||'',mae:p.mae||'',pai:p.pai||'',end:p.endereco||'—',sexo:p.sexo||'',medico:p.medico||'',
     grupo:p.grupo||'',ocup:p.ocupacao||'',cpf:p.cpf||'',dadosClinicos:p.dados_clinicos||'',infoComp:p.info_complementar||{},updated_at:p.updated_at||p.created_at||null
+    ,cids:Array.isArray(p.cids)?p.cids:[]
   };
 }
 
