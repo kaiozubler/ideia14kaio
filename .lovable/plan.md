@@ -1,48 +1,58 @@
-## Avaliação
+# Integração Deepgram — Transcrição ao vivo (pt-BR)
 
-Concordo com a mudança. Hoje o usuário precisa lembrar de inserir tokens como `{resumo_prontuario}`, `{info_complementar}` ou `{ultimos_exames}` no meio do texto — é técnico, frágil (se esquecer o token o dado não vai) e expõe um detalhe de implementação que não agrega valor clínico. Trocar por **Fontes de Contexto** (checkboxes) deixa o médico focado no que quer pedir à IA, e o sistema cuida de montar o pacote de dados.
+## Objetivo
+Substituir o mock de transcrições do Copiloto por transcrição real do microfone via Deepgram, em tempo real, em português brasileiro.
 
-## Fontes de Contexto propostas
+## Como vai funcionar (visão do usuário)
+1. Ao clicar em "Iniciar atendimento" / ativar a escuta, o navegador pede permissão de microfone.
+2. O áudio é enviado ao Deepgram em streaming; frases aparecem no painel de transcrição assim que são reconhecidas (parciais em cinza, finais consolidadas).
+3. Ao pausar/encerrar, o stream é fechado e o texto final fica salvo em `transcriptLog` (já usado pela IA da Anamnese e pelo Resumo do atendimento).
 
-Na tela de Novo/Editar prompt, no lugar da régua de "Variáveis do sistema", passa a existir uma lista de toggles "Fontes de contexto que a IA pode usar":
+## Arquitetura (segura)
+A chave Deepgram nunca vai ao navegador. Fluxo:
 
-1. **Dados cadastrais do paciente** — nome, nascimento, idade, sexo, telefone, convênio, CPF, endereço, filiação.
-2. **Dados complementares do paciente** — campos de `infoComp` (alergias, medicações em uso, antecedentes, etc.).
-3. **Resumo do prontuário** — `currentResumoProntuario`.
-4. **Resumo dos exames** — últimos exames cadastrados do paciente.
-5. **Resumo do atendimento atual** — anotações do prontuário em aberto + transcrição + bolhas do Copiloto + itens fixados.
-6. **Memória longitudinal do paciente** — placeholder por enquanto (fonte cinza/"em breve"), pronta para ligar quando o recurso existir.
+```
+Browser  ──(1) pede token──►  Server Function (TanStack)
+Browser  ◄──(2) token efêmero (≈60s, scope:usage:write)──
+Browser  ──(3) WebSocket wss://api.deepgram.com/v1/listen──►  Deepgram
+Browser  ◄──(4) transcrições JSON (parcial/final)──────────
+```
 
-Todas vêm ligadas por padrão, exceto Memória longitudinal (desativada e desabilitada com tag "Em breve").
+- Token efêmero é criado via `POST https://api.deepgram.com/v1/auth/grant` usando `DEEPGRAM_API_KEY` no servidor.
+- Cliente abre WebSocket direto com Deepgram usando esse token (baixa latência, sem proxy de áudio).
 
-## Mudanças na UI
+## Passos de implementação
 
-- **Modal "Novo/Editar prompt de anamnese"** (`#m-anamnese-prompt`):
-  - Remover o bloco "Variáveis do sistema (clique para inserir)" e o `#map-vars`.
-  - Adicionar um bloco "Fontes de contexto" com 6 checkboxes + breve descrição de cada um.
-  - Atualizar o placeholder/`label` do textarea para "Escreva apenas as instruções para a IA. Os dados marcados acima serão fornecidos automaticamente.".
-- **Lista de modelos** (`renderAnamneseList`): mostrar pequenos chips com as fontes ativas em cada modelo.
-- **Modelo padrão**: reescrever o `DEFAULT_ANAMNESE_PROMPT` removendo os tokens `{...}` e deixando apenas instruções, já que o contexto vem agora por fontes.
+1. **Secret**: solicitar `DEEPGRAM_API_KEY` (via add_secret) após aprovação.
+2. **Server function** `src/lib/deepgram.functions.ts`:
+   - `getDeepgramToken` (`createServerFn`, sem auth pública por enquanto — pode ficar atrás de `requireSupabaseAuth` se preferir) → chama Deepgram Auth API e devolve `{ access_token, expires_in }`.
+3. **Cliente em `public/medicopilot.html`**:
+   - Novo módulo JS `deepgramLive` com: `start()`, `stop()`, `pause()`, `resume()`.
+   - Usa `navigator.mediaDevices.getUserMedia({audio:true})` + `MediaRecorder` (mimeType `audio/webm;codecs=opus`, timeslice 250 ms).
+   - Abre `WebSocket('wss://api.deepgram.com/v1/listen?model=nova-2&language=pt-BR&smart_format=true&interim_results=true&punctuate=true&endpointing=300', ['token', accessToken])`.
+   - `ondataavailable` → `ws.send(blob)`.
+   - `onmessage` → se `is_final` chama `addTranscriptLine(transcript)` (função já existente); se parcial, atualiza uma linha "ao vivo" no painel.
+   - Tratamento de erros: permissão negada, token expirado (re-mint), perda de rede (reconnect com backoff).
+4. **Substituir o mock**:
+   - Remover/ignorar `transcripts[]` e o `setInterval` em `transcriptInterval` quando o Deepgram estiver ativo.
+   - Manter fallback ao mock atrás de uma flag `USE_DEEPGRAM` para desenvolvimento offline (opcional).
+   - Respeitar o toggle "Permitir gravação de voz" (linha 1062) — só inicia se estiver ligado.
+5. **UI**:
+   - Indicador "● ao vivo" já existe; trocar para refletir estado real (`connecting`, `live`, `paused`, `error`).
+   - Mostrar parcial em itálico/cinza claro acima das finais.
 
-## Mudanças no comportamento
+## Detalhes técnicos
 
-- Modelo passa a guardar `sources: { cadastrais, complementares, prontuario, exames, atendimento, longitudinal }` em `localStorage` (`anamnese_models`).
-- `buildAnamneseContext()` permanece, mas ganha um irmão `buildAnamneseContextBlock(sources)` que monta um bloco de texto só com as seções marcadas, em formato Markdown com cabeçalhos claros (`## Dados cadastrais`, `## Resumo do prontuário`, etc.).
-- `runAnamneseGeneration()` deixa de chamar `applyAnamneseVars` e passa a montar o `system_prompt` como: `model.prompt` + `\n\n---\nContexto disponível:\n` + bloco gerado pelas fontes selecionadas. Fontes não selecionadas não vão à IA — preserva a regra atual de "só envia o que foi configurado".
-- `applyAnamneseVars` e `ANAMNESE_VARS` ficam mantidos apenas como compatibilidade para modelos antigos que ainda contenham `{tokens}` (substituição silenciosa), evitando quebrar prompts já salvos pelo usuário.
+- **Endpoint token**: `POST /v1/auth/grant` com header `Authorization: Token <API_KEY>`, body `{"ttl_seconds":60}`. Retorna `access_token`.
+- **Parâmetros Deepgram**: `model=nova-2`, `language=pt-BR`, `interim_results=true`, `smart_format=true`, `punctuate=true`, `endpointing=300`, `vad_events=true`.
+- **Encoding**: enviar `audio/webm;opus` direto — Deepgram detecta. Em Safari (`audio/mp4`) idem.
+- **Keepalive**: enviar `{"type":"KeepAlive"}` a cada 8s para não desconectar em silêncio.
+- **Fechamento limpo**: enviar `{"type":"CloseStream"}` antes de `ws.close()` para receber transcrição final pendente.
+- **Custo**: Nova-2 streaming ≈ US$0.0043/min.
 
-## Migração de modelos existentes
+## Fora de escopo (proposto p/ próximos passos)
+- Diarização (identificar quem falou — médico × paciente).
+- Salvar áudio bruto no storage.
+- Transcrição pós-gravação (upload) como fallback.
 
-Na primeira carga após a mudança (`loadAnamneseModels`), para cada modelo sem campo `sources`:
-- Inferir as fontes a partir dos tokens presentes no texto (`{resumo_prontuario}` → prontuário, `{info_complementar}` → complementares, `{ultimos_exames}` → exames, `{paciente_*}` → cadastrais, etc.).
-- Se nenhum token for encontrado, marcar todas as 5 fontes ativas (exceto longitudinal) como padrão seguro.
-- Persistir o modelo já com `sources` preenchido.
-
-## Memória longitudinal
-
-Fica como ponto de extensão: checkbox desabilitado com tooltip "Em breve — histórico consolidado de longo prazo do paciente". Quando o recurso for criado, basta produzir um texto resumido e plugar em `buildAnamneseContextBlock` sob a chave `longitudinal`.
-
-## Fora de escopo desta entrega
-
-- Criar de fato a Memória longitudinal (estrutura de dados, geração e atualização).
-- Reescrever a tela de Anamnese gerada (painel lateral) — segue igual.
+Confirme para eu pedir o `DEEPGRAM_API_KEY` e implementar.
