@@ -1270,6 +1270,14 @@ Reduzir ingestão de sódio. Hidratação adequada. Evitar situações de estres
         <div class="fld wide"><label>Alergias</label><input type="text" id="ic-alerg" placeholder="Ex: Dipirona, Penicilina, frutos do mar..."></div>
         <div class="fld wide"><label>Antecedentes familiares</label><textarea id="ic-fam" rows="2" placeholder="Ex: Mãe — HAS e DM2; Pai — IAM aos 58 anos..." style="width:100%;font-family:var(--font);font-size:13px;padding:7px 10px;border:0.5px solid var(--n200);border-radius:var(--r6);resize:vertical"></textarea></div>
         <div class="fld wide"><label>Outras observações relevantes</label><textarea id="ic-outros" rows="2" placeholder="Comorbidades, cirurgias prévias, gestação, hábitos alimentares, sono..." style="width:100%;font-family:var(--font);font-size:13px;padding:7px 10px;border:0.5px solid var(--n200);border-radius:var(--r6);resize:vertical"></textarea></div>
+        <div class="fld wide">
+          <label>CIDs (CID-10)</label>
+          <div id="ic-cids-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px"></div>
+          <div style="position:relative">
+            <input type="text" id="ic-cids-input" placeholder="Buscar CID por código ou descrição (ex: I10, diabetes). Enter adiciona." autocomplete="off" oninput="renderCidSuggestions()" onkeydown="cidInputKeydown(event)" onblur="setTimeout(()=>{const s=document.getElementById('ic-cids-suggest');if(s)s.style.display='none';},150)">
+            <div id="ic-cids-suggest" style="display:none;position:absolute;z-index:50;background:#fff;border:0.5px solid var(--n200);border-radius:var(--r6);max-height:220px;overflow:auto;left:0;right:0;top:100%;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,.08)"></div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="mfoot">
@@ -1336,6 +1344,7 @@ function mapPatientRow(p){
     tel:p.telefone||'—',init:patientInitials(p.name),
     conv:p.convenio||'Particular',sus:p.sus||'—',email:p.email||'',mae:p.mae||'',pai:p.pai||'',end:p.endereco||'—',sexo:p.sexo||'',medico:p.medico||'',
     grupo:p.grupo||'',ocup:p.ocupacao||'',cpf:p.cpf||'',dadosClinicos:p.dados_clinicos||'',infoComp:p.info_complementar||{},updated_at:p.updated_at||p.created_at||null
+    ,cids:Array.isArray(p.cids)?p.cids:[]
   };
 }
 
@@ -2170,6 +2179,99 @@ function calcIMC(){
     out.value=imc.toFixed(1)+cl;
   }else out.value='';
 }
+/* ===== CIDs (multiselect) ===== */
+const CID10_DB=[
+  {c:'A09',d:'Diarreia e gastroenterite de origem infecciosa presumível'},
+  {c:'B34.9',d:'Infecção viral não especificada'},
+  {c:'E03.9',d:'Hipotireoidismo não especificado'},
+  {c:'E05.9',d:'Tireotoxicose não especificada'},
+  {c:'E10',d:'Diabetes mellitus tipo 1'},
+  {c:'E11',d:'Diabetes mellitus tipo 2'},
+  {c:'E66.0',d:'Obesidade devida a excesso de calorias'},
+  {c:'E78.0',d:'Hipercolesterolemia pura'},
+  {c:'E78.5',d:'Dislipidemia não especificada'},
+  {c:'F32.9',d:'Episódio depressivo não especificado'},
+  {c:'F41.0',d:'Transtorno de pânico'},
+  {c:'F41.1',d:'Ansiedade generalizada'},
+  {c:'G43.9',d:'Enxaqueca não especificada'},
+  {c:'I10',d:'Hipertensão essencial (primária)'},
+  {c:'I20.9',d:'Angina pectoris não especificada'},
+  {c:'I21.9',d:'Infarto agudo do miocárdio não especificado'},
+  {c:'I25.1',d:'Doença aterosclerótica do coração'},
+  {c:'I48',d:'Fibrilação e flutter atrial'},
+  {c:'I50.9',d:'Insuficiência cardíaca não especificada'},
+  {c:'I63.9',d:'Infarto cerebral não especificado'},
+  {c:'J06.9',d:'Infecção aguda das vias aéreas superiores não especificada'},
+  {c:'J18.9',d:'Pneumonia não especificada'},
+  {c:'J20.9',d:'Bronquite aguda não especificada'},
+  {c:'J30.4',d:'Rinite alérgica não especificada'},
+  {c:'J44.9',d:'DPOC não especificada'},
+  {c:'J45',d:'Asma'},
+  {c:'K21.9',d:'Doença do refluxo gastroesofágico sem esofagite'},
+  {c:'K29.7',d:'Gastrite não especificada'},
+  {c:'K30',d:'Dispepsia funcional'},
+  {c:'K59.0',d:'Constipação'},
+  {c:'K80.2',d:'Cálculo da vesícula biliar sem colecistite'},
+  {c:'L20.9',d:'Dermatite atópica não especificada'},
+  {c:'L30.9',d:'Dermatite não especificada'},
+  {c:'M10.9',d:'Gota não especificada'},
+  {c:'M25.5',d:'Dor articular'},
+  {c:'M54.4',d:'Lumbago com ciática'},
+  {c:'M54.5',d:'Dor lombar baixa'},
+  {c:'M79.7',d:'Fibromialgia'},
+  {c:'N18.9',d:'Doença renal crônica não especificada'},
+  {c:'N20.0',d:'Calculose do rim'},
+  {c:'N39.0',d:'Infecção do trato urinário'},
+  {c:'R05',d:'Tosse'},
+  {c:'R10.4',d:'Outras dores abdominais e as não especificadas'},
+  {c:'R51',d:'Cefaleia'},
+  {c:'R53',d:'Mal estar e fadiga'},
+  {c:'R73.9',d:'Hiperglicemia não especificada'},
+  {c:'Z00.0',d:'Exame médico geral'},
+  {c:'Z01.7',d:'Exame laboratorial'},
+  {c:'Z71.3',d:'Aconselhamento dietético'},
+  {c:'Z76.3',d:'Pessoa em boa saúde acompanhando doente'}
+];
+let _editCids=[];
+function renderCidChips(){
+  const box=document.getElementById('ic-cids-chips');if(!box)return;
+  if(!_editCids.length){box.innerHTML='<span style="font-size:11px;color:var(--n400)">Nenhum CID selecionado</span>';return;}
+  box.innerHTML=_editCids.map((c,i)=>'<span style="display:inline-flex;align-items:center;gap:5px;background:#eff6ff;color:#1d4ed8;border:0.5px solid #bfdbfe;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:600"><b>'+escapeHtml(c.code)+'</b><span style="font-weight:500;color:#1e3a8a">'+escapeHtml(c.description||'')+'</span><button type="button" onclick="removeCid('+i+')" style="background:none;border:0;color:#1d4ed8;cursor:pointer;padding:0;display:flex;align-items:center"><i class="ti ti-x" style="font-size:12px"></i></button></span>').join('');
+}
+function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function addCid(code,description){
+  code=String(code||'').trim().toUpperCase();if(!code)return;
+  if(_editCids.some(c=>c.code===code))return;
+  _editCids.push({code,description:String(description||'').trim()});
+  renderCidChips();
+  const inp=document.getElementById('ic-cids-input');if(inp){inp.value='';inp.focus();}
+  const sg=document.getElementById('ic-cids-suggest');if(sg){sg.style.display='none';sg.innerHTML='';}
+}
+function removeCid(i){_editCids.splice(i,1);renderCidChips();}
+function renderCidSuggestions(){
+  const inp=document.getElementById('ic-cids-input');const sg=document.getElementById('ic-cids-suggest');if(!inp||!sg)return;
+  const q=inp.value.trim().toLowerCase();
+  if(!q){sg.style.display='none';sg.innerHTML='';return;}
+  const matches=CID10_DB.filter(it=>it.c.toLowerCase().includes(q)||it.d.toLowerCase().includes(q)).slice(0,20);
+  if(!matches.length){sg.innerHTML='<div style="padding:8px 10px;font-size:11px;color:var(--n500)">Sem correspondência. Pressione Enter para adicionar "'+escapeHtml(inp.value.trim())+'" como CID personalizado.</div>';sg.style.display='block';return;}
+  sg.innerHTML=matches.map(m=>'<div onmousedown="event.preventDefault();addCid(\''+m.c+'\',\''+m.d.replace(/'/g,"\\'")+'\')" style="padding:7px 10px;font-size:12px;cursor:pointer;border-bottom:0.5px solid var(--n100)" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'transparent\'"><b style="color:#1d4ed8">'+escapeHtml(m.c)+'</b> <span style="color:var(--n700)">'+escapeHtml(m.d)+'</span></div>').join('');
+  sg.style.display='block';
+}
+function cidInputKeydown(ev){
+  if(ev.key==='Enter'){
+    ev.preventDefault();
+    const inp=ev.target;const raw=inp.value.trim();if(!raw)return;
+    const sg=document.getElementById('ic-cids-suggest');
+    const matches=CID10_DB.filter(it=>it.c.toLowerCase().includes(raw.toLowerCase())||it.d.toLowerCase().includes(raw.toLowerCase()));
+    if(matches.length===1){addCid(matches[0].c,matches[0].d);return;}
+    // Try "CODE - description" or "CODE description"
+    const m=raw.match(/^([A-Za-z]\d{2}(?:\.\d+)?)(?:\s*[-–:]\s*|\s+)?(.*)$/);
+    if(m){addCid(m[1],m[2]||'');}
+    else{addCid(raw,'');}
+  }else if(ev.key==='Escape'){
+    const sg=document.getElementById('ic-cids-suggest');if(sg){sg.style.display='none';}
+  }
+}
 function openInfoComp(){
   if(!currentPatient){alert('Selecione um paciente primeiro.');return;}
   const d=loadInfoComp();
@@ -2178,6 +2280,10 @@ function openInfoComp(){
   });
   calcIMC();
   ['ic-peso','ic-altura'].forEach(id=>{const el=document.getElementById(id);if(el){el.oninput=calcIMC;}});
+  _editCids=Array.isArray(currentPatient.cids)?currentPatient.cids.slice():[];
+  const inp=document.getElementById('ic-cids-input');if(inp)inp.value='';
+  renderCidChips();
+  const sg=document.getElementById('ic-cids-suggest');if(sg){sg.style.display='none';sg.innerHTML='';}
   openModal('info-comp');
 }
 async function saveInfoComp(){
@@ -2186,7 +2292,8 @@ async function saveInfoComp(){
     const el=document.getElementById('ic-'+k);if(el)d[k]=el.value.trim();
   });
   d.updated_at=new Date().toISOString();
-  const {data,error}=await sb.from('pacientes').update({info_complementar:d}).eq('paciente_id',currentPatient.id).select('*').single();
+  const cids=Array.isArray(_editCids)?_editCids:[];
+  const {data,error}=await sb.from('pacientes').update({info_complementar:d,cids:cids}).eq('paciente_id',currentPatient.id).select('*').single();
   if(error){showToast('Erro ao salvar informações: '+error.message,'error');return;}
   Object.assign(currentPatient,mapPatientRow(data));
   patients=patients.map(p=>p.id===currentPatient.id?currentPatient:p);
@@ -2214,6 +2321,8 @@ function renderInfoCompSummary(){
   if(d.alerg)parts.push('<b>Alergias:</b> '+d.alerg);
   if(d.fam)parts.push('<b>Antec. familiares:</b> '+d.fam);
   if(d.outros)parts.push('<b>Outras:</b> '+d.outros);
+  const cids=Array.isArray(currentPatient?.cids)?currentPatient.cids:[];
+  if(cids.length)parts.push('<b>CIDs:</b> '+cids.map(c=>c.code+(c.description?' ('+c.description+')':'')).join(', '));
   if(parts.length){box.innerHTML='<div style="font-weight:600;color:#92400e;font-size:10px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px"><i class="ti ti-clipboard-list" style="font-size:11px"></i> Informações complementares</div>'+parts.join(' &nbsp;·&nbsp; ');box.style.display='block';}
   else{box.innerHTML='';box.style.display='none';}
 }

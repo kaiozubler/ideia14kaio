@@ -1,0 +1,1 @@
+ALTER TABLE public.pacientes ADD COLUMN IF NOT EXISTS cids jsonb NOT NULL DEFAULT '[]'::jsonb;
