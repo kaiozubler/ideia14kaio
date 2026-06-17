@@ -1888,6 +1888,7 @@ function saveAtendState(){
 }
 function restoreAtendState(){
   if(atendEmAndamento.dirty)showNovoAtend(true);
+  else if(hasAtendDraft())showNovoAtend(false);
   else showAtendList();
 }
 function markAtendDirty(){
@@ -2016,7 +2017,7 @@ function showNovoAtend(restore){
   nv.style.display='flex';
   if(!restore){
     resetAI();
-    atendEmAndamento={pront:'',notaPessoal:'',dirty:false};
+    atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[],startedAt:new Date().toISOString()};
     const pa=document.getElementById('pront-area');if(pa)pa.value='';
     const npta=document.getElementById('nota-personal-ta');if(npta)npta.value='';
     aiChatHistory=[];
@@ -2035,7 +2036,7 @@ async function saveAtendInternal(){
   const timeStr=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   const pront=atendEmAndamento.pront||document.getElementById('pront-area')?.value||'';
   const notaPessoal=document.getElementById('nota-personal-ta')?.value||'';
-  const payload={paciente_id:currentPatient.id,id_medico:currentUser.id,ended_at:now.toISOString(),title:'Consulta — '+dateStr,acao:'Consulta',resumo:pront?pront.substring(0,200)+(pront.length>200?'...':''):'Atendimento registrado.',notas:pront||'Sem anotações.',nota_personal:notaPessoal,anamnese_ia:window.__lastAnamnese||null};
+  const payload={paciente_id:currentPatient.id,id_medico:currentUser.id,started_at:atendEmAndamento.startedAt||now.toISOString(),ended_at:now.toISOString(),title:'Consulta — '+dateStr,acao:'Consulta',resumo:pront?pront.substring(0,200)+(pront.length>200?'...':''):'Atendimento registrado.',notas:pront||'Sem anotações.',nota_personal:notaPessoal,anamnese_ia:window.__lastAnamnese||null};
   let data=null,error=null;
   if(window._idConsultaAtual){({data,error}=await sb.from('consulta').update(payload).eq('id',window._idConsultaAtual).select('*').single());}
   if(error||!data){({data,error}=await sb.from('consulta').insert(payload).select('*').single());}
@@ -2043,7 +2044,7 @@ async function saveAtendInternal(){
   atendimentos=atendimentos.filter(a=>a.id!==data.id);
   atendimentos.unshift(mapConsultaRow(data));
   await addTimelineEvent({date:dateStr,type:'atend',icon:'ti-stethoscope',title:'Atendimento registrado — '+timeStr,sub:medicoNames[currentPatient.medico]||'Médico responsável'});
-  atendEmAndamento={pront:'',notaPessoal:'',dirty:false};
+  atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[]};
   window._idConsultaAtual=null;
   clearAtendDraft();
   stopAtendAutoSave();
