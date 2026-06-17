@@ -3705,14 +3705,24 @@ function _atendDraftKey(){
   const uid=(currentUser&&currentUser.id)?currentUser.id:'anon';
   return 'atendDraft:'+uid+':'+pid;
 }
+function hasAtendDraft(){
+  try{
+    const raw=localStorage.getItem(_atendDraftKey());
+    if(!raw)return false;
+    const d=JSON.parse(raw);
+    return !!(d&&(d.pront||d.notaPessoal||(Array.isArray(d.transcriptLog)&&d.transcriptLog.length)||(Array.isArray(d.bblHistory)&&d.bblHistory.length)));
+  }catch{return false;}
+}
 function snapshotAtendDraft(){
   if(!currentPatient)return null;
   const pa=document.getElementById('pront-area');
   const npta=document.getElementById('nota-personal-ta');
   const pront=pa?pa.value:(atendEmAndamento&&atendEmAndamento.pront)||'';
   const notaPessoal=npta?npta.value:(atendEmAndamento&&atendEmAndamento.notaPessoal)||'';
-  if(!pront&&!notaPessoal)return null;
-  return {pront,notaPessoal,updatedAt:new Date().toISOString(),consultaId:window._idConsultaAtual||null};
+  const bblHistory=Array.isArray(atendEmAndamento?.bblHistory)?atendEmAndamento.bblHistory:[];
+  if(!pront&&!notaPessoal&&!transcriptLog.length&&!bblHistory.length)return null;
+  if(atendEmAndamento){atendEmAndamento.pront=pront;atendEmAndamento.notaPessoal=notaPessoal;if(!atendEmAndamento.startedAt)atendEmAndamento.startedAt=new Date().toISOString();}
+  return {version:2,pront,notaPessoal,bblHistory,transcriptLog:[...transcriptLog],pinnedBbls:[...pinnedBbls],bubblesVisible,copTranscriptCursor,copLastSummary,copFirstRun,startedAt:atendEmAndamento?.startedAt||new Date().toISOString(),updatedAt:new Date().toISOString()};
 }
 function saveAtendDraft(){
   try{
@@ -3722,24 +3732,46 @@ function saveAtendDraft(){
   }catch(e){console.warn('autosave falhou',e);}
 }
 function clearAtendDraft(){try{localStorage.removeItem(_atendDraftKey());}catch(e){}}
+function restoreAiDraft(d){
+  transcriptLog=Array.isArray(d.transcriptLog)?d.transcriptLog.filter(Boolean):[];
+  const content=document.getElementById('trans-content');
+  if(content){
+    content.innerHTML='';
+    transcriptLog.forEach(text=>{const line=document.createElement('div');line.className='trans-line';line.textContent=text;content.appendChild(line);});
+    content.scrollTop=content.scrollHeight;
+  }
+  const lbl=document.getElementById('trans-lbl');
+  if(lbl&&transcriptLog.length){lbl.textContent=transcriptLog[transcriptLog.length-1];lbl.className='trans-lbl';}
+  pinnedBbls=Array.isArray(d.pinnedBbls)?d.pinnedBbls:[];
+  bubblesVisible=d.bubblesVisible!==false;
+  const layer=document.getElementById('bubbles-layer');
+  const ph=document.getElementById('orb-center-placeholder');
+  if(layer){layer.innerHTML='';if(ph)layer.appendChild(ph);}
+  (Array.isArray(d.bblHistory)?d.bblHistory:[]).forEach(b=>spawnBubble(b.type||'ia',b.text||'',{record:false}));
+  if(!bubblesVisible&&layer)layer.classList.add('hidden-bbl');
+  const icon=document.getElementById('toggle-bbl-icon');if(icon)icon.className=bubblesVisible?'ti ti-eye':'ti ti-eye-off';
+  refreshPinnedStrip();
+  copTranscriptCursor=Number(d.copTranscriptCursor)||0;
+  copLastSummary=d.copLastSummary||'';
+  copFirstRun=d.copFirstRun!==false;
+}
 function tryRestoreAtendDraft(){
   try{
     const raw=localStorage.getItem(_atendDraftKey());
     if(!raw)return;
     const d=JSON.parse(raw);
-    if(!d||(!d.pront&&!d.notaPessoal))return;
-    const when=d.updatedAt?new Date(d.updatedAt).toLocaleString('pt-BR'):'';
-    if(!confirm('Encontramos um rascunho não salvo deste atendimento'+(when?(' ('+when+')'):'')+'.\n\nDeseja restaurar?')){
-      clearAtendDraft();return;
-    }
+    if(!d||(!d.pront&&!d.notaPessoal&&!(Array.isArray(d.transcriptLog)&&d.transcriptLog.length)&&!(Array.isArray(d.bblHistory)&&d.bblHistory.length)))return;
     const pa=document.getElementById('pront-area');if(pa)pa.value=d.pront||'';
     const npta=document.getElementById('nota-personal-ta');if(npta)npta.value=d.notaPessoal||'';
     atendEmAndamento.pront=d.pront||'';
     atendEmAndamento.notaPessoal=d.notaPessoal||'';
-    atendEmAndamento.dirty=!!(d.pront||d.notaPessoal);
-    if(d.consultaId)window._idConsultaAtual=d.consultaId;
+    atendEmAndamento.bblHistory=Array.isArray(d.bblHistory)?d.bblHistory:[];
+    atendEmAndamento.startedAt=d.startedAt||new Date().toISOString();
+    atendEmAndamento.dirty=true;
+    window._idConsultaAtual=null;
+    restoreAiDraft(d);
     updateAtendProgress();
-    showToast&&showToast('Rascunho restaurado','success');
+    showToast&&showToast('Rascunho retomado automaticamente','success');
   }catch(e){console.warn('restore draft falhou',e);}
 }
 function startAtendAutoSave(){
