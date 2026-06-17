@@ -3667,6 +3667,62 @@ function iniciarNovoAtendimento(){
   renderAtendimentos();renderExames();renderTimeline();updateAtendProgress();
   openTab('atendimentos',null);
 }
+
+/* ========== AUTO-SAVE DE RASCUNHO DO ATENDIMENTO ==========
+   Pré-salva localmente (localStorage) a cada X segundos para evitar
+   perda de dados em quedas de energia/sessão. NÃO grava no prontuário
+   nem na timeline — isso só ocorre no salvamento manual. */
+const ATEND_DRAFT_INTERVAL_MS=10000;
+let _atendDraftTimer=null;
+function _atendDraftKey(){
+  const pid=(currentPatient&&currentPatient.id)?currentPatient.id:'novo';
+  const uid=(currentUser&&currentUser.id)?currentUser.id:'anon';
+  return 'atendDraft:'+uid+':'+pid;
+}
+function snapshotAtendDraft(){
+  if(!currentPatient)return null;
+  const pa=document.getElementById('pront-area');
+  const npta=document.getElementById('nota-personal-ta');
+  const pront=pa?pa.value:(atendEmAndamento&&atendEmAndamento.pront)||'';
+  const notaPessoal=npta?npta.value:(atendEmAndamento&&atendEmAndamento.notaPessoal)||'';
+  if(!pront&&!notaPessoal)return null;
+  return {pront,notaPessoal,updatedAt:new Date().toISOString(),consultaId:window._idConsultaAtual||null};
+}
+function saveAtendDraft(){
+  try{
+    const snap=snapshotAtendDraft();
+    if(!snap){return;}
+    localStorage.setItem(_atendDraftKey(),JSON.stringify(snap));
+  }catch(e){console.warn('autosave falhou',e);}
+}
+function clearAtendDraft(){try{localStorage.removeItem(_atendDraftKey());}catch(e){}}
+function tryRestoreAtendDraft(){
+  try{
+    const raw=localStorage.getItem(_atendDraftKey());
+    if(!raw)return;
+    const d=JSON.parse(raw);
+    if(!d||(!d.pront&&!d.notaPessoal))return;
+    const when=d.updatedAt?new Date(d.updatedAt).toLocaleString('pt-BR'):'';
+    if(!confirm('Encontramos um rascunho não salvo deste atendimento'+(when?(' ('+when+')'):'')+'.\n\nDeseja restaurar?')){
+      clearAtendDraft();return;
+    }
+    const pa=document.getElementById('pront-area');if(pa)pa.value=d.pront||'';
+    const npta=document.getElementById('nota-personal-ta');if(npta)npta.value=d.notaPessoal||'';
+    atendEmAndamento.pront=d.pront||'';
+    atendEmAndamento.notaPessoal=d.notaPessoal||'';
+    atendEmAndamento.dirty=!!(d.pront||d.notaPessoal);
+    if(d.consultaId)window._idConsultaAtual=d.consultaId;
+    updateAtendProgress();
+    showToast&&showToast('Rascunho restaurado','success');
+  }catch(e){console.warn('restore draft falhou',e);}
+}
+function startAtendAutoSave(){
+  stopAtendAutoSave();
+  _atendDraftTimer=setInterval(saveAtendDraft,ATEND_DRAFT_INTERVAL_MS);
+}
+function stopAtendAutoSave(){if(_atendDraftTimer){clearInterval(_atendDraftTimer);_atendDraftTimer=null;}}
+window.addEventListener('beforeunload',saveAtendDraft);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveAtendDraft();});
 </script>
 </body>
 </html>
