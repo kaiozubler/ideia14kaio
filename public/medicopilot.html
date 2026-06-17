@@ -2748,6 +2748,10 @@ function spawnBubble(type,customText){
   layer.appendChild(el);
   layer.scrollTop=layer.scrollHeight;
   bblCount++;
+  if(atendEmAndamento){
+    if(!Array.isArray(atendEmAndamento.bblHistory))atendEmAndamento.bblHistory=[];
+    atendEmAndamento.bblHistory.push({type,text:rawText,ts:new Date().toISOString()});
+  }
   saveAtendDraft();
 }
 
