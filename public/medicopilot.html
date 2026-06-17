@@ -2616,6 +2616,8 @@ function resetAI(){
   if(dgLive.active || dgLive.starting){ dgLive.stop(); }
   bblCount=0;sugIdx=0;aiRespIdx=0;transcriptIdx=0;
   transcriptLog=[];pinnedBbls=[];bubblesVisible=true;
+  stopCopilotoLoop();
+  copTranscriptCursor=0;copLastSummary='';copFirstRun=true;copBusy=false;
   const bl=document.getElementById('bubbles-layer');
   if(bl){
     // Clear but keep placeholder
@@ -2768,7 +2770,63 @@ function toggleBubbles(){
 }
 
 function suggestAction(){
-  spawnBubble('ia','Sugestão de conduta: Ajustar Losartana 50mg → 100mg + Dipirona 500mg 6/6h + Retorno 7 dias. Confirmar?');
+  // Sugestão manual: dispara processamento do copiloto imediatamente, ignorando o tipo
+  runCopilotoTurn({manual:true}).catch(e=>spawnBubble('ia','⚠️ Erro ao consultar a IA: '+(e.message||e)));
+}
+
+/* ========== COPILOTO ATIVO — LOOP ========== */
+function startCopilotoLoop(){
+  stopCopilotoLoop();
+  const cfg=getCopilotoCfg();
+  if(!cfg.enabled || cfg.tipo!=='ativo') return;
+  const ms=Math.max(15,cfg.freq)*1000;
+  copLoopTimer=setInterval(()=>{
+    if(!listening) return;
+    runCopilotoTurn({manual:false}).catch(e=>console.warn('copiloto turn',e));
+  },ms);
+}
+function stopCopilotoLoop(){
+  if(copLoopTimer){clearInterval(copLoopTimer);copLoopTimer=null;}
+}
+async function runCopilotoTurn(opts){
+  if(copBusy)return;
+  const manual=!!(opts&&opts.manual);
+  // pega o trecho novo da transcrição desde o último envio
+  const novo=transcriptLog.slice(copTranscriptCursor).join('\n').trim();
+  if(!manual && !novo) return; // nada novo para processar
+  copBusy=true;
+  const cursorAtSend=transcriptLog.length;
+  try{
+    const payload={mode:'copiloto', manual, primeiro_processamento: copFirstRun, trecho_transcricao: novo};
+    if(copFirstRun){
+      // primeiro processamento: envia todo o contexto disponível
+      let infoComp=null; try{infoComp=loadInfoComp();}catch{}
+      payload.paciente=currentPatient||null;
+      payload.resumo_prontuario=currentResumoProntuario||'';
+      payload.info_complementar=infoComp;
+      payload.resumo_acumulado='';
+      payload.transcricao_completa=transcriptLog.join('\n');
+    } else {
+      payload.resumo_acumulado=copLastSummary||'';
+    }
+    const res=await fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!res.ok) throw new Error(await res.text());
+    const data=await res.json();
+    copTranscriptCursor=cursorAtSend;
+    copFirstRun=false;
+    if(data && typeof data==='object'){
+      if(data.resumo_clinico) copLastSummary=data.resumo_clinico;
+      const perguntas=Array.isArray(data.perguntas_sugeridas)?data.perguntas_sugeridas:[];
+      const condutas=Array.isArray(data.condutas_sugeridas)?data.condutas_sugeridas:[];
+      const pontos=Array.isArray(data.pontos_atencao)?data.pontos_atencao:[];
+      perguntas.forEach(p=>{ const t=typeof p==='string'?p:(p&&p.pergunta)||JSON.stringify(p); if(t) spawnBubble('sug',t); });
+      condutas.forEach(c=>{ const t=typeof c==='string'?c:(c&&(c.conduta||c.sugestao))||JSON.stringify(c); if(t) spawnBubble('ia','Conduta sugerida: '+t); });
+      pontos.forEach(p=>{ const t=typeof p==='string'?p:JSON.stringify(p); if(t) spawnBubble('ia','⚠️ Ponto de atenção: '+t); });
+      if(!perguntas.length && !condutas.length && !pontos.length && manual){
+        spawnBubble('ia','Sem novas sugestões com base nos dados disponíveis.');
+      }
+    }
+  } finally { copBusy=false; }
 }
 
 /* ========== CONSULTA + RESUMO PRONTUÁRIO (IA) ========== */
