@@ -2653,7 +2653,12 @@ function setListenBtnState(state){
 }
 
 function toggleListen(){
-  const voiceAllowed = (document.getElementById('cop-voz')||{}).checked !== false;
+  const cfg = getCopilotoCfg();
+  if(!cfg.enabled){
+    if(typeof toast==='function') toast('Ative o copiloto em Minhas IA\u0027s › Copiloto de consulta para iniciar a gravação.');
+    return;
+  }
+  const voiceAllowed = cfg.voz;
   if(!listening&&!aiPaused){
     listening=true;aiPaused=false;
     setOrbState('listening');setListenBtnState('listening');
@@ -2667,14 +2672,12 @@ function toggleListen(){
         addTranscriptLine('[ Erro ao iniciar gravação: '+err.message+' ]');
       });
     } else {
-      transcriptInterval=setInterval(()=>{
-        if(listening)addTranscriptLine(transcripts[transcriptIdx++%transcripts.length]);
-      },3400);
+      addTranscriptLine('[ Captura de voz desativada nas configurações do copiloto ]');
     }
     // Hide placeholder once started
     const ph=document.getElementById('orb-center-placeholder');
     if(ph){ph.style.transition='opacity .4s';ph.style.opacity='0.35';ph.style.pointerEvents='none';}
-    spawnBubbleTimers();
+    startCopilotoLoop();
   }else if(listening&&!aiPaused){
     listening=false;aiPaused=true;
     clearInterval(transcriptInterval);
@@ -2683,6 +2686,7 @@ function toggleListen(){
     const td=document.getElementById('tdot');if(td)td.classList.remove('live');
     const lbl=document.getElementById('trans-lbl');if(lbl){lbl.textContent='Pausado — histórico preservado';lbl.className='trans-lbl';}
     addTranscriptLine('[ Gravação pausada ]');
+    stopCopilotoLoop();
   }else if(!listening&&aiPaused){
     listening=true;aiPaused=false;
     setOrbState('listening');setListenBtnState('listening');
@@ -2694,22 +2698,17 @@ function toggleListen(){
       } else {
         dgLive.start().catch(err=>addTranscriptLine('[ Erro: '+err.message+' ]'));
       }
-    } else {
-      transcriptInterval=setInterval(()=>{
-        if(listening)addTranscriptLine(transcripts[transcriptIdx++%transcripts.length]);
-      },3400);
     }
     addTranscriptLine('[ Gravação retomada ]');
+    startCopilotoLoop();
   }
 }
 function pauseAI(){toggleListen();}
 
 let bblTimers=[];
 function spawnBubbleTimers(){
+  // legado mocado — substituído por startCopilotoLoop (chamadas reais à IA)
   bblTimers.forEach(t=>clearTimeout(t));bblTimers=[];
-  const times=[1600,5000,9000,13500,18000];
-  const types=['sug','sug','ia','sug','ia'];
-  times.forEach((t,i)=>bblTimers.push(setTimeout(()=>{if(listening||aiPaused)spawnBubble(types[i]);},t)));
 }
 
 function fmtBubbleText(raw){
