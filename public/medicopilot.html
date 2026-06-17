@@ -2623,6 +2623,7 @@ function resetAI(){
   if(dgLive.active || dgLive.starting){ dgLive.stop(); }
   bblCount=0;sugIdx=0;aiRespIdx=0;transcriptIdx=0;
   transcriptLog=[];pinnedBbls=[];bubblesVisible=true;
+  clearAiSuggestionQueue();
   stopCopilotoLoop();
   copTranscriptCursor=0;copLastSummary='';copFirstRun=true;copBusy=false;
   const bl=document.getElementById('bubbles-layer');
@@ -2741,6 +2742,26 @@ function spawnBubble(type,customText){
   layer.appendChild(el);
   layer.scrollTop=layer.scrollHeight;
   bblCount++;
+  saveAtendDraft();
+}
+
+function clearAiSuggestionQueue(){
+  aiSuggestionQueue=[];
+  if(aiSuggestionQueueTimer){clearTimeout(aiSuggestionQueueTimer);aiSuggestionQueueTimer=null;}
+}
+function queueAiPanelItem(type,text){
+  const clean=(text||'').trim();
+  if(!clean)return;
+  aiSuggestionQueue.push({type,text:clean});
+  processAiSuggestionQueue();
+}
+function processAiSuggestionQueue(){
+  if(aiSuggestionQueueTimer||!aiSuggestionQueue.length)return;
+  const item=aiSuggestionQueue.shift();
+  spawnBubble(item.type,item.text);
+  if(aiSuggestionQueue.length){
+    aiSuggestionQueueTimer=setTimeout(()=>{aiSuggestionQueueTimer=null;processAiSuggestionQueue();},AI_SUGGESTION_DISPLAY_INTERVAL_MS);
+  }
 }
 
 function togglePin(id){
