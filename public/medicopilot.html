@@ -2734,7 +2734,7 @@ function fmtBubbleText(raw){
     .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
     .replace(/\*(.+?)\*/g,'<em>$1</em>');
 }
-function spawnBubble(type,customText){
+function spawnBubble(type,customText,opts){
   const layer=document.getElementById('bubbles-layer');if(!layer)return;
   const ph=document.getElementById('orb-center-placeholder');if(ph)ph.style.display='none';
   const rawText=customText||(type==='sug'?aiSuggestions[sugIdx++%aiSuggestions.length]:aiResponses[aiRespIdx++%aiResponses.length]);
@@ -2748,11 +2748,11 @@ function spawnBubble(type,customText){
   layer.appendChild(el);
   layer.scrollTop=layer.scrollHeight;
   bblCount++;
-  if(atendEmAndamento){
+  if((!opts||opts.record!==false)&&atendEmAndamento){
     if(!Array.isArray(atendEmAndamento.bblHistory))atendEmAndamento.bblHistory=[];
     atendEmAndamento.bblHistory.push({type,text:rawText,ts:new Date().toISOString()});
+    saveAtendDraft();
   }
-  saveAtendDraft();
 }
 
 function clearAiSuggestionQueue(){
