@@ -1693,6 +1693,7 @@ async function addTimelineEvent(ev){
   }
 }
 async function openPatient(id){
+  if(currentPatient&&atendEmAndamento&&atendEmAndamento.dirty){saveAtendState();saveAtendDraft();stopAtendAutoSave();}
   currentPatient=patients.find(p=>p.id===id);
   if(!currentPatient)return;
   currentResumoProntuario='';
@@ -2890,17 +2891,7 @@ function setResumoBadge(state){
 async function iniciarConsultaEResumo(){
   window._idConsultaAtual=null;
   if(!currentPatient||!currentUser)return;
-  // 1) cria registro de consulta (best-effort; se falhar segue sem persistir)
-  try{
-    const {data,error}=await sb.from('consulta').insert({
-      paciente_id:currentPatient.id,
-      id_medico:currentUser.id,
-      started_at:new Date().toISOString()
-    }).select('id').single();
-    if(!error&&data)window._idConsultaAtual=data.id;
-  }catch(e){console.warn('consulta insert falhou',e);}
-
-  // 2) garante resumo do prontuário conforme regra (cadastro alterado OU >60 dias)
+  // Garante resumo do prontuário conforme regra; a consulta só é gravada no salvamento manual.
   ensureResumoProntuario(currentPatient.id).catch(e=>console.error('resumo erro',e));
 }
 
