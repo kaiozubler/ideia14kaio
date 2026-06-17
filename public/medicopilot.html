@@ -2614,6 +2614,7 @@ function addTranscriptLine(text){
   // Update label with latest
   const lbl=document.getElementById('trans-lbl');
   if(lbl)lbl.textContent=text;
+  saveAtendDraft();
 }
 
 /* ========== AI PANEL — ORB + LISTEN ========== */
@@ -2847,11 +2848,11 @@ async function runCopilotoTurn(opts){
       const perguntas=Array.isArray(data.perguntas_sugeridas)?data.perguntas_sugeridas:[];
       const condutas=Array.isArray(data.condutas_sugeridas)?data.condutas_sugeridas:[];
       const pontos=Array.isArray(data.pontos_atencao)?data.pontos_atencao:[];
-      perguntas.forEach(p=>{ const t=typeof p==='string'?p:(p&&p.pergunta)||JSON.stringify(p); if(t) spawnBubble('sug',t); });
-      condutas.forEach(c=>{ const t=typeof c==='string'?c:(c&&(c.conduta||c.sugestao))||JSON.stringify(c); if(t) spawnBubble('ia','Conduta sugerida: '+t); });
-      pontos.forEach(p=>{ const t=typeof p==='string'?p:JSON.stringify(p); if(t) spawnBubble('ia','⚠️ Ponto de atenção: '+t); });
+      perguntas.forEach(p=>{ const t=typeof p==='string'?p:(p&&p.pergunta)||JSON.stringify(p); if(t) queueAiPanelItem('sug',t); });
+      condutas.forEach(c=>{ const t=typeof c==='string'?c:(c&&(c.conduta||c.sugestao))||JSON.stringify(c); if(t) queueAiPanelItem('ia','Conduta sugerida: '+t); });
+      pontos.forEach(p=>{ const t=typeof p==='string'?p:JSON.stringify(p); if(t) queueAiPanelItem('ia','⚠️ Ponto de atenção: '+t); });
       if(!perguntas.length && !condutas.length && !pontos.length && manual){
-        spawnBubble('ia','Sem novas sugestões com base nos dados disponíveis.');
+        queueAiPanelItem('ia','Sem novas sugestões com base nos dados disponíveis.');
       }
     }
   } finally { copBusy=false; }
