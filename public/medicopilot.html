@@ -1482,6 +1482,9 @@ let copTranscriptCursor=0;
 let copLastSummary='';
 let copFirstRun=true;
 let copBusy=false;
+const AI_SUGGESTION_DISPLAY_INTERVAL_MS=5000;
+let aiSuggestionQueue=[];
+let aiSuggestionQueueTimer=null;
 function getCopilotoCfg(){
   let cfg={};try{cfg=JSON.parse(localStorage.getItem('copilotoCfg')||'{}');}catch(e){}
   return {
