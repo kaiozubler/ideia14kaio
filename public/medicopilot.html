@@ -2854,7 +2854,7 @@ async function runCopilotoTurn(opts){
   copBusy=true;
   const cursorAtSend=transcriptLog.length;
   try{
-    const payload={mode:'copiloto', manual, primeiro_processamento: copFirstRun, trecho_transcricao: novo};
+    const payload={mode:'copiloto', manual, solicitacao: kind||'geral', primeiro_processamento: copFirstRun, trecho_transcricao: novo};
     if(copFirstRun){
       // primeiro processamento: envia todo o contexto disponível
       let infoComp=null; try{infoComp=loadInfoComp();}catch{}
