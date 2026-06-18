@@ -309,6 +309,11 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 @keyframes popBbl{from{opacity:0;transform:scale(.78) translateY(6px)}to{opacity:1;transform:scale(1) translateY(0)}}
 .bbl.sug{background:var(--white);border:0.5px solid var(--n200);color:var(--n700);border-bottom-left-radius:3px;align-self:flex-start}
 .bbl.ia{background:#dbeafe;border:0.5px solid #93c5fd;color:#1e3a5f;border-bottom-left-radius:3px;align-self:flex-start}
+.bbl.typing{padding:10px 14px;display:inline-flex;align-items:center;gap:4px}
+.bbl.typing .tdot{width:6px;height:6px;border-radius:50%;background:#1e3a5f;opacity:.35;animation:typingWave 1.1s ease-in-out infinite}
+.bbl.typing .tdot:nth-child(2){animation-delay:.18s}
+.bbl.typing .tdot:nth-child(3){animation-delay:.36s}
+@keyframes typingWave{0%,60%,100%{transform:translateY(0);opacity:.35}30%{transform:translateY(-4px);opacity:1}}
 .bbl.usr{background:var(--g500);color:var(--white);border-bottom-right-radius:3px;align-self:flex-end;flex-direction:row-reverse}
 .bbl.pinned{background:#fef9c3!important;border-color:#fde047!important;color:var(--n700)!important}
 .bbl-text{flex:1;min-width:0;white-space:pre-wrap}
@@ -3023,6 +3028,7 @@ function sendAIMsg(){
   aiChatHistory.push({role:'user',content:userText});
   aiBusy=true;
   const btn=document.querySelector('.ai-sbtn');if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>';}
+  const typingId=showTypingBubble();
   fetch('/api/chat-ia',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -3032,6 +3038,7 @@ function sendAIMsg(){
   .then(d=>{
     const reply=(d.reply||'').trim()||'(sem resposta)';
     aiChatHistory.push({role:'assistant',content:reply});
+    removeTypingBubble(typingId);
     spawnBubble('ia',reply);
     // Persiste mensagens da consulta atual (best-effort)
     if(window._idConsultaAtual){
@@ -3041,8 +3048,26 @@ function sendAIMsg(){
       ]).then(()=>{}).catch(()=>{});
     }
   })
-  .catch(e=>{spawnBubble('ia','⚠️ Erro ao consultar a IA: '+(e.message||e));})
+  .catch(e=>{removeTypingBubble(typingId);spawnBubble('ia','⚠️ Erro ao consultar a IA: '+(e.message||e));})
   .finally(()=>{aiBusy=false;if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-send"></i>';}});
+}
+
+function showTypingBubble(){
+  const layer=document.getElementById('bubbles-layer');if(!layer)return null;
+  const ph=document.getElementById('orb-center-placeholder');if(ph)ph.style.display='none';
+  const id='bbl-typing-'+Date.now();
+  const el=document.createElement('div');
+  el.className='bbl ia typing';
+  el.id=id;
+  el.innerHTML='<span class="tdot"></span><span class="tdot"></span><span class="tdot"></span>';
+  layer.appendChild(el);
+  layer.scrollTop=layer.scrollHeight;
+  return id;
+}
+function removeTypingBubble(id){
+  if(!id)return;
+  const el=document.getElementById(id);
+  if(el&&el.parentNode)el.parentNode.removeChild(el);
 }
 
 /* ========== RESUMO PANEL ========== */
