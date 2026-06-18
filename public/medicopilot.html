@@ -3028,6 +3028,7 @@ function sendAIMsg(){
   aiChatHistory.push({role:'user',content:userText});
   aiBusy=true;
   const btn=document.querySelector('.ai-sbtn');if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>';}
+  const typingId=showTypingBubble();
   fetch('/api/chat-ia',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -3037,6 +3038,7 @@ function sendAIMsg(){
   .then(d=>{
     const reply=(d.reply||'').trim()||'(sem resposta)';
     aiChatHistory.push({role:'assistant',content:reply});
+    removeTypingBubble(typingId);
     spawnBubble('ia',reply);
     // Persiste mensagens da consulta atual (best-effort)
     if(window._idConsultaAtual){
@@ -3046,8 +3048,26 @@ function sendAIMsg(){
       ]).then(()=>{}).catch(()=>{});
     }
   })
-  .catch(e=>{spawnBubble('ia','⚠️ Erro ao consultar a IA: '+(e.message||e));})
+  .catch(e=>{removeTypingBubble(typingId);spawnBubble('ia','⚠️ Erro ao consultar a IA: '+(e.message||e));})
   .finally(()=>{aiBusy=false;if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-send"></i>';}});
+}
+
+function showTypingBubble(){
+  const layer=document.getElementById('bubbles-layer');if(!layer)return null;
+  const ph=document.getElementById('orb-center-placeholder');if(ph)ph.style.display='none';
+  const id='bbl-typing-'+Date.now();
+  const el=document.createElement('div');
+  el.className='bbl ia typing';
+  el.id=id;
+  el.innerHTML='<span class="tdot"></span><span class="tdot"></span><span class="tdot"></span>';
+  layer.appendChild(el);
+  layer.scrollTop=layer.scrollHeight;
+  return id;
+}
+function removeTypingBubble(id){
+  if(!id)return;
+  const el=document.getElementById(id);
+  if(el&&el.parentNode)el.parentNode.removeChild(el);
 }
 
 /* ========== RESUMO PANEL ========== */
