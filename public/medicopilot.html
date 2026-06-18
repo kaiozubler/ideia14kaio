@@ -2773,9 +2773,12 @@ function processAiSuggestionQueue(){
   if(aiSuggestionQueueTimer||!aiSuggestionQueue.length)return;
   const item=aiSuggestionQueue.shift();
   spawnBubble(item.type,item.text);
-  if(aiSuggestionQueue.length){
-    aiSuggestionQueueTimer=setTimeout(()=>{aiSuggestionQueueTimer=null;processAiSuggestionQueue();},AI_SUGGESTION_DISPLAY_INTERVAL_MS);
-  }
+  // Sempre aguarda o intervalo antes de exibir o próximo item,
+  // mesmo que novos itens sejam enfileirados depois.
+  aiSuggestionQueueTimer=setTimeout(()=>{
+    aiSuggestionQueueTimer=null;
+    processAiSuggestionQueue();
+  },AI_SUGGESTION_DISPLAY_INTERVAL_MS);
 }
 
 function togglePin(id){
