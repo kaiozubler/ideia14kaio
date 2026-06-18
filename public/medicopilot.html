@@ -939,8 +939,8 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
                 <div class="ai-ctrls">
                   <button class="btn sm" id="listen-btn" onclick="toggleListen()"><i class="ti ti-microphone" id="lt-ico"></i> <span id="lt-lbl">Escutar</span></button>
                   <div class="csep"></div>
-                  <div class="sug-grp" title="Pedir sugestão à IA" style="display:inline-flex;align-items:stretch;border:1px solid var(--n200);border-radius:8px;background:linear-gradient(180deg,#fffbeb,#fef9c3);overflow:hidden;height:28px;position:relative;padding-top:10px">
-                    <span style="position:absolute;top:-7px;left:6px;font-size:9px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:#92400e;background:#fef9c3;padding:0 4px;border-radius:4px;line-height:1">Sugestão</span>
+                  <div class="sug-grp" title="Pedir sugestão à IA" style="display:inline-flex;align-items:stretch;border:1px solid var(--n200);border-radius:8px;background:linear-gradient(180deg,#fffbeb,#fef9c3);overflow:visible;height:30px;position:relative;margin-top:6px">
+                    <span style="position:absolute;top:-8px;left:6px;font-size:9px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:#92400e;background:#fef9c3;padding:0 4px;border-radius:4px;line-height:1;z-index:1">Sugestão</span>
                     <button class="btn sm ghost" onclick="suggestAction('conduta')" title="Sugerir conduta" style="border:0;border-radius:0;background:transparent;height:100%;padding:0 8px;font-size:11px"><i class="ti ti-stethoscope"></i> Conduta</button>
                     <div style="width:1px;background:var(--n200)"></div>
                     <button class="btn sm ghost" onclick="suggestAction('duvida')" title="Sugerir dúvida para guiar a consulta" style="border:0;border-radius:0;background:transparent;height:100%;padding:0 8px;font-size:11px"><i class="ti ti-help"></i> Dúvida</button>
@@ -2824,10 +2824,16 @@ function toggleBubbles(){
   if(icon)icon.className=bubblesVisible?'ti ti-eye':'ti ti-eye-off';
 }
 
-function suggestAction(kind){
-  // Sugestão manual: 'conduta' | 'duvida' | undefined (ambos)
+async function suggestAction(kind){
+  const typingId=showTypingBubble();
   const k=(kind==='conduta'||kind==='duvida')?kind:null;
-  runCopilotoTurn({manual:true, kind:k}).catch(e=>spawnBubble('ia','⚠️ Erro ao consultar a IA: '+(e.message||e)));
+  try{
+    await runCopilotoTurn({manual:true, kind:k});
+  }catch(e){
+    spawnBubble('ia','⚠️ Erro ao consultar a IA: '+(e.message||e));
+  }finally{
+    removeTypingBubble(typingId);
+  }
 }
 
 /* ========== COPILOTO ATIVO — LOOP ========== */
