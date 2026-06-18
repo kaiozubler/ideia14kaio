@@ -2824,9 +2824,10 @@ function toggleBubbles(){
   if(icon)icon.className=bubblesVisible?'ti ti-eye':'ti ti-eye-off';
 }
 
-function suggestAction(){
-  // Sugestão manual: dispara processamento do copiloto imediatamente, ignorando o tipo
-  runCopilotoTurn({manual:true}).catch(e=>spawnBubble('ia','⚠️ Erro ao consultar a IA: '+(e.message||e)));
+function suggestAction(kind){
+  // Sugestão manual: 'conduta' | 'duvida' | undefined (ambos)
+  const k=(kind==='conduta'||kind==='duvida')?kind:null;
+  runCopilotoTurn({manual:true, kind:k}).catch(e=>spawnBubble('ia','⚠️ Erro ao consultar a IA: '+(e.message||e)));
 }
 
 /* ========== COPILOTO ATIVO — LOOP ========== */
@@ -2846,6 +2847,7 @@ function stopCopilotoLoop(){
 async function runCopilotoTurn(opts){
   if(copBusy)return;
   const manual=!!(opts&&opts.manual);
+  const kind=(opts&&opts.kind)||null; // 'conduta' | 'duvida' | null
   // pega o trecho novo da transcrição desde o último envio
   const novo=transcriptLog.slice(copTranscriptCursor).join('\n').trim();
   if(!manual && !novo) return; // nada novo para processar
@@ -2874,11 +2876,18 @@ async function runCopilotoTurn(opts){
       const perguntas=Array.isArray(data.perguntas_sugeridas)?data.perguntas_sugeridas:[];
       const condutas=Array.isArray(data.condutas_sugeridas)?data.condutas_sugeridas:[];
       const pontos=Array.isArray(data.pontos_atencao)?data.pontos_atencao:[];
-      perguntas.forEach(p=>{ const t=typeof p==='string'?p:(p&&p.pergunta)||JSON.stringify(p); if(t) queueAiPanelItem('sug',t); });
-      condutas.forEach(c=>{ const t=typeof c==='string'?c:(c&&(c.conduta||c.sugestao))||JSON.stringify(c); if(t) queueAiPanelItem('ia','Conduta sugerida: '+t); });
-      pontos.forEach(p=>{ const t=typeof p==='string'?p:JSON.stringify(p); if(t) queueAiPanelItem('ia','⚠️ Ponto de atenção: '+t); });
-      if(!perguntas.length && !condutas.length && !pontos.length && manual){
-        queueAiPanelItem('ia','Sem novas sugestões com base nos dados disponíveis.');
+      const showPerg = !kind || kind==='duvida';
+      const showCond = !kind || kind==='conduta';
+      const showPontos = !kind; // pontos de atenção apenas no fluxo automático/geral
+      let pushed=0;
+      if(showPerg){ perguntas.forEach(p=>{ const t=typeof p==='string'?p:(p&&p.pergunta)||JSON.stringify(p); if(t){ queueAiPanelItem('sug',t); pushed++; } }); }
+      if(showCond){ condutas.forEach(c=>{ const t=typeof c==='string'?c:(c&&(c.conduta||c.sugestao))||JSON.stringify(c); if(t){ queueAiPanelItem('ia','Conduta sugerida: '+t); pushed++; } }); }
+      if(showPontos){ pontos.forEach(p=>{ const t=typeof p==='string'?p:JSON.stringify(p); if(t){ queueAiPanelItem('ia','⚠️ Ponto de atenção: '+t); pushed++; } }); }
+      if(!pushed && manual){
+        const msg = kind==='duvida' ? 'Sem novas dúvidas sugeridas com base nos dados disponíveis.'
+                  : kind==='conduta' ? 'Sem novas condutas sugeridas com base nos dados disponíveis.'
+                  : 'Sem novas sugestões com base nos dados disponíveis.';
+        queueAiPanelItem('ia',msg);
       }
     }
   } finally { copBusy=false; }
