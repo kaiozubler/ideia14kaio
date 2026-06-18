@@ -939,7 +939,12 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
                 <div class="ai-ctrls">
                   <button class="btn sm" id="listen-btn" onclick="toggleListen()"><i class="ti ti-microphone" id="lt-ico"></i> <span id="lt-lbl">Escutar</span></button>
                   <div class="csep"></div>
-                  <button class="btn sm ghost" onclick="suggestAction()"><i class="ti ti-bulb"></i> Sugerir</button>
+                  <div class="sug-grp" title="Pedir sugestão à IA" style="display:inline-flex;align-items:stretch;border:1px solid var(--n200);border-radius:8px;background:linear-gradient(180deg,#fffbeb,#fef9c3);overflow:hidden;height:28px;position:relative;padding-top:10px">
+                    <span style="position:absolute;top:-7px;left:6px;font-size:9px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:#92400e;background:#fef9c3;padding:0 4px;border-radius:4px;line-height:1">Sugestão</span>
+                    <button class="btn sm ghost" onclick="suggestAction('conduta')" title="Sugerir conduta" style="border:0;border-radius:0;background:transparent;height:100%;padding:0 8px;font-size:11px"><i class="ti ti-stethoscope"></i> Conduta</button>
+                    <div style="width:1px;background:var(--n200)"></div>
+                    <button class="btn sm ghost" onclick="suggestAction('duvida')" title="Sugerir dúvida para guiar a consulta" style="border:0;border-radius:0;background:transparent;height:100%;padding:0 8px;font-size:11px"><i class="ti ti-help"></i> Dúvida</button>
+                  </div>
                   <button class="btn sm" id="toggle-bbl-btn" onclick="toggleBubbles()" title="Ocultar/mostrar mensagens"><i class="ti ti-eye" id="toggle-bbl-icon"></i></button>
                   <button class="btn sm primary" onclick="openAnamnesePanel()"><i class="ti ti-file-text-ai"></i> Anamnese</button>
                 </div>
@@ -2819,9 +2824,10 @@ function toggleBubbles(){
   if(icon)icon.className=bubblesVisible?'ti ti-eye':'ti ti-eye-off';
 }
 
-function suggestAction(){
-  // Sugestão manual: dispara processamento do copiloto imediatamente, ignorando o tipo
-  runCopilotoTurn({manual:true}).catch(e=>spawnBubble('ia','⚠️ Erro ao consultar a IA: '+(e.message||e)));
+function suggestAction(kind){
+  // Sugestão manual: 'conduta' | 'duvida' | undefined (ambos)
+  const k=(kind==='conduta'||kind==='duvida')?kind:null;
+  runCopilotoTurn({manual:true, kind:k}).catch(e=>spawnBubble('ia','⚠️ Erro ao consultar a IA: '+(e.message||e)));
 }
 
 /* ========== COPILOTO ATIVO — LOOP ========== */
@@ -2841,13 +2847,14 @@ function stopCopilotoLoop(){
 async function runCopilotoTurn(opts){
   if(copBusy)return;
   const manual=!!(opts&&opts.manual);
+  const kind=(opts&&opts.kind)||null; // 'conduta' | 'duvida' | null
   // pega o trecho novo da transcrição desde o último envio
   const novo=transcriptLog.slice(copTranscriptCursor).join('\n').trim();
   if(!manual && !novo) return; // nada novo para processar
   copBusy=true;
   const cursorAtSend=transcriptLog.length;
   try{
-    const payload={mode:'copiloto', manual, primeiro_processamento: copFirstRun, trecho_transcricao: novo};
+    const payload={mode:'copiloto', manual, solicitacao: kind||'geral', primeiro_processamento: copFirstRun, trecho_transcricao: novo};
     if(copFirstRun){
       // primeiro processamento: envia todo o contexto disponível
       let infoComp=null; try{infoComp=loadInfoComp();}catch{}
@@ -2869,11 +2876,18 @@ async function runCopilotoTurn(opts){
       const perguntas=Array.isArray(data.perguntas_sugeridas)?data.perguntas_sugeridas:[];
       const condutas=Array.isArray(data.condutas_sugeridas)?data.condutas_sugeridas:[];
       const pontos=Array.isArray(data.pontos_atencao)?data.pontos_atencao:[];
-      perguntas.forEach(p=>{ const t=typeof p==='string'?p:(p&&p.pergunta)||JSON.stringify(p); if(t) queueAiPanelItem('sug',t); });
-      condutas.forEach(c=>{ const t=typeof c==='string'?c:(c&&(c.conduta||c.sugestao))||JSON.stringify(c); if(t) queueAiPanelItem('ia','Conduta sugerida: '+t); });
-      pontos.forEach(p=>{ const t=typeof p==='string'?p:JSON.stringify(p); if(t) queueAiPanelItem('ia','⚠️ Ponto de atenção: '+t); });
-      if(!perguntas.length && !condutas.length && !pontos.length && manual){
-        queueAiPanelItem('ia','Sem novas sugestões com base nos dados disponíveis.');
+      const showPerg = !kind || kind==='duvida';
+      const showCond = !kind || kind==='conduta';
+      const showPontos = !kind; // pontos de atenção apenas no fluxo automático/geral
+      let pushed=0;
+      if(showPerg){ perguntas.forEach(p=>{ const t=typeof p==='string'?p:(p&&p.pergunta)||JSON.stringify(p); if(t){ queueAiPanelItem('sug',t); pushed++; } }); }
+      if(showCond){ condutas.forEach(c=>{ const t=typeof c==='string'?c:(c&&(c.conduta||c.sugestao))||JSON.stringify(c); if(t){ queueAiPanelItem('ia','Conduta sugerida: '+t); pushed++; } }); }
+      if(showPontos){ pontos.forEach(p=>{ const t=typeof p==='string'?p:JSON.stringify(p); if(t){ queueAiPanelItem('ia','⚠️ Ponto de atenção: '+t); pushed++; } }); }
+      if(!pushed && manual){
+        const msg = kind==='duvida' ? 'Sem novas dúvidas sugeridas com base nos dados disponíveis.'
+                  : kind==='conduta' ? 'Sem novas condutas sugeridas com base nos dados disponíveis.'
+                  : 'Sem novas sugestões com base nos dados disponíveis.';
+        queueAiPanelItem('ia',msg);
       }
     }
   } finally { copBusy=false; }
