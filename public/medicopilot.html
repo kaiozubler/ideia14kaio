@@ -2824,10 +2824,16 @@ function toggleBubbles(){
   if(icon)icon.className=bubblesVisible?'ti ti-eye':'ti ti-eye-off';
 }
 
-function suggestAction(kind){
-  // Sugestão manual: 'conduta' | 'duvida' | undefined (ambos)
+async function suggestAction(kind){
+  const typingId=showTypingBubble();
   const k=(kind==='conduta'||kind==='duvida')?kind:null;
-  runCopilotoTurn({manual:true, kind:k}).catch(e=>spawnBubble('ia','⚠️ Erro ao consultar a IA: '+(e.message||e)));
+  try{
+    await runCopilotoTurn({manual:true, kind:k});
+  }catch(e){
+    spawnBubble('ia','⚠️ Erro ao consultar a IA: '+(e.message||e));
+  }finally{
+    removeTypingBubble(typingId);
+  }
 }
 
 /* ========== COPILOTO ATIVO — LOOP ========== */
