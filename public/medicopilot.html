@@ -1023,9 +1023,15 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 
     <!-- SCREEN: RECEITAS -->
     <div id="s-receitas" style="display:none">
+      <div class="rec-empty">
+        <i class="ti ti-file-prescription"></i>
+        <h3>Receitas e Atestados</h3>
+        <p>Selecione um paciente para acessar receitas e atestados</p>
+        <button class="btn ghost" style="margin-top:14px" onclick="goScreen('patients')"><i class="ti ti-users"></i> Ir para Pacientes</button>
+      </div>
+    </div>
 
     <!-- SCREEN: CONVERSAS -->
-    </div>
     <div id="s-conversas" style="display:none;margin:-20px;height:calc(100vh - 54px)">
       <div class="cv-wrap">
         <!-- COLUNA ESQUERDA -->
@@ -1173,7 +1179,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
       </div>
     </div>
 
-    <!-- (RECEITAS continua) -->
+    <!-- (placeholder removido) -->
     <div style="display:none">
       <div class="rec-empty">
         <i class="ti ti-file-prescription"></i>
