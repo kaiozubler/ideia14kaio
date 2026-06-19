@@ -4096,6 +4096,116 @@ function startAtendAutoSave(){
 function stopAtendAutoSave(){if(_atendDraftTimer){clearInterval(_atendDraftTimer);_atendDraftTimer=null;}}
 window.addEventListener('beforeunload',saveAtendDraft);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveAtendDraft();});
+
+/* ========== CONVERSAS (WhatsApp) ========== */
+const CV_DATA={
+  conversas:[
+    {id:1,paciente:'Marcio Pereira',ultimaMensagem:'Olá, preciso marcar uma consulta',hora:'10:15',responsavel:'Dra. Ana',avatar:'MP',online:true,mensagensNaoLidas:3,idade:42,cpf:'123.456.789-00',tel:'(47) 99999-0000',email:'marcio@email.com'},
+    {id:2,paciente:'João Silva',ultimaMensagem:'Agradeço a consulta de hoje',hora:'09:45',responsavel:'Dr. Carlos',avatar:'JS',online:false,mensagensNaoLidas:0,idade:35,cpf:'987.654.321-00',tel:'(47) 98888-1111',email:'joao@email.com'},
+    {id:3,paciente:'Maria Santos',ultimaMensagem:'Qual é o valor da consulta?',hora:'09:20',responsavel:'Secretária',avatar:'MS',online:true,mensagensNaoLidas:5,idade:28,cpf:'555.666.777-00',tel:'(47) 97777-2222',email:'maria@email.com'}
+  ],
+  modelos:[
+    'Olá! Confirmo sua consulta para amanhã. Até lá! 😊',
+    'Seu agendamento foi confirmado. Aguardamos você!',
+    'Você possui um boleto em aberto. Deseja regularizar?',
+    'Lembrete: sua consulta é amanhã às {{hora}}. Confirma?',
+    'Olá! Como posso ajudar você hoje?',
+    'Seu exame está disponível para retirada.',
+    'Precisa remarcar sua consulta? Estamos à disposição!'
+  ],
+  equipe:[
+    {id:1,nome:'Dra. Ana Silva',esp:'Clínica Geral'},
+    {id:2,nome:'Dr. Carlos Santos',esp:'Cardiologia'},
+    {id:3,nome:'Dra. Maria Costa',esp:'Dermatologia'}
+  ],
+  mensagensPorConversa:{
+    1:[{id:1,autor:'them',texto:'Olá, preciso marcar uma consulta',hora:'10:15'},{id:2,autor:'me',texto:'Olá! Tudo bem? Claro, vamos agendar sua consulta.',hora:'10:16'},{id:3,autor:'them',texto:'Gostaria de agendar para a próxima semana se possível',hora:'10:17'}],
+    2:[{id:1,autor:'them',texto:'Agradeço a consulta de hoje',hora:'09:45'}],
+    3:[{id:1,autor:'them',texto:'Qual é o valor da consulta?',hora:'09:20'}]
+  },
+  selecionada:1,
+  rightOpen:true
+};
+let cvInitDone=false;
+function initConversas(){
+  renderConversas();
+  renderCvChat();
+  if(!cvInitDone){
+    const m=document.getElementById('cv-modelos-list');
+    if(m)m.innerHTML=CV_DATA.modelos.map(t=>`<button class="opt" onclick="cvUseModelo(this)">${t.replace(/</g,'&lt;')}</button>`).join('');
+    const eq=document.getElementById('cv-equipe');
+    if(eq)eq.innerHTML=CV_DATA.equipe.map(p=>`<button class="cv-equipe-item" onclick="cvDoTransfer('${p.nome}')"><b>${p.nome}</b><span>${p.esp}</span></button>`).join('');
+    document.addEventListener('click',cvDocClick);
+    cvInitDone=true;
+  }
+}
+function cvDocClick(e){
+  const mp=document.getElementById('cv-modelos-pop'),ip=document.getElementById('cv-ia-pop');
+  if(mp&&mp.style.display!=='none'&&!e.target.closest('#cv-modelos-pop')&&!e.target.closest('.modelos-btn'))mp.style.display='none';
+  if(ip&&ip.style.display!=='none'&&!e.target.closest('#cv-ia-pop')&&!e.target.closest('.ia-btn'))ip.style.display='none';
+}
+function renderConversas(){
+  const q=(document.getElementById('cv-search')?.value||'').toLowerCase();
+  const list=CV_DATA.conversas.filter(c=>!q||c.paciente.toLowerCase().includes(q));
+  const el=document.getElementById('cv-list');if(!el)return;
+  el.innerHTML=list.map(c=>`
+    <div class="cv-item ${c.id===CV_DATA.selecionada?'active':''}" onclick="cvSelect(${c.id})">
+      <div class="cv-avatar">${c.avatar}</div>
+      <div class="cv-item-body">
+        <div class="cv-item-top">
+          <span class="cv-name">${c.paciente}</span>
+          ${c.mensagensNaoLidas>0?`<span class="cv-badge">${c.mensagensNaoLidas}</span>`:''}
+        </div>
+        <div class="cv-last">${c.ultimaMensagem}</div>
+        <div class="cv-meta"><span>${c.hora}</span><span>${c.responsavel}</span></div>
+      </div>
+    </div>`).join('');
+  document.getElementById('cv-foot').textContent=`${list.length} atendimento${list.length===1?'':'s'}`;
+}
+function cvSelect(id){
+  CV_DATA.selecionada=id;
+  const c=CV_DATA.conversas.find(x=>x.id===id);if(c)c.mensagensNaoLidas=0;
+  renderConversas();renderCvChat();
+}
+function renderCvChat(){
+  const c=CV_DATA.conversas.find(x=>x.id===CV_DATA.selecionada);if(!c)return;
+  document.getElementById('cv-pname').textContent=c.paciente;
+  document.getElementById('cv-phora').textContent=c.hora;
+  document.getElementById('cv-pdot').style.display=c.online?'inline-block':'none';
+  document.getElementById('cv-ponline').style.display=c.online?'inline':'none';
+  document.getElementById('cv-rav').textContent=c.avatar;
+  document.getElementById('cv-rnome').textContent=c.paciente;
+  document.getElementById('cv-ridade').textContent=c.idade+' anos';
+  const msgs=CV_DATA.mensagensPorConversa[c.id]||[];
+  const box=document.getElementById('cv-msgs');
+  box.innerHTML=`<div class="cv-day">Hoje</div>`+msgs.map(m=>`
+    <div class="cv-msg ${m.autor==='me'?'me':'them'}">
+      <div class="cv-bub">
+        <div>${m.texto.replace(/</g,'&lt;')}</div>
+        <div class="time">${m.hora}${m.autor==='me'?' <i class="ti ti-checks"></i>':''}</div>
+      </div>
+    </div>`).join('');
+  box.scrollTop=box.scrollHeight;
+}
+function cvSend(){
+  const i=document.getElementById('cv-input');const t=(i.value||'').trim();if(!t)return;
+  const c=CV_DATA.conversas.find(x=>x.id===CV_DATA.selecionada);if(!c)return;
+  const arr=CV_DATA.mensagensPorConversa[c.id]=CV_DATA.mensagensPorConversa[c.id]||[];
+  const h=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  arr.push({id:arr.length+1,autor:'me',texto:t,hora:h});
+  c.ultimaMensagem=t;c.hora=h;
+  i.value='';renderConversas();renderCvChat();
+}
+function cvUseModelo(btn){document.getElementById('cv-input').value=btn.textContent;document.getElementById('cv-modelos-pop').style.display='none';document.getElementById('cv-input').focus();}
+function cvToggleModelos(e){e&&e.stopPropagation();const p=document.getElementById('cv-modelos-pop');const ip=document.getElementById('cv-ia-pop');p.style.display=p.style.display==='none'?'block':'none';ip.style.display='none';}
+function cvToggleIa(e){e&&e.stopPropagation();const p=document.getElementById('cv-ia-pop');const m=document.getElementById('cv-modelos-pop');p.style.display=p.style.display==='none'?'flex':'none';m.style.display='none';const ch=document.getElementById('cv-ia-chev');if(ch)ch.style.transform=p.style.display==='none'?'':'rotate(180deg)';}
+function cvCloseIa(){document.getElementById('cv-ia-pop').style.display='none';const ch=document.getElementById('cv-ia-chev');if(ch)ch.style.transform='';}
+function cvToggleRight(){const r=document.getElementById('cv-col-right');r.classList.toggle('hidden');}
+function cvOpenTransfer(){document.getElementById('cv-modal-transfer').classList.add('open');}
+function cvCloseTransfer(){document.getElementById('cv-modal-transfer').classList.remove('open');}
+function cvDoTransfer(nome){const c=CV_DATA.conversas.find(x=>x.id===CV_DATA.selecionada);if(c)c.responsavel=nome;cvCloseTransfer();renderConversas();}
+function cvOpenFiltros(){document.getElementById('cv-modal-filtros').classList.add('open');}
+function cvCloseFiltros(){document.getElementById('cv-modal-filtros').classList.remove('open');}
 </script>
 </body>
 </html>
