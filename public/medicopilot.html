@@ -1534,6 +1534,7 @@ function goScreen(name){
   const leavingPatientDetail=name!=='patient-detail'&&document.getElementById('s-patient-detail')?.style.display!=='none';
   if(leavingPatientDetail&&currentPatient&&atendEmAndamento&&atendEmAndamento.dirty){saveAtendState();saveAtendDraft();stopAtendAutoSave();}
   ['atendimentos','patients','patient-detail','receitas','indicadores','secretaria','anamnese','copiloto'].forEach(s=>{
+  ['atendimentos','patients','patient-detail','conversas','receitas','indicadores','secretaria','anamnese','copiloto'].forEach(s=>{
     const el=document.getElementById('s-'+s);
     if(el)el.style.display='none';
   });
