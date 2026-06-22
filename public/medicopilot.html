@@ -935,8 +935,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 
         <!-- NOVO ATENDIMENTO -->
         <div id="atend-novo-view" style="display:none;flex-direction:column;height:560px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <button class="back-btn" style="margin-bottom:0" onclick="showAtendList()"><i class="ti ti-arrow-left"></i> Atendimentos</button>
+          <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:10px">
             <div style="display:flex;gap:6px">
               <button class="btn sm primary" onclick="saveAtend()"><i class="ti ti-device-floppy"></i> Salvar atendimento</button>
             </div>
@@ -944,6 +943,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
           <div class="split-wrap">
             <!-- LEFT -->
             <div class="split-left">
+              <button class="panel-expand" onclick="togglePanelExpand('left',event)" title="Expandir prontuário" id="exp-left-btn"><i class="ti ti-arrows-diagonal" id="exp-left-icon"></i></button>
               <div class="pront-header">
                 <span class="pront-label">Prontuário</span>
               </div>
@@ -997,6 +997,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 
             <!-- RIGHT: AI -->
             <div class="split-right">
+              <button class="panel-expand" onclick="togglePanelExpand('right',event)" title="Expandir copiloto" id="exp-right-btn" style="top:8px;right:8px"><i class="ti ti-arrows-diagonal" id="exp-right-icon"></i></button>
               <div class="trans-bar" id="trans-bar">
                 <div class="trans-bar-top">
                   <span class="tdot" id="tdot"></span>
