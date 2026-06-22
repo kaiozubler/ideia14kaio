@@ -241,7 +241,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .tbtn:hover{background:var(--n100);color:var(--g600)}
 .tbtn .ti{font-size:12px}
 .tsep{width:0.5px;background:var(--n200);margin:2px 3px}
-.pront-area{flex:1;padding:10px 12px;font-family:var(--mono);font-size:11.5px;color:var(--n700);resize:none;outline:none;border:none;background:var(--white);line-height:1.75;min-height:0}
+.pront-area{flex:1;padding:10px 12px 70px 12px;font-family:var(--mono);font-size:11.5px;color:var(--n700);resize:none;outline:none;border:none;background:var(--white);line-height:1.75;min-height:0}
 .pront-area::placeholder{color:var(--n300)}
 
 /* NOTE PERSONAL */
@@ -256,7 +256,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .nota-personal-note{font-size:10px;color:var(--n300);margin-top:3px;font-style:italic}
 
 /* FOOTER */
-.left-footer{border-top:0.5px solid var(--n150);padding:8px 12px;display:flex;flex-direction:column;gap:6px;background:var(--white);flex-shrink:0}
+.left-footer{position:absolute;left:10px;right:10px;bottom:10px;padding:6px 10px;display:flex;flex-direction:column;gap:6px;background:rgba(255,255,255,.55);backdrop-filter:blur(18px) saturate(180%);border:1px solid rgba(255,255,255,.7);border-radius:14px;box-shadow:0 8px 24px -8px rgba(15,40,60,.18),0 2px 6px rgba(0,0,0,.05),inset 0 1px 0 rgba(255,255,255,.6);z-index:20}
 .lf-label{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--n400)}
 .lf-row{display:flex;gap:6px;align-items:flex-end}
 .lf-ta{flex:1;border:0.5px solid var(--n200);border-radius:var(--r6);padding:6px 9px;font-family:var(--font);font-size:12px;color:var(--n700);resize:none;outline:none;background:var(--n50);max-height:60px;line-height:1.45}
@@ -297,7 +297,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .trans-line:last-child{border-bottom:none;color:var(--n700);font-weight:500;font-style:normal}
 
 /* AI STAGE */
-.ai-stage{flex:1;position:relative;display:flex;flex-direction:column;overflow:hidden}
+.ai-stage{flex:1;position:relative;display:flex;flex-direction:column;overflow:hidden;padding-bottom:110px}
 .ai-bg-icon{position:absolute;opacity:0.04;pointer-events:none;top:50%;left:50%;transform:translate(-50%,-55%);z-index:0}
 .ai-bg-icon .ti{font-size:120px;color:var(--g600)}
 .ai-orb-center{flex:1;display:flex;align-items:center;justify-content:center;position:relative;z-index:2}
@@ -347,10 +347,10 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .orb-lbl.live{color:var(--g600);font-weight:500}
 
 /* AI BOTTOM */
-.ai-bottom{border-top:0.5px solid var(--n150);background:var(--white);flex-shrink:0}
+.ai-bottom{position:absolute;left:10px;right:10px;bottom:10px;background:rgba(255,255,255,.55);backdrop-filter:blur(18px) saturate(180%);border:1px solid rgba(255,255,255,.7);border-radius:14px;box-shadow:0 8px 24px -8px rgba(15,40,60,.18),0 2px 6px rgba(0,0,0,.05),inset 0 1px 0 rgba(255,255,255,.6);z-index:20;overflow:hidden}
 
 /* RESUMO PANEL (inline no AI) */
-.resumo-panel{display:none;position:absolute;inset:0;background:var(--white);z-index:10;flex-direction:column;overflow:hidden}
+.resumo-panel{display:none;position:absolute;inset:0;background:var(--white);z-index:25;flex-direction:column;overflow:hidden}
 .resumo-panel.open{display:flex}
 .resumo-panel-hd{padding:10px 13px;border-bottom:0.5px solid var(--n150);display:flex;align-items:center;gap:8px;flex-shrink:0}
 .resumo-panel-title{font-size:12px;font-weight:600;color:var(--n700);flex:1}
@@ -367,7 +367,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .resumo-panel-foot{padding:10px 13px;border-top:0.5px solid var(--n150);display:flex;gap:6px;flex-wrap:wrap}
 
 /* AI CONTROLS */
-.ai-ctrls{padding:7px 12px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;border-bottom:0.5px solid var(--n100)}
+.ai-ctrls{padding:7px 10px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;border-bottom:0.5px solid rgba(0,0,0,.05)}
 .ai-ctrls .csep{width:0.5px;height:16px;background:var(--n200)}
 .ai-ctrls .btn{height:28px}
 .ai-input-row{padding:7px 12px 9px;display:flex;gap:5px}
@@ -934,10 +934,10 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
         </div>
 
         <!-- NOVO ATENDIMENTO -->
-        <div id="atend-novo-view" style="display:none;flex-direction:column;height:560px">
-          <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:10px">
-            <div style="display:flex;gap:6px">
-              <button class="btn sm primary" onclick="saveAtend()"><i class="ti ti-device-floppy"></i> Salvar atendimento</button>
+        <div id="atend-novo-view" style="display:none;flex-direction:column;height:560px;position:relative">
+          <div style="position:absolute;top:6px;right:48px;z-index:40;display:flex;align-items:center;gap:6px;pointer-events:none">
+            <div style="display:flex;gap:6px;pointer-events:auto">
+              <button class="btn sm primary" onclick="saveAtend()" style="backdrop-filter:blur(14px) saturate(180%);box-shadow:0 6px 18px -6px rgba(15,40,60,.25)"><i class="ti ti-device-floppy"></i> Salvar</button>
             </div>
           </div>
           <div class="split-wrap">
