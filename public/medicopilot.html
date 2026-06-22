@@ -934,10 +934,10 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
         </div>
 
         <!-- NOVO ATENDIMENTO -->
-        <div id="atend-novo-view" style="display:none;flex-direction:column;height:560px">
-          <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:10px">
-            <div style="display:flex;gap:6px">
-              <button class="btn sm primary" onclick="saveAtend()"><i class="ti ti-device-floppy"></i> Salvar atendimento</button>
+        <div id="atend-novo-view" style="display:none;flex-direction:column;height:560px;position:relative">
+          <div style="position:absolute;top:6px;right:48px;z-index:40;display:flex;align-items:center;gap:6px;pointer-events:none">
+            <div style="display:flex;gap:6px;pointer-events:auto">
+              <button class="btn sm primary" onclick="saveAtend()" style="backdrop-filter:blur(14px) saturate(180%);box-shadow:0 6px 18px -6px rgba(15,40,60,.25)"><i class="ti ti-device-floppy"></i> Salvar</button>
             </div>
           </div>
           <div class="split-wrap">
