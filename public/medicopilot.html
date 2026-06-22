@@ -2182,6 +2182,25 @@ function markAtendDirty(){
   if(!atendEmAndamento.dirty){atendEmAndamento.dirty=true;updateAtendProgress();}
   saveAtendState();
   saveAtendDraft();
+  updateSaveStatus('dirty');
+  scheduleAutoSave();
+}
+let _autoSaveTimer=null;
+function scheduleAutoSave(){
+  if(_autoSaveTimer)clearTimeout(_autoSaveTimer);
+  _autoSaveTimer=setTimeout(async()=>{
+    try{const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;
+      updateSaveStatus('saving');await saveAtendInternal();updateSaveStatus('saved');
+    }catch(e){updateSaveStatus('error');}
+  },1400);
+}
+function updateSaveStatus(state){
+  const el=document.getElementById('save-status');if(!el)return;
+  const ic=document.getElementById('save-status-icon');const lb=document.getElementById('save-status-lbl');
+  if(state==='dirty'){el.style.color='#92400e';el.style.background='rgba(254,243,199,.8)';el.style.borderColor='#fde68a';ic.className='ti ti-cloud-up';lb.textContent='Alterações...';}
+  else if(state==='saving'){el.style.color='var(--n500)';el.style.background='rgba(255,255,255,.7)';el.style.borderColor='var(--n150)';ic.className='ti ti-loader-2';ic.style.animation='spin 1s linear infinite';lb.textContent='Salvando...';}
+  else if(state==='saved'){el.style.color='var(--g600)';el.style.background='rgba(220,252,231,.7)';el.style.borderColor='#86efac';ic.className='ti ti-cloud-check';ic.style.animation='';const t=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});lb.textContent='Salvo '+t;}
+  else if(state==='error'){el.style.color='#b91c1c';el.style.background='rgba(254,226,226,.8)';el.style.borderColor='#fca5a5';ic.className='ti ti-alert-circle';ic.style.animation='';lb.textContent='Erro ao salvar';}
 }
 function updateAtendProgress(){const p=document.getElementById('atend-progress');if(p)p.classList.toggle('show',atendEmAndamento.dirty);}
 function openTabFromProgress(){
