@@ -224,24 +224,23 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .atend-links{display:flex;gap:6px;flex-wrap:wrap}
 
 /* NOVO ATENDIMENTO SPLIT */
-.split-wrap{display:grid;grid-template-columns:1fr 1fr;gap:14px;border:none;border-radius:0;overflow:visible;flex:1;min-height:0;transition:grid-template-columns .25s ease}
-.split-left{background:var(--white);border:0.5px solid var(--n150);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;position:relative;box-shadow:0 6px 18px -8px rgba(15,40,60,.12),0 2px 4px rgba(0,0,0,.04)}
-.split-right{background:var(--n50);border:0.5px solid var(--n150);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;position:relative;box-shadow:0 6px 18px -8px rgba(15,40,60,.12),0 2px 4px rgba(0,0,0,.04)}
-.split-wrap.exp-left{grid-template-columns:1fr 0}
-.split-wrap.exp-left .split-right{display:none}
-.split-wrap.exp-right{grid-template-columns:0 1fr}
-.split-wrap.exp-right .split-left{display:none}
-.panel-expand{position:absolute;top:8px;right:8px;z-index:30;width:28px;height:28px;border-radius:8px;border:0.5px solid var(--n200);background:#fff;color:var(--n500);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.06);transition:all .14s}
+.split-wrap{display:grid;grid-template-columns:1fr 1fr;gap:14px;border:none;border-radius:0;overflow:visible;flex:1;min-height:0;position:relative}
+.split-left{background:var(--white);border:0.5px solid var(--n150);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;position:relative;box-shadow:0 6px 18px -8px rgba(15,40,60,.12),0 2px 4px rgba(0,0,0,.04);transition:box-shadow .2s}
+.split-right{background:var(--n50);border:0.5px solid var(--n150);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;position:relative;box-shadow:0 6px 18px -8px rgba(15,40,60,.12),0 2px 4px rgba(0,0,0,.04);transition:box-shadow .2s}
+.split-wrap.exp-left .split-left,.split-wrap.exp-right .split-right{position:absolute;inset:0;z-index:60;box-shadow:0 24px 60px -16px rgba(15,40,60,.35),0 8px 20px -6px rgba(0,0,0,.18)}
+.split-wrap.exp-left::before,.split-wrap.exp-right::before{content:"";position:absolute;inset:0;background:rgba(15,23,42,.18);backdrop-filter:blur(2px);z-index:55;border-radius:16px;animation:fadeOv .18s ease}
+@keyframes fadeOv{from{opacity:0}to{opacity:1}}
+.panel-expand{position:absolute;top:16px;right:16px;z-index:30;width:24px;height:24px;border-radius:7px;border:0.5px solid var(--n200);background:rgba(255,255,255,.9);backdrop-filter:blur(8px);color:var(--n500);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.08);transition:all .14s}
 .panel-expand:hover{color:var(--g600);border-color:var(--g300);background:var(--g50)}
 .panel-expand .ti{font-size:14px}
-.pront-header{padding:8px 12px 8px 12px;border-bottom:0.5px solid var(--n100);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,#fafbfc,#f3f5f7);gap:6px;flex-shrink:0;padding-right:44px}
+.pront-header{margin:10px 10px 0 10px;padding:7px 44px 7px 12px;border-radius:12px 12px 0 0;border:0.5px solid var(--n150);border-bottom:0.5px dashed var(--n100);display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.78);backdrop-filter:blur(14px) saturate(180%);gap:6px;flex-shrink:0;box-shadow:0 6px 18px -10px rgba(15,40,60,.18),0 1px 3px rgba(0,0,0,.04);position:relative;z-index:5}
 .pront-label{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--n400)}
-.toolbar{display:flex;gap:2px;padding:4px 10px;border-bottom:0.5px solid var(--n100);background:var(--n50);flex-shrink:0;flex-wrap:wrap}
+.toolbar{margin:0 10px;padding:4px 10px;border-radius:0 0 12px 12px;border:0.5px solid var(--n150);border-top:none;display:flex;gap:2px;background:rgba(250,251,252,.85);backdrop-filter:blur(14px) saturate(180%);flex-shrink:0;flex-wrap:wrap;box-shadow:0 6px 18px -12px rgba(15,40,60,.15);position:relative;z-index:4}
 .tbtn{width:28px;height:28px;border-radius:8px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--n500);font-size:12px;font-weight:500;font-family:var(--mono);transition:all .12s}
 .tbtn:hover{background:var(--n100);color:var(--g600)}
 .tbtn .ti{font-size:12px}
 .tsep{width:0.5px;background:var(--n200);margin:2px 3px}
-.pront-area{flex:1;padding:10px 12px 70px 12px;font-family:var(--mono);font-size:11.5px;color:var(--n700);resize:none;outline:none;border:none;background:var(--white);line-height:1.75;min-height:0}
+.pront-area{flex:1;padding:14px 14px 88px 14px;margin-top:8px;font-family:var(--mono);font-size:11.5px;color:var(--n700);resize:none;outline:none;border:none;background:transparent;line-height:1.75;min-height:0}
 .pront-area::placeholder{color:var(--n300)}
 
 /* NOTE PERSONAL */
@@ -256,7 +255,9 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .nota-personal-note{font-size:10px;color:var(--n300);margin-top:3px;font-style:italic}
 
 /* FOOTER */
-.left-footer{position:absolute;left:10px;right:10px;bottom:10px;padding:6px 10px;display:flex;flex-direction:column;gap:6px;background:rgba(255,255,255,.55);backdrop-filter:blur(18px) saturate(180%);border:1px solid rgba(255,255,255,.7);border-radius:14px;box-shadow:0 8px 24px -8px rgba(15,40,60,.18),0 2px 6px rgba(0,0,0,.05),inset 0 1px 0 rgba(255,255,255,.6);z-index:20}
+.left-footer{position:absolute;left:0;right:0;bottom:0;padding:8px 14px 12px 14px;display:flex;flex-direction:column;gap:6px;background:transparent;border:none;border-radius:0;z-index:20;pointer-events:none}
+.left-footer > *{pointer-events:auto}
+.left-footer .lf-actions{align-self:flex-start;padding:5px 8px;background:rgba(255,255,255,.7);backdrop-filter:blur(16px) saturate(180%);border:0.5px solid rgba(255,255,255,.9);border-radius:12px;box-shadow:0 8px 22px -8px rgba(15,40,60,.22),0 2px 6px rgba(0,0,0,.06),inset 0 1px 0 rgba(255,255,255,.7)}
 .lf-label{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--n400)}
 .lf-row{display:flex;gap:6px;align-items:flex-end}
 .lf-ta{flex:1;border:0.5px solid var(--n200);border-radius:var(--r6);padding:6px 9px;font-family:var(--font);font-size:12px;color:var(--n700);resize:none;outline:none;background:var(--n50);max-height:60px;line-height:1.45}
@@ -278,7 +279,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .dm-item.green .ti{color:var(--g500)}
 
 /* AI RIGHT — TRANSCRIPTION */
-.trans-bar{background:var(--white);border-bottom:0.5px solid var(--n150);flex-shrink:0;overflow:hidden;transition:max-height .28s cubic-bezier(.4,0,.2,1);max-height:46px}
+.trans-bar{margin:10px 10px 0 10px;border-radius:12px;border:0.5px solid var(--n150);background:rgba(255,255,255,.82);backdrop-filter:blur(14px) saturate(180%);box-shadow:0 6px 18px -10px rgba(15,40,60,.18),0 1px 3px rgba(0,0,0,.04);flex-shrink:0;overflow:hidden;transition:max-height .28s cubic-bezier(.4,0,.2,1);max-height:46px;position:relative;z-index:5}
 .trans-bar.exp2{max-height:115px}
 .trans-bar.exp3{max-height:340px}
 .trans-bar-top{padding:5px 44px 5px 10px;display:flex;align-items:center;gap:7px;min-height:34px}
@@ -297,7 +298,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .trans-line:last-child{border-bottom:none;color:var(--n700);font-weight:500;font-style:normal}
 
 /* AI STAGE */
-.ai-stage{flex:1;position:relative;display:flex;flex-direction:column;overflow:hidden;padding-bottom:110px}
+.ai-stage{flex:1;position:relative;display:flex;flex-direction:column;overflow:hidden;padding-bottom:130px;padding-top:8px}
 .ai-bg-icon{position:absolute;opacity:0.04;pointer-events:none;top:50%;left:50%;transform:translate(-50%,-55%);z-index:0}
 .ai-bg-icon .ti{font-size:120px;color:var(--g600)}
 .ai-orb-center{flex:1;display:flex;align-items:center;justify-content:center;position:relative;z-index:2}
@@ -347,7 +348,8 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .orb-lbl.live{color:var(--g600);font-weight:500}
 
 /* AI BOTTOM */
-.ai-bottom{position:absolute;left:10px;right:10px;bottom:10px;background:rgba(255,255,255,.55);backdrop-filter:blur(18px) saturate(180%);border:1px solid rgba(255,255,255,.7);border-radius:14px;box-shadow:0 8px 24px -8px rgba(15,40,60,.18),0 2px 6px rgba(0,0,0,.05),inset 0 1px 0 rgba(255,255,255,.6);z-index:20;overflow:hidden}
+.ai-bottom{position:absolute;left:0;right:0;bottom:0;padding:8px 12px 12px 12px;background:transparent;border:none;border-radius:0;z-index:20;overflow:visible;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.ai-bottom > *{pointer-events:auto}
 
 /* RESUMO PANEL (inline no AI) */
 .resumo-panel{display:none;position:absolute;inset:0;background:var(--white);z-index:25;flex-direction:column;overflow:hidden}
@@ -367,12 +369,12 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .resumo-panel-foot{padding:10px 13px;border-top:0.5px solid var(--n150);display:flex;gap:6px;flex-wrap:wrap}
 
 /* AI CONTROLS */
-.ai-ctrls{padding:7px 10px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;border-bottom:0.5px solid rgba(0,0,0,.05)}
+.ai-ctrls{align-self:flex-start;padding:5px 8px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;border:0.5px solid rgba(255,255,255,.9);border-radius:12px;background:rgba(255,255,255,.7);backdrop-filter:blur(16px) saturate(180%);box-shadow:0 8px 22px -8px rgba(15,40,60,.22),0 2px 6px rgba(0,0,0,.06),inset 0 1px 0 rgba(255,255,255,.7)}
 .ai-ctrls .csep{width:0.5px;height:16px;background:var(--n200)}
 .ai-ctrls .btn{height:28px}
-.ai-input-row{padding:7px 12px 9px;display:flex;gap:5px}
-.ai-inp{flex:1;border:0.5px solid var(--n200);border-radius:var(--r6);padding:6px 10px;font-family:var(--font);font-size:12px;color:var(--n700);outline:none;background:var(--n50)}
-.ai-inp:focus{border-color:var(--g400);background:var(--white)}
+.ai-input-row{padding:6px 8px;display:flex;gap:5px;border-radius:14px;border:0.5px solid rgba(255,255,255,.9);background:rgba(255,255,255,.7);backdrop-filter:blur(16px) saturate(180%);box-shadow:0 8px 22px -8px rgba(15,40,60,.22),0 2px 6px rgba(0,0,0,.06),inset 0 1px 0 rgba(255,255,255,.7)}
+.ai-inp{flex:1;border:none;border-radius:var(--r6);padding:6px 10px;font-family:var(--font);font-size:12px;color:var(--n700);outline:none;background:transparent}
+.ai-inp:focus{background:rgba(255,255,255,.6)}
 .ai-inp::placeholder{color:var(--n400)}
 .ai-sbtn{width:30px;height:30px;border-radius:var(--r6);border:none;background:var(--g500);color:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center}
 .ai-sbtn:hover{background:var(--g600)}
@@ -935,17 +937,16 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 
         <!-- NOVO ATENDIMENTO -->
         <div id="atend-novo-view" style="display:none;flex-direction:column;height:560px;position:relative">
-          <div style="position:absolute;top:6px;right:48px;z-index:40;display:flex;align-items:center;gap:6px;pointer-events:none">
-            <div style="display:flex;gap:6px;pointer-events:auto">
-              <button class="btn sm primary" onclick="saveAtend()" style="backdrop-filter:blur(14px) saturate(180%);box-shadow:0 6px 18px -6px rgba(15,40,60,.25)"><i class="ti ti-device-floppy"></i> Salvar</button>
-            </div>
-          </div>
           <div class="split-wrap">
             <!-- LEFT -->
             <div class="split-left">
               <button class="panel-expand" onclick="togglePanelExpand('left',event)" title="Expandir prontuário" id="exp-left-btn"><i class="ti ti-arrows-diagonal" id="exp-left-icon"></i></button>
               <div class="pront-header">
                 <span class="pront-label">Prontuário</span>
+                <span id="save-status" class="save-status" title="Salvar atendimento" onclick="saveAtend()" style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--n400);cursor:pointer;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.6);border:0.5px solid var(--n150);transition:all .15s">
+                  <i class="ti ti-cloud-check" id="save-status-icon" style="font-size:12px"></i>
+                  <span id="save-status-lbl">Salvo</span>
+                </span>
               </div>
               <div class="toolbar">
                 <button class="tbtn" title="Negrito"><b>B</b></button>
@@ -984,6 +985,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
                   <div class="dropdown" id="actions-dropdown">
                     <button class="btn sm" onclick="toggleDropdown()"><i class="ti ti-dots"></i> Ações <i class="ti ti-chevron-up" style="font-size:10px"></i></button>
                     <div class="dropdown-menu" id="actions-menu">
+                      <div class="dm-item green" onclick="closeDropdown();saveAtend()"><i class="ti ti-device-floppy"></i> Salvar atendimento</div>
                       <div class="dm-item green" onclick="closeDropdown()"><i class="ti ti-prescription"></i> Emitir receita</div>
                       <div class="dm-item green" onclick="closeDropdown()"><i class="ti ti-certificate"></i> Emitir atestado</div>
                       <div class="dm-item" onclick="closeDropdown()"><i class="ti ti-paperclip"></i> Anexar arquivo</div>
@@ -997,7 +999,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 
             <!-- RIGHT: AI -->
             <div class="split-right">
-              <button class="panel-expand" onclick="togglePanelExpand('right',event)" title="Expandir copiloto" id="exp-right-btn" style="top:8px;right:8px"><i class="ti ti-arrows-diagonal" id="exp-right-icon"></i></button>
+              <button class="panel-expand" onclick="togglePanelExpand('right',event)" title="Expandir copiloto" id="exp-right-btn"><i class="ti ti-arrows-diagonal" id="exp-right-icon"></i></button>
               <div class="trans-bar" id="trans-bar">
                 <div class="trans-bar-top">
                   <span class="tdot" id="tdot"></span>
@@ -1052,11 +1054,11 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
                 <div class="ai-ctrls">
                   <button class="btn sm" id="listen-btn" onclick="toggleListen()"><i class="ti ti-microphone" id="lt-ico"></i> <span id="lt-lbl">Escutar</span></button>
                   <div class="csep"></div>
-                  <div class="sug-grp" title="Pedir sugestão à IA" style="display:inline-flex;align-items:stretch;border:1px solid var(--n200);border-radius:8px;background:linear-gradient(180deg,#fffbeb,#fef9c3);overflow:visible;height:28px;position:relative">
-                    <span style="position:absolute;top:-8px;left:6px;font-size:9px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:#92400e;background:#fef9c3;padding:0 4px;border-radius:4px;line-height:1;z-index:1">Sugestão</span>
-                    <button class="btn sm ghost" onclick="suggestAction('conduta')" title="Sugerir conduta" style="border:0;border-radius:0;background:transparent;height:100%;padding:0 8px;font-size:11px"><i class="ti ti-stethoscope"></i> Conduta</button>
-                    <div style="width:1px;background:var(--n200)"></div>
-                    <button class="btn sm ghost" onclick="suggestAction('duvida')" title="Sugerir dúvida para guiar a consulta" style="border:0;border-radius:0;background:transparent;height:100%;padding:0 8px;font-size:11px"><i class="ti ti-help"></i> Dúvida</button>
+                  <div class="sug-grp" title="Pedir sugestão à IA" style="display:inline-flex;align-items:stretch;border:0.5px solid rgba(252,211,77,.7);border-radius:10px;background:linear-gradient(180deg,rgba(255,251,235,.85),rgba(254,249,195,.85));backdrop-filter:blur(10px) saturate(180%);overflow:visible;height:28px;position:relative;box-shadow:0 2px 8px -2px rgba(180,140,0,.18)">
+                    <span style="position:absolute;top:-7px;left:8px;font-size:8.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#92400e;background:linear-gradient(180deg,#fef9c3,#fde68a);padding:1px 5px;border-radius:4px;line-height:1;z-index:1;box-shadow:0 1px 2px rgba(0,0,0,.06)">Sugestão</span>
+                    <button class="btn sm ghost" onclick="suggestAction('conduta')" title="Sugerir conduta" style="border:0;border-radius:9px 0 0 9px;background:transparent;height:100%;padding:0 9px;font-size:11px;color:#78350f"><i class="ti ti-stethoscope"></i> Conduta</button>
+                    <div style="width:1px;background:rgba(252,211,77,.6)"></div>
+                    <button class="btn sm ghost" onclick="suggestAction('duvida')" title="Sugerir dúvida para guiar a consulta" style="border:0;border-radius:0 9px 9px 0;background:transparent;height:100%;padding:0 9px;font-size:11px;color:#78350f"><i class="ti ti-help"></i> Dúvida</button>
                   </div>
                   <button class="btn sm" id="toggle-bbl-btn" onclick="toggleBubbles()" title="Ocultar/mostrar mensagens"><i class="ti ti-eye" id="toggle-bbl-icon"></i></button>
                   <button class="btn sm primary" onclick="openAnamnesePanel()"><i class="ti ti-file-text-ai"></i> Anamnese</button>
@@ -2181,6 +2183,25 @@ function markAtendDirty(){
   if(!atendEmAndamento.dirty){atendEmAndamento.dirty=true;updateAtendProgress();}
   saveAtendState();
   saveAtendDraft();
+  updateSaveStatus('dirty');
+  scheduleAutoSave();
+}
+let _autoSaveTimer=null;
+function scheduleAutoSave(){
+  if(_autoSaveTimer)clearTimeout(_autoSaveTimer);
+  _autoSaveTimer=setTimeout(async()=>{
+    try{const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;
+      updateSaveStatus('saving');await saveAtendInternal();updateSaveStatus('saved');
+    }catch(e){updateSaveStatus('error');}
+  },1400);
+}
+function updateSaveStatus(state){
+  const el=document.getElementById('save-status');if(!el)return;
+  const ic=document.getElementById('save-status-icon');const lb=document.getElementById('save-status-lbl');
+  if(state==='dirty'){el.style.color='#92400e';el.style.background='rgba(254,243,199,.8)';el.style.borderColor='#fde68a';ic.className='ti ti-cloud-up';lb.textContent='Alterações...';}
+  else if(state==='saving'){el.style.color='var(--n500)';el.style.background='rgba(255,255,255,.7)';el.style.borderColor='var(--n150)';ic.className='ti ti-loader-2';ic.style.animation='spin 1s linear infinite';lb.textContent='Salvando...';}
+  else if(state==='saved'){el.style.color='var(--g600)';el.style.background='rgba(220,252,231,.7)';el.style.borderColor='#86efac';ic.className='ti ti-cloud-check';ic.style.animation='';const t=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});lb.textContent='Salvo '+t;}
+  else if(state==='error'){el.style.color='#b91c1c';el.style.background='rgba(254,226,226,.8)';el.style.borderColor='#fca5a5';ic.className='ti ti-alert-circle';ic.style.animation='';lb.textContent='Erro ao salvar';}
 }
 function updateAtendProgress(){const p=document.getElementById('atend-progress');if(p)p.classList.toggle('show',atendEmAndamento.dirty);}
 function openTabFromProgress(){
