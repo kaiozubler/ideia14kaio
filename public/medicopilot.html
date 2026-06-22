@@ -2216,6 +2216,27 @@ function showAtendList(){
   document.getElementById('atend-novo-view').style.display='none';
   renderAtendimentos();
 }
+function togglePanelExpand(side,ev){
+  if(ev){ev.stopPropagation();}
+  const w=document.querySelector('#atend-novo-view .split-wrap');if(!w)return;
+  const cls='exp-'+side;
+  const other=side==='left'?'exp-right':'exp-left';
+  if(w.classList.contains(cls)){w.classList.remove(cls);}
+  else{w.classList.remove(other);w.classList.add(cls);}
+  const li=document.getElementById('exp-left-icon');const ri=document.getElementById('exp-right-icon');
+  if(li)li.className='ti '+(w.classList.contains('exp-left')?'ti-arrows-diagonal-minimize-2':'ti-arrows-diagonal');
+  if(ri)ri.className='ti '+(w.classList.contains('exp-right')?'ti-arrows-diagonal-minimize-2':'ti-arrows-diagonal');
+}
+document.addEventListener('click',function(e){
+  const w=document.querySelector('#atend-novo-view .split-wrap');
+  if(!w)return;
+  if(!w.classList.contains('exp-left')&&!w.classList.contains('exp-right'))return;
+  if(w.contains(e.target))return;
+  w.classList.remove('exp-left','exp-right');
+  const li=document.getElementById('exp-left-icon');const ri=document.getElementById('exp-right-icon');
+  if(li)li.className='ti ti-arrows-diagonal';
+  if(ri)ri.className='ti ti-arrows-diagonal';
+},true);
 function openAtend(id){
   const a=atendimentos.find(x=>String(x.id)===String(id));
   if(!a){console.warn('Atendimento não encontrado',id);return;}
