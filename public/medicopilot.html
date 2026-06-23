@@ -606,6 +606,75 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .cv-equipe-item:hover{background:#f0fdf4;border-color:#16a34a}
 .cv-equipe-item b{display:block;font-size:13px;color:#111827}
 .cv-equipe-item span{font-size:11px;color:#6b7280}
+
+/* ===== AGENDA ===== */
+.ag-wrap{padding:0}
+.ag-toolbar{display:flex;gap:10px;align-items:center;background:var(--white);padding:10px 12px;border:0.5px solid var(--n150);border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.03);margin-bottom:14px;flex-wrap:wrap}
+.ag-search{flex:1;min-width:220px;position:relative}
+.ag-search i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--n400);font-size:14px}
+.ag-search input{width:100%;padding:9px 12px 9px 32px;border:1px solid var(--n150);border-radius:8px;font-size:13px;background:var(--n50)}
+.ag-search input:focus{outline:none;border-color:var(--g500);background:var(--white)}
+.ag-views{display:flex;gap:2px;background:var(--n75);padding:3px;border-radius:8px}
+.ag-views button{padding:6px 14px;border:none;background:transparent;color:var(--n500);border-radius:6px;font-size:12px;font-weight:500;transition:all .15s}
+.ag-views button.active{background:var(--white);color:var(--g600);box-shadow:0 1px 3px rgba(0,0,0,.06)}
+#ag-doctor{padding:8px 10px;border:1px solid var(--n150);border-radius:8px;font-size:13px;background:var(--white);min-width:160px}
+.ag-filter-wrap{position:relative}
+.ag-fbtn{width:36px;height:36px;border:1px solid var(--n150);border-radius:8px;background:var(--white);color:var(--n500);display:flex;align-items:center;justify-content:center;font-size:15px}
+.ag-fbtn.active,.ag-fbtn:hover{background:var(--g50);color:var(--g600);border-color:var(--g300)}
+.ag-adv{position:absolute;right:0;top:calc(100% + 6px);width:280px;background:var(--white);border:1px solid var(--n150);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.12);z-index:50;overflow:hidden}
+.ag-adv-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--n100)}
+.ag-adv-head button{background:none;border:none;color:var(--n400);font-size:16px}
+.ag-adv-body{padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.ag-adv-body label{font-size:11px;font-weight:600;color:var(--n500);text-transform:uppercase;letter-spacing:.4px;margin-top:6px}
+.ag-adv-body select{padding:8px 10px;border:1px solid var(--n150);border-radius:6px;font-size:13px;background:var(--white)}
+.ag-adv-foot{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--n100);background:var(--n50)}
+.ag-adv-foot button{flex:1}
+.ag-body{background:var(--white);border:0.5px solid var(--n150);border-radius:12px;overflow:auto;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+
+.ag-grid{display:grid;width:100%}
+.ag-h{padding:10px 8px;text-align:center;font-size:11px;font-weight:600;color:var(--n500);border-bottom:1px solid var(--n100);border-right:1px solid var(--n100);background:var(--white);position:relative}
+.ag-h:last-child{border-right:none}
+.ag-h .ag-day{font-size:13px;color:var(--n700);font-weight:600}
+.ag-h .ag-dnum{font-size:11px;color:var(--n400);margin-top:2px}
+.ag-h.today .ag-badge{position:absolute;top:4px;right:6px;background:var(--g600);color:#fff;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:700}
+.ag-hourcell{padding:14px 8px;text-align:center;font-size:11px;font-weight:600;color:var(--n400);background:var(--n50);border-right:1px solid var(--n100);border-bottom:1px solid var(--n100)}
+.ag-cell{padding:8px 6px;min-height:96px;background:var(--white);border-right:1px solid var(--n100);border-bottom:1px solid var(--n100);transition:background .15s}
+.ag-cell:hover{background:var(--g50)}
+.ag-cell:last-child{border-right:none}
+
+.ag-card{position:relative;background:#f4f6f4;border-left:4px solid var(--g500);border-radius:8px;padding:9px 11px;margin-bottom:6px;cursor:pointer;transition:all .18s}
+.ag-card:hover{box-shadow:0 6px 16px rgba(0,0,0,.1);transform:translateY(-1px)}
+.ag-card.overdue{background:rgba(244,67,54,.08);border-left-color:#F44336}
+.ag-card-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.ag-card-name{font-size:12px;font-weight:600;color:var(--n700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ag-card-sub{font-size:11px;color:var(--n500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ag-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.ag-dot.confirmed{background:#4CAF50;box-shadow:0 0 0 2px #E8F5E9}
+.ag-dot.pending{background:#FFC107;box-shadow:0 0 0 2px #FFF8E1}
+.ag-dot.unconfirmed{background:#F44336;box-shadow:0 0 0 2px #FFEBEE}
+.ag-mbtn{background:none;border:none;color:var(--n300);font-size:14px;padding:0 4px;line-height:1}
+.ag-mbtn:hover{color:var(--n500)}
+.ag-menu{position:absolute;right:6px;top:30px;background:var(--white);border:1px solid var(--n150);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.18);z-index:200;min-width:180px;overflow:hidden}
+.ag-menu button{display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;border:none;background:transparent;text-align:left;font-size:12px;color:var(--n700);border-bottom:1px solid var(--n100)}
+.ag-menu button:last-child{border-bottom:none}
+.ag-menu button:hover{background:var(--n50)}
+
+.ag-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;padding:14px;background:transparent;border:none;box-shadow:none}
+.ag-card-full{background:var(--white);border:1px solid var(--n150);border-radius:10px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.05);position:relative}
+.ag-card-full.overdue{border-color:#F44336;border-width:2px}
+.ag-card-full .ovr{position:absolute;top:-10px;left:14px;background:#F44336;color:#fff;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:600}
+.ag-card-full h4{margin:0 0 2px;font-size:14px;font-weight:600;color:var(--n700)}
+.ag-card-full .spec{font-size:11px;color:var(--n400);margin-bottom:10px}
+.ag-doc-badge{display:inline-block;color:#fff;padding:5px 11px;border-radius:6px;font-size:11px;font-weight:600;margin:8px 0}
+.ag-card-full .row-bot{display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--n100);margin-top:8px}
+.ag-card-full .time{font-size:15px;font-weight:600;color:var(--g600)}
+.ag-card-full .time.late{color:#F44336}
+.ag-tags{display:flex;gap:5px;flex-wrap:wrap}
+.ag-tag{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600}
+.ag-tag.ret{background:#E3F2FD;color:#1976D2}
+.ag-tag.res{background:#FFF3E0;color:#F57C00}
+.ag-empty{text-align:center;padding:60px 20px;color:var(--n400)}
+.ag-empty p{font-size:13px;margin-top:10px}
 </style>
 </head>
 <body>
@@ -657,6 +726,9 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
     </div>
     <div class="sb-item" id="nav-conversas" onclick="goScreen('conversas')">
       <i class="ti ti-brand-whatsapp"></i><span class="sb-lbl">Conversas</span>
+    </div>
+    <div class="sb-item" id="nav-agenda" onclick="goScreen('agenda')">
+      <i class="ti ti-calendar-event"></i><span class="sb-lbl">Agenda</span>
     </div>
     <div class="sb-item" id="nav-receitas" onclick="goScreen('receitas')">
       <i class="ti ti-file-description"></i><span class="sb-lbl">Receitas e Atestados</span>
@@ -1139,6 +1211,58 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
         <h3>Receitas e Atestados</h3>
         <p>Selecione um paciente para acessar receitas e atestados</p>
         <button class="btn ghost" style="margin-top:14px" onclick="goScreen('patients')"><i class="ti ti-users"></i> Ir para Pacientes</button>
+      </div>
+    </div>
+
+    <!-- SCREEN: AGENDA -->
+    <div id="s-agenda" style="display:none">
+      <div class="ag-wrap">
+        <div class="ag-toolbar">
+          <div class="ag-search">
+            <i class="ti ti-search"></i>
+            <input id="ag-search" type="text" placeholder="Buscar paciente, médico ou especialidade..." oninput="renderAgenda()">
+          </div>
+          <div class="ag-views">
+            <button data-view="daily"  onclick="setAgendaView('daily')">Diário</button>
+            <button data-view="weekly" class="active" onclick="setAgendaView('weekly')">Semanal</button>
+            <button data-view="monthly" onclick="setAgendaView('monthly')">Mensal</button>
+          </div>
+          <select id="ag-doctor" onchange="renderAgenda()">
+            <option value="all">Todos os médicos</option>
+          </select>
+          <div class="ag-filter-wrap">
+            <button class="ag-fbtn" id="ag-fbtn" onclick="agToggleAdv(event)" title="Filtros avançados"><i class="ti ti-adjustments-horizontal"></i></button>
+            <div class="ag-adv" id="ag-adv" style="display:none">
+              <div class="ag-adv-head">
+                <strong>Filtros avançados</strong>
+                <button onclick="agToggleAdv(event)"><i class="ti ti-x"></i></button>
+              </div>
+              <div class="ag-adv-body">
+                <label>Especialidade</label>
+                <select id="ag-spec"><option value="all">Todas</option></select>
+                <label>Status</label>
+                <select id="ag-status">
+                  <option value="all">Todos</option>
+                  <option value="agendado">Agendado</option>
+                  <option value="realizado">Realizado</option>
+                  <option value="faltou">Faltou</option>
+                </select>
+                <label>Confirmação</label>
+                <select id="ag-conf">
+                  <option value="all">Todas</option>
+                  <option value="confirmed">Confirmados</option>
+                  <option value="pending">Aguardando</option>
+                  <option value="unconfirmed">Não confirmados</option>
+                </select>
+              </div>
+              <div class="ag-adv-foot">
+                <button class="btn ghost" onclick="agClearAdv()">Limpar</button>
+                <button class="btn primary" onclick="agApplyAdv()">Aplicar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="ag-body" class="ag-body"></div>
       </div>
     </div>
 
@@ -1802,7 +1926,7 @@ Reduzir sódio. Hidratação adequada. Evitar estresse.`;
 function goScreen(name){
   const leavingPatientDetail=name!=='patient-detail'&&document.getElementById('s-patient-detail')?.style.display!=='none';
   if(leavingPatientDetail&&currentPatient&&atendEmAndamento&&atendEmAndamento.dirty){saveAtendState();saveAtendDraft();stopAtendAutoSave();}
-  ['atendimentos','patients','patient-detail','receitas','indicadores','secretaria','anamnese','copiloto'].forEach(s=>{
+  ['atendimentos','patients','patient-detail','receitas','agenda','indicadores','secretaria','anamnese','copiloto'].forEach(s=>{
     const el=document.getElementById('s-'+s);
     if(el)el.style.display='none';
   });
@@ -1812,7 +1936,7 @@ function goScreen(name){
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   const nav=document.getElementById('nav-'+name);
   if(nav)nav.classList.add('active');
-  const titles={atendimentos:'Atendimentos',patients:'Pacientes',conversas:'Conversas',receitas:'Receitas e Atestados',indicadores:'Indicadores',secretaria:'Secretária digital',anamnese:'Gerador de Anamnese',copiloto:'Copiloto de consulta'};
+  const titles={atendimentos:'Atendimentos',patients:'Pacientes',conversas:'Conversas',agenda:'Agenda',receitas:'Receitas e Atestados',indicadores:'Indicadores',secretaria:'Secretária digital',anamnese:'Gerador de Anamnese',copiloto:'Copiloto de consulta'};
   const pt=document.getElementById('page-title');
   pt.textContent=titles[name]||'Paciente';
   pt.style.cursor='';
@@ -1820,6 +1944,7 @@ function goScreen(name){
   document.getElementById('breadcrumb').innerHTML='';
   if(name==='atendimentos')renderKanban();
   if(name==='conversas')initConversas();
+  if(name==='agenda')initAgenda();
   if(name==='indicadores')setTimeout(renderChart,50);
   if(name==='anamnese')renderAnamneseList();
   if(name==='copiloto')loadCopilotoCfg();
@@ -4256,6 +4381,158 @@ function cvCloseTransfer(){document.getElementById('cv-modal-transfer').classLis
 function cvDoTransfer(nome){const c=CV_DATA.conversas.find(x=>x.id===CV_DATA.selecionada);if(c)c.responsavel=nome;cvCloseTransfer();renderConversas();}
 function cvOpenFiltros(){document.getElementById('cv-modal-filtros').classList.add('open');}
 function cvCloseFiltros(){document.getElementById('cv-modal-filtros').classList.remove('open');}
+
+/* ========== AGENDA ========== */
+const AG_DOCTORS=[
+  {id:1,name:'Dr. Silva',color:'#2E7D32',specialty:'Cardiologia'},
+  {id:2,name:'Dra. Santos',color:'#1976D2',specialty:'Pediatria'},
+  {id:3,name:'Dr. Oliveira',color:'#D32F2F',specialty:'Ortopedia'},
+  {id:4,name:'Dra. Costa',color:'#F57C00',specialty:'Dermatologia'},
+  {id:5,name:'Dr. Ferreira',color:'#7B1FA2',specialty:'Neurologia'}
+];
+const AG_SPECS=['Cardiologia','Pediatria','Ortopedia','Dermatologia','Neurologia'];
+const AG_APTS=[
+  {id:1,patient:'João Silva',specialty:'Cardiologia',doctor:'Dr. Silva',doctorId:1,date:'2024-01-15',time:'09:00',confirmation:'confirmed',presence:'recebido',status:'realizado',isReturn:true,isRescheduled:false,hasEntry:true},
+  {id:2,patient:'Maria Santos',specialty:'Pediatria',doctor:'Dra. Santos',doctorId:2,date:'2024-01-15',time:'10:30',confirmation:'pending',presence:'nao_recebido',status:'agendado',isReturn:false,isRescheduled:false,hasEntry:false},
+  {id:3,patient:'Carlos Oliveira',specialty:'Ortopedia',doctor:'Dr. Oliveira',doctorId:3,date:'2024-01-15',time:'14:00',confirmation:'unconfirmed',presence:'faltoso',status:'faltou',isReturn:true,isRescheduled:true,hasEntry:false},
+  {id:4,patient:'Ana Costa',specialty:'Dermatologia',doctor:'Dra. Costa',doctorId:4,date:'2024-01-15',time:'15:30',confirmation:'confirmed',presence:'recebido',status:'realizado',isReturn:false,isRescheduled:false,hasEntry:true},
+  {id:5,patient:'Pedro Gomes',specialty:'Cardiologia',doctor:'Dr. Silva',doctorId:1,date:'2024-01-15',time:'08:00',confirmation:'confirmed',presence:'nao_recebido',status:'agendado',isReturn:false,isRescheduled:false,hasEntry:false},
+  {id:6,patient:'Lucia Martins',specialty:'Neurologia',doctor:'Dr. Ferreira',doctorId:5,date:'2024-01-15',time:'11:00',confirmation:'pending',presence:'nao_recebido',status:'agendado',isReturn:true,isRescheduled:false,hasEntry:false},
+  {id:7,patient:'Roberto Costa',specialty:'Ortopedia',doctor:'Dr. Oliveira',doctorId:3,date:'2024-01-15',time:'13:00',confirmation:'unconfirmed',presence:'nao_recebido',status:'agendado',isReturn:false,isRescheduled:false,hasEntry:false}
+];
+const AG_STATE={view:'weekly',doctor:'all',spec:'all',status:'all',conf:'all',openMenu:null,inited:false};
+const AG_MENU=[
+  {label:'Dar entrada',icon:'ti-login'},
+  {label:'Editar etiqueta',icon:'ti-tag'},
+  {label:'Reagendar (IA)',icon:'ti-refresh'},
+  {label:'Confirmar agenda',icon:'ti-check'},
+  {label:'Enviar mensagem',icon:'ti-message'},
+  {label:'Transferir agenda',icon:'ti-arrow-right'}
+];
+function agDocColor(id){return (AG_DOCTORS.find(d=>d.id===id)||{}).color||'#999';}
+function agConfLabel(c){return {confirmed:'Confirmado',pending:'Aguardando confirmação',unconfirmed:'Não confirmado'}[c]||c;}
+function agIsOverdue(a){
+  const [h,m]=a.time.split(':').map(Number);
+  const t=new Date();t.setHours(h,m,0,0);
+  return new Date()>t && !a.hasEntry && a.status==='agendado';
+}
+function agHours(){const h=[];for(let i=8;i<18;i++)h.push(String(i).padStart(2,'0')+':00');return h;}
+function agWeek(){
+  const t=new Date(2024,0,15);const w=[];const d=t.getDay();const diff=t.getDate()-d+(d===0?-6:1);
+  for(let i=0;i<7;i++){const dt=new Date(2024,0,1);dt.setDate(diff+i);
+    w.push({date:dt.toISOString().split('T')[0],dayName:['Dom','Seg','Ter','Qua','Qui','Sex','Sab'][dt.getDay()],dayNum:dt.getDate()});
+  }
+  return w;
+}
+function initAgenda(){
+  if(!AG_STATE.inited){
+    const ds=document.getElementById('ag-doctor');
+    AG_DOCTORS.forEach(d=>{const o=document.createElement('option');o.value=d.id;o.textContent=d.name;ds.appendChild(o);});
+    const ss=document.getElementById('ag-spec');
+    AG_SPECS.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;ss.appendChild(o);});
+    document.addEventListener('click',e=>{
+      if(!e.target.closest('.ag-card')&&!e.target.closest('.ag-menu')){AG_STATE.openMenu=null;renderAgenda();}
+      if(!e.target.closest('#ag-adv')&&!e.target.closest('#ag-fbtn')){const a=document.getElementById('ag-adv');if(a)a.style.display='none';document.getElementById('ag-fbtn')?.classList.remove('active');}
+    });
+    AG_STATE.inited=true;
+  }
+  renderAgenda();
+}
+function setAgendaView(v){AG_STATE.view=v;document.querySelectorAll('.ag-views button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));renderAgenda();}
+function agToggleAdv(e){e&&e.stopPropagation();const a=document.getElementById('ag-adv');const open=a.style.display==='none';a.style.display=open?'block':'none';document.getElementById('ag-fbtn').classList.toggle('active',open);}
+function agClearAdv(){AG_STATE.spec='all';AG_STATE.status='all';AG_STATE.conf='all';document.getElementById('ag-spec').value='all';document.getElementById('ag-status').value='all';document.getElementById('ag-conf').value='all';renderAgenda();}
+function agApplyAdv(){AG_STATE.spec=document.getElementById('ag-spec').value;AG_STATE.status=document.getElementById('ag-status').value;AG_STATE.conf=document.getElementById('ag-conf').value;document.getElementById('ag-adv').style.display='none';document.getElementById('ag-fbtn').classList.remove('active');renderAgenda();}
+function agToggleMenu(id,ev){ev&&ev.stopPropagation();AG_STATE.openMenu=AG_STATE.openMenu===id?null:id;renderAgenda();}
+function agAction(label,id){showToast(label+' #'+id);AG_STATE.openMenu=null;renderAgenda();}
+function agFiltered(){
+  const q=(document.getElementById('ag-search')?.value||'').toLowerCase();
+  const doc=document.getElementById('ag-doctor')?.value||'all';
+  return AG_APTS.filter(a=>{
+    const mq=!q||a.patient.toLowerCase().includes(q)||a.specialty.toLowerCase().includes(q)||a.doctor.toLowerCase().includes(q);
+    const md=doc==='all'||a.doctorId===parseInt(doc);
+    const ms=AG_STATE.spec==='all'||a.specialty===AG_STATE.spec;
+    const mt=AG_STATE.status==='all'||a.status===AG_STATE.status;
+    const mc=AG_STATE.conf==='all'||a.confirmation===AG_STATE.conf;
+    return mq&&md&&ms&&mt&&mc;
+  });
+}
+function agCardHtml(a){
+  const c=agDocColor(a.doctorId);
+  const ov=agIsOverdue(a);
+  const bg=ov?'rgba(244,67,54,.08)':(c+'18');
+  const menuOpen=AG_STATE.openMenu===a.id;
+  const menu=menuOpen?`<div class="ag-menu">${AG_MENU.map(m=>`<button onclick="agAction('${m.label}',${a.id})"><i class="ti ${m.icon}"></i>${m.label}</button>`).join('')}</div>`:'';
+  return `<div class="ag-card ${ov?'overdue':''}" style="background:${bg};border-left-color:${ov?'#F44336':c}" title="${a.patient} • ${a.doctor} • ${a.time} — ${agConfLabel(a.confirmation)}">
+    <div class="ag-card-row">
+      <div style="flex:1;min-width:0">
+        <div class="ag-card-name">${a.patient}</div>
+        <div class="ag-card-sub">${a.doctor}</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="ag-dot ${a.confirmation}"></span>
+        <button class="ag-mbtn" onclick="agToggleMenu(${a.id},event)">⋮</button>
+      </div>
+    </div>
+    ${menu}
+  </div>`;
+}
+function renderAgenda(){
+  const body=document.getElementById('ag-body');if(!body)return;
+  body.style.background='';body.style.border='';body.style.boxShadow='';
+  const apts=agFiltered();
+  if(!apts.length){body.innerHTML=`<div class="ag-empty"><i class="ti ti-calendar-off" style="font-size:32px"></i><p>Nenhum agendamento encontrado com os filtros selecionados</p></div>`;return;}
+  if(AG_STATE.view==='weekly')return renderAgWeekly(body,apts);
+  if(AG_STATE.view==='daily')return renderAgDaily(body,apts);
+  return renderAgCards(body,apts);
+}
+function renderAgWeekly(body,apts){
+  const week=agWeek();const hours=agHours();
+  const byKey={};apts.forEach(a=>{const k=a.date+'-'+a.time;(byKey[k]=byKey[k]||[]).push(a);});
+  const cols='80px '+week.map(()=>'1fr').join(' ');
+  let html=`<div class="ag-grid" style="grid-template-columns:${cols}">`;
+  html+=`<div class="ag-h"></div>`;
+  week.forEach((d,i)=>{html+=`<div class="ag-h ${i===0?'today':''}">${i===0?'<span class="ag-badge">Hoje</span>':''}<div class="ag-day">${d.dayName}</div><div class="ag-dnum">${String(d.dayNum).padStart(2,'0')}</div></div>`;});
+  hours.forEach(h=>{
+    html+=`<div class="ag-hourcell">${h}</div>`;
+    week.forEach(d=>{const list=byKey[d.date+'-'+h]||[];html+=`<div class="ag-cell">${list.map(agCardHtml).join('')}</div>`;});
+  });
+  html+='</div>';body.innerHTML=html;
+}
+function renderAgDaily(body,apts){
+  const hours=agHours();
+  const byDT={};apts.forEach(a=>{(byDT[a.doctorId]=byDT[a.doctorId]||{});(byDT[a.doctorId][a.time]=byDT[a.doctorId][a.time]||[]).push(a);});
+  const docs=Object.keys(byDT).map(id=>AG_DOCTORS.find(d=>d.id===parseInt(id))).filter(Boolean);
+  if(!docs.length){body.innerHTML=`<div class="ag-empty"><p>Nenhum médico com agendamentos</p></div>`;return;}
+  const cols='80px '+docs.map(()=>'minmax(180px,1fr)').join(' ');
+  let html=`<div class="ag-grid" style="grid-template-columns:${cols}">`;
+  html+=`<div class="ag-h"></div>`;
+  docs.forEach(d=>{html+=`<div class="ag-h"><div class="ag-day" style="color:${d.color}">${d.name}</div><div class="ag-dnum">${d.specialty}</div></div>`;});
+  hours.forEach(h=>{
+    html+=`<div class="ag-hourcell">${h}</div>`;
+    docs.forEach(d=>{const list=(byDT[d.id]||{})[h]||[];html+=`<div class="ag-cell">${list.map(agCardHtml).join('')}</div>`;});
+  });
+  html+='</div>';body.innerHTML=html;
+}
+function renderAgCards(body,apts){
+  body.style.background='transparent';body.style.border='none';body.style.boxShadow='none';
+  const html=`<div class="ag-cards">`+apts.map(a=>{
+    const ov=agIsOverdue(a);const col=agDocColor(a.doctorId);
+    return `<div class="ag-card-full ${ov?'overdue':''}">
+      ${ov?'<div class="ovr">Horário expirado</div>':''}
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="flex:1"><h4>${a.patient}</h4><div class="spec">${a.specialty}</div></div>
+        <div style="display:flex;gap:8px;align-items:center"><span class="ag-dot ${a.confirmation}"></span></div>
+      </div>
+      <div class="ag-doc-badge" style="background:${col}">${a.doctor}</div>
+      <div class="row-bot">
+        <div class="time ${ov?'late':''}">${a.time}</div>
+        <div class="ag-tags">${a.isReturn?'<span class="ag-tag ret">Retorno</span>':''}${a.isRescheduled?'<span class="ag-tag res">Reagendado</span>':''}</div>
+      </div>
+    </div>`;
+  }).join('')+`</div>`;
+  body.innerHTML=html;
+  // restore frame styles when leaving cards view next time via renderAgenda
+}
 </script>
 </body>
 </html>
