@@ -1145,6 +1145,58 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
       </div>
     </div>
 
+    <!-- SCREEN: AGENDA -->
+    <div id="s-agenda" style="display:none">
+      <div class="ag-wrap">
+        <div class="ag-toolbar">
+          <div class="ag-search">
+            <i class="ti ti-search"></i>
+            <input id="ag-search" type="text" placeholder="Buscar paciente, médico ou especialidade..." oninput="renderAgenda()">
+          </div>
+          <div class="ag-views">
+            <button data-view="daily"  onclick="setAgendaView('daily')">Diário</button>
+            <button data-view="weekly" class="active" onclick="setAgendaView('weekly')">Semanal</button>
+            <button data-view="monthly" onclick="setAgendaView('monthly')">Mensal</button>
+          </div>
+          <select id="ag-doctor" onchange="renderAgenda()">
+            <option value="all">Todos os médicos</option>
+          </select>
+          <div class="ag-filter-wrap">
+            <button class="ag-fbtn" id="ag-fbtn" onclick="agToggleAdv(event)" title="Filtros avançados"><i class="ti ti-adjustments-horizontal"></i></button>
+            <div class="ag-adv" id="ag-adv" style="display:none">
+              <div class="ag-adv-head">
+                <strong>Filtros avançados</strong>
+                <button onclick="agToggleAdv(event)"><i class="ti ti-x"></i></button>
+              </div>
+              <div class="ag-adv-body">
+                <label>Especialidade</label>
+                <select id="ag-spec"><option value="all">Todas</option></select>
+                <label>Status</label>
+                <select id="ag-status">
+                  <option value="all">Todos</option>
+                  <option value="agendado">Agendado</option>
+                  <option value="realizado">Realizado</option>
+                  <option value="faltou">Faltou</option>
+                </select>
+                <label>Confirmação</label>
+                <select id="ag-conf">
+                  <option value="all">Todas</option>
+                  <option value="confirmed">Confirmados</option>
+                  <option value="pending">Aguardando</option>
+                  <option value="unconfirmed">Não confirmados</option>
+                </select>
+              </div>
+              <div class="ag-adv-foot">
+                <button class="btn ghost" onclick="agClearAdv()">Limpar</button>
+                <button class="btn primary" onclick="agApplyAdv()">Aplicar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="ag-body" class="ag-body"></div>
+      </div>
+    </div>
+
     <!-- SCREEN: CONVERSAS -->
     <div id="s-conversas" style="display:none;margin:-20px;height:calc(100vh - 54px)">
       <div class="cv-wrap">
