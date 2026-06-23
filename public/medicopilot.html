@@ -4381,6 +4381,157 @@ function cvCloseTransfer(){document.getElementById('cv-modal-transfer').classLis
 function cvDoTransfer(nome){const c=CV_DATA.conversas.find(x=>x.id===CV_DATA.selecionada);if(c)c.responsavel=nome;cvCloseTransfer();renderConversas();}
 function cvOpenFiltros(){document.getElementById('cv-modal-filtros').classList.add('open');}
 function cvCloseFiltros(){document.getElementById('cv-modal-filtros').classList.remove('open');}
+
+/* ========== AGENDA ========== */
+const AG_DOCTORS=[
+  {id:1,name:'Dr. Silva',color:'#2E7D32',specialty:'Cardiologia'},
+  {id:2,name:'Dra. Santos',color:'#1976D2',specialty:'Pediatria'},
+  {id:3,name:'Dr. Oliveira',color:'#D32F2F',specialty:'Ortopedia'},
+  {id:4,name:'Dra. Costa',color:'#F57C00',specialty:'Dermatologia'},
+  {id:5,name:'Dr. Ferreira',color:'#7B1FA2',specialty:'Neurologia'}
+];
+const AG_SPECS=['Cardiologia','Pediatria','Ortopedia','Dermatologia','Neurologia'];
+const AG_APTS=[
+  {id:1,patient:'João Silva',specialty:'Cardiologia',doctor:'Dr. Silva',doctorId:1,date:'2024-01-15',time:'09:00',confirmation:'confirmed',presence:'recebido',status:'realizado',isReturn:true,isRescheduled:false,hasEntry:true},
+  {id:2,patient:'Maria Santos',specialty:'Pediatria',doctor:'Dra. Santos',doctorId:2,date:'2024-01-15',time:'10:30',confirmation:'pending',presence:'nao_recebido',status:'agendado',isReturn:false,isRescheduled:false,hasEntry:false},
+  {id:3,patient:'Carlos Oliveira',specialty:'Ortopedia',doctor:'Dr. Oliveira',doctorId:3,date:'2024-01-15',time:'14:00',confirmation:'unconfirmed',presence:'faltoso',status:'faltou',isReturn:true,isRescheduled:true,hasEntry:false},
+  {id:4,patient:'Ana Costa',specialty:'Dermatologia',doctor:'Dra. Costa',doctorId:4,date:'2024-01-15',time:'15:30',confirmation:'confirmed',presence:'recebido',status:'realizado',isReturn:false,isRescheduled:false,hasEntry:true},
+  {id:5,patient:'Pedro Gomes',specialty:'Cardiologia',doctor:'Dr. Silva',doctorId:1,date:'2024-01-15',time:'08:00',confirmation:'confirmed',presence:'nao_recebido',status:'agendado',isReturn:false,isRescheduled:false,hasEntry:false},
+  {id:6,patient:'Lucia Martins',specialty:'Neurologia',doctor:'Dr. Ferreira',doctorId:5,date:'2024-01-15',time:'11:00',confirmation:'pending',presence:'nao_recebido',status:'agendado',isReturn:true,isRescheduled:false,hasEntry:false},
+  {id:7,patient:'Roberto Costa',specialty:'Ortopedia',doctor:'Dr. Oliveira',doctorId:3,date:'2024-01-15',time:'13:00',confirmation:'unconfirmed',presence:'nao_recebido',status:'agendado',isReturn:false,isRescheduled:false,hasEntry:false}
+];
+const AG_STATE={view:'weekly',doctor:'all',spec:'all',status:'all',conf:'all',openMenu:null,inited:false};
+const AG_MENU=[
+  {label:'Dar entrada',icon:'ti-login'},
+  {label:'Editar etiqueta',icon:'ti-tag'},
+  {label:'Reagendar (IA)',icon:'ti-refresh'},
+  {label:'Confirmar agenda',icon:'ti-check'},
+  {label:'Enviar mensagem',icon:'ti-message'},
+  {label:'Transferir agenda',icon:'ti-arrow-right'}
+];
+function agDocColor(id){return (AG_DOCTORS.find(d=>d.id===id)||{}).color||'#999';}
+function agConfLabel(c){return {confirmed:'Confirmado',pending:'Aguardando confirmação',unconfirmed:'Não confirmado'}[c]||c;}
+function agIsOverdue(a){
+  const [h,m]=a.time.split(':').map(Number);
+  const t=new Date();t.setHours(h,m,0,0);
+  return new Date()>t && !a.hasEntry && a.status==='agendado';
+}
+function agHours(){const h=[];for(let i=8;i<18;i++)h.push(String(i).padStart(2,'0')+':00');return h;}
+function agWeek(){
+  const t=new Date(2024,0,15);const w=[];const d=t.getDay();const diff=t.getDate()-d+(d===0?-6:1);
+  for(let i=0;i<7;i++){const dt=new Date(2024,0,1);dt.setDate(diff+i);
+    w.push({date:dt.toISOString().split('T')[0],dayName:['Dom','Seg','Ter','Qua','Qui','Sex','Sab'][dt.getDay()],dayNum:dt.getDate()});
+  }
+  return w;
+}
+function initAgenda(){
+  if(!AG_STATE.inited){
+    const ds=document.getElementById('ag-doctor');
+    AG_DOCTORS.forEach(d=>{const o=document.createElement('option');o.value=d.id;o.textContent=d.name;ds.appendChild(o);});
+    const ss=document.getElementById('ag-spec');
+    AG_SPECS.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;ss.appendChild(o);});
+    document.addEventListener('click',e=>{
+      if(!e.target.closest('.ag-card')&&!e.target.closest('.ag-menu')){AG_STATE.openMenu=null;renderAgenda();}
+      if(!e.target.closest('#ag-adv')&&!e.target.closest('#ag-fbtn')){const a=document.getElementById('ag-adv');if(a)a.style.display='none';document.getElementById('ag-fbtn')?.classList.remove('active');}
+    });
+    AG_STATE.inited=true;
+  }
+  renderAgenda();
+}
+function setAgendaView(v){AG_STATE.view=v;document.querySelectorAll('.ag-views button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));renderAgenda();}
+function agToggleAdv(e){e&&e.stopPropagation();const a=document.getElementById('ag-adv');const open=a.style.display==='none';a.style.display=open?'block':'none';document.getElementById('ag-fbtn').classList.toggle('active',open);}
+function agClearAdv(){AG_STATE.spec='all';AG_STATE.status='all';AG_STATE.conf='all';document.getElementById('ag-spec').value='all';document.getElementById('ag-status').value='all';document.getElementById('ag-conf').value='all';renderAgenda();}
+function agApplyAdv(){AG_STATE.spec=document.getElementById('ag-spec').value;AG_STATE.status=document.getElementById('ag-status').value;AG_STATE.conf=document.getElementById('ag-conf').value;document.getElementById('ag-adv').style.display='none';document.getElementById('ag-fbtn').classList.remove('active');renderAgenda();}
+function agToggleMenu(id,ev){ev&&ev.stopPropagation();AG_STATE.openMenu=AG_STATE.openMenu===id?null:id;renderAgenda();}
+function agAction(label,id){showToast(label+' #'+id);AG_STATE.openMenu=null;renderAgenda();}
+function agFiltered(){
+  const q=(document.getElementById('ag-search')?.value||'').toLowerCase();
+  const doc=document.getElementById('ag-doctor')?.value||'all';
+  return AG_APTS.filter(a=>{
+    const mq=!q||a.patient.toLowerCase().includes(q)||a.specialty.toLowerCase().includes(q)||a.doctor.toLowerCase().includes(q);
+    const md=doc==='all'||a.doctorId===parseInt(doc);
+    const ms=AG_STATE.spec==='all'||a.specialty===AG_STATE.spec;
+    const mt=AG_STATE.status==='all'||a.status===AG_STATE.status;
+    const mc=AG_STATE.conf==='all'||a.confirmation===AG_STATE.conf;
+    return mq&&md&&ms&&mt&&mc;
+  });
+}
+function agCardHtml(a){
+  const c=agDocColor(a.doctorId);
+  const ov=agIsOverdue(a);
+  const bg=ov?'rgba(244,67,54,.08)':(c+'18');
+  const menuOpen=AG_STATE.openMenu===a.id;
+  const menu=menuOpen?`<div class="ag-menu">${AG_MENU.map(m=>`<button onclick="agAction('${m.label}',${a.id})"><i class="ti ${m.icon}"></i>${m.label}</button>`).join('')}</div>`:'';
+  return `<div class="ag-card ${ov?'overdue':''}" style="background:${bg};border-left-color:${ov?'#F44336':c}" title="${a.patient} • ${a.doctor} • ${a.time} — ${agConfLabel(a.confirmation)}">
+    <div class="ag-card-row">
+      <div style="flex:1;min-width:0">
+        <div class="ag-card-name">${a.patient}</div>
+        <div class="ag-card-sub">${a.doctor}</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="ag-dot ${a.confirmation}"></span>
+        <button class="ag-mbtn" onclick="agToggleMenu(${a.id},event)">⋮</button>
+      </div>
+    </div>
+    ${menu}
+  </div>`;
+}
+function renderAgenda(){
+  const body=document.getElementById('ag-body');if(!body)return;
+  const apts=agFiltered();
+  if(!apts.length){body.innerHTML=`<div class="ag-empty"><i class="ti ti-calendar-off" style="font-size:32px"></i><p>Nenhum agendamento encontrado com os filtros selecionados</p></div>`;return;}
+  if(AG_STATE.view==='weekly')return renderAgWeekly(body,apts);
+  if(AG_STATE.view==='daily')return renderAgDaily(body,apts);
+  return renderAgCards(body,apts);
+}
+function renderAgWeekly(body,apts){
+  const week=agWeek();const hours=agHours();
+  const byKey={};apts.forEach(a=>{const k=a.date+'-'+a.time;(byKey[k]=byKey[k]||[]).push(a);});
+  const cols='80px '+week.map(()=>'1fr').join(' ');
+  let html=`<div class="ag-grid" style="grid-template-columns:${cols}">`;
+  html+=`<div class="ag-h"></div>`;
+  week.forEach((d,i)=>{html+=`<div class="ag-h ${i===0?'today':''}">${i===0?'<span class="ag-badge">Hoje</span>':''}<div class="ag-day">${d.dayName}</div><div class="ag-dnum">${String(d.dayNum).padStart(2,'0')}</div></div>`;});
+  hours.forEach(h=>{
+    html+=`<div class="ag-hourcell">${h}</div>`;
+    week.forEach(d=>{const list=byKey[d.date+'-'+h]||[];html+=`<div class="ag-cell">${list.map(agCardHtml).join('')}</div>`;});
+  });
+  html+='</div>';body.innerHTML=html;
+}
+function renderAgDaily(body,apts){
+  const hours=agHours();
+  const byDT={};apts.forEach(a=>{(byDT[a.doctorId]=byDT[a.doctorId]||{});(byDT[a.doctorId][a.time]=byDT[a.doctorId][a.time]||[]).push(a);});
+  const docs=Object.keys(byDT).map(id=>AG_DOCTORS.find(d=>d.id===parseInt(id))).filter(Boolean);
+  if(!docs.length){body.innerHTML=`<div class="ag-empty"><p>Nenhum médico com agendamentos</p></div>`;return;}
+  const cols='80px '+docs.map(()=>'minmax(180px,1fr)').join(' ');
+  let html=`<div class="ag-grid" style="grid-template-columns:${cols}">`;
+  html+=`<div class="ag-h"></div>`;
+  docs.forEach(d=>{html+=`<div class="ag-h"><div class="ag-day" style="color:${d.color}">${d.name}</div><div class="ag-dnum">${d.specialty}</div></div>`;});
+  hours.forEach(h=>{
+    html+=`<div class="ag-hourcell">${h}</div>`;
+    docs.forEach(d=>{const list=(byDT[d.id]||{})[h]||[];html+=`<div class="ag-cell">${list.map(agCardHtml).join('')}</div>`;});
+  });
+  html+='</div>';body.innerHTML=html;
+}
+function renderAgCards(body,apts){
+  body.style.background='transparent';body.style.border='none';body.style.boxShadow='none';
+  const html=`<div class="ag-cards">`+apts.map(a=>{
+    const ov=agIsOverdue(a);const col=agDocColor(a.doctorId);
+    return `<div class="ag-card-full ${ov?'overdue':''}">
+      ${ov?'<div class="ovr">Horário expirado</div>':''}
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="flex:1"><h4>${a.patient}</h4><div class="spec">${a.specialty}</div></div>
+        <div style="display:flex;gap:8px;align-items:center"><span class="ag-dot ${a.confirmation}"></span></div>
+      </div>
+      <div class="ag-doc-badge" style="background:${col}">${a.doctor}</div>
+      <div class="row-bot">
+        <div class="time ${ov?'late':''}">${a.time}</div>
+        <div class="ag-tags">${a.isReturn?'<span class="ag-tag ret">Retorno</span>':''}${a.isRescheduled?'<span class="ag-tag res">Reagendado</span>':''}</div>
+      </div>
+    </div>`;
+  }).join('')+`</div>`;
+  body.innerHTML=html;
+  // restore frame styles when leaving cards view next time via renderAgenda
+}
 </script>
 </body>
 </html>
