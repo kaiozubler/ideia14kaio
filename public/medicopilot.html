@@ -4478,6 +4478,7 @@ function agCardHtml(a){
 }
 function renderAgenda(){
   const body=document.getElementById('ag-body');if(!body)return;
+  body.style.background='';body.style.border='';body.style.boxShadow='';
   const apts=agFiltered();
   if(!apts.length){body.innerHTML=`<div class="ag-empty"><i class="ti ti-calendar-off" style="font-size:32px"></i><p>Nenhum agendamento encontrado com os filtros selecionados</p></div>`;return;}
   if(AG_STATE.view==='weekly')return renderAgWeekly(body,apts);
