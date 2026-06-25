@@ -2143,15 +2143,25 @@ async function openPatient(id){
   document.getElementById('breadcrumb').innerHTML='<span>/ '+currentPatient.name+'</span>';
   document.getElementById('pth-av').textContent=currentPatient.init;
   document.getElementById('pth-name').textContent=currentPatient.name;
-  document.getElementById('pth-sub').textContent='Nasc. '+currentPatient.dob+' · '+currentPatient.tel;
-  document.getElementById('pth-conv').textContent=currentPatient.conv;
-  document.getElementById('pth-sus').textContent='SUS: '+currentPatient.sus;
   const yr=new Date().getFullYear();
   const born=parseInt(currentPatient.dob.split('/')[2]);
-  document.getElementById('pth-idade').textContent=(yr-born)+' anos';
+  const idade=(yr-born);
+  document.getElementById('pth-idade').textContent=idade+' anos';
+  const dobAge=document.getElementById('pth-dob-age');
+  if(dobAge)dobAge.innerHTML='<i class="ti ti-cake" style="font-size:11px"></i> '+currentPatient.dob+' ('+idade+' anos)';
+  const sx=document.getElementById('pth-sexo');
+  if(sx){const s=(currentPatient.sexo||'').toLowerCase();const ic=s.startsWith('m')?'ti-mars':(s.startsWith('f')?'ti-venus':'ti-gender-genderless');sx.innerHTML='<i class="ti '+ic+'" style="font-size:11px"></i> '+(currentPatient.sexo||'—');}
+  const cv=document.getElementById('pth-conv');if(cv)cv.innerHTML='<i class="ti ti-shield-check" style="font-size:11px"></i> '+(currentPatient.conv||'—');
+  const tl=document.getElementById('pth-tel');if(tl)tl.innerHTML='<i class="ti ti-phone" style="font-size:11px"></i> '+(currentPatient.tel||'—');
+  const sus=document.getElementById('pth-sus');
+  if(sus){if(currentPatient.sus&&currentPatient.sus!=='—'){sus.textContent='SUS: '+currentPatient.sus;sus.style.display='';}else{sus.style.display='none';}}
   const mb=document.getElementById('pth-medico');
   if(currentPatient.medico&&medicoNames[currentPatient.medico]){mb.textContent=medicoNames[currentPatient.medico];mb.style.display='';}
   else mb.style.display='none';
+  const prof=document.getElementById('pth-prof');
+  if(prof)prof.textContent=(currentPatient.medico&&medicoNames[currentPatient.medico])||(currentUser?.email?.split('@')[0])||'—';
+  const lv=document.getElementById('pth-last-visit');
+  if(lv){try{const ats=(patientRecords?.atendimentos||[]);if(ats.length){const a=ats[0];lv.textContent=(a.date||a.data||'—');}else lv.textContent='Sem registros';}catch(e){lv.textContent='—';}}
   document.getElementById('print-name').textContent=currentPatient.name;
   document.getElementById('print-sub1').textContent='CPF: '+(currentPatient.cpf||'—')+' · Nasc.: '+currentPatient.dob+' · Tel.: '+currentPatient.tel;
   document.getElementById('print-sub2').textContent='Endereço: '+currentPatient.end;
