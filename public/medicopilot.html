@@ -3344,12 +3344,14 @@ function setResumoBadge(state){
   // state: 'idle' | 'processing' | 'done' | 'error'
   let badge=document.getElementById('resumo-badge');
   if(!badge){
-    const host=document.querySelector('#atend-novo-view > div'); // header row
+    const host=document.querySelector('#atend-novo-view .pront-header');
     if(!host)return;
     badge=document.createElement('span');
     badge.id='resumo-badge';
-    badge.style.cssText='display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:3px 9px;border-radius:20px;border:0.5px solid var(--n200);background:var(--n50);color:var(--n600);margin-right:8px';
-    host.insertBefore(badge,host.lastElementChild);
+    badge.style.cssText='display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:3px 9px;border-radius:20px;border:0.5px solid var(--n200);background:var(--n50);color:var(--n600);margin-left:8px';
+    const saveEl=host.querySelector('#save-status');
+    if(saveEl)host.insertBefore(badge,saveEl);
+    else host.appendChild(badge);
   }
   if(state==='processing'){badge.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Atualizando resumo do prontuário…';badge.style.color='#92400e';badge.style.background='#fef9c3';badge.style.borderColor='#fde047';}
   else if(state==='done'){badge.innerHTML='<i class="ti ti-sparkles"></i> Resumo do prontuário pronto';badge.style.color='var(--g700)';badge.style.background='var(--g50)';badge.style.borderColor='var(--g200)';setTimeout(()=>{if(badge)badge.style.display='none';},4000);}
