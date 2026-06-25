@@ -161,12 +161,18 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .kcol-empty{padding:24px 12px;text-align:center;color:var(--n400);font-size:11.5px}
 
 /* PATIENT HEADER */
-.pt-hdr-card{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12);padding:16px 20px;display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-shrink:0}
-.pth-av{width:46px;height:46px;border-radius:50%;background:var(--g100);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:var(--g700);flex-shrink:0}
-.pth-name{font-size:15px;font-weight:600;color:var(--n700);letter-spacing:-.01em}
-.pth-sub{font-size:11.5px;color:var(--n400);margin-top:2px}
-.pth-badges{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
-.pth-badge{font-size:10px;padding:2px 8px;border-radius:var(--r4)}
+.pt-hdr-card{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12);padding:10px 14px;display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-shrink:0;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.pth-av{width:40px;height:40px;border-radius:50%;background:var(--g100);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--g700);flex-shrink:0}
+.pth-main{display:flex;flex-direction:column;min-width:0;flex:1}
+.pth-name{font-size:14px;font-weight:600;color:var(--n700);letter-spacing:-.01em;display:flex;align-items:center;gap:6px}
+.pth-sub{font-size:11px;color:var(--n400);margin-top:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pth-sub .dot{width:3px;height:3px;border-radius:50%;background:var(--n200)}
+.pth-badges{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap}
+.pth-badge{font-size:10px;padding:2px 8px;border-radius:var(--r4);display:inline-flex;align-items:center;gap:4px}
+.pth-info-card{display:flex;align-items:center;gap:8px;padding:6px 10px;border:0.5px solid var(--n150);border-radius:10px;background:var(--n50);min-width:0}
+.pth-info-card i{font-size:14px;color:var(--n400);flex-shrink:0}
+.pth-info-card .pic-lbl{font-size:9.5px;color:var(--n400);text-transform:uppercase;letter-spacing:.05em;font-weight:600;line-height:1.1}
+.pth-info-card .pic-val{font-size:12px;color:var(--n700);font-weight:500;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
 .pth-badge.green{background:var(--g50);color:var(--g700);border:0.5px solid var(--g200)}
 .pth-badge.gray{background:var(--n75);color:var(--n500);border:0.5px solid var(--n200)}
 .pth-actions{margin-left:auto;display:flex;gap:5px}
@@ -225,22 +231,23 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 
 /* NOVO ATENDIMENTO SPLIT */
 .split-wrap{display:grid;grid-template-columns:1fr 1fr;gap:14px;border:none;border-radius:0;overflow:visible;flex:1;min-height:0;position:relative}
-.split-left{background:var(--white);border:0.5px solid var(--n150);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;position:relative;box-shadow:0 6px 18px -8px rgba(15,40,60,.12),0 2px 4px rgba(0,0,0,.04);transition:box-shadow .2s}
-.split-right{background:var(--n50);border:0.5px solid var(--n150);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;position:relative;box-shadow:0 6px 18px -8px rgba(15,40,60,.12),0 2px 4px rgba(0,0,0,.04);transition:box-shadow .2s}
+.split-left{background:transparent;border:none;border-radius:16px;display:flex;flex-direction:column;overflow:visible;position:relative;box-shadow:none;padding:4px;transition:box-shadow .2s}
+.split-right{background:transparent;border:none;border-radius:16px;display:flex;flex-direction:column;overflow:visible;position:relative;box-shadow:none;padding:4px;transition:box-shadow .2s}
 .split-wrap.exp-left .split-left,.split-wrap.exp-right .split-right{position:absolute;inset:0;z-index:60;box-shadow:0 24px 60px -16px rgba(15,40,60,.35),0 8px 20px -6px rgba(0,0,0,.18)}
 .split-wrap.exp-left::before,.split-wrap.exp-right::before{content:"";position:absolute;inset:0;background:rgba(15,23,42,.18);backdrop-filter:blur(2px);z-index:55;border-radius:16px;animation:fadeOv .18s ease}
 @keyframes fadeOv{from{opacity:0}to{opacity:1}}
 .panel-expand{position:absolute;top:16px;right:16px;z-index:30;width:24px;height:24px;border-radius:7px;border:0.5px solid var(--n200);background:rgba(255,255,255,.9);backdrop-filter:blur(8px);color:var(--n500);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.08);transition:all .14s}
 .panel-expand:hover{color:var(--g600);border-color:var(--g300);background:var(--g50)}
 .panel-expand .ti{font-size:14px}
-.pront-header{margin:10px 10px 0 10px;padding:7px 44px 7px 12px;border-radius:12px 12px 0 0;border:0.5px solid var(--n150);border-bottom:0.5px dashed var(--n100);display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.78);backdrop-filter:blur(14px) saturate(180%);gap:6px;flex-shrink:0;box-shadow:0 6px 18px -10px rgba(15,40,60,.18),0 1px 3px rgba(0,0,0,.04);position:relative;z-index:5}
-.pront-label{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--n400)}
-.toolbar{margin:0 10px;padding:4px 10px;border-radius:0 0 12px 12px;border:0.5px solid var(--n150);border-top:none;display:flex;gap:2px;background:rgba(250,251,252,.85);backdrop-filter:blur(14px) saturate(180%);flex-shrink:0;flex-wrap:wrap;box-shadow:0 6px 18px -12px rgba(15,40,60,.15);position:relative;z-index:4}
+.pront-header{margin:0 4px 8px 4px;padding:2px 44px 2px 4px;border-radius:0;border:none;display:flex;align-items:center;justify-content:space-between;background:transparent;backdrop-filter:none;gap:8px;flex-shrink:0;box-shadow:none;position:relative;z-index:5}
+.pront-label{font-size:13px;font-weight:600;letter-spacing:-.01em;text-transform:none;color:var(--n700);display:inline-flex;align-items:center;gap:6px}
+.pront-label::before{content:"";display:inline-block;width:18px;height:18px;background:var(--g100);border-radius:6px;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2316a34a' stroke-width='2'><path d='M14 3v4a1 1 0 0 0 1 1h4'/><path d='M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z'/><path d='M9 12h6M9 16h4'/></svg>");background-size:12px;background-repeat:no-repeat;background-position:center}
+.toolbar{margin:0 4px 10px 4px;padding:4px 8px;border-radius:10px;border:0.5px solid var(--n150);border-top:0.5px solid var(--n150);display:flex;gap:2px;background:var(--n50);backdrop-filter:none;flex-shrink:0;flex-wrap:wrap;box-shadow:0 1px 2px rgba(0,0,0,.03);position:relative;z-index:4}
 .tbtn{width:28px;height:28px;border-radius:8px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--n500);font-size:12px;font-weight:500;font-family:var(--mono);transition:all .12s}
 .tbtn:hover{background:var(--n100);color:var(--g600)}
 .tbtn .ti{font-size:12px}
 .tsep{width:0.5px;background:var(--n200);margin:2px 3px}
-.pront-area{flex:1;padding:14px 14px 88px 14px;margin-top:8px;font-family:var(--mono);font-size:11.5px;color:var(--n700);resize:none;outline:none;border:none;background:transparent;line-height:1.75;min-height:0}
+.pront-area{flex:1;padding:18px 18px 92px 18px;margin:0 4px;font-family:var(--mono);font-size:11.5px;color:var(--n700);resize:none;outline:none;border:0.5px solid var(--n150);background:#fff;border-radius:14px;line-height:1.75;min-height:0;box-shadow:0 18px 40px -18px rgba(15,40,60,.28),0 4px 10px -4px rgba(15,40,60,.08);position:relative;z-index:6}
 .pront-area::placeholder{color:var(--n300)}
 
 /* NOTE PERSONAL */
@@ -279,7 +286,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .dm-item.green .ti{color:var(--g500)}
 
 /* AI RIGHT — TRANSCRIPTION */
-.trans-bar{margin:10px 10px 0 10px;border-radius:12px;border:0.5px solid var(--n150);background:rgba(255,255,255,.82);backdrop-filter:blur(14px) saturate(180%);box-shadow:0 6px 18px -10px rgba(15,40,60,.18),0 1px 3px rgba(0,0,0,.04);flex-shrink:0;overflow:hidden;transition:max-height .28s cubic-bezier(.4,0,.2,1);max-height:46px;position:relative;z-index:5}
+.trans-bar{margin:0 4px 8px 4px;border-radius:10px;border:0.5px solid var(--n150);background:var(--n50);backdrop-filter:none;box-shadow:0 1px 2px rgba(0,0,0,.03);flex-shrink:0;overflow:hidden;transition:max-height .28s cubic-bezier(.4,0,.2,1);max-height:46px;position:relative;z-index:5}
 .trans-bar.exp2{max-height:115px}
 .trans-bar.exp3{max-height:340px}
 .trans-bar-top{padding:5px 44px 5px 10px;display:flex;align-items:center;gap:7px;min-height:34px}
@@ -298,7 +305,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .trans-line:last-child{border-bottom:none;color:var(--n700);font-weight:500;font-style:normal}
 
 /* AI STAGE */
-.ai-stage{flex:1;position:relative;display:flex;flex-direction:column;overflow:hidden;padding-bottom:130px;padding-top:8px}
+.ai-stage{flex:1;position:relative;display:flex;flex-direction:column;overflow:hidden;padding:16px 4px 130px 4px;margin:0 4px;background:#fff;border:0.5px solid var(--n150);border-radius:14px;box-shadow:0 18px 40px -18px rgba(15,40,60,.28),0 4px 10px -4px rgba(15,40,60,.08);z-index:6}
 .ai-bg-icon{position:absolute;opacity:0.04;pointer-events:none;top:50%;left:50%;transform:translate(-50%,-55%);z-index:0}
 .ai-bg-icon .ti{font-size:120px;color:var(--g600)}
 .ai-orb-center{flex:1;display:flex;align-items:center;justify-content:center;position:relative;z-index:2}
@@ -883,15 +890,31 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 
       <div class="pt-hdr-card" id="pt-hdr-card">
         <div class="pth-av" id="pth-av">--</div>
-        <div id="pth-full-info">
-          <div class="pth-name" id="pth-name">—</div>
-          <div class="pth-sub" id="pth-sub">—</div>
+        <div id="pth-full-info" class="pth-main">
+          <div class="pth-name"><span id="pth-name">—</span><i class="ti ti-rosette-discount-check" style="color:var(--g600);font-size:14px" title="Cadastro verificado"></i></div>
+          <div class="pth-sub">
+            <span id="pth-dob-age">—</span>
+            <span class="dot"></span>
+            <span id="pth-sexo"><i class="ti ti-venus" style="font-size:11px"></i> —</span>
+            <span class="dot"></span>
+            <span id="pth-conv"><i class="ti ti-shield-check" style="font-size:11px"></i> —</span>
+            <span class="dot"></span>
+            <span id="pth-tel"><i class="ti ti-phone" style="font-size:11px"></i> —</span>
+          </div>
           <div class="pth-badges">
-            <span class="pth-badge green" id="pth-conv">—</span>
-            <span class="pth-badge gray" id="pth-sus">SUS: —</span>
-            <span class="pth-badge gray" id="pth-idade">—</span>
+            <span class="pth-badge gray" id="pth-sus" style="display:none">SUS: —</span>
             <span class="pth-badge gray" id="pth-medico" style="display:none">—</span>
           </div>
+          <!-- hidden legacy nodes for compatibility -->
+          <span id="pth-idade" style="display:none"></span>
+        </div>
+        <div class="pth-info-card" title="Última consulta">
+          <i class="ti ti-calendar-event"></i>
+          <div><div class="pic-lbl">Última consulta</div><div class="pic-val" id="pth-last-visit">—</div></div>
+        </div>
+        <div class="pth-info-card" title="Profissional responsável">
+          <i class="ti ti-user-check"></i>
+          <div><div class="pic-lbl">Profissional</div><div class="pic-val" id="pth-prof">—</div></div>
         </div>
         <div id="pth-mini-info" style="display:none;flex:1">
           <span class="pth-name" id="pth-mini-name" style="font-size:13px">—</span>
@@ -2120,15 +2143,25 @@ async function openPatient(id){
   document.getElementById('breadcrumb').innerHTML='<span>/ '+currentPatient.name+'</span>';
   document.getElementById('pth-av').textContent=currentPatient.init;
   document.getElementById('pth-name').textContent=currentPatient.name;
-  document.getElementById('pth-sub').textContent='Nasc. '+currentPatient.dob+' · '+currentPatient.tel;
-  document.getElementById('pth-conv').textContent=currentPatient.conv;
-  document.getElementById('pth-sus').textContent='SUS: '+currentPatient.sus;
   const yr=new Date().getFullYear();
   const born=parseInt(currentPatient.dob.split('/')[2]);
-  document.getElementById('pth-idade').textContent=(yr-born)+' anos';
+  const idade=(yr-born);
+  document.getElementById('pth-idade').textContent=idade+' anos';
+  const dobAge=document.getElementById('pth-dob-age');
+  if(dobAge)dobAge.innerHTML='<i class="ti ti-cake" style="font-size:11px"></i> '+currentPatient.dob+' ('+idade+' anos)';
+  const sx=document.getElementById('pth-sexo');
+  if(sx){const s=(currentPatient.sexo||'').toLowerCase();const ic=s.startsWith('m')?'ti-mars':(s.startsWith('f')?'ti-venus':'ti-gender-genderless');sx.innerHTML='<i class="ti '+ic+'" style="font-size:11px"></i> '+(currentPatient.sexo||'—');}
+  const cv=document.getElementById('pth-conv');if(cv)cv.innerHTML='<i class="ti ti-shield-check" style="font-size:11px"></i> '+(currentPatient.conv||'—');
+  const tl=document.getElementById('pth-tel');if(tl)tl.innerHTML='<i class="ti ti-phone" style="font-size:11px"></i> '+(currentPatient.tel||'—');
+  const sus=document.getElementById('pth-sus');
+  if(sus){if(currentPatient.sus&&currentPatient.sus!=='—'){sus.textContent='SUS: '+currentPatient.sus;sus.style.display='';}else{sus.style.display='none';}}
   const mb=document.getElementById('pth-medico');
   if(currentPatient.medico&&medicoNames[currentPatient.medico]){mb.textContent=medicoNames[currentPatient.medico];mb.style.display='';}
   else mb.style.display='none';
+  const prof=document.getElementById('pth-prof');
+  if(prof)prof.textContent=(currentPatient.medico&&medicoNames[currentPatient.medico])||(currentUser?.email?.split('@')[0])||'—';
+  const lv=document.getElementById('pth-last-visit');
+  if(lv){try{if(atendimentos&&atendimentos.length){const a=atendimentos[0];lv.textContent=(a.date||a.data||a.consulta||'—');}else lv.textContent='Sem registros';}catch(e){lv.textContent='—';}}
   document.getElementById('print-name').textContent=currentPatient.name;
   document.getElementById('print-sub1').textContent='CPF: '+(currentPatient.cpf||'—')+' · Nasc.: '+currentPatient.dob+' · Tel.: '+currentPatient.tel;
   document.getElementById('print-sub2').textContent='Endereço: '+currentPatient.end;
@@ -4167,8 +4200,10 @@ function iniciarNovoAtendimento(){
   document.getElementById('page-title').onclick=null;
   document.getElementById('breadcrumb').innerHTML='<span>/ Novo paciente</span>';
   document.getElementById('pth-av').textContent='+';document.getElementById('pth-name').textContent='Novo paciente';
-  document.getElementById('pth-sub').textContent='';document.getElementById('pth-conv').textContent='Particular';
-  document.getElementById('pth-sus').textContent='SUS: —';document.getElementById('pth-idade').textContent='';
+  const _set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  _set('pth-dob-age','—');_set('pth-sexo','—');_set('pth-conv','Particular');_set('pth-tel','—');
+  _set('pth-idade','');_set('pth-last-visit','—');_set('pth-prof','—');
+  const sus=document.getElementById('pth-sus');if(sus)sus.style.display='none';
   const mb=document.getElementById('pth-medico');if(mb)mb.style.display='none';
   document.getElementById('print-name').textContent='';document.getElementById('print-sub1').textContent='';
   document.getElementById('print-sub2').textContent='';document.getElementById('print-sub3').textContent='';
