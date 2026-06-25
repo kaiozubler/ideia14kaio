@@ -4200,8 +4200,10 @@ function iniciarNovoAtendimento(){
   document.getElementById('page-title').onclick=null;
   document.getElementById('breadcrumb').innerHTML='<span>/ Novo paciente</span>';
   document.getElementById('pth-av').textContent='+';document.getElementById('pth-name').textContent='Novo paciente';
-  document.getElementById('pth-sub').textContent='';document.getElementById('pth-conv').textContent='Particular';
-  document.getElementById('pth-sus').textContent='SUS: —';document.getElementById('pth-idade').textContent='';
+  const _set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  _set('pth-dob-age','—');_set('pth-sexo','—');_set('pth-conv','Particular');_set('pth-tel','—');
+  _set('pth-idade','');_set('pth-last-visit','—');_set('pth-prof','—');
+  const sus=document.getElementById('pth-sus');if(sus)sus.style.display='none';
   const mb=document.getElementById('pth-medico');if(mb)mb.style.display='none';
   document.getElementById('print-name').textContent='';document.getElementById('print-sub1').textContent='';
   document.getElementById('print-sub2').textContent='';document.getElementById('print-sub3').textContent='';
