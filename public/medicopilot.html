@@ -890,15 +890,31 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 
       <div class="pt-hdr-card" id="pt-hdr-card">
         <div class="pth-av" id="pth-av">--</div>
-        <div id="pth-full-info">
-          <div class="pth-name" id="pth-name">—</div>
-          <div class="pth-sub" id="pth-sub">—</div>
+        <div id="pth-full-info" class="pth-main">
+          <div class="pth-name"><span id="pth-name">—</span><i class="ti ti-rosette-discount-check" style="color:var(--g600);font-size:14px" title="Cadastro verificado"></i></div>
+          <div class="pth-sub">
+            <span id="pth-dob-age">—</span>
+            <span class="dot"></span>
+            <span id="pth-sexo"><i class="ti ti-venus" style="font-size:11px"></i> —</span>
+            <span class="dot"></span>
+            <span id="pth-conv"><i class="ti ti-shield-check" style="font-size:11px"></i> —</span>
+            <span class="dot"></span>
+            <span id="pth-tel"><i class="ti ti-phone" style="font-size:11px"></i> —</span>
+          </div>
           <div class="pth-badges">
-            <span class="pth-badge green" id="pth-conv">—</span>
-            <span class="pth-badge gray" id="pth-sus">SUS: —</span>
-            <span class="pth-badge gray" id="pth-idade">—</span>
+            <span class="pth-badge gray" id="pth-sus" style="display:none">SUS: —</span>
             <span class="pth-badge gray" id="pth-medico" style="display:none">—</span>
           </div>
+          <!-- hidden legacy nodes for compatibility -->
+          <span id="pth-idade" style="display:none"></span>
+        </div>
+        <div class="pth-info-card" title="Última consulta">
+          <i class="ti ti-calendar-event"></i>
+          <div><div class="pic-lbl">Última consulta</div><div class="pic-val" id="pth-last-visit">—</div></div>
+        </div>
+        <div class="pth-info-card" title="Profissional responsável">
+          <i class="ti ti-user-check"></i>
+          <div><div class="pic-lbl">Profissional</div><div class="pic-val" id="pth-prof">—</div></div>
         </div>
         <div id="pth-mini-info" style="display:none;flex:1">
           <span class="pth-name" id="pth-mini-name" style="font-size:13px">—</span>
