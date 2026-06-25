@@ -2161,7 +2161,7 @@ async function openPatient(id){
   const prof=document.getElementById('pth-prof');
   if(prof)prof.textContent=(currentPatient.medico&&medicoNames[currentPatient.medico])||(currentUser?.email?.split('@')[0])||'—';
   const lv=document.getElementById('pth-last-visit');
-  if(lv){try{const ats=(patientRecords?.atendimentos||[]);if(ats.length){const a=ats[0];lv.textContent=(a.date||a.data||'—');}else lv.textContent='Sem registros';}catch(e){lv.textContent='—';}}
+  if(lv){try{if(atendimentos&&atendimentos.length){const a=atendimentos[0];lv.textContent=(a.date||a.data||a.consulta||'—');}else lv.textContent='Sem registros';}catch(e){lv.textContent='—';}}
   document.getElementById('print-name').textContent=currentPatient.name;
   document.getElementById('print-sub1').textContent='CPF: '+(currentPatient.cpf||'—')+' · Nasc.: '+currentPatient.dob+' · Tel.: '+currentPatient.tel;
   document.getElementById('print-sub2').textContent='Endereço: '+currentPatient.end;
