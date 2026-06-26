@@ -2174,8 +2174,8 @@ async function openPatient(id){
   document.getElementById('d-end').value=currentPatient.end;
   document.getElementById('d-nasc').value=currentPatient.nasc;
   document.getElementById('d-sus').value=currentPatient.sus==='—'?'':currentPatient.sus;
-  const cv=document.getElementById('d-conv');if(cv)cv.value=currentPatient.conv||'Particular';
-  const sx=document.getElementById('d-sexo');if(sx)sx.value=currentPatient.sexo||'Feminino';
+  const cv2=document.getElementById('d-conv');if(cv2)cv2.value=currentPatient.conv||'Particular';
+  const sx2=document.getElementById('d-sexo');if(sx2)sx2.value=currentPatient.sexo||'Feminino';
   const ms=document.getElementById('d-medico');if(ms)ms.value=currentPatient.medico||'';
   const op=document.getElementById('d-ocup');if(op)op.value=currentPatient.ocup||'';
   const gs=document.getElementById('d-grupo');if(gs){populateGrupoSelect(gs);gs.value=getPatientGrupo(currentPatient.id)||'';}
