@@ -682,6 +682,197 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .ag-tag.res{background:#FFF3E0;color:#F57C00}
 .ag-empty{text-align:center;padding:60px 20px;color:var(--n400)}
 .ag-empty p{font-size:13px;margin-top:10px}
+
+/* ============================================================
+   LIQUID GLASS — aba Atendimentos (novo visual)
+   Scoped to #atend-novo-view to preserve outras telas.
+   ============================================================ */
+#atend-novo-view{
+  height:auto !important;
+  min-height:560px;
+  padding:18px 22px 22px 22px;
+  background:linear-gradient(135deg,#eef8f1 0%,#f3f1fb 45%,#fdf6ec 100%);
+  border-radius:28px;
+  overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Inter,sans-serif;
+}
+#atend-novo-view::before,
+#atend-novo-view::after{
+  content:"";position:absolute;border-radius:50%;filter:blur(60px);opacity:.55;pointer-events:none;z-index:0;
+}
+#atend-novo-view::before{width:380px;height:380px;background:#a7f3d0;top:-130px;left:-120px}
+#atend-novo-view::after{width:340px;height:340px;background:#ddd6fe;top:80px;right:-140px}
+#atend-novo-view > *{position:relative;z-index:1}
+
+/* split layout */
+#atend-novo-view .split-wrap{gap:22px}
+#atend-novo-view .split-left,
+#atend-novo-view .split-right{
+  background:rgba(255,255,255,.6);
+  border:0.5px solid rgba(255,255,255,.85);
+  border-radius:28px;
+  backdrop-filter:blur(22px) saturate(180%);
+  box-shadow:0 20px 45px -20px rgba(15,40,60,.25),0 4px 12px -4px rgba(15,40,60,.08);
+  padding:6px 6px 8px 6px;
+}
+
+/* expand button (top right) */
+#atend-novo-view .panel-expand{
+  width:30px;height:30px;border-radius:10px;
+  background:rgba(255,255,255,.85);
+  border:0.5px solid rgba(255,255,255,.9);
+  box-shadow:0 4px 10px rgba(15,40,60,.12);
+  color:#475569;top:14px;right:14px;
+}
+#atend-novo-view .panel-expand:hover{background:#fff;color:#10b981;border-color:#a7f3d0}
+
+/* header (Prontuário title) */
+#atend-novo-view .pront-header{
+  padding:12px 50px 8px 16px;margin:0;
+}
+#atend-novo-view .pront-label{
+  font-size:14px;font-weight:600;color:#1e293b;gap:10px;
+}
+#atend-novo-view .pront-label::before{
+  width:30px;height:30px;border-radius:10px;
+  background:linear-gradient(135deg,#34d399,#059669);
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M14 3v4a1 1 0 0 0 1 1h4'/><path d='M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z'/><path d='M9 12h6M9 16h4'/></svg>");
+  background-size:18px;background-repeat:no-repeat;background-position:center;
+  box-shadow:0 6px 14px rgba(16,185,129,.35);
+}
+#atend-novo-view .save-status{
+  background:rgba(255,255,255,.75) !important;
+  border:0.5px solid rgba(255,255,255,.9) !important;
+  border-radius:999px !important;
+  padding:5px 12px !important;font-size:11px !important;
+  box-shadow:0 2px 6px rgba(15,40,60,.08);
+}
+
+/* toolbar (intermediate relief) */
+#atend-novo-view .toolbar{
+  margin:0 12px 10px 12px;padding:6px 10px;
+  background:rgba(255,255,255,.55);
+  border:0.5px solid rgba(255,255,255,.85);
+  border-radius:14px;
+  backdrop-filter:blur(14px) saturate(180%);
+  box-shadow:0 4px 10px -4px rgba(15,40,60,.12);
+}
+#atend-novo-view .tbtn{border-radius:10px}
+#atend-novo-view .tbtn:hover{background:rgba(255,255,255,.9);color:#059669}
+#atend-novo-view .nota-interna-btn{
+  background:linear-gradient(135deg,#fef9c3,#fde68a) !important;
+  border:0.5px solid #fcd34d !important;border-radius:999px !important;
+  padding:3px 10px !important;color:#92400e !important;
+}
+
+/* main writing surface — top relief */
+#atend-novo-view .pront-area{
+  margin:0 12px;
+  border-radius:20px;
+  border:0.5px solid rgba(255,255,255,.9);
+  background:#ffffff;
+  box-shadow:0 24px 50px -22px rgba(15,40,60,.32),0 6px 14px -4px rgba(15,40,60,.10),inset 0 1px 0 rgba(255,255,255,.9);
+  padding:20px 20px 96px 20px;
+}
+
+/* floating footer actions (liquid glass pill) */
+#atend-novo-view .left-footer{padding:10px 18px 16px 18px}
+#atend-novo-view .left-footer .lf-actions,
+#atend-novo-view .ai-ctrls,
+#atend-novo-view .ai-input-row{
+  background:rgba(255,255,255,.72);
+  border:0.5px solid rgba(255,255,255,.95);
+  border-radius:999px;
+  backdrop-filter:blur(20px) saturate(180%);
+  box-shadow:0 12px 28px -10px rgba(15,40,60,.28),0 2px 6px rgba(15,40,60,.08),inset 0 1px 0 rgba(255,255,255,.85);
+  padding:6px 10px;
+}
+#atend-novo-view .ai-input-row{padding:6px 6px 6px 14px}
+#atend-novo-view .left-footer .btn,
+#atend-novo-view .ai-ctrls .btn{
+  border-radius:999px;border:0.5px solid rgba(255,255,255,.9);
+  background:rgba(255,255,255,.85);color:#475569;
+  height:30px;padding:0 12px;font-weight:600;font-size:11.5px;
+  box-shadow:0 2px 6px rgba(15,40,60,.06);
+}
+#atend-novo-view .ai-ctrls .btn.primary,
+#atend-novo-view .left-footer .btn.primary{
+  background:linear-gradient(135deg,#10b981,#059669);
+  color:#fff;border:0.5px solid #059669;
+  box-shadow:0 8px 18px -4px rgba(16,185,129,.45),inset 0 1px 0 rgba(255,255,255,.3);
+}
+#atend-novo-view .ai-sbtn,
+#atend-novo-view .lf-send{
+  width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,#10b981,#059669);
+  box-shadow:0 6px 14px -2px rgba(16,185,129,.45),inset 0 1px 0 rgba(255,255,255,.3);
+}
+
+/* "Sugestão" group — keep structure, redraw in new style */
+#atend-novo-view .sug-grp{
+  background:linear-gradient(135deg,#fef3c7,#fde68a) !important;
+  border:0.5px solid #fcd34d !important;
+  border-radius:999px !important;
+  height:30px !important;
+  padding:0 4px !important;
+  box-shadow:0 6px 14px -4px rgba(217,158,21,.35),inset 0 1px 0 rgba(255,255,255,.6) !important;
+  overflow:visible !important;
+}
+#atend-novo-view .sug-grp > button{
+  background:transparent !important;color:#92400e !important;
+  height:100% !important;padding:0 10px !important;font-size:11.5px !important;
+  font-weight:600 !important;border-radius:999px !important;
+}
+#atend-novo-view .sug-grp > button:hover{background:rgba(255,255,255,.55) !important}
+#atend-novo-view .sug-grp > div{background:rgba(217,158,21,.35) !important}
+#atend-novo-view .sug-grp > span{
+  background:linear-gradient(135deg,#fef3c7,#fde68a) !important;
+  color:#b45309 !important;border:0.5px solid #fcd34d;top:-9px !important;
+}
+
+/* AI stage card */
+#atend-novo-view .ai-stage{
+  margin:8px 12px 0 12px;
+  border-radius:20px;
+  background:#ffffff;
+  border:0.5px solid rgba(255,255,255,.9);
+  box-shadow:0 24px 50px -22px rgba(15,40,60,.32),0 6px 14px -4px rgba(15,40,60,.10),inset 0 1px 0 rgba(255,255,255,.9);
+  padding:16px 8px 140px 8px;
+}
+#atend-novo-view .trans-bar{
+  margin:0 12px 8px 12px;
+  background:rgba(255,255,255,.55);
+  border:0.5px solid rgba(255,255,255,.85);
+  border-radius:14px;
+  backdrop-filter:blur(14px) saturate(180%);
+  box-shadow:0 4px 10px -4px rgba(15,40,60,.12);
+}
+
+/* Mic orb — soft emerald liquid bubble (keeps original markup) */
+#atend-novo-view .orb{
+  width:62px;height:62px;border-radius:50%;
+  background:linear-gradient(135deg,#d1fae5,#a7f3d0);
+  border:1px solid #6ee7b7;
+  box-shadow:0 12px 24px -6px rgba(16,185,129,.45),inset 0 1px 0 rgba(255,255,255,.7);
+}
+#atend-novo-view .orb .ti{color:#059669}
+#atend-novo-view .orb.live{
+  background:linear-gradient(135deg,#10b981,#059669);
+  border-color:#059669;
+}
+#atend-novo-view .orb.live .ti{color:#fff}
+#atend-novo-view .orb-lbl{color:#94a3b8;font-size:12px;margin-top:10px}
+
+/* AI bottom container */
+#atend-novo-view .ai-bottom{padding:10px 18px 16px 18px;gap:10px}
+
+/* sub-tabs (Cadastro / Atendimentos / etc) — chip pills */
+#atend-novo-view ~ * .subtab,
+.tab-strip .tab{border-radius:999px !important}
+
+/* dropdown actions caption */
+#atend-novo-view .lf-actions .btn{height:30px}
+
 </style>
 </head>
 <body>
