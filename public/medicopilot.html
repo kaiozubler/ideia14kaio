@@ -873,6 +873,164 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 /* dropdown actions caption */
 #atend-novo-view .lf-actions .btn{height:30px}
 
+/* ============================================================
+   LIQUID GLASS — Patient Detail / Cadastro
+   Inspired by Apple liquid glass: translucid, soft, rounded.
+   Scoped to #s-patient-detail to avoid leaking to other screens.
+   ============================================================ */
+#s-patient-detail{
+  position:relative;
+  background:
+    radial-gradient(900px 600px at 8% -10%, rgba(167,243,208,.55), transparent 60%),
+    radial-gradient(800px 500px at 95% 5%, rgba(196,181,253,.45), transparent 60%),
+    radial-gradient(700px 500px at 50% 110%, rgba(253,224,170,.45), transparent 60%),
+    linear-gradient(135deg,#eef8f1 0%,#f3f1fb 45%,#fdf6ec 100%);
+  padding:14px 16px 18px;
+  border-radius:24px;
+  overflow:hidden;
+}
+#s-patient-detail::before,
+#s-patient-detail::after{
+  content:"";position:absolute;border-radius:50%;
+  filter:blur(60px);opacity:.55;pointer-events:none;z-index:0;
+}
+#s-patient-detail::before{
+  width:340px;height:340px;left:-80px;top:-60px;
+  background:radial-gradient(circle,#a7f3d0,transparent 70%);
+}
+#s-patient-detail::after{
+  width:300px;height:300px;right:-60px;bottom:-80px;
+  background:radial-gradient(circle,#ddd6fe,transparent 70%);
+}
+#s-patient-detail > *{position:relative;z-index:1}
+
+/* Patient header card → glass */
+#s-patient-detail .pt-hdr-card{
+  background:rgba(255,255,255,.62);
+  backdrop-filter:blur(22px) saturate(180%);
+  border:1px solid rgba(255,255,255,.85);
+  border-radius:24px;
+  padding:12px 18px;
+  box-shadow:0 10px 30px -12px rgba(15,42,80,.18),0 2px 6px rgba(15,42,80,.06),inset 0 1px 0 rgba(255,255,255,.9);
+}
+#s-patient-detail .pth-av{
+  background:linear-gradient(135deg,#34d399,#059669);
+  color:#fff;
+  box-shadow:0 6px 14px -4px rgba(16,185,129,.5),inset 0 1px 0 rgba(255,255,255,.4);
+}
+#s-patient-detail .pth-info-card{
+  background:rgba(255,255,255,.7);
+  border:1px solid rgba(255,255,255,.9);
+  border-radius:14px;
+  box-shadow:0 4px 10px -4px rgba(100,116,139,.18),inset 0 1px 0 rgba(255,255,255,.9);
+}
+#s-patient-detail .pth-badge.gray{
+  background:rgba(255,255,255,.7);
+  border:1px solid rgba(255,255,255,.9);
+  color:#475569;
+}
+#s-patient-detail .ib,
+#s-patient-detail .pth-actions .btn{
+  background:rgba(255,255,255,.7);
+  border:1px solid rgba(255,255,255,.9);
+  border-radius:999px;
+  box-shadow:0 4px 10px -4px rgba(100,116,139,.2),inset 0 1px 0 rgba(255,255,255,.9);
+}
+#s-patient-detail .ib:hover{background:rgba(255,255,255,.95)}
+
+/* Tabs → liquid pills */
+#s-patient-detail .tabs-row{padding:8px 2px 14px}
+#s-patient-detail .tab{
+  background:rgba(255,255,255,.62);
+  border:1px solid rgba(255,255,255,.85);
+  color:#475569;font-weight:500;
+  padding:9px 18px;font-size:12.5px;
+  backdrop-filter:blur(14px);
+  box-shadow:0 4px 10px -4px rgba(100,116,139,.18),inset 0 1px 0 rgba(255,255,255,.9);
+}
+#s-patient-detail .tab:hover{background:rgba(255,255,255,.92)}
+#s-patient-detail .tab.on{
+  background:linear-gradient(135deg,#34d399,#059669);
+  border-color:transparent;color:#fff;
+  box-shadow:0 10px 22px -6px rgba(16,185,129,.55),0 2px 4px rgba(16,185,129,.25),inset 0 1px 0 rgba(255,255,255,.35);
+}
+
+/* Tab body → glass panel */
+#s-patient-detail .tab-body{
+  background:rgba(255,255,255,.6);
+  backdrop-filter:blur(22px) saturate(180%);
+  border:1px solid rgba(255,255,255,.85);
+  border-radius:32px;
+  padding:22px 24px;
+  box-shadow:0 20px 40px -20px rgba(15,42,80,.18),0 4px 10px rgba(15,42,80,.05),inset 0 1px 0 rgba(255,255,255,.9);
+}
+
+/* Form fields */
+#s-patient-detail .form-grid{gap:14px}
+#s-patient-detail .fld label{
+  color:#64748b;font-size:10.5px;letter-spacing:.06em;
+}
+#s-patient-detail .fld input,
+#s-patient-detail .fld select{
+  background:rgba(255,255,255,.78);
+  border:1px solid rgba(255,255,255,.95);
+  border-radius:14px;
+  height:40px;font-size:13px;color:#1e293b;
+  padding:0 14px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 1px 2px rgba(15,42,80,.04);
+  transition:box-shadow .18s ease,background .18s ease;
+}
+#s-patient-detail .fld input:focus,
+#s-patient-detail .fld select:focus{
+  background:#fff;border-color:#a7f3d0;
+  box-shadow:0 0 0 4px rgba(16,185,129,.15),inset 0 1px 0 rgba(255,255,255,.9);
+}
+
+/* Section headers — visually separate groups inside the glass panel */
+#s-patient-detail .sec-hd{
+  border-top:1px solid rgba(148,163,184,.22);
+  color:#64748b;font-size:10.5px;
+  margin-top:22px;padding-top:18px;
+}
+
+/* Attachments → glass chips */
+#s-patient-detail .attach-item{
+  background:rgba(255,255,255,.7);
+  border:1px solid rgba(255,255,255,.9);
+  border-radius:999px;
+  padding:8px 14px;font-size:12px;color:#475569;
+  box-shadow:0 4px 10px -4px rgba(100,116,139,.18),inset 0 1px 0 rgba(255,255,255,.9);
+}
+#s-patient-detail .attach-item:hover{background:rgba(255,255,255,.95)}
+#s-patient-detail .attach-add{
+  border:1px dashed rgba(100,116,139,.35);background:transparent;box-shadow:none;color:#94a3b8;
+}
+
+/* Footer buttons */
+#s-patient-detail .tab-body .btn{
+  background:rgba(255,255,255,.78);
+  border:1px solid rgba(255,255,255,.95);
+  border-radius:999px;
+  padding:9px 18px;font-size:12.5px;color:#475569;font-weight:600;
+  box-shadow:0 6px 14px -6px rgba(100,116,139,.25),inset 0 1px 0 rgba(255,255,255,.9);
+}
+#s-patient-detail .tab-body .btn:hover{background:#fff}
+#s-patient-detail .tab-body .btn.primary{
+  background:linear-gradient(135deg,#34d399,#059669);
+  border-color:transparent;color:#fff;
+  box-shadow:0 12px 24px -8px rgba(16,185,129,.55),0 2px 4px rgba(16,185,129,.25),inset 0 1px 0 rgba(255,255,255,.3);
+}
+#s-patient-detail .tab-body .btn.primary:hover{filter:brightness(1.05)}
+
+/* Atend-progress strip — keep coherent */
+#s-patient-detail .atend-progress{
+  background:rgba(255,255,255,.7);
+  backdrop-filter:blur(18px);
+  border:1px solid rgba(255,255,255,.9);
+  border-radius:18px;
+  box-shadow:0 6px 16px -8px rgba(15,42,80,.18);
+}
+
 </style>
 </head>
 <body>
