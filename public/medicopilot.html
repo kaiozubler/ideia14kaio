@@ -830,14 +830,43 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
   color:#b45309 !important;border:0.5px solid #fcd34d;top:-9px !important;
 }
 
-/* AI stage card */
+/* AI stage — transparent canvas so bubbles and controls float */
 #atend-novo-view .ai-stage{
   margin:8px 12px 0 12px;
   border-radius:20px;
-  background:#ffffff;
-  border:0.5px solid rgba(255,255,255,.9);
-  box-shadow:0 24px 50px -22px rgba(15,40,60,.32),0 6px 14px -4px rgba(15,40,60,.10),inset 0 1px 0 rgba(255,255,255,.9);
+  background:transparent;
+  border:none;
+  box-shadow:none;
   padding:16px 8px 140px 8px;
+}
+
+/* Bubbles with relief — floating on the glass background */
+#atend-novo-view .bbl{
+  backdrop-filter:blur(14px) saturate(160%);
+  border:0.5px solid rgba(255,255,255,.9);
+  box-shadow:0 6px 16px -4px rgba(15,40,60,.18),0 2px 4px rgba(15,40,60,.06),inset 0 1px 0 rgba(255,255,255,.85);
+}
+#atend-novo-view .bbl.ia{
+  background:rgba(219,234,254,.85);
+  color:#1e3a5f;
+}
+#atend-novo-view .bbl.usr{
+  background:rgba(58,143,58,.92);
+  color:#fff;
+  box-shadow:0 6px 16px -4px rgba(16,100,60,.28),0 2px 4px rgba(15,40,60,.08),inset 0 1px 0 rgba(255,255,255,.3);
+}
+#atend-novo-view .bbl.sug{
+  background:rgba(255,255,255,.85);
+  color:#1e293b;
+}
+#atend-novo-view .bbl.typing{
+  background:rgba(219,234,254,.85);
+}
+#atend-novo-view .bbl.pinned{
+  background:rgba(254,249,195,.9)!important;
+  border-color:rgba(252,211,77,.9)!important;
+  color:#1e293b!important;
+  box-shadow:0 6px 16px -4px rgba(180,140,0,.25),0 2px 4px rgba(15,40,60,.06),inset 0 1px 0 rgba(255,255,255,.85)!important;
 }
 #atend-novo-view .trans-bar{
   margin:0 12px 8px 12px;
