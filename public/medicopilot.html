@@ -688,9 +688,11 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
    Scoped to #atend-novo-view to preserve outras telas.
    ============================================================ */
 #atend-novo-view{
-  height:auto !important;
-  min-height:560px;
-  padding:18px 22px 22px 22px;
+  height:100% !important;
+  min-height:0;
+  padding:14px 22px 18px 22px;
+  display:flex;
+  flex-direction:column;
   background:linear-gradient(135deg,#eef8f1 0%,#f3f1fb 45%,#fdf6ec 100%);
   border-radius:28px;
   overflow:hidden;
@@ -1005,6 +1007,44 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
   border-radius:0;
   padding:0;
   box-shadow:none;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+}
+
+/* Each subtela's tab body should fit the viewport and scroll internally */
+#s-patient-detail .tab-body{
+  flex:1;
+  min-height:0;
+  overflow-y:auto;
+}
+#s-patient-detail #atend-novo-view,
+#s-patient-detail #atend-list-view,
+#s-patient-detail #atend-detail-view{
+  flex:1;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+}
+#s-patient-detail #atend-novo-view .split-wrap{
+  flex:1;
+  min-height:0;
+}
+#s-patient-detail #atend-novo-view .split-left,
+#s-patient-detail #atend-novo-view .split-right{
+  overflow:hidden;
+  min-height:0;
+}
+#s-patient-detail #atend-novo-view .pront-area{
+  flex:1;
+  min-height:0;
+  overflow-y:auto;
+}
+#s-patient-detail #atend-novo-view .ai-stage{
+  flex:1;
+  min-height:0;
+  overflow:hidden;
 }
 
 /* Form fields */
