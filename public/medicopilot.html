@@ -778,7 +778,8 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 }
 
 /* floating footer actions (liquid glass pill) */
-#atend-novo-view .left-footer{padding:10px 18px 16px 18px}
+#atend-novo-view .left-footer{padding:0}
+#atend-novo-view .ai-bottom{padding:0}
 #atend-novo-view .left-footer .lf-actions,
 #atend-novo-view .ai-ctrls,
 #atend-novo-view .ai-input-row{
@@ -788,6 +789,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
   backdrop-filter:blur(20px) saturate(180%);
   box-shadow:0 12px 28px -10px rgba(15,40,60,.28),0 2px 6px rgba(15,40,60,.08),inset 0 1px 0 rgba(255,255,255,.85);
   padding:6px 10px;
+  margin:0;
 }
 #atend-novo-view .ai-input-row{padding:6px 6px 6px 14px}
 #atend-novo-view .left-footer .btn,
@@ -895,7 +897,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 #atend-novo-view .orb-lbl{color:#94a3b8;font-size:12px;margin-top:10px}
 
 /* AI bottom container */
-#atend-novo-view .ai-bottom{padding:10px 18px 16px 18px;gap:10px}
+#atend-novo-view .ai-bottom{padding:0;gap:10px}
 
 /* sub-tabs (Cadastro / Atendimentos / etc) — chip pills */
 #atend-novo-view ~ * .subtab,
@@ -1506,7 +1508,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
               <!-- NOTA PESSOAL hidden input (preserved for data) -->
               <textarea id="nota-personal-ta" style="display:none"></textarea>
 
-              <div class="left-footer" style="padding:6px 10px">
+              <div class="left-footer">
                 <div class="lf-actions">
                   <div class="dropdown" id="actions-dropdown">
                     <button class="btn sm" onclick="toggleDropdown()"><i class="ti ti-dots"></i> Ações <i class="ti ti-chevron-up" style="font-size:10px"></i></button>
