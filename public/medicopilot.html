@@ -1143,6 +1143,155 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
   box-shadow:0 6px 16px -8px rgba(15,42,80,.18);
 }
 
+/* ============================================================
+   LIQUID GLASS — GLOBAL THEME (every screen except #s-patient-detail
+   which already has its own scoped tokens).
+   Apple-inspired translucent surfaces over a pastel gradient with
+   blurred color blobs. Soft borders, large radii, soft shadows.
+   ============================================================ */
+.main{
+  position:relative;
+  background:
+    radial-gradient(900px 600px at 6% -10%, rgba(167,243,208,.55), transparent 60%),
+    radial-gradient(800px 500px at 95% 5%, rgba(196,181,253,.45), transparent 60%),
+    radial-gradient(700px 500px at 50% 110%, rgba(253,224,170,.45), transparent 60%),
+    linear-gradient(135deg,#eef8f1 0%,#f3f1fb 45%,#fdf6ec 100%);
+}
+.main::before,
+.main::after{
+  content:"";position:absolute;border-radius:50%;
+  filter:blur(60px);opacity:.55;pointer-events:none;z-index:0;
+}
+.main::before{width:340px;height:340px;left:-80px;top:40px;background:radial-gradient(circle,#a7f3d0,transparent 70%)}
+.main::after{width:300px;height:300px;right:-60px;bottom:-80px;background:radial-gradient(circle,#ddd6fe,transparent 70%)}
+.main > *{position:relative;z-index:1}
+
+/* Topbar — glass */
+.topbar{
+  background:rgba(255,255,255,.55);
+  backdrop-filter:blur(22px) saturate(180%);
+  border-bottom:1px solid rgba(255,255,255,.7);
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset;
+}
+.topbar .ib{background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.8);border-radius:12px;backdrop-filter:blur(14px)}
+.topbar .ib:hover{background:rgba(255,255,255,.85)}
+
+/* Sidebar — soft white-glass */
+.sidebar{
+  background:rgba(255,255,255,.65);
+  backdrop-filter:blur(22px) saturate(180%);
+  border-right:1px solid rgba(255,255,255,.75);
+  box-shadow:1px 0 0 rgba(255,255,255,.5) inset;
+}
+.sb-item.active{background:rgba(16,185,129,.12);border-left-color:#10b981}
+
+/* Generic surfaces → glass cards.
+   We override the most common containers used in every screen.
+   #s-patient-detail keeps its own scoped rules (higher specificity). */
+.search-hero,
+.results-card,
+.kcol,
+.atd-search,
+.modal-card,
+.modal,
+.toast{
+  background:rgba(255,255,255,.62) !important;
+  backdrop-filter:blur(22px) saturate(180%);
+  border:1px solid rgba(255,255,255,.85) !important;
+  border-radius:20px !important;
+  box-shadow:0 10px 30px -12px rgba(15,42,80,.18),0 2px 6px rgba(15,42,80,.05),inset 0 1px 0 rgba(255,255,255,.9) !important;
+}
+.kcol{overflow:hidden}
+.kcol-hd{background:rgba(255,255,255,.6);border-bottom:1px solid rgba(255,255,255,.7)}
+.kcard{
+  background:rgba(255,255,255,.78);
+  backdrop-filter:blur(14px) saturate(180%);
+  border:1px solid rgba(255,255,255,.9);
+  border-radius:14px;
+  box-shadow:0 6px 16px -8px rgba(15,42,80,.15),inset 0 1px 0 rgba(255,255,255,.9);
+}
+.kcard:hover{transform:translateY(-1px);box-shadow:0 10px 24px -10px rgba(15,42,80,.22)}
+
+/* Rows inside results card */
+.pt-row{background:transparent;border-bottom:1px solid rgba(255,255,255,.6)}
+.pt-row:hover{background:rgba(255,255,255,.55)}
+
+/* Buttons — glass pill */
+.btn{
+  background:rgba(255,255,255,.65);
+  backdrop-filter:blur(14px) saturate(180%);
+  border:1px solid rgba(255,255,255,.85);
+  border-radius:999px;
+  box-shadow:0 4px 10px -4px rgba(15,42,80,.12),inset 0 1px 0 rgba(255,255,255,.9);
+}
+.btn:hover{background:rgba(255,255,255,.9)}
+.btn.primary{
+  background:linear-gradient(135deg,#34d399,#10b981);
+  border-color:rgba(16,185,129,.6);
+  color:#fff;
+  box-shadow:0 8px 20px -8px rgba(16,185,129,.5),inset 0 1px 0 rgba(255,255,255,.4);
+}
+.btn.primary:hover{background:linear-gradient(135deg,#10b981,#059669)}
+.btn.ghost{background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.3);color:#047857}
+
+/* Inputs / selects — glass field */
+.atd-search{background:rgba(255,255,255,.55) !important;border-radius:999px !important;padding:0 16px}
+.atd-period-select,
+.ff input,.ff select{
+  background:rgba(255,255,255,.6);
+  border:1px solid rgba(255,255,255,.85);
+  border-radius:12px;
+  backdrop-filter:blur(14px) saturate(180%);
+}
+
+/* Tab body inside content (not patient detail) */
+#s-receitas .tab-body,
+#s-agenda .tab-body,
+#s-indicadores .tab-body,
+#s-secretaria .tab-body,
+#s-copiloto .tab-body,
+#s-anamnese .tab-body{
+  background:rgba(255,255,255,.62);
+  backdrop-filter:blur(22px) saturate(180%);
+  border:1px solid rgba(255,255,255,.85);
+  border-radius:24px;
+  box-shadow:0 10px 30px -12px rgba(15,42,80,.18),inset 0 1px 0 rgba(255,255,255,.9);
+}
+
+/* Agenda widgets */
+.ag-wrap,.ag-card,.ag-card-full,.ag-toolbar,.ag-grid,.ag-menu,.ag-adv{
+  background:rgba(255,255,255,.62) !important;
+  backdrop-filter:blur(22px) saturate(180%);
+  border:1px solid rgba(255,255,255,.85) !important;
+  border-radius:20px !important;
+  box-shadow:0 10px 30px -12px rgba(15,42,80,.18),inset 0 1px 0 rgba(255,255,255,.9);
+}
+.ag-day,.ag-hourcell,.ag-cell{background:transparent}
+
+/* Conversas screen — keep its own layout, soften surfaces */
+#s-conversas{background:transparent}
+#s-conversas .wa-side,#s-conversas .wa-main,#s-conversas .wa-list-item,
+#s-conversas .wa-bubble,#s-conversas .wa-header,#s-conversas .wa-composer{
+  background:rgba(255,255,255,.62);
+  backdrop-filter:blur(18px) saturate(180%);
+  border:1px solid rgba(255,255,255,.85);
+  border-radius:18px;
+}
+
+/* Modals (popups) - glass */
+.modal-backdrop{background:rgba(15,23,42,.25);backdrop-filter:blur(10px)}
+.modal-card{padding:22px}
+
+/* Section headers / titles a tad more contrast on glass */
+.page-title{color:#0f172a}
+
+/* Avoid leak: keep #s-patient-detail using its own scoped backgrounds */
+#s-patient-detail{background:
+    radial-gradient(900px 600px at 8% -10%, rgba(167,243,208,.55), transparent 60%),
+    radial-gradient(800px 500px at 95% 5%, rgba(196,181,253,.45), transparent 60%),
+    radial-gradient(700px 500px at 50% 110%, rgba(253,224,170,.45), transparent 60%),
+    linear-gradient(135deg,#eef8f1 0%,#f3f1fb 45%,#fdf6ec 100%) !important;}
+
 </style>
 </head>
 <body>
