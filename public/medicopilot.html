@@ -1800,6 +1800,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
                   </div>
                   <button class="btn sm" id="toggle-bbl-btn" onclick="toggleBubbles()" title="Ocultar/mostrar mensagens"><i class="ti ti-eye" id="toggle-bbl-icon"></i></button>
                   <button class="btn sm primary" onclick="openAnamnesePanel()"><i class="ti ti-file-text-ai"></i> Anamnese</button>
+                  <button class="btn sm primary" onclick="openCondutaFlow()" title="Gerar conduta com documentos" style="background:linear-gradient(135deg,#34d399,#059669);border-color:rgba(5,150,105,.5)"><i class="ti ti-stethoscope"></i> Conduta</button>
                 </div>
                 <div class="ai-input-row">
                   <input class="ai-inp" id="ai-inp" type="text" placeholder="Mensagem para a IA..." onkeydown="if(event.key==='Enter')sendAIMsg()">
