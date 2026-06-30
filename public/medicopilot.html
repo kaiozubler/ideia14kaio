@@ -4456,6 +4456,179 @@ function openAnamnesePanel(){
   const model=models.find(m=>m.id==='default')||models[0];
   runAnamneseGeneration(model.id);
 }
+
+/* ========== CONDUTA FLOW ========== */
+const CF_SUGESTOES=[
+  "Cefaleia tensional — analgesia e profilaxia",
+  "Hipertensão arterial — início de anti-hipertensivo",
+  "Orientações gerais de estilo de vida",
+  "Solicitação de exames de rotina",
+  "Outra conduta"
+];
+const CF_CAMPOS=[
+  {key:'conduta',label:'Conduta',icon:'ti-clipboard-list',grad:'linear-gradient(135deg,#34d399,#059669)'},
+  {key:'medicamentos',label:'Medicamentos / Receita',icon:'ti-pill',grad:'linear-gradient(135deg,#818cf8,#6d28d9)'},
+  {key:'orientacoes',label:'Orientações Médicas',icon:'ti-heart',grad:'linear-gradient(135deg,#f472b6,#db2777)'},
+  {key:'exames',label:'Solicitação de Exames',icon:'ti-test-pipe',grad:'linear-gradient(135deg,#38bdf8,#0284c7)'},
+  {key:'atestado',label:'Atestado',icon:'ti-award',grad:'linear-gradient(135deg,#fb923c,#ea580c)'},
+  {key:'laudo',label:'Laudo',icon:'ti-eye',grad:'linear-gradient(135deg,#a78bfa,#7c3aed)'}
+];
+let condState=null;
+function cfDefaultState(){
+  return{
+    sugSel:null,
+    ativados:{conduta:true,medicamentos:true,orientacoes:true,exames:true,atestado:true,laudo:true},
+    vistos:{},
+    removidos:{},
+    canal:'whatsapp',
+    ciente:false,
+    condutaCards:[
+      {id:1,titulo:'Cefaleia tensional recorrente',texto:'Paciente relata dores de cabeça frequentes, opressivas, bilaterais. Intensidade moderada (6/10). Atenção ao uso excessivo de analgésicos.',tipo:'atencao'},
+      {id:2,titulo:'Ponto de atenção: Hipertensão associada',texto:'PA aferida: 148/92 mmHg. Avaliar início de anti-hipertensivo. Monitorar pressão nas próximas semanas.',tipo:'atencao'},
+      {id:3,titulo:'Conduta recomendada',texto:'Orientar higiene do sono, redução de estresse, hidratação adequada. Considerar fisioterapia para tensão cervical.',tipo:'conduta'}
+    ],
+    medicamentos:[
+      {id:1,nome:'Paracetamol',apresentacao:'500mg comprimido',quantidade:'20 comprimidos',instrucoes:'1 cp a cada 6h em caso de dor. Máx 4g/dia.',selecionado:true},
+      {id:2,nome:'Losartana potássica',apresentacao:'50mg comprimido',quantidade:'30 comprimidos',instrucoes:'1 cp pela manhã, em jejum.',selecionado:true},
+      {id:3,nome:'Amitriptilina',apresentacao:'25mg comprimido',quantidade:'30 comprimidos',instrucoes:'1 cp à noite, 30 min antes de dormir.',selecionado:false}
+    ],
+    orientacoes:'• Manter hidratação adequada: mínimo 2 litros de água por dia\n• Praticar atividade física leve (caminhada 30min/dia, 3x/semana)\n• Evitar exposição prolongada a telas\n• Dormir 7–9h por noite\n• Retornar em 30 dias ou antes em caso de piora',
+    exames:[
+      {id:1,nome:'Hemograma completo',instrucoes:'Jejum de 4 horas.',selecionado:true},
+      {id:2,nome:'Glicemia de jejum',instrucoes:'Jejum de 8 horas.',selecionado:true},
+      {id:3,nome:'Tomografia de crânio sem contraste',instrucoes:'Exclusão de lesões estruturais.',selecionado:true},
+      {id:4,nome:'Perfil lipídico',instrucoes:'Jejum de 12 horas.',selecionado:false}
+    ],
+    laudo:'LAUDO MÉDICO\n\nPaciente de 38 anos, sexo feminino, queixa principal de cefaleia recorrente há 3 meses.\n\nAo exame: PA 148/92 mmHg, FC 78 bpm.\n\nImpressão: Cefaleia tensional crônica (G44.2) + HAS (I10).\n\nConduta: tratamento conforme prescrição, exames complementares, retorno 30 dias.'
+  };
+}
+function openCondutaFlow(){
+  condState=cfDefaultState();
+  cfRenderSugestao();
+  openModal('cond-sugestao');
+}
+function cfRenderSugestao(){
+  const list=document.getElementById('cf-sug-list');
+  list.innerHTML=CF_SUGESTOES.map((s,i)=>{
+    const isLast=i===CF_SUGESTOES.length-1;
+    const act=condState.sugSel===i;
+    return `<button class="cf-sug${act?' active':''}${isLast?' dashed':''}" onclick="cfSelectSug(${i})"><span style="flex:1">${s}</span>${act?'<i class="ti ti-check" style="color:#059669"></i>':''}</button>`;
+  }).join('');
+  document.getElementById('cf-sug-outra').style.display=condState.sugSel===CF_SUGESTOES.length-1?'block':'none';
+  document.getElementById('cf-sug-next').disabled=condState.sugSel===null;
+}
+function cfSelectSug(i){condState.sugSel=i;cfRenderSugestao();}
+function condGoConduta(){
+  closeModal();cfRenderConduta();openModal('cond-conduta');
+}
+function condBackToSugestao(){closeModal();cfRenderSugestao();openModal('cond-sugestao');}
+function condBackToConduta(){closeModal();cfRenderConduta();openModal('cond-conduta');}
+function cfRenderConduta(){
+  const nav=document.getElementById('cf-nav-list');
+  nav.innerHTML=CF_CAMPOS.map(c=>{
+    const at=condState.ativados[c.key],vi=condState.vistos[c.key];
+    return `<div class="cf-nav-item">
+      <button class="cf-nav-btn${vi?' visto':''}" ${at?'':'disabled'} onclick="cfNavClick('${c.key}')">
+        <span class="cf-nav-badge" style="background:${vi?'linear-gradient(135deg,#34d399,#059669)':(at?c.grad:'rgba(203,213,225,.5)')}"><i class="ti ${c.icon}"></i></span>
+        <span style="flex:1">${c.label}</span>
+      </button>
+      <button class="cf-toggle" title="${at?'Desconsiderar':'Incluir'}" onclick="cfToggleAtivo('${c.key}',event)"><i class="ti ${at?'ti-check':'ti-ban'}" style="color:${at?'#059669':'#94a3b8'}"></i></button>
+    </div>`;
+  }).join('');
+  const scroll=document.getElementById('cf-cond-scroll');
+  scroll.innerHTML=CF_CAMPOS.filter(c=>condState.ativados[c.key]).map(c=>{
+    const vi=condState.vistos[c.key];
+    return `<div class="cf-section" data-key="${c.key}">
+      <div class="cf-section-hd">
+        <span class="cf-nav-badge" style="background:${vi?'linear-gradient(135deg,#34d399,#059669)':c.grad}"><i class="ti ${c.icon}"></i></span>
+        <span style="font-weight:700;font-size:13px;color:${vi?'#065f46':'#1e293b'}">${c.label}</span>
+        ${vi?'<span class="cf-pill-tag">✓ revisado</span>':'<span style="font-size:10px;color:#94a3b8">· gerado pela IA</span>'}
+      </div>
+      <div class="cf-section-body">${cfRenderBody(c.key)}</div>
+    </div>`;
+  }).join('');
+  // observer for vistos
+  if(window.__cfObs)window.__cfObs.disconnect();
+  window.__cfObs=new IntersectionObserver((ents)=>{
+    let changed=false;
+    ents.forEach(e=>{if(e.isIntersecting){const k=e.target.dataset.key;if(!condState.vistos[k]){condState.vistos[k]=true;changed=true;}}});
+    if(changed)cfUpdateConduFooter();
+  },{root:scroll,threshold:.25});
+  scroll.querySelectorAll('.cf-section').forEach(el=>window.__cfObs.observe(el));
+  cfUpdateConduFooter();
+}
+function cfRenderBody(key){
+  const s=condState;
+  if(key==='conduta')return s.condutaCards.map(c=>`<div class="cf-card${c.tipo==='atencao'?' alert':''}"><div class="cf-card-title"><i class="ti ${c.tipo==='atencao'?'ti-alert-triangle':'ti-check'}"></i>${c.titulo}</div><p class="cf-card-text">${c.texto}</p></div>`).join('');
+  if(key==='medicamentos')return s.medicamentos.map(m=>`<div class="cf-med${m.selecionado?' sel':' off'}" onclick="cfToggleMed(${m.id})"><div style="flex:1"><span class="cf-med-name">${m.nome}</span><span class="cf-med-sub">${m.apresentacao} · ${m.quantidade}</span><div style="font-size:11px;color:#64748b;margin-top:4px">${m.instrucoes}</div></div></div>`).join('');
+  if(key==='orientacoes')return `<textarea class="cf-ta" style="min-height:160px" oninput="condState.orientacoes=this.value">${s.orientacoes}</textarea>`;
+  if(key==='exames')return s.exames.map(e=>`<div class="cf-med${e.selecionado?' sel':' off'}" onclick="cfToggleExame(${e.id})"><div style="flex:1"><span class="cf-med-name">${e.nome}</span><div style="font-size:11px;color:#64748b;margin-top:4px">${e.instrucoes}</div></div></div>`).join('');
+  if(key==='atestado')return `<div style="background:rgba(255,255,255,.55);border-radius:14px;padding:14px 16px;border:1px solid rgba(226,232,240,.8)">
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><span style="font-size:12px;color:#64748b;width:130px">Tipo:</span><select class="cf-inp" style="width:auto"><option>Repouso</option><option>Somente presença</option><option>Afastamento do trabalho</option></select></div>
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><span style="font-size:12px;color:#64748b;width:130px">Dias de repouso:</span><input type="number" class="cf-inp" style="width:100px" value="2"></div>
+    <textarea class="cf-ta">Paciente necessita de repouso relativo por 2 dias devido à cefaleia tensional.</textarea>
+  </div>`;
+  if(key==='laudo')return `<textarea class="cf-ta" style="min-height:200px;font-family:var(--mono);font-size:11px">${s.laudo}</textarea>`;
+  return '';
+}
+function cfNavClick(key){
+  if(!condState.ativados[key])return;
+  condState.vistos[key]=true;
+  const sec=document.querySelector(`#cf-cond-scroll .cf-section[data-key="${key}"]`);
+  if(sec)sec.scrollIntoView({behavior:'smooth',block:'start'});
+  cfRenderConduta();
+}
+function cfToggleAtivo(key,ev){ev.stopPropagation();condState.ativados[key]=!condState.ativados[key];if(!condState.ativados[key])delete condState.vistos[key];cfRenderConduta();}
+function cfToggleMed(id){const m=condState.medicamentos.find(x=>x.id===id);if(m){m.selecionado=!m.selecionado;cfRenderConduta();}}
+function cfToggleExame(id){const e=condState.exames.find(x=>x.id===id);if(e){e.selecionado=!e.selecionado;cfRenderConduta();}}
+function cfUpdateConduFooter(){
+  const ativos=CF_CAMPOS.filter(c=>condState.ativados[c.key]);
+  const falt=ativos.filter(c=>!condState.vistos[c.key]).length;
+  const all=falt===0;
+  document.getElementById('cf-cond-falta').textContent=all?'':`${falt} campo${falt>1?'s':''} ainda não revisado${falt>1?'s':''}`;
+  document.getElementById('cf-cond-next').disabled=!all;
+}
+function condGoDocs(){closeModal();cfRenderDocs();openModal('cond-docs');}
+function cfRenderDocs(){
+  const list=document.getElementById('cf-doc-list');
+  const docs=CF_CAMPOS.filter(c=>condState.ativados[c.key]&&condState.vistos[c.key]);
+  list.innerHTML=docs.length===0
+    ?`<p style="color:#94a3b8;text-align:center;padding:32px 0;font-size:13px">Nenhum campo foi revisado.</p>`
+    :docs.map(c=>{
+      const off=!!condState.removidos[c.key];
+      return `<div class="cf-doc${off?' off':''}">
+        <span class="cf-nav-badge" style="width:30px;height:30px;background:${off?'linear-gradient(135deg,#94a3b8,#64748b)':c.grad}"><i class="ti ${c.icon}"></i></span>
+        <span class="cf-doc-name" style="${off?'color:#94a3b8':''}">${c.label}</span>
+        <button class="cf-doc-fmt docx"><i class="ti ti-file-text"></i> DOCX</button>
+        <button class="cf-doc-fmt pdf"><i class="ti ti-file-type-pdf"></i> PDF</button>
+        <button class="cf-close" style="padding:4px" onclick="cfToggleRemovido('${c.key}')"><i class="ti ${off?'ti-plus':'ti-ban'}" style="color:${off?'#059669':'#f43f5e'}"></i></button>
+      </div>`;
+    }).join('');
+  document.getElementById('cf-ch-wa').classList.toggle('active',condState.canal==='whatsapp');
+  document.getElementById('cf-ch-em').classList.toggle('active',condState.canal==='email');
+  document.getElementById('cf-doc-contato').placeholder=condState.canal==='whatsapp'?'(47) 99999-9999':'email@paciente.com';
+  document.getElementById('cf-ciente').checked=condState.ciente;
+  document.getElementById('cf-ciente-lbl').classList.toggle('on',condState.ciente);
+  cfUpdateSendBtn();
+}
+function cfToggleRemovido(k){condState.removidos[k]=!condState.removidos[k];cfRenderDocs();}
+function condSetCanal(c){condState.canal=c;cfRenderDocs();}
+function condToggleCiente(ev){
+  if(ev.target.id==='cf-ciente'){condState.ciente=ev.target.checked;}
+  else{condState.ciente=!condState.ciente;document.getElementById('cf-ciente').checked=condState.ciente;}
+  document.getElementById('cf-ciente-lbl').classList.toggle('on',condState.ciente);
+  cfUpdateSendBtn();
+}
+function cfUpdateSendBtn(){
+  const contato=(document.getElementById('cf-doc-contato')?.value||'').trim();
+  const ok=condState.ciente&&contato.length>0;
+  document.getElementById('cf-doc-send').disabled=!ok;
+}
+document.addEventListener('input',e=>{if(e.target&&e.target.id==='cf-doc-contato')cfUpdateSendBtn();});
+function condEnviar(){
+  showToast('Documentos enviados via '+(condState.canal==='whatsapp'?'WhatsApp':'e-mail'),'success');
+  closeModal();
+}
 function runAnamneseGeneration(modelId){
   const txtEl=document.getElementById('resumo-panel-text');
   txtEl.classList.remove('rich');
