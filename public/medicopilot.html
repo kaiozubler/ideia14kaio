@@ -1213,6 +1213,10 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .sidebar .sb-item.active .ti{color:#10b981}
 .sidebar .sb-sub .sb-item{padding-left:30px;margin-left:14px}
 .sidebar .sb-footer{border-top:1px solid rgba(255,255,255,.7);padding-top:8px}
+/* Collapsed alignment fix */
+.sidebar:not(:hover) .sb-item{justify-content:center;gap:0;padding-left:0;padding-right:0}
+.sidebar:not(:hover) .sb-lbl{display:none}
+.sidebar:not(:hover) .sb-chev{display:none}
 
 /* Generic surfaces → glass cards.
    We override the most common containers used in every screen.
