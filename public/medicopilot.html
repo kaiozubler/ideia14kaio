@@ -4802,6 +4802,105 @@ function closeModal(){
   document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
 }
 document.getElementById('modal-overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+/* ========== EMITIR RECEITA ========== */
+let rxAllMeds=null; let rxSelected=[]; let rxSearchTimer=null;
+async function rxLoadMeds(){
+  if(rxAllMeds) return rxAllMeds;
+  const {data,error}=await sb.from('medicamentos').select('id,nome_comercial,composicao,compostos,apresentacoes,fabricante').order('nome_comercial');
+  if(error){console.error(error);rxAllMeds=[];return rxAllMeds;}
+  rxAllMeds=data||[];return rxAllMeds;
+}
+async function openReceita(){
+  rxSelected=[];
+  await rxLoadMeds();
+  openModal('receita');
+  const inp=document.getElementById('rx-search');if(inp){inp.value='';}
+  document.getElementById('rx-results').style.display='none';
+  rxRenderSelected();
+  setTimeout(()=>inp&&inp.focus(),80);
+}
+function rxSearch(q){
+  clearTimeout(rxSearchTimer);
+  rxSearchTimer=setTimeout(()=>rxDoSearch(q),120);
+}
+function rxNorm(s){return (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+function rxDoSearch(q){
+  const box=document.getElementById('rx-results');
+  const term=rxNorm(q).trim();
+  if(!term){box.style.display='none';box.innerHTML='';return;}
+  const list=(rxAllMeds||[]).filter(m=>{
+    const hay=rxNorm([m.nome_comercial,m.composicao,(m.compostos||[]).join(' ')].join(' '));
+    return hay.includes(term);
+  }).slice(0,30);
+  if(!list.length){box.style.display='block';box.innerHTML='<div style="padding:14px;font-size:12px;color:#94a3b8;text-align:center">Nenhum medicamento encontrado</div>';return;}
+  box.innerHTML=list.map(m=>{
+    const aps=(m.apresentacoes||[]);
+    const apsPreview=aps.slice(0,3).join(' • ')+(aps.length>3?` +${aps.length-3}`:'');
+    const compos=m.composicao||(m.compostos||[]).join(', ');
+    return `<div class="rx-opt" onclick='rxAdd(${JSON.stringify(m.id)})' style="padding:9px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;flex-direction:column;gap:2px">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:13px;color:#0f172a">${m.nome_comercial}</span>${m.fabricante?`<span style="font-size:10.5px;color:#94a3b8">· ${m.fabricante}</span>`:''}</div>
+      <div style="font-size:11.5px;color:#64748b">${compos}</div>
+      ${aps.length?`<div style="font-size:10.5px;color:#059669;margin-top:2px"><i class="ti ti-pill" style="font-size:11px"></i> ${apsPreview}</div>`:''}
+    </div>`;
+  }).join('');
+  box.style.display='block';
+  box.querySelectorAll('.rx-opt').forEach(el=>{
+    el.addEventListener('mouseenter',()=>el.style.background='#f8fafc');
+    el.addEventListener('mouseleave',()=>el.style.background='');
+  });
+}
+function rxAdd(id){
+  const med=(rxAllMeds||[]).find(m=>m.id===id);if(!med)return;
+  const uid=Math.random().toString(36).slice(2,10);
+  rxSelected.push({uid,medicamento_id:med.id,nome_comercial:med.nome_comercial,composicao:med.composicao,compostos:med.compostos||[],apresentacoes:med.apresentacoes||[],apresentacao:(med.apresentacoes||[])[0]||'',posologia:'',quantidade:'1 caixa'});
+  document.getElementById('rx-search').value='';
+  document.getElementById('rx-results').style.display='none';
+  rxRenderSelected();
+}
+function rxRemove(uid){rxSelected=rxSelected.filter(i=>i.uid!==uid);rxRenderSelected();}
+function rxSetField(uid,field,val){const it=rxSelected.find(i=>i.uid===uid);if(it){it[field]=val;}}
+function rxToggleEdit(uid){const el=document.getElementById('rx-item-'+uid);if(!el)return;const editing=el.getAttribute('data-editing')==='1';el.setAttribute('data-editing',editing?'0':'1');rxRenderSelected();}
+function rxRenderSelected(){
+  const wrap=document.getElementById('rx-selected');
+  document.getElementById('rx-count').textContent='('+rxSelected.length+')';
+  if(!rxSelected.length){wrap.innerHTML='<div id="rx-empty" style="text-align:center;color:#94a3b8;font-size:12px;padding:22px;border:1px dashed #e2e8f0;border-radius:10px">Nenhum medicamento adicionado ainda.</div>';return;}
+  wrap.innerHTML=rxSelected.map(it=>{
+    const compos=it.composicao||(it.compostos||[]).join(', ');
+    const apsOpts=(it.apresentacoes||[]).map(a=>`<option value="${a.replace(/"/g,'&quot;')}" ${a===it.apresentacao?'selected':''}>${a}</option>`).join('');
+    return `<div id="rx-item-${it.uid}" style="border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;background:#fff;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:13px;color:#0f172a">${it.nome_comercial}</div>
+          <div style="font-size:11.5px;color:#64748b">${compos}</div>
+        </div>
+        <button class="btn sm" onclick="rxRemove('${it.uid}')" title="Remover" style="color:#dc2626;border-color:#fecaca;background:#fef2f2"><i class="ti ti-trash"></i></button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <label style="font-size:10.5px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:3px">Apresentação</label>
+          ${apsOpts?`<select onchange="rxSetField('${it.uid}','apresentacao',this.value)" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:#fff">${apsOpts}</select>`:`<input type="text" value="${(it.apresentacao||'').replace(/"/g,'&quot;')}" oninput="rxSetField('${it.uid}','apresentacao',this.value)" placeholder="Ex: Comprimido 500mg" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">`}
+        </div>
+        <div>
+          <label style="font-size:10.5px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:3px">Quantidade</label>
+          <input type="text" value="${(it.quantidade||'').replace(/"/g,'&quot;')}" oninput="rxSetField('${it.uid}','quantidade',this.value)" placeholder="Ex: 1 caixa" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">
+        </div>
+        <div style="grid-column:1/-1">
+          <label style="font-size:10.5px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:3px">Posologia / orientação</label>
+          <input type="text" value="${(it.posologia||'').replace(/"/g,'&quot;')}" oninput="rxSetField('${it.uid}','posologia',this.value)" placeholder="Ex: 1 comprimido de 8/8h por 7 dias" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function rxEmitir(){
+  if(!rxSelected.length){showToast&&showToast('Adicione ao menos um medicamento','warn');return;}
+  const linhas=rxSelected.map((it,i)=>`${i+1}. ${it.nome_comercial}${it.apresentacao?' — '+it.apresentacao:''}${it.quantidade?' — '+it.quantidade:''}${it.posologia?'\n   '+it.posologia:''}`).join('\n');
+  const ta=document.getElementById('pront-area');
+  if(ta){ta.value=(ta.value?ta.value+'\n\n':'')+'RECEITA:\n'+linhas;if(typeof markAtendDirty==='function')markAtendDirty();}
+  closeModal();
+  showToast&&showToast('Receita adicionada ao prontuário','success');
+}
 async function saveNewPatient(){
   const nome=document.getElementById('np-nome').value.trim();if(!nome)return;
   const dob=document.getElementById('np-dob')?.value||null;
