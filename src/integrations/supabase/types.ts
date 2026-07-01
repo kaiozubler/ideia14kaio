@@ -153,6 +153,36 @@ export type Database = {
           },
         ]
       }
+      medicamentos: {
+        Row: {
+          apresentacoes: string[]
+          composicao: string | null
+          compostos: string[]
+          created_at: string
+          fabricante: string | null
+          id: string
+          nome_comercial: string
+        }
+        Insert: {
+          apresentacoes?: string[]
+          composicao?: string | null
+          compostos?: string[]
+          created_at?: string
+          fabricante?: string | null
+          id?: string
+          nome_comercial: string
+        }
+        Update: {
+          apresentacoes?: string[]
+          composicao?: string | null
+          compostos?: string[]
+          created_at?: string
+          fabricante?: string | null
+          id?: string
+          nome_comercial?: string
+        }
+        Relationships: []
+      }
       mensagens_consulta: {
         Row: {
           content: string
