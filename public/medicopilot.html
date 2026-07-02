@@ -1325,6 +1325,28 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
     radial-gradient(700px 500px at 50% 110%, rgba(253,224,170,.45), transparent 60%),
     linear-gradient(135deg,#eef8f1 0%,#f3f1fb 45%,#fdf6ec 100%) !important;}
 
+/* ===== JANELA FLUTUANTE DA VIDEOCHAMADA ===== */
+#modal-overlay.video-floating{
+  background:transparent;
+  pointer-events:none;
+  align-items:flex-start;
+  justify-content:flex-start;
+}
+#modal-overlay.video-floating #m-video{
+  pointer-events:auto;
+  position:fixed;
+  top:70px;
+  left:70px;
+  margin:0;
+  transition:width .18s ease,height .18s ease;
+}
+#m-video .mhd{cursor:move;user-select:none}
+#m-video.minimized{
+  width:300px !important;
+  height:48px !important;
+  overflow:hidden;
+}
+#m-video.minimized .mbody{display:none}
 </style>
 </head>
 <body>
@@ -2181,6 +2203,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
     <div class="mhd"><span class="mhd-title"><i class="ti ti-video"></i> Chamada de vídeo</span>
       <div style="display:flex;gap:8px;align-items:center">
         <button class="btn sm" id="vc-copy" onclick="copyVideoLink()" style="display:none"><i class="ti ti-link"></i> Copiar link do paciente</button>
+        <button class="mclose" onclick="toggleMinimizeVideoCall()" title="Minimizar"><i class="ti ti-minus" id="vc-minimize-icon"></i></button>
         <button class="mclose" onclick="closeVideoCall()"><i class="ti ti-x"></i></button>
       </div>
     </div>
@@ -5664,8 +5687,11 @@ async function openVideoCall(){
   const ov=document.getElementById('modal-overlay');
   const m=document.getElementById('m-video');
   document.querySelectorAll('#modal-overlay .modal').forEach(el=>el.style.display='none');
+  m.classList.remove('minimized');
+  m.style.left='70px';m.style.top='70px';
   m.style.display='flex';m.style.flexDirection='column';
   ov.classList.add('open');
+  ov.classList.add('video-floating');
   const status=document.getElementById('vc-status');
   const frame=document.getElementById('vc-frame');
   const copyBtn=document.getElementById('vc-copy');
@@ -5694,7 +5720,9 @@ function closeVideoCall(){
   const frame=document.getElementById('vc-frame');
   try{frame.src='about:blank';}catch(_){}
   const m=document.getElementById('m-video');m.style.display='none';
+  m.classList.remove('minimized');
   document.getElementById('modal-overlay').classList.remove('open');
+  document.getElementById('modal-overlay').classList.remove('video-floating');
 }
 function copyVideoLink(){
   if(!window.__vcRoom||!window.__vcRoom.url)return;
@@ -5704,6 +5732,53 @@ function copyVideoLink(){
     setTimeout(()=>{b.innerHTML=t;},1800);
   });
 }
+
+/* ===== ARRASTAR E MINIMIZAR JANELA DE VÍDEO ===== */
+(function(){
+  const modal = document.getElementById('m-video');
+  if(!modal) return;
+  const header = modal.querySelector('.mhd');
+  let dragging=false, offsetX=0, offsetY=0;
+  function onDragStart(e){
+    if(e.target.closest('button')) return;
+    dragging=true;
+    const rect=modal.getBoundingClientRect();
+    const point = e.touches ? e.touches[0] : e;
+    offsetX = point.clientX - rect.left;
+    offsetY = point.clientY - rect.top;
+    modal.style.left = rect.left+'px';
+    modal.style.top = rect.top+'px';
+    document.addEventListener('mousemove', onDragMove);
+    document.addEventListener('mouseup', onDragEnd);
+    document.addEventListener('touchmove', onDragMove, {passive:false});
+    document.addEventListener('touchend', onDragEnd);
+  }
+  function onDragMove(e){
+    if(!dragging) return;
+    e.preventDefault();
+    const point = e.touches ? e.touches[0] : e;
+    let x = point.clientX - offsetX;
+    let y = point.clientY - offsetY;
+    x = Math.max(0, Math.min(x, window.innerWidth - modal.offsetWidth));
+    y = Math.max(0, Math.min(y, window.innerHeight - modal.offsetHeight));
+    modal.style.left = x+'px';
+    modal.style.top = y+'px';
+  }
+  function onDragEnd(){
+    dragging=false;
+    document.removeEventListener('mousemove', onDragMove);
+    document.removeEventListener('mouseup', onDragEnd);
+    document.removeEventListener('touchmove', onDragMove);
+    document.removeEventListener('touchend', onDragEnd);
+  }
+  header.addEventListener('mousedown', onDragStart);
+  header.addEventListener('touchstart', onDragStart, {passive:true});
+  window.toggleMinimizeVideoCall = function(){
+    modal.classList.toggle('minimized');
+    const icon=document.getElementById('vc-minimize-icon');
+    if(icon) icon.className = modal.classList.contains('minimized') ? 'ti ti-square' : 'ti ti-minus';
+  };
+})();
 </script>
 </body>
 </html>
