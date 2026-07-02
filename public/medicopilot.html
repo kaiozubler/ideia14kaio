@@ -1325,6 +1325,28 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
     radial-gradient(700px 500px at 50% 110%, rgba(253,224,170,.45), transparent 60%),
     linear-gradient(135deg,#eef8f1 0%,#f3f1fb 45%,#fdf6ec 100%) !important;}
 
+/* ===== JANELA FLUTUANTE DA VIDEOCHAMADA ===== */
+#modal-overlay.video-floating{
+  background:transparent;
+  pointer-events:none;
+  align-items:flex-start;
+  justify-content:flex-start;
+}
+#modal-overlay.video-floating #m-video{
+  pointer-events:auto;
+  position:fixed;
+  top:70px;
+  left:70px;
+  margin:0;
+  transition:width .18s ease,height .18s ease;
+}
+#m-video .mhd{cursor:move;user-select:none}
+#m-video.minimized{
+  width:300px !important;
+  height:48px !important;
+  overflow:hidden;
+}
+#m-video.minimized .mbody{display:none}
 </style>
 </head>
 <body>
