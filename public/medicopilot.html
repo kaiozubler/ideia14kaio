@@ -5665,7 +5665,7 @@ async function openVideoCall(){
   const m=document.getElementById('m-video');
   document.querySelectorAll('#modal-overlay .modal').forEach(el=>el.style.display='none');
   m.style.display='flex';m.style.flexDirection='column';
-  ov.classList.add('active');
+  ov.classList.add('open');
   const status=document.getElementById('vc-status');
   const frame=document.getElementById('vc-frame');
   const copyBtn=document.getElementById('vc-copy');
@@ -5694,7 +5694,7 @@ function closeVideoCall(){
   const frame=document.getElementById('vc-frame');
   try{frame.src='about:blank';}catch(_){}
   const m=document.getElementById('m-video');m.style.display='none';
-  document.getElementById('modal-overlay').classList.remove('active');
+  document.getElementById('modal-overlay').classList.remove('open');
 }
 function copyVideoLink(){
   if(!window.__vcRoom||!window.__vcRoom.url)return;
