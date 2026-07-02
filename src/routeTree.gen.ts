@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiDeepgramTokenRouteImport } from './routes/api/deepgram-token'
+import { Route as ApiDailyRoomRouteImport } from './routes/api/daily-room'
 import { Route as ApiChatIaRouteImport } from './routes/api/chat-ia'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +24,11 @@ const ApiDeepgramTokenRoute = ApiDeepgramTokenRouteImport.update({
   path: '/api/deepgram-token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDailyRoomRoute = ApiDailyRoomRouteImport.update({
+  id: '/api/daily-room',
+  path: '/api/daily-room',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatIaRoute = ApiChatIaRouteImport.update({
   id: '/api/chat-ia',
   path: '/api/chat-ia',
@@ -32,30 +38,39 @@ const ApiChatIaRoute = ApiChatIaRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/chat-ia': typeof ApiChatIaRoute
+  '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/chat-ia': typeof ApiChatIaRoute
+  '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/chat-ia': typeof ApiChatIaRoute
+  '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/chat-ia' | '/api/deepgram-token'
+  fullPaths: '/' | '/api/chat-ia' | '/api/daily-room' | '/api/deepgram-token'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/chat-ia' | '/api/deepgram-token'
-  id: '__root__' | '/' | '/api/chat-ia' | '/api/deepgram-token'
+  to: '/' | '/api/chat-ia' | '/api/daily-room' | '/api/deepgram-token'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/chat-ia'
+    | '/api/daily-room'
+    | '/api/deepgram-token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiChatIaRoute: typeof ApiChatIaRoute
+  ApiDailyRoomRoute: typeof ApiDailyRoomRoute
   ApiDeepgramTokenRoute: typeof ApiDeepgramTokenRoute
 }
 
@@ -75,6 +90,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDeepgramTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/daily-room': {
+      id: '/api/daily-room'
+      path: '/api/daily-room'
+      fullPath: '/api/daily-room'
+      preLoaderRoute: typeof ApiDailyRoomRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/chat-ia': {
       id: '/api/chat-ia'
       path: '/api/chat-ia'
@@ -88,6 +110,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiChatIaRoute: ApiChatIaRoute,
+  ApiDailyRoomRoute: ApiDailyRoomRoute,
   ApiDeepgramTokenRoute: ApiDeepgramTokenRoute,
 }
 export const routeTree = rootRouteImport
