@@ -169,7 +169,7 @@ export type Database = {
           compostos?: string[]
           created_at?: string
           fabricante?: string | null
-          id?: string
+          id: string
           nome_comercial: string
         }
         Update: {
@@ -377,7 +377,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       [_ in never]: never
