@@ -4804,16 +4804,9 @@ function closeModal(){
 document.getElementById('modal-overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
 /* ========== EMITIR RECEITA ========== */
-let rxAllMeds=null; let rxSelected=[]; let rxSearchTimer=null;
-async function rxLoadMeds(){
-  if(rxAllMeds) return rxAllMeds;
-  const {data,error}=await sb.from('medicamentos').select('id,nome_comercial,composicao,compostos,apresentacoes,fabricante').order('nome_comercial');
-  if(error){console.error(error);rxAllMeds=[];return rxAllMeds;}
-  rxAllMeds=data||[];return rxAllMeds;
-}
+let rxSelected=[]; let rxSearchTimer=null; let rxLastResults=[];
 async function openReceita(){
   rxSelected=[];
-  await rxLoadMeds();
   openModal('receita');
   const inp=document.getElementById('rx-search');if(inp){inp.value='';}
   document.getElementById('rx-results').style.display='none';
@@ -4822,17 +4815,23 @@ async function openReceita(){
 }
 function rxSearch(q){
   clearTimeout(rxSearchTimer);
-  rxSearchTimer=setTimeout(()=>rxDoSearch(q),120);
+  rxSearchTimer=setTimeout(()=>rxDoSearch(q),220);
 }
 function rxNorm(s){return (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
-function rxDoSearch(q){
+async function rxDoSearch(q){
   const box=document.getElementById('rx-results');
-  const term=rxNorm(q).trim();
+  const term=(q||'').trim();
   if(!term){box.style.display='none';box.innerHTML='';return;}
-  const list=(rxAllMeds||[]).filter(m=>{
-    const hay=rxNorm([m.nome_comercial,m.composicao,(m.compostos||[]).join(' ')].join(' '));
-    return hay.includes(term);
-  }).slice(0,30);
+  box.style.display='block';
+  box.innerHTML='<div style="padding:14px;font-size:12px;color:#94a3b8;text-align:center">Buscando...</div>';
+  const like='%'+term.replace(/[,%]/g,' ')+'%';
+  const {data,error}=await sb.from('medicamentos')
+    .select('id,nome_comercial,composicao,compostos,apresentacoes,fabricante')
+    .or(`nome_comercial.ilike.${like},composicao.ilike.${like}`)
+    .order('nome_comercial')
+    .limit(30);
+  if(error){console.error(error);box.innerHTML='<div style="padding:14px;font-size:12px;color:#dc2626;text-align:center">Erro ao buscar</div>';return;}
+  const list=data||[]; rxLastResults=list;
   if(!list.length){box.style.display='block';box.innerHTML='<div style="padding:14px;font-size:12px;color:#94a3b8;text-align:center">Nenhum medicamento encontrado</div>';return;}
   box.innerHTML=list.map(m=>{
     const aps=(m.apresentacoes||[]);
@@ -4851,7 +4850,7 @@ function rxDoSearch(q){
   });
 }
 function rxAdd(id){
-  const med=(rxAllMeds||[]).find(m=>m.id===id);if(!med)return;
+  const med=(rxLastResults||[]).find(m=>m.id===id);if(!med)return;
   const uid=Math.random().toString(36).slice(2,10);
   rxSelected.push({uid,medicamento_id:med.id,nome_comercial:med.nome_comercial,composicao:med.composicao,compostos:med.compostos||[],apresentacoes:med.apresentacoes||[],apresentacao:(med.apresentacoes||[])[0]||'',posologia:'',quantidade:'1 caixa'});
   document.getElementById('rx-search').value='';
