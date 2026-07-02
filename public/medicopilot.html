@@ -5659,6 +5659,51 @@ function renderAgCards(body,apts){
   body.innerHTML=html;
   // restore frame styles when leaving cards view next time via renderAgenda
 }
+window.__vcRoom=null;
+async function openVideoCall(){
+  const ov=document.getElementById('modal-overlay');
+  const m=document.getElementById('m-video');
+  document.querySelectorAll('#modal-overlay .modal').forEach(el=>el.style.display='none');
+  m.style.display='flex';m.style.flexDirection='column';
+  ov.classList.add('active');
+  const status=document.getElementById('vc-status');
+  const frame=document.getElementById('vc-frame');
+  const copyBtn=document.getElementById('vc-copy');
+  frame.style.display='none';copyBtn.style.display='none';
+  status.style.display='block';status.textContent='Criando sala…';
+  try{
+    if(window.__vcRoom && window.__vcRoom.expires_at*1000 > Date.now()+60000){
+      // reuse
+    }else{
+      const pid=(typeof currentPatient!=='undefined'&&currentPatient&&currentPatient.id)?String(currentPatient.id):'';
+      const name=('consulta-'+pid+'-'+Date.now().toString(36)).toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,40);
+      const r=await fetch('/api/daily-room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+      if(!r.ok){throw new Error(await r.text());}
+      window.__vcRoom=await r.json();
+    }
+    const url=window.__vcRoom.url;
+    frame.src=url;
+    frame.onload=()=>{status.style.display='none';frame.style.display='block';};
+    copyBtn.style.display='inline-flex';
+    setTimeout(()=>{status.style.display='none';frame.style.display='block';},1500);
+  }catch(e){
+    status.innerHTML='<div style="color:#fca5a5">Erro ao criar sala:<br><span style="opacity:.8;font-size:12px">'+String(e.message||e)+'</span></div>';
+  }
+}
+function closeVideoCall(){
+  const frame=document.getElementById('vc-frame');
+  try{frame.src='about:blank';}catch(_){}
+  const m=document.getElementById('m-video');m.style.display='none';
+  document.getElementById('modal-overlay').classList.remove('active');
+}
+function copyVideoLink(){
+  if(!window.__vcRoom||!window.__vcRoom.url)return;
+  navigator.clipboard.writeText(window.__vcRoom.url).then(()=>{
+    const b=document.getElementById('vc-copy');const t=b.innerHTML;
+    b.innerHTML='<i class="ti ti-check"></i> Link copiado';
+    setTimeout(()=>{b.innerHTML=t;},1800);
+  });
+}
 </script>
 </body>
 </html>
