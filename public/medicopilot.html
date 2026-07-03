@@ -4517,13 +4517,7 @@ function openAnamnesePanel(){
 }
 
 /* ========== CONDUTA FLOW ========== */
-const CF_SUGESTOES=[
-  "Cefaleia tensional — analgesia e profilaxia",
-  "Hipertensão arterial — início de anti-hipertensivo",
-  "Orientações gerais de estilo de vida",
-  "Solicitação de exames de rotina",
-  "Outra conduta"
-];
+let CF_SUGESTOES=[ "Outra conduta" ];
 const CF_CAMPOS=[
   {key:'conduta',label:'Conduta',icon:'ti-clipboard-list',grad:'linear-gradient(135deg,#34d399,#059669)'},
   {key:'medicamentos',label:'Medicamentos / Receita',icon:'ti-pill',grad:'linear-gradient(135deg,#818cf8,#6d28d9)'},
@@ -4541,44 +4535,204 @@ function cfDefaultState(){
     removidos:{},
     canal:'whatsapp',
     ciente:false,
-    condutaCards:[
-      {id:1,titulo:'Cefaleia tensional recorrente',texto:'Paciente relata dores de cabeça frequentes, opressivas, bilaterais. Intensidade moderada (6/10). Atenção ao uso excessivo de analgésicos.',tipo:'atencao'},
-      {id:2,titulo:'Ponto de atenção: Hipertensão associada',texto:'PA aferida: 148/92 mmHg. Avaliar início de anti-hipertensivo. Monitorar pressão nas próximas semanas.',tipo:'atencao'},
-      {id:3,titulo:'Conduta recomendada',texto:'Orientar higiene do sono, redução de estresse, hidratação adequada. Considerar fisioterapia para tensão cervical.',tipo:'conduta'}
-    ],
-    medicamentos:[
-      {id:1,nome:'Paracetamol',apresentacao:'500mg comprimido',quantidade:'20 comprimidos',instrucoes:'1 cp a cada 6h em caso de dor. Máx 4g/dia.',selecionado:true},
-      {id:2,nome:'Losartana potássica',apresentacao:'50mg comprimido',quantidade:'30 comprimidos',instrucoes:'1 cp pela manhã, em jejum.',selecionado:true},
-      {id:3,nome:'Amitriptilina',apresentacao:'25mg comprimido',quantidade:'30 comprimidos',instrucoes:'1 cp à noite, 30 min antes de dormir.',selecionado:false}
-    ],
-    orientacoes:'• Manter hidratação adequada: mínimo 2 litros de água por dia\n• Praticar atividade física leve (caminhada 30min/dia, 3x/semana)\n• Evitar exposição prolongada a telas\n• Dormir 7–9h por noite\n• Retornar em 30 dias ou antes em caso de piora',
-    exames:[
-      {id:1,nome:'Hemograma completo',instrucoes:'Jejum de 4 horas.',selecionado:true},
-      {id:2,nome:'Glicemia de jejum',instrucoes:'Jejum de 8 horas.',selecionado:true},
-      {id:3,nome:'Tomografia de crânio sem contraste',instrucoes:'Exclusão de lesões estruturais.',selecionado:true},
-      {id:4,nome:'Perfil lipídico',instrucoes:'Jejum de 12 horas.',selecionado:false}
-    ],
-    laudo:'LAUDO MÉDICO\n\nPaciente de 38 anos, sexo feminino, queixa principal de cefaleia recorrente há 3 meses.\n\nAo exame: PA 148/92 mmHg, FC 78 bpm.\n\nImpressão: Cefaleia tensional crônica (G44.2) + HAS (I10).\n\nConduta: tratamento conforme prescrição, exames complementares, retorno 30 dias.'
+    condutaCards:[],
+    medicamentos:[],
+    orientacoes:'',
+    exames:[],
+    atestado:{tipo:'Repouso',dias:2,texto:''},
+    laudo:'',
+    anamnese:''
   };
 }
 function openCondutaFlow(){
   condState=cfDefaultState();
-  cfRenderSugestao();
+  CF_SUGESTOES=["Outra conduta"];
+  cfRenderSugestao(true);
   openModal('cond-sugestao');
+  cfLoadSugestoes();
+}
+async function cfCallIaJson(systemPrompt,userContent){
+  const r=await fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})});
+  if(!r.ok)throw new Error('IA '+r.status+': '+(await r.text()));
+  const d=await r.json();
+  const raw=(d.reply||d.resumo||'').trim();
+  let clean=raw.replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/i,'');
+  try{return JSON.parse(clean);}catch{}
+  const m=clean.match(/\{[\s\S]*\}/);
+  if(m){try{return JSON.parse(m[0]);}catch{}}
+  throw new Error('Resposta não é JSON válido');
+}
+function cfBuildAnamneseTxt(){
+  const ctx=buildAnamneseContext();
+  return [
+    'DATA: '+ctx.dataAt,
+    ctx.medicoNome?('MÉDICO: '+ctx.medicoNome):'',
+    '',
+    '## DADOS DO PACIENTE',
+    ctx.dadosCliente||'(sem dados básicos)',
+    '',
+    '## QUEIXA PRINCIPAL',
+    ctx.queixa||'(não informada)',
+    '',
+    '## DADOS CLÍNICOS',
+    ctx.dadosClinicos,
+    '',
+    '## ATENDIMENTO ATUAL',
+    ctx.atend,
+    '',
+    '## ÚLTIMOS EXAMES',
+    ctx.ultimosExames||'(nenhum)'
+  ].filter(Boolean).join('\n');
+}
+async function cfLoadSugestoes(){
+  const list=document.getElementById('cf-sug-list');
+  list.innerHTML='<div style="padding:24px;text-align:center;font-size:12px;color:#94a3b8"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Analisando o atendimento e gerando sugestões de conduta…</div>';
+  const anam=cfBuildAnamneseTxt();
+  condState.anamnese=anam;
+  const sys='Você é um assistente clínico. Com base na anamnese abaixo, sugira de 3 a 6 CONDUTAS MÉDICAS possíveis, curtas e objetivas (uma frase cada, começando com verbo). Retorne EXCLUSIVAMENTE JSON válido, sem markdown, no formato: {"condutas":["...","..."]}. Não invente dados clínicos não presentes.';
+  const usr='ANAMNESE:\n\n'+anam+'\n\nRetorne o JSON agora.';
+  try{
+    const j=await cfCallIaJson(sys,usr);
+    const arr=Array.isArray(j.condutas)?j.condutas.filter(x=>typeof x==='string'&&x.trim()):[];
+    CF_SUGESTOES=arr.length?[...arr,'Outra conduta']:['Outra conduta'];
+  }catch(e){
+    console.error(e);
+    CF_SUGESTOES=['Outra conduta'];
+    list.innerHTML='<div style="padding:14px;font-size:12px;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;margin-bottom:10px">⚠️ Erro ao gerar sugestões: '+(e.message||e)+'</div>';
+  }
+  cfRenderSugestao();
 }
 function cfRenderSugestao(){
   const list=document.getElementById('cf-sug-list');
-  list.innerHTML=CF_SUGESTOES.map((s,i)=>{
+  const html=CF_SUGESTOES.map((s,i)=>{
     const isLast=i===CF_SUGESTOES.length-1;
     const act=condState.sugSel===i;
     return `<button class="cf-sug${act?' active':''}${isLast?' dashed':''}" onclick="cfSelectSug(${i})"><span style="flex:1">${s}</span>${act?'<i class="ti ti-check" style="color:#059669"></i>':''}</button>`;
   }).join('');
+  // Preserva mensagem de erro (se houver) acima da lista
+  const err=list.querySelector('div[style*="fef2f2"]');
+  list.innerHTML=(err?err.outerHTML:'')+html;
   document.getElementById('cf-sug-outra').style.display=condState.sugSel===CF_SUGESTOES.length-1?'block':'none';
   document.getElementById('cf-sug-next').disabled=condState.sugSel===null;
 }
 function cfSelectSug(i){condState.sugSel=i;cfRenderSugestao();}
-function condGoConduta(){
-  closeModal();cfRenderConduta();openModal('cond-conduta');
+function cfCondutaTextoSelecionado(){
+  if(condState.sugSel==null)return '';
+  if(condState.sugSel===CF_SUGESTOES.length-1){
+    return (document.getElementById('cf-sug-outra')?.value||'').trim()||'Outra conduta';
+  }
+  return CF_SUGESTOES[condState.sugSel]||'';
+}
+async function condGoConduta(){
+  const conduta=cfCondutaTextoSelecionado();
+  if(!conduta){showToast('Selecione uma conduta','error');return;}
+  closeModal();
+  cfRenderCondutaLoading(conduta);
+  openModal('cond-conduta');
+  try{
+    const data=await cfGerarCondutaDetalhada(conduta);
+    cfApplyCondutaData(data);
+    await cfEnrichMedicamentos();
+    cfRenderConduta();
+  }catch(e){
+    console.error(e);
+    document.getElementById('cf-cond-scroll').innerHTML='<div style="padding:24px;text-align:center;color:#dc2626;font-size:13px">⚠️ Erro ao gerar conduta: '+(e.message||e)+'</div>';
+  }
+}
+function cfRenderCondutaLoading(conduta){
+  document.getElementById('cf-nav-list').innerHTML='';
+  document.getElementById('cf-cond-scroll').innerHTML=`<div style="padding:32px;text-align:center;color:#64748b;font-size:13px"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite;font-size:22px;color:#059669"></i><div style="margin-top:10px;font-weight:600">Gerando conduta com a IA…</div><div style="font-size:11px;color:#94a3b8;margin-top:4px">"${conduta.replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]))}"</div></div>`;
+  document.getElementById('cf-cond-falta').textContent='';
+  document.getElementById('cf-cond-next').disabled=true;
+}
+async function cfGerarCondutaDetalhada(conduta){
+  const anam=condState.anamnese||cfBuildAnamneseTxt();
+  const sys=`Você é um assistente clínico. Recebe uma ANAMNESE e a CONDUTA escolhida pelo médico. Gere um plano estruturado. Retorne EXCLUSIVAMENTE JSON válido, sem markdown, sem comentários, no formato exato:
+{
+  "pontos_atencao":[{"titulo":"","texto":""}],
+  "conduta_recomendada":{"titulo":"Conduta recomendada","texto":""},
+  "medicamentos":[{"principio_ativo":"","nome_sugerido":"","apresentacao":"","posologia":"","quantidade":""}],
+  "orientacoes":"",
+  "exames":[{"nome":"","instrucoes":""}],
+  "atestado":{"tipo":"Repouso","dias":0,"texto":""},
+  "laudo":""
+}
+Regras:
+- Baseie tudo APENAS na anamnese e na conduta escolhida. Não invente dados do paciente.
+- "pontos_atencao": 1 a 4 itens, cada um com título curto e texto explicativo (2-3 frases).
+- "conduta_recomendada.texto": recomendação clara em 2-4 frases.
+- "medicamentos": só incluir quando houver base clínica. "principio_ativo" em minúsculo. "apresentacao" ex: "50mg comprimido". "posologia" ex: "1 cp a cada 8h por 5 dias".
+- "exames": só se necessários; caso contrário, array vazio.
+- "atestado": preencha apenas se justificado; caso não seja necessário use {"tipo":"","dias":0,"texto":""}.
+- "laudo": texto de laudo médico formal referente ao caso; deixe vazio se não aplicável.`;
+  const usr='ANAMNESE:\n\n'+anam+'\n\nCONDUTA ESCOLHIDA PELO MÉDICO:\n'+conduta+'\n\nRetorne o JSON agora.';
+  return await cfCallIaJson(sys,usr);
+}
+function cfApplyCondutaData(d){
+  const pa=Array.isArray(d.pontos_atencao)?d.pontos_atencao:[];
+  const cr=d.conduta_recomendada||{};
+  const cards=[];
+  pa.forEach((p,i)=>{if(p&&(p.titulo||p.texto))cards.push({id:i+1,titulo:p.titulo||'Ponto de atenção',texto:p.texto||'',tipo:'atencao'});});
+  if(cr.titulo||cr.texto)cards.push({id:cards.length+1,titulo:cr.titulo||'Conduta recomendada',texto:cr.texto||'',tipo:'conduta'});
+  condState.condutaCards=cards;
+  condState.medicamentos=(Array.isArray(d.medicamentos)?d.medicamentos:[]).map((m,i)=>({
+    id:i+1,
+    principio_ativo:(m.principio_ativo||'').trim(),
+    nome:(m.nome_sugerido||m.principio_ativo||'Medicamento').trim(),
+    apresentacao:(m.apresentacao||'').trim(),
+    quantidade:(m.quantidade||'').trim()||'1 caixa',
+    instrucoes:(m.posologia||'').trim(),
+    selecionado:true,
+    medicamento_id:null,
+    apresentacoes_db:[]
+  }));
+  condState.orientacoes=(d.orientacoes||'').toString();
+  condState.exames=(Array.isArray(d.exames)?d.exames:[]).map((e,i)=>({id:i+1,nome:(e.nome||'').trim(),instrucoes:(e.instrucoes||'').trim(),selecionado:true}));
+  const at=d.atestado||{};
+  condState.atestado={tipo:(at.tipo||'').trim(),dias:parseInt(at.dias)||0,texto:(at.texto||'').trim()};
+  if(!condState.atestado.tipo&&!condState.atestado.texto)condState.ativados.atestado=false;
+  condState.laudo=(d.laudo||'').toString();
+  if(!condState.laudo)condState.ativados.laudo=false;
+  if(!condState.exames.length)condState.ativados.exames=false;
+  if(!condState.medicamentos.length)condState.ativados.medicamentos=false;
+  if(!condState.orientacoes)condState.ativados.orientacoes=false;
+}
+async function cfEnrichMedicamentos(){
+  // Para cada medicamento sugerido pela IA, procura no banco pelo princípio ativo
+  // e monta lista de apresentações disponíveis, escolhendo a mais próxima da sugerida.
+  for(const med of condState.medicamentos){
+    const term=(med.principio_ativo||med.nome||'').trim();
+    if(!term)continue;
+    try{
+      const like='%'+term.replace(/[,%]/g,' ')+'%';
+      const {data,error}=await sb.from('medicamentos')
+        .select('id,nome_comercial,composicao,apresentacoes')
+        .or(`composicao.ilike.${like},nome_comercial.ilike.${like}`)
+        .limit(50);
+      if(error||!data||!data.length)continue;
+      // Agrupa apresentações únicas de todos os matches
+      const apsSet=new Set();
+      data.forEach(r=>(r.apresentacoes||[]).forEach(a=>a&&apsSet.add(a)));
+      const aps=Array.from(apsSet);
+      med.apresentacoes_db=aps;
+      // Escolhe apresentação mais parecida
+      if(aps.length){
+        const alvo=rxNorm(med.apresentacao);
+        let best=aps[0],bestScore=-1;
+        aps.forEach(a=>{
+          const an=rxNorm(a);
+          let score=0;
+          alvo.split(/\s+/).forEach(tok=>{if(tok&&an.includes(tok))score++;});
+          if(score>bestScore){bestScore=score;best=a;}
+        });
+        med.apresentacao=best;
+        // Guarda o primeiro medicamento_id compatível com essa apresentação
+        const hit=data.find(r=>(r.apresentacoes||[]).includes(best))||data[0];
+        med.medicamento_id=hit.id;
+        med.nome=hit.nome_comercial||med.nome;
+      }
+    }catch(e){console.warn('cfEnrichMedicamentos',term,e);}
+  }
 }
 function condBackToSugestao(){closeModal();cfRenderSugestao();openModal('cond-sugestao');}
 function condBackToConduta(){closeModal();cfRenderConduta();openModal('cond-conduta');}
@@ -4622,12 +4776,17 @@ function cfRenderBody(key){
   if(key==='medicamentos')return s.medicamentos.map(m=>`<div class="cf-med${m.selecionado?' sel':' off'}" onclick="cfToggleMed(${m.id})"><div style="flex:1"><span class="cf-med-name">${m.nome}</span><span class="cf-med-sub">${m.apresentacao} · ${m.quantidade}</span><div style="font-size:11px;color:#64748b;margin-top:4px">${m.instrucoes}</div></div></div>`).join('');
   if(key==='orientacoes')return `<textarea class="cf-ta" style="min-height:160px" oninput="condState.orientacoes=this.value">${s.orientacoes}</textarea>`;
   if(key==='exames')return s.exames.map(e=>`<div class="cf-med${e.selecionado?' sel':' off'}" onclick="cfToggleExame(${e.id})"><div style="flex:1"><span class="cf-med-name">${e.nome}</span><div style="font-size:11px;color:#64748b;margin-top:4px">${e.instrucoes}</div></div></div>`).join('');
-  if(key==='atestado')return `<div style="background:rgba(255,255,255,.55);border-radius:14px;padding:14px 16px;border:1px solid rgba(226,232,240,.8)">
-    <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><span style="font-size:12px;color:#64748b;width:130px">Tipo:</span><select class="cf-inp" style="width:auto"><option>Repouso</option><option>Somente presença</option><option>Afastamento do trabalho</option></select></div>
-    <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><span style="font-size:12px;color:#64748b;width:130px">Dias de repouso:</span><input type="number" class="cf-inp" style="width:100px" value="2"></div>
-    <textarea class="cf-ta">Paciente necessita de repouso relativo por 2 dias devido à cefaleia tensional.</textarea>
-  </div>`;
-  if(key==='laudo')return `<textarea class="cf-ta" style="min-height:200px;font-family:var(--mono);font-size:11px">${s.laudo}</textarea>`;
+  if(key==='atestado'){
+    const at=s.atestado||{tipo:'Repouso',dias:0,texto:''};
+    const opts=['Repouso','Somente presença','Afastamento do trabalho'];
+    if(at.tipo&&!opts.includes(at.tipo))opts.unshift(at.tipo);
+    return `<div style="background:rgba(255,255,255,.55);border-radius:14px;padding:14px 16px;border:1px solid rgba(226,232,240,.8)">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><span style="font-size:12px;color:#64748b;width:130px">Tipo:</span><select class="cf-inp" style="width:auto" onchange="condState.atestado.tipo=this.value">${opts.map(o=>`<option ${o===at.tipo?'selected':''}>${o}</option>`).join('')}</select></div>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><span style="font-size:12px;color:#64748b;width:130px">Dias de repouso:</span><input type="number" class="cf-inp" style="width:100px" value="${at.dias||0}" oninput="condState.atestado.dias=parseInt(this.value)||0"></div>
+      <textarea class="cf-ta" oninput="condState.atestado.texto=this.value">${(at.texto||'').replace(/</g,'&lt;')}</textarea>
+    </div>`;
+  }
+  if(key==='laudo')return `<textarea class="cf-ta" style="min-height:200px;font-family:var(--mono);font-size:11px" oninput="condState.laudo=this.value">${(s.laudo||'').replace(/</g,'&lt;')}</textarea>`;
   return '';
 }
 function cfNavClick(key){
