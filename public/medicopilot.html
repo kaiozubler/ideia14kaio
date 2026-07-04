@@ -3179,7 +3179,7 @@ function scheduleAutoSave(){
   if(_autoSaveTimer)clearTimeout(_autoSaveTimer);
   _autoSaveTimer=setTimeout(async()=>{
     try{const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;
-      updateSaveStatus('saving');await saveAtendInternal();updateSaveStatus('saved');
+      updateSaveStatus('saving');await saveAtendInternal({finalize:false});updateSaveStatus('saved');
     }catch(e){updateSaveStatus('error');}
   },1400);
 }
@@ -3345,18 +3345,25 @@ function showNovoAtend(restore){
   }
   startAtendAutoSave();
 }
-async function saveAtendFromProgress(){const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;await saveAtendInternal();}
-async function saveAtendInternal(){
+async function saveAtendFromProgress(){const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;await saveAtendInternal({finalize:true});}
+async function saveAtendInternal(opts){
+  const finalize=!!(opts&&opts.finalize);
   const now=new Date();
   const dateStr=now.toLocaleDateString('pt-BR');
   const timeStr=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   const pront=atendEmAndamento.pront||document.getElementById('pront-area')?.value||'';
   const notaPessoal=document.getElementById('nota-personal-ta')?.value||'';
-  const payload={paciente_id:currentPatient.id,id_medico:currentUser.id,started_at:atendEmAndamento.startedAt||now.toISOString(),ended_at:now.toISOString(),title:'Consulta — '+dateStr,acao:'Consulta',resumo:pront?pront.substring(0,200)+(pront.length>200?'...':''):'Atendimento registrado.',notas:pront||'Sem anotações.',nota_personal:notaPessoal,anamnese_ia:window.__lastAnamnese||null};
+  const payload={paciente_id:currentPatient.id,id_medico:currentUser.id,started_at:atendEmAndamento.startedAt||now.toISOString(),title:'Consulta — '+dateStr,acao:finalize?'Consulta':'Rascunho',resumo:pront?pront.substring(0,200)+(pront.length>200?'...':''):'Atendimento registrado.',notas:pront||'Sem anotações.',nota_personal:notaPessoal,anamnese_ia:window.__lastAnamnese||null};
+  if(finalize)payload.ended_at=now.toISOString();
   let data=null,error=null;
   if(window._idConsultaAtual){({data,error}=await sb.from('consulta').update(payload).eq('id',window._idConsultaAtual).select('*').single());}
   if(error||!data){({data,error}=await sb.from('consulta').insert(payload).select('*').single());}
-  if(error){showToast('Erro ao salvar atendimento: '+error.message,'error');return;}
+  if(error){if(finalize)showToast('Erro ao salvar atendimento: '+error.message,'error');return;}
+  window._idConsultaAtual=data.id;
+  if(!finalize){
+    // pré-salvamento: mantém o atendimento aberto para continuação
+    return;
+  }
   atendimentos=atendimentos.filter(a=>a.id!==data.id);
   atendimentos.unshift(mapConsultaRow(data));
   await addTimelineEvent({date:dateStr,type:'atend',icon:'ti-stethoscope',title:'Atendimento registrado — '+timeStr,sub:medicoNames[currentPatient.medico]||'Médico responsável'});
@@ -3368,7 +3375,7 @@ async function saveAtendInternal(){
 }
 async function saveAtend(){
   const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;
-  await saveAtendInternal();showAtendList();
+  await saveAtendInternal({finalize:true});showAtendList();
 }
 
 /* ========== PATIENT HEADER COLLAPSE ========== */
