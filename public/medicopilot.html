@@ -2547,6 +2547,8 @@ Reduzir ingestão de sódio. Hidratação adequada. Evitar situações de estres
       <div class="cf-body"><div class="cf-scroll">
         <div id="cf-doc-list"></div>
         <div style="height:1px;background:rgba(226,232,240,.6);margin:14px 0"></div>
+        <p style="font-size:12px;font-weight:600;color:#475569;margin-bottom:6px">Anamnese a gerar:</p>
+        <select id="cf-anamnese-model" class="cf-inp" style="margin-bottom:12px"></select>
         <p style="font-size:12px;font-weight:600;color:#475569;margin-bottom:10px">Enviar documentos via:</p>
         <div style="display:flex;gap:8px;margin-bottom:12px">
           <button class="cf-ch active" id="cf-ch-wa" onclick="condSetCanal('whatsapp')"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
@@ -4834,6 +4836,15 @@ function cfRenderDocs(){
   document.getElementById('cf-doc-contato').placeholder=condState.canal==='whatsapp'?'(47) 99999-9999':'email@paciente.com';
   document.getElementById('cf-ciente').checked=condState.ciente;
   document.getElementById('cf-ciente-lbl').classList.toggle('on',condState.ciente);
+  // Popula seletor de modelo de anamnese
+  const sel=document.getElementById('cf-anamnese-model');
+  if(sel){
+    const models=loadAnamneseModels();
+    const prev=sel.value||condState.anamneseModelId||'default';
+    sel.innerHTML='<option value="">— Não gerar anamnese —</option>'+
+      models.map(m=>`<option value="${m.id}">${(m.name||m.id).replace(/</g,'&lt;')}</option>`).join('');
+    sel.value=models.find(m=>m.id===prev)?prev:'default';
+  }
   cfUpdateSendBtn();
 }
 function cfToggleRemovido(k){condState.removidos[k]=!condState.removidos[k];cfRenderDocs();}
@@ -4850,8 +4861,40 @@ function cfUpdateSendBtn(){
   document.getElementById('cf-doc-send').disabled=!ok;
 }
 document.addEventListener('input',e=>{if(e.target&&e.target.id==='cf-doc-contato')cfUpdateSendBtn();});
-function condEnviar(){
-  showToast('Documentos enviados via '+(condState.canal==='whatsapp'?'WhatsApp':'e-mail'),'success');
+async function condEnviar(){
+  const sel=document.getElementById('cf-anamnese-model');
+  const modelId=sel?sel.value:'';
+  const btn=document.getElementById('cf-doc-send');
+  if(modelId){
+    const origHtml=btn.innerHTML;btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Gerando anamnese...';
+    try{
+      const models=loadAnamneseModels();
+      const model=models.find(m=>m.id===modelId)||models.find(m=>m.id==='default');
+      if(model){
+        const sources=model.sources||inferSourcesFromPrompt(model.prompt||'');
+        const ctx=buildAnamneseContext();
+        const basePrompt=applyAnamneseVars(model.prompt,ctx);
+        const ctxBlock=buildAnamneseContextBlock(sources);
+        const systemPrompt=basePrompt+'\n\n---\n# CONTEXTO DISPONÍVEL\n\n'+(ctxBlock||'(nenhuma fonte de contexto selecionada)');
+        const userContent='Gere a resposta agora, seguindo estritamente as instruções acima. Use apenas os dados já fornecidos no prompt do sistema; não invente nem complemente com informações ausentes.';
+        const r=await fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})});
+        if(!r.ok)throw new Error(await r.text());
+        const d=await r.json();
+        const txt=(d.reply||d.resumo||'').trim();
+        if(txt){
+          window.__lastAnamnese=txt;
+          const pa=document.getElementById('pront-area');
+          if(pa){
+            const ts=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+            pa.value+=(pa.value?'\n\n':'')+`[${ts}] ANAMNESE — ${model.name}:\n`+mdToPlain(txt);
+            pa.scrollTop=pa.scrollHeight;
+            markAtendDirty();
+          }
+        }
+      }
+    }catch(e){showToast('Erro ao gerar anamnese: '+(e.message||e),'error');btn.disabled=false;btn.innerHTML=origHtml;return;}
+  }
+  showToast('Documentos enviados via '+(condState.canal==='whatsapp'?'WhatsApp':'e-mail')+(modelId?' • Anamnese adicionada ao prontuário':''),'success');
   closeModal();
 }
 function runAnamneseGeneration(modelId){
