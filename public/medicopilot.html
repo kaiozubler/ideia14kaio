@@ -5970,10 +5970,44 @@ async function openVideoCall(){
 function closeVideoCall(){
   const frame=document.getElementById('vc-frame');
   try{frame.src='about:blank';}catch(_){}
+  if(dgLive.active && dgLive.includeCall){ try{ dgLive.stop(); }catch{} }
   const m=document.getElementById('m-video');m.style.display='none';
   m.classList.remove('minimized');
   document.getElementById('modal-overlay').classList.remove('open');
   document.getElementById('modal-overlay').classList.remove('video-floating');
+}
+
+async function toggleCallTranscription(){
+  const btn=document.getElementById('vc-transcribe');
+  // Se já está ativo com áudio da chamada, para
+  if(dgLive.active && dgLive.includeCall){
+    try{ await dgLive.stop(); }catch{}
+    listening=false; aiPaused=false;
+    setOrbState('idle'); setListenBtnState('idle');
+    const td=document.getElementById('tdot');if(td)td.classList.remove('live');
+    return;
+  }
+  // Se está rodando só com microfone, encerra antes de reabrir com áudio da chamada
+  if(dgLive.active || dgLive.starting){ try{ await dgLive.stop(); }catch{} }
+  const cfg = (typeof getCopilotoCfg==='function') ? getCopilotoCfg() : { enabled:true, voz:true };
+  if(!cfg.enabled){ if(typeof toast==='function') toast('Ative o copiloto para transcrever a chamada.'); return; }
+  if(!cfg.voz){ if(typeof toast==='function') toast('Ative "Permitir gravação de voz" no copiloto.'); return; }
+  if(btn){ btn.innerHTML='<i class="ti ti-loader-2"></i> Conectando…'; }
+  const lbl=document.getElementById('trans-lbl');if(lbl){lbl.textContent='Conectando ao Deepgram (chamada)...';lbl.className='trans-lbl live-lbl';}
+  const td=document.getElementById('tdot');if(td)td.classList.add('live');
+  listening=true; aiPaused=false;
+  setOrbState('listening'); setListenBtnState('listening');
+  try{
+    await dgLive.start({ includeCall:true });
+    if(btn){ btn.innerHTML='<i class="ti ti-player-stop"></i> Parar transcrição'; btn.classList.add('live'); }
+    const l=document.getElementById('trans-lbl');if(l){l.textContent='Transcrevendo chamada em tempo real...';l.className='trans-lbl live-lbl';}
+  }catch(err){
+    if(btn){ btn.innerHTML='<i class="ti ti-microphone-2"></i> Transcrever chamada'; btn.classList.remove('live'); }
+    const l=document.getElementById('trans-lbl');if(l){l.textContent='Erro: '+err.message;l.className='trans-lbl';}
+    addTranscriptLine('[ Erro ao transcrever chamada: '+err.message+' ]');
+    listening=false; setOrbState('idle'); setListenBtnState('idle');
+    if(td)td.classList.remove('live');
+  }
 }
 function copyVideoLink(){
   if(!window.__vcRoom||!window.__vcRoom.url)return;
