@@ -1426,7 +1426,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
     </div>
   </nav>
   <div class="sb-footer">
-    <div class="sb-item"><i class="ti ti-settings"></i><span class="sb-lbl">Configurações</span></div>
+    <div class="sb-item" id="nav-configuracoes" onclick="goScreen('configuracoes')"><i class="ti ti-settings"></i><span class="sb-lbl">Configurações</span></div>
   </div>
 </div>
 
@@ -1439,7 +1439,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
     </div>
     <div class="topbar-right">
       <button class="ib" title="Notificações"><i class="ti ti-bell"></i><span class="notif-dot"></span></button>
-      <button class="ib" title="Configurações"><i class="ti ti-settings"></i></button>
+      <button class="ib" title="Configurações" onclick="goScreen('configuracoes')"><i class="ti ti-settings"></i></button>
       <div class="avatar" id="user-avatar" title="Sair" onclick="logout()" style="cursor:pointer"><span>DR</span></div>
     </div>
   </div>
