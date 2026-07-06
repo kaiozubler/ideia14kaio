@@ -2913,6 +2913,49 @@ function goScreen(name){
   }
 }
 function toggleIAGroup(){document.getElementById('grp-ia').classList.toggle('open');}
+
+/* ========== MINHA CLÍNICA ========== */
+const CLINICA_KEY='clinicaCfg';
+function loadClinica(){
+  let c={};try{c=JSON.parse(localStorage.getItem(CLINICA_KEY)||'{}');}catch(e){}
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
+  set('cli-fantasia',c.fantasia);set('cli-razao',c.razao);set('cli-fiscal',c.fiscal);
+  set('cli-cep',c.cep);set('cli-log',c.logradouro);set('cli-num',c.numero);set('cli-compl',c.complemento);
+  set('cli-bairro',c.bairro);set('cli-cidade',c.cidade);set('cli-uf',c.uf);set('cli-pais',c.pais||'Brasil');
+  const prev=document.getElementById('cli-logo-preview');
+  const rm=document.getElementById('cli-logo-remove');
+  if(c.logo){prev.innerHTML=`<img src="${c.logo}" style="width:100%;height:100%;object-fit:contain">`;rm.style.display='inline-flex';}
+  else{prev.innerHTML='<i class="ti ti-photo" style="font-size:28px"></i>';rm.style.display='none';}
+}
+function handleClinicaLogo(ev){
+  const f=ev.target.files&&ev.target.files[0];if(!f)return;
+  if(f.size>2*1024*1024){if(typeof toast==='function')toast('Logo muito grande (máx 2MB)');return;}
+  const rd=new FileReader();
+  rd.onload=()=>{
+    let c={};try{c=JSON.parse(localStorage.getItem(CLINICA_KEY)||'{}');}catch(e){}
+    c.logo=rd.result;localStorage.setItem(CLINICA_KEY,JSON.stringify(c));loadClinica();
+  };
+  rd.readAsDataURL(f);
+}
+function removeClinicaLogo(){
+  let c={};try{c=JSON.parse(localStorage.getItem(CLINICA_KEY)||'{}');}catch(e){}
+  delete c.logo;localStorage.setItem(CLINICA_KEY,JSON.stringify(c));
+  const inp=document.getElementById('cli-logo');if(inp)inp.value='';
+  loadClinica();
+}
+function saveClinica(){
+  const get=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
+  let c={};try{c=JSON.parse(localStorage.getItem(CLINICA_KEY)||'{}');}catch(e){}
+  const next={
+    fantasia:get('cli-fantasia'),razao:get('cli-razao'),fiscal:get('cli-fiscal'),
+    cep:get('cli-cep'),logradouro:get('cli-log'),numero:get('cli-num'),complemento:get('cli-compl'),
+    bairro:get('cli-bairro'),cidade:get('cli-cidade'),uf:get('cli-uf'),pais:get('cli-pais'),
+    logo:c.logo||null,
+  };
+  localStorage.setItem(CLINICA_KEY,JSON.stringify(next));
+  if(typeof toast==='function')toast('Dados da clínica salvos');
+}
+
 function _copFmt(s){s=Number(s)||120;if(s>=60){const m=Math.floor(s/60),r=s%60;return r?`${m}min ${r}s`:`${m}min`;}return `${s}s`;}
 function updateCopFreqVisibility(){
   document.getElementById('cop-freq-wrap').style.display='block';
