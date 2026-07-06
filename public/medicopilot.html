@@ -2876,7 +2876,7 @@ Reduzir sódio. Hidratação adequada. Evitar estresse.`;
 function goScreen(name){
   const leavingPatientDetail=name!=='patient-detail'&&document.getElementById('s-patient-detail')?.style.display!=='none';
   if(leavingPatientDetail&&currentPatient&&atendEmAndamento&&atendEmAndamento.dirty){saveAtendState();saveAtendDraft();stopAtendAutoSave();}
-  ['atendimentos','patients','patient-detail','receitas','agenda','indicadores','secretaria','anamnese','copiloto'].forEach(s=>{
+  ['atendimentos','patients','patient-detail','receitas','agenda','indicadores','secretaria','anamnese','copiloto','configuracoes','equipe','clinica'].forEach(s=>{
     const el=document.getElementById('s-'+s);
     if(el)el.style.display='none';
   });
@@ -2886,7 +2886,7 @@ function goScreen(name){
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   const nav=document.getElementById('nav-'+name);
   if(nav)nav.classList.add('active');
-  const titles={atendimentos:'Atendimentos',patients:'Pacientes',conversas:'Conversas',agenda:'Agenda',receitas:'Receitas e Atestados',indicadores:'Indicadores',secretaria:'Secretária digital',anamnese:'Gerador de Anamnese',copiloto:'Copiloto de consulta'};
+  const titles={atendimentos:'Atendimentos',patients:'Pacientes',conversas:'Conversas',agenda:'Agenda',receitas:'Receitas e Atestados',indicadores:'Indicadores',secretaria:'Secretária digital',anamnese:'Gerador de Anamnese',copiloto:'Copiloto de consulta',configuracoes:'Configurações',equipe:'Minha equipe',clinica:'Minha clínica'};
   const pt=document.getElementById('page-title');
   pt.textContent=titles[name]||'Paciente';
   pt.style.cursor='';
@@ -2898,6 +2898,7 @@ function goScreen(name){
   if(name==='indicadores')setTimeout(renderChart,50);
   if(name==='anamnese')renderAnamneseList();
   if(name==='copiloto')loadCopilotoCfg();
+  if(name==='clinica')loadClinica();
   if(['secretaria','anamnese','copiloto'].includes(name)){
     const g=document.getElementById('grp-ia');if(g)g.classList.add('open');
   }
