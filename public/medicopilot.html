@@ -3810,24 +3810,60 @@ const dgLive = {
   ws: null,
   mediaRecorder: null,
   stream: null,
+  micStream: null,
+  displayStream: null,
+  audioCtx: null,
   keepAliveTimer: null,
   interimEl: null,
   starting: false,
   active: false,
+  includeCall: false,
   async fetchToken(){
     const r = await fetch('/api/deepgram-token', { method:'GET' });
     if(!r.ok){ throw new Error('Token error '+r.status+': '+await r.text()); }
     return r.json();
   },
-  async start(){
+  async _buildStream(includeCall){
+    const mic = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true } });
+    this.micStream = mic;
+    if(!includeCall) return mic;
+    let display;
+    try{
+      display = await navigator.mediaDevices.getDisplayMedia({ audio:true, video:true });
+    }catch(e){
+      mic.getTracks().forEach(t=>{try{t.stop();}catch{}});
+      this.micStream = null;
+      throw new Error('Compartilhamento cancelado. Marque "Compartilhar áudio da aba" ao selecionar a aba da chamada.');
+    }
+    if(!display.getAudioTracks().length){
+      display.getTracks().forEach(t=>{try{t.stop();}catch{}});
+      mic.getTracks().forEach(t=>{try{t.stop();}catch{}});
+      this.micStream = null;
+      throw new Error('A aba foi compartilhada sem áudio. Repita e marque "Compartilhar áudio da aba".');
+    }
+    this.displayStream = display;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AC();
+    this.audioCtx = ctx;
+    const dest = ctx.createMediaStreamDestination();
+    try{ ctx.createMediaStreamSource(mic).connect(dest); }catch{}
+    try{ ctx.createMediaStreamSource(new MediaStream(display.getAudioTracks())).connect(dest); }catch{}
+    // Se o usuário parar o compartilhamento pela UI do navegador, encerra a transcrição
+    display.getVideoTracks().forEach(t=>{ t.onended = ()=>{ if(this.includeCall) this.stop(); }; });
+    display.getAudioTracks().forEach(t=>{ t.onended = ()=>{ if(this.includeCall) this.stop(); }; });
+    return dest.stream;
+  },
+  async start(opts){
     if(this.starting || this.active) return;
+    const includeCall = !!(opts && opts.includeCall);
+    this.includeCall = includeCall;
     this.starting = true;
     try{
       const tk = await this.fetchToken();
       const access_token = tk.access_token;
       // grant => JWT (subprotocol 'bearer'); ephemeral_key => API key (subprotocol 'token')
       const subproto = tk.mode === 'grant' ? 'bearer' : 'token';
-      const stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true } });
+      const stream = await this._buildStream(includeCall);
       this.stream = stream;
       const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
@@ -3918,7 +3954,12 @@ const dgLive = {
   },
   cleanupAfterClose(){
     if(this.stream){ this.stream.getTracks().forEach(t=>{ try{ t.stop(); }catch{} }); this.stream=null; }
-    this.mediaRecorder=null; this.ws=null; this.active=false;
+    if(this.micStream){ this.micStream.getTracks().forEach(t=>{ try{ t.stop(); }catch{} }); this.micStream=null; }
+    if(this.displayStream){ this.displayStream.getTracks().forEach(t=>{ try{ t.stop(); }catch{} }); this.displayStream=null; }
+    if(this.audioCtx){ try{ this.audioCtx.close(); }catch{} this.audioCtx=null; }
+    this.mediaRecorder=null; this.ws=null; this.active=false; this.includeCall=false;
+    const btn=document.getElementById('vc-transcribe');
+    if(btn){ btn.innerHTML='<i class="ti ti-microphone-2"></i> Transcrever chamada'; btn.classList.remove('live'); }
     this.removeInterim();
   }
 };
