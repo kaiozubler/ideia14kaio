@@ -2313,8 +2313,8 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
       </div>
     </div>
     <div class="mbody" id="vc-body" style="padding:0;height:calc(100% - 56px);background:#0b1220;display:flex;align-items:center;justify-content:center;color:#e2e8f0;font-size:13px">
-      <div id="vc-status">Criando sala…</div>
-      <div id="vc-frame" style="display:none;width:100%;height:100%;position:relative"></div>
+      <div id="vc-frame" style="width:100%;height:100%;position:relative"></div>
+      <div id="vc-status" style="position:absolute;left:0;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:2;background:#0b1220">Criando sala…</div>
     </div>
   </div>
 
@@ -6094,8 +6094,9 @@ async function openVideoCall(){
   const status=document.getElementById('vc-status');
   const frame=document.getElementById('vc-frame');
   const copyBtn=document.getElementById('vc-copy');
-  frame.style.display='none';copyBtn.style.display='none';
-  status.style.display='block';status.textContent='Criando sala…';
+  copyBtn.style.display='none';
+  frame.innerHTML='';
+  status.style.display='flex';status.textContent='Criando sala…';
   try{
     if(window.__vcRoom && window.__vcRoom.expires_at*1000 > Date.now()+60000){
       // reuse
@@ -6107,9 +6108,11 @@ async function openVideoCall(){
       window.__vcRoom=await r.json();
     }
     const url=window.__vcRoom.url;
-    // destrói callFrame anterior, se houver
-    if(window.__vcCallFrame){ try{ window.__vcCallFrame.destroy(); }catch{} window.__vcCallFrame=null; }
     if(!window.DailyIframe){ throw new Error('SDK do Daily não carregou'); }
+    // destrói qualquer callFrame remanescente (Daily é singleton por página)
+    if(window.__vcCallFrame){ try{ await window.__vcCallFrame.destroy(); }catch{} window.__vcCallFrame=null; }
+    try{ const inst = window.DailyIframe.getCallInstance && window.DailyIframe.getCallInstance(); if(inst){ await inst.destroy(); } }catch{}
+    status.textContent='Conectando à sala…';
     const cf = window.DailyIframe.createFrame(frame, {
       iframeStyle:{ position:'absolute', inset:'0', width:'100%', height:'100%', border:'0' },
       showLeaveButton:true, showFullscreenButton:true,
@@ -6140,23 +6143,40 @@ async function openVideoCall(){
       if(isFinal){ if(dgLive.removeInterim) dgLive.removeInterim(); addTranscriptLine(text); }
       else if(dgLive.showInterim){ dgLive.showInterim(text); }
     });
+    cf.on('joined-meeting', ()=>{ status.style.display='none'; });
+    cf.on('error', (ev)=>{
+      const msg = (ev && (ev.errorMsg || ev.error || ev.message)) || 'erro Daily';
+      status.style.display='flex';
+      status.innerHTML='<div style="color:#fca5a5;text-align:center">Erro na chamada:<br><span style="opacity:.8;font-size:12px">'+String(msg)+'</span></div>';
+    });
     cf.on('left-meeting', ()=>{ /* usuário saiu na UI do Daily */ });
-    await cf.join({ url });
-    status.style.display='none'; frame.style.display='block';
     copyBtn.style.display='inline-flex';
+    try{
+      await cf.join({ url });
+    }catch(joinErr){
+      throw new Error('Falha ao entrar na sala: '+(joinErr && joinErr.message || joinErr));
+    }
+    // fallback: esconde status caso o evento não dispare
+    setTimeout(()=>{ if(status) status.style.display='none'; }, 800);
   }catch(e){
     status.innerHTML='<div style="color:#fca5a5">Erro ao criar sala:<br><span style="opacity:.8;font-size:12px">'+String(e.message||e)+'</span></div>';
+    status.style.display='flex';
   }
 }
 function closeVideoCall(){
   const frame=document.getElementById('vc-frame');
   if(window.__vcCallFrame){
-    try{ window.__vcCallFrame.stopTranscription(); }catch{}
-    try{ window.__vcCallFrame.leave(); }catch{}
-    try{ window.__vcCallFrame.destroy(); }catch{}
+    const cf = window.__vcCallFrame;
     window.__vcCallFrame = null;
+    (async ()=>{
+      try{ await cf.stopTranscription(); }catch{}
+      try{ await cf.leave(); }catch{}
+      try{ await cf.destroy(); }catch{}
+      if(frame) frame.innerHTML='';
+    })();
+  }else{
+    if(frame) frame.innerHTML='';
   }
-  if(frame){ frame.innerHTML=''; }
   if(dgLive.active){ try{ dgLive.stop(); }catch{} }
   listening=false; setOrbState('idle'); setListenBtnState('idle');
   const td=document.getElementById('tdot'); if(td) td.classList.remove('live');
