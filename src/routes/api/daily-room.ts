@@ -22,6 +22,7 @@ export const Route = createFileRoute("/api/daily-room")({
             exp,
             enable_chat: true,
             enable_screenshare: true,
+            enable_prejoin_ui: false,
             start_video_off: false,
             start_audio_off: false,
             ...(dgKey ? { enable_transcription: `deepgram:${dgKey}` } : {}),
