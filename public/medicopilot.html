@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://unpkg.com/@daily-co/daily-js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -2313,7 +2314,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
     </div>
     <div class="mbody" id="vc-body" style="padding:0;height:calc(100% - 56px);background:#0b1220;display:flex;align-items:center;justify-content:center;color:#e2e8f0;font-size:13px">
       <div id="vc-status">Criando sala…</div>
-      <iframe id="vc-frame" allow="camera; microphone; fullscreen; speaker; display-capture; autoplay" style="display:none;width:100%;height:100%;border:0"></iframe>
+      <div id="vc-frame" style="display:none;width:100%;height:100%;position:relative"></div>
     </div>
   </div>
 
@@ -6106,18 +6107,59 @@ async function openVideoCall(){
       window.__vcRoom=await r.json();
     }
     const url=window.__vcRoom.url;
-    frame.src=url;
-    frame.onload=()=>{status.style.display='none';frame.style.display='block';};
+    // destrói callFrame anterior, se houver
+    if(window.__vcCallFrame){ try{ window.__vcCallFrame.destroy(); }catch{} window.__vcCallFrame=null; }
+    if(!window.DailyIframe){ throw new Error('SDK do Daily não carregou'); }
+    const cf = window.DailyIframe.createFrame(frame, {
+      iframeStyle:{ position:'absolute', inset:'0', width:'100%', height:'100%', border:'0' },
+      showLeaveButton:true, showFullscreenButton:true,
+    });
+    window.__vcCallFrame = cf;
+    // Eventos de transcrição do Daily → mesmo pipeline do Deepgram local
+    cf.on('transcription-started', ()=>{
+      const btn=document.getElementById('vc-transcribe');
+      if(btn){ btn.innerHTML='<i class="ti ti-player-stop"></i> Parar transcrição'; btn.classList.add('live'); }
+      const lbl=document.getElementById('trans-lbl');
+      if(lbl){ lbl.textContent='Transcrevendo chamada em tempo real...'; lbl.className='trans-lbl live-lbl'; }
+      const td=document.getElementById('tdot'); if(td) td.classList.add('live');
+    });
+    cf.on('transcription-stopped', ()=>{
+      const btn=document.getElementById('vc-transcribe');
+      if(btn){ btn.innerHTML='<i class="ti ti-microphone-2"></i> Transcrever chamada'; btn.classList.remove('live'); }
+      const td=document.getElementById('tdot'); if(td) td.classList.remove('live');
+      listening=false; setOrbState('idle'); setListenBtnState('idle');
+    });
+    cf.on('transcription-error', (ev)=>{
+      const msg = (ev && (ev.errorMsg || ev.message)) || 'erro de transcrição';
+      addTranscriptLine('[ Erro Daily: '+msg+' ]');
+    });
+    cf.on('transcription-message', (ev)=>{
+      const text = (ev && (ev.text || (ev.rawResponse && ev.rawResponse.channel && ev.rawResponse.channel.alternatives && ev.rawResponse.channel.alternatives[0] && ev.rawResponse.channel.alternatives[0].transcript)) || '').trim();
+      if(!text) return;
+      const isFinal = (ev && ev.rawResponse) ? !!ev.rawResponse.is_final : true;
+      if(isFinal){ if(dgLive.removeInterim) dgLive.removeInterim(); addTranscriptLine(text); }
+      else if(dgLive.showInterim){ dgLive.showInterim(text); }
+    });
+    cf.on('left-meeting', ()=>{ /* usuário saiu na UI do Daily */ });
+    await cf.join({ url });
+    status.style.display='none'; frame.style.display='block';
     copyBtn.style.display='inline-flex';
-    setTimeout(()=>{status.style.display='none';frame.style.display='block';},1500);
   }catch(e){
     status.innerHTML='<div style="color:#fca5a5">Erro ao criar sala:<br><span style="opacity:.8;font-size:12px">'+String(e.message||e)+'</span></div>';
   }
 }
 function closeVideoCall(){
   const frame=document.getElementById('vc-frame');
-  try{frame.src='about:blank';}catch(_){}
-  if(dgLive.active && dgLive.includeCall){ try{ dgLive.stop(); }catch{} }
+  if(window.__vcCallFrame){
+    try{ window.__vcCallFrame.stopTranscription(); }catch{}
+    try{ window.__vcCallFrame.leave(); }catch{}
+    try{ window.__vcCallFrame.destroy(); }catch{}
+    window.__vcCallFrame = null;
+  }
+  if(frame){ frame.innerHTML=''; }
+  if(dgLive.active){ try{ dgLive.stop(); }catch{} }
+  listening=false; setOrbState('idle'); setListenBtnState('idle');
+  const td=document.getElementById('tdot'); if(td) td.classList.remove('live');
   const m=document.getElementById('m-video');m.style.display='none';
   m.classList.remove('minimized');
   document.getElementById('modal-overlay').classList.remove('open');
@@ -6126,7 +6168,33 @@ function closeVideoCall(){
 
 async function toggleCallTranscription(){
   const btn=document.getElementById('vc-transcribe');
-  // Se já está ativo com áudio da chamada, para
+  const cf = window.__vcCallFrame;
+  const cfg = (typeof getCopilotoCfg==='function') ? getCopilotoCfg() : { enabled:true, voz:true };
+  if(!cfg.enabled){ if(typeof toast==='function') toast('Ative o copiloto para transcrever a chamada.'); return; }
+  if(!cfg.voz){ if(typeof toast==='function') toast('Ative "Permitir gravação de voz" no copiloto.'); return; }
+  // Consulta em vídeo (Daily) → usa transcrição nativa do Daily
+  if(cf){
+    let running=false;
+    try{ const st = cf.transcriptionState && cf.transcriptionState(); running = !!(st && (st.isTranscribing || st.transcriptId)); }catch{}
+    if(running){
+      try{ await cf.stopTranscription(); }catch(e){}
+      return;
+    }
+    if(btn){ btn.innerHTML='<i class="ti ti-loader-2"></i> Conectando…'; }
+    const lbl=document.getElementById('trans-lbl');if(lbl){lbl.textContent='Conectando à transcrição do Daily...';lbl.className='trans-lbl live-lbl';}
+    listening=true; aiPaused=false;
+    setOrbState('listening'); setListenBtnState('listening');
+    try{
+      await cf.startTranscription({ language:'pt-BR', model:'nova-2', tier:'nova', punctuate:true, profanity_filter:false, includeRawResponse:true });
+    }catch(err){
+      if(btn){ btn.innerHTML='<i class="ti ti-microphone-2"></i> Transcrever chamada'; btn.classList.remove('live'); }
+      const l=document.getElementById('trans-lbl');if(l){l.textContent='Erro: '+(err.message||err);l.className='trans-lbl';}
+      addTranscriptLine('[ Erro Daily: '+(err.message||err)+' ]');
+      listening=false; setOrbState('idle'); setListenBtnState('idle');
+    }
+    return;
+  }
+  // Consulta presencial (sem chamada de vídeo) → mantém Deepgram
   if(dgLive.active && dgLive.includeCall){
     try{ await dgLive.stop(); }catch{}
     listening=false; aiPaused=false;
@@ -6134,11 +6202,7 @@ async function toggleCallTranscription(){
     const td=document.getElementById('tdot');if(td)td.classList.remove('live');
     return;
   }
-  // Se está rodando só com microfone, encerra antes de reabrir com áudio da chamada
   if(dgLive.active || dgLive.starting){ try{ await dgLive.stop(); }catch{} }
-  const cfg = (typeof getCopilotoCfg==='function') ? getCopilotoCfg() : { enabled:true, voz:true };
-  if(!cfg.enabled){ if(typeof toast==='function') toast('Ative o copiloto para transcrever a chamada.'); return; }
-  if(!cfg.voz){ if(typeof toast==='function') toast('Ative "Permitir gravação de voz" no copiloto.'); return; }
   if(btn){ btn.innerHTML='<i class="ti ti-loader-2"></i> Conectando…'; }
   const lbl=document.getElementById('trans-lbl');if(lbl){lbl.textContent='Conectando ao Deepgram (chamada)...';lbl.className='trans-lbl live-lbl';}
   const td=document.getElementById('tdot');if(td)td.classList.add('live');
