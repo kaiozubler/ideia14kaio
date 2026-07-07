@@ -6144,6 +6144,7 @@ async function openVideoCall(){
     setVideoStatus('Carregando vídeo…');
     const cf = window.DailyIframe.createFrame(frame, {
       url,
+      token:window.__vcRoom.token,
       iframeStyle:{ position:'absolute', inset:'0', width:'100%', height:'100%', border:'0' },
       userName:getDailyUserName(),
       showUserNameChangeUI:false,
@@ -6183,7 +6184,7 @@ async function openVideoCall(){
     });
     cf.on('left-meeting', ()=>{ /* usuário saiu na UI do Daily */ });
     copyBtn.style.display='inline-flex';
-    const joinPromise = cf.join({ userName:getDailyUserName() });
+    const joinPromise = cf.join({ userName:getDailyUserName(), token:window.__vcRoom.token });
     setTimeout(()=>{ if(window.__vcCallFrame===cf) setVideoStatus(null); }, 650);
     joinPromise.catch(joinErr=>{
       if(window.__vcCallFrame!==cf) return;
