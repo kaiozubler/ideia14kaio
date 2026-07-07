@@ -6093,6 +6093,11 @@ function setVideoStatus(message, mode){
     ? '<div style="color:#fca5a5;text-align:center">'+message+'</div>'
     : message;
 }
+function getDailyUserName(){
+  const p = (typeof currentPatient !== 'undefined' && currentPatient) ? currentPatient : null;
+  const patient = (p && (p.nome || p.name)) ? String(p.nome || p.name).trim() : '';
+  return patient ? 'Dr(a). — '+patient : 'Profissional';
+}
 async function destroyVideoFrame(){
   if(window.__vcDestroying){
     try{ await window.__vcDestroying; }catch{}
@@ -6140,6 +6145,9 @@ async function openVideoCall(){
     const cf = window.DailyIframe.createFrame(frame, {
       url,
       iframeStyle:{ position:'absolute', inset:'0', width:'100%', height:'100%', border:'0' },
+      userName:getDailyUserName(),
+      showUserNameChangeUI:false,
+      lang:'pt-BR',
       showLeaveButton:true, showFullscreenButton:true,
     });
     window.__vcCallFrame = cf;
@@ -6175,7 +6183,7 @@ async function openVideoCall(){
     });
     cf.on('left-meeting', ()=>{ /* usuário saiu na UI do Daily */ });
     copyBtn.style.display='inline-flex';
-    const joinPromise = cf.join();
+    const joinPromise = cf.join({ userName:getDailyUserName() });
     setTimeout(()=>{ if(window.__vcCallFrame===cf) setVideoStatus(null); }, 650);
     joinPromise.catch(joinErr=>{
       if(window.__vcCallFrame!==cf) return;
@@ -6204,6 +6212,13 @@ async function toggleCallTranscription(){
   if(!cfg.voz){ if(typeof toast==='function') toast('Ative "Permitir gravação de voz" no copiloto.'); return; }
   // Consulta em vídeo (Daily) → usa transcrição nativa do Daily
   if(cf){
+    let meetingState='';
+    try{ meetingState = cf.meetingState && cf.meetingState(); }catch{}
+    if(meetingState !== 'joined-meeting'){
+      if(typeof toast==='function') toast('Aguarde entrar na sala para iniciar a transcrição.');
+      const l=document.getElementById('trans-lbl');if(l){l.textContent='Aguardando entrada na sala Daily...';l.className='trans-lbl';}
+      return;
+    }
     let running=false;
     try{ const st = cf.transcriptionState && cf.transcriptionState(); running = !!(st && (st.isTranscribing || st.transcriptId)); }catch{}
     if(running){
