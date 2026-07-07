@@ -6166,12 +6166,17 @@ async function openVideoCall(){
 function closeVideoCall(){
   const frame=document.getElementById('vc-frame');
   if(window.__vcCallFrame){
-    try{ window.__vcCallFrame.stopTranscription(); }catch{}
-    try{ window.__vcCallFrame.leave(); }catch{}
-    try{ window.__vcCallFrame.destroy(); }catch{}
+    const cf = window.__vcCallFrame;
     window.__vcCallFrame = null;
+    (async ()=>{
+      try{ await cf.stopTranscription(); }catch{}
+      try{ await cf.leave(); }catch{}
+      try{ await cf.destroy(); }catch{}
+      if(frame) frame.innerHTML='';
+    })();
+  }else{
+    if(frame) frame.innerHTML='';
   }
-  if(frame){ frame.innerHTML=''; }
   if(dgLive.active){ try{ dgLive.stop(); }catch{} }
   listening=false; setOrbState('idle'); setListenBtnState('idle');
   const td=document.getElementById('tdot'); if(td) td.classList.remove('live');
