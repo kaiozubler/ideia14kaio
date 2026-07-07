@@ -15,6 +15,7 @@ export const Route = createFileRoute("/api/daily-room")({
           /* no body */
         }
         const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 2; // 2h
+        const dgKey = process.env.DEEPGRAM_API_KEY;
         const payload: Record<string, unknown> = {
           privacy: "public",
           properties: {
@@ -23,6 +24,7 @@ export const Route = createFileRoute("/api/daily-room")({
             enable_screenshare: true,
             start_video_off: false,
             start_audio_off: false,
+            ...(dgKey ? { enable_transcription: `deepgram:${dgKey}` } : {}),
           },
         };
         if (body.name) payload.name = body.name;
