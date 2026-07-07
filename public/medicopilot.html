@@ -6082,6 +6082,38 @@ function renderAgCards(body,apts){
   // restore frame styles when leaving cards view next time via renderAgenda
 }
 window.__vcRoom=null;
+window.__vcDestroying=null;
+function setVideoStatus(message, mode){
+  const status=document.getElementById('vc-status');
+  if(!status)return;
+  if(!message){status.style.display='none';status.innerHTML='';return;}
+  status.style.display='flex';
+  status.style.background = mode === 'error' ? 'rgba(11,18,32,.92)' : '#0b1220';
+  status.innerHTML = mode === 'error'
+    ? '<div style="color:#fca5a5;text-align:center">'+message+'</div>'
+    : message;
+}
+function getDailyUserName(){
+  const p = (typeof currentPatient !== 'undefined' && currentPatient) ? currentPatient : null;
+  const patient = (p && (p.nome || p.name)) ? String(p.nome || p.name).trim() : '';
+  return patient ? 'Dr(a). — '+patient : 'Profissional';
+}
+async function destroyVideoFrame(){
+  if(window.__vcDestroying){
+    try{ await window.__vcDestroying; }catch{}
+  }
+  const frame=document.getElementById('vc-frame');
+  const cf = window.__vcCallFrame || (window.DailyIframe && window.DailyIframe.getCallInstance && window.DailyIframe.getCallInstance());
+  window.__vcCallFrame = null;
+  if(!cf){ if(frame) frame.innerHTML=''; return; }
+  window.__vcDestroying = (async ()=>{
+    try{ await cf.stopTranscription(); }catch{}
+    try{ await cf.leave(); }catch{}
+    try{ await cf.destroy(); }catch{}
+    if(frame) frame.innerHTML='';
+  })();
+  try{ await window.__vcDestroying; }finally{ window.__vcDestroying=null; }
+}
 async function openVideoCall(){
   const ov=document.getElementById('modal-overlay');
   const m=document.getElementById('m-video');
@@ -6095,8 +6127,8 @@ async function openVideoCall(){
   const frame=document.getElementById('vc-frame');
   const copyBtn=document.getElementById('vc-copy');
   copyBtn.style.display='none';
-  frame.innerHTML='';
-  status.style.display='flex';status.textContent='Criando sala…';
+  await destroyVideoFrame();
+  setVideoStatus('Criando sala…');
   try{
     if(window.__vcRoom && window.__vcRoom.expires_at*1000 > Date.now()+60000){
       // reuse
@@ -6109,12 +6141,14 @@ async function openVideoCall(){
     }
     const url=window.__vcRoom.url;
     if(!window.DailyIframe){ throw new Error('SDK do Daily não carregou'); }
-    // destrói qualquer callFrame remanescente (Daily é singleton por página)
-    if(window.__vcCallFrame){ try{ await window.__vcCallFrame.destroy(); }catch{} window.__vcCallFrame=null; }
-    try{ const inst = window.DailyIframe.getCallInstance && window.DailyIframe.getCallInstance(); if(inst){ await inst.destroy(); } }catch{}
-    status.textContent='Conectando à sala…';
+    setVideoStatus('Carregando vídeo…');
     const cf = window.DailyIframe.createFrame(frame, {
+      url,
+      token:window.__vcRoom.token,
       iframeStyle:{ position:'absolute', inset:'0', width:'100%', height:'100%', border:'0' },
+      userName:getDailyUserName(),
+      showUserNameChangeUI:false,
+      lang:'pt-BR',
       showLeaveButton:true, showFullscreenButton:true,
     });
     window.__vcCallFrame = cf;
@@ -6143,40 +6177,25 @@ async function openVideoCall(){
       if(isFinal){ if(dgLive.removeInterim) dgLive.removeInterim(); addTranscriptLine(text); }
       else if(dgLive.showInterim){ dgLive.showInterim(text); }
     });
-    cf.on('joined-meeting', ()=>{ status.style.display='none'; });
+    cf.on('joined-meeting', ()=>{ setVideoStatus(null); });
     cf.on('error', (ev)=>{
       const msg = (ev && (ev.errorMsg || ev.error || ev.message)) || 'erro Daily';
-      status.style.display='flex';
-      status.innerHTML='<div style="color:#fca5a5;text-align:center">Erro na chamada:<br><span style="opacity:.8;font-size:12px">'+String(msg)+'</span></div>';
+      setVideoStatus('Erro na chamada:<br><span style="opacity:.8;font-size:12px">'+String(msg)+'</span>', 'error');
     });
     cf.on('left-meeting', ()=>{ /* usuário saiu na UI do Daily */ });
     copyBtn.style.display='inline-flex';
-    try{
-      await cf.join({ url });
-    }catch(joinErr){
-      throw new Error('Falha ao entrar na sala: '+(joinErr && joinErr.message || joinErr));
-    }
-    // fallback: esconde status caso o evento não dispare
-    setTimeout(()=>{ if(status) status.style.display='none'; }, 800);
+    const joinPromise = cf.join({ userName:getDailyUserName(), token:window.__vcRoom.token });
+    setTimeout(()=>{ if(window.__vcCallFrame===cf) setVideoStatus(null); }, 650);
+    joinPromise.catch(joinErr=>{
+      if(window.__vcCallFrame!==cf) return;
+      setVideoStatus('Falha ao entrar na sala:<br><span style="opacity:.8;font-size:12px">'+String((joinErr && joinErr.message) || joinErr)+'</span>', 'error');
+    });
   }catch(e){
-    status.innerHTML='<div style="color:#fca5a5">Erro ao criar sala:<br><span style="opacity:.8;font-size:12px">'+String(e.message||e)+'</span></div>';
-    status.style.display='flex';
+    setVideoStatus('Erro ao criar sala:<br><span style="opacity:.8;font-size:12px">'+String(e.message||e)+'</span>', 'error');
   }
 }
 function closeVideoCall(){
-  const frame=document.getElementById('vc-frame');
-  if(window.__vcCallFrame){
-    const cf = window.__vcCallFrame;
-    window.__vcCallFrame = null;
-    (async ()=>{
-      try{ await cf.stopTranscription(); }catch{}
-      try{ await cf.leave(); }catch{}
-      try{ await cf.destroy(); }catch{}
-      if(frame) frame.innerHTML='';
-    })();
-  }else{
-    if(frame) frame.innerHTML='';
-  }
+  destroyVideoFrame();
   if(dgLive.active){ try{ dgLive.stop(); }catch{} }
   listening=false; setOrbState('idle'); setListenBtnState('idle');
   const td=document.getElementById('tdot'); if(td) td.classList.remove('live');
@@ -6194,6 +6213,13 @@ async function toggleCallTranscription(){
   if(!cfg.voz){ if(typeof toast==='function') toast('Ative "Permitir gravação de voz" no copiloto.'); return; }
   // Consulta em vídeo (Daily) → usa transcrição nativa do Daily
   if(cf){
+    let meetingState='';
+    try{ meetingState = cf.meetingState && cf.meetingState(); }catch{}
+    if(meetingState !== 'joined-meeting'){
+      if(typeof toast==='function') toast('Aguarde entrar na sala para iniciar a transcrição.');
+      const l=document.getElementById('trans-lbl');if(l){l.textContent='Aguardando entrada na sala Daily...';l.className='trans-lbl';}
+      return;
+    }
     let running=false;
     try{ const st = cf.transcriptionState && cf.transcriptionState(); running = !!(st && (st.isTranscribing || st.transcriptId)); }catch{}
     if(running){
