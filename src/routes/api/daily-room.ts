@@ -42,7 +42,34 @@ export const Route = createFileRoute("/api/daily-room")({
           return new Response(`Daily ${r.status}: ${text}`, { status: r.status });
         }
         const data = JSON.parse(text) as { url?: string; name?: string };
-        return Response.json({ url: data.url, name: data.name, expires_at: exp });
+        const roomName = data.name || body.name;
+        let token: string | undefined;
+        if (roomName) {
+          const tr = await fetch("https://api.daily.co/v1/meeting-tokens", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              properties: {
+                room_name: roomName,
+                exp,
+                is_owner: true,
+                user_name: "Profissional",
+                enable_prejoin_ui: false,
+                lang: "pt-BR",
+                permissions: { hasPresence: true, canSend: true, canReceive: {}, canAdmin: true },
+              },
+            }),
+          });
+          const tokenText = await tr.text();
+          if (!tr.ok) {
+            return new Response(`Daily token ${tr.status}: ${tokenText}`, { status: tr.status });
+          }
+          token = (JSON.parse(tokenText) as { token?: string }).token;
+        }
+        return Response.json({ url: data.url, name: roomName, token, expires_at: exp });
       },
     },
   },
