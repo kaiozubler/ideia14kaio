@@ -17,6 +17,8 @@ function Index() {
     <iframe
       src="/medicopilot.html"
       title="MediCopilot"
+      allow="camera; microphone; autoplay; display-capture; fullscreen; screen-wake-lock"
+      allowFullScreen
       style={{ border: 0, width: "100vw", height: "100vh", display: "block" }}
     />
   );
