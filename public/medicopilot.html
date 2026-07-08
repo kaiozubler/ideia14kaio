@@ -6083,11 +6083,14 @@ function renderAgCards(body,apts){
 }
 window.__vcRoom=null;
 window.__vcDestroying=null;
+window.__vcPopout=null;
+window.__vcProxyState={joined:false,transcribing:false};
 function setVideoStatus(message, mode){
   const status=document.getElementById('vc-status');
   if(!status)return;
   if(!message){status.style.display='none';status.innerHTML='';return;}
   status.style.display='flex';
+  status.style.pointerEvents = mode === 'action' ? 'auto' : 'none';
   status.style.background = mode === 'error' ? 'rgba(11,18,32,.92)' : '#0b1220';
   status.innerHTML = mode === 'error'
     ? '<div style="color:#fca5a5;text-align:center">'+message+'</div>'
@@ -6098,6 +6101,114 @@ function getDailyUserName(){
   const patient = (p && (p.nome || p.name)) ? String(p.nome || p.name).trim() : '';
   return patient ? 'Dr(a). — '+patient : 'Profissional';
 }
+function embeddedPreviewBlocksMedia(){
+  try{
+    if(window.top===window.self) return false;
+    const policy = document.permissionsPolicy || document.featurePolicy;
+    if(policy && typeof policy.allowsFeature === 'function'){
+      return !policy.allowsFeature('camera') || !policy.allowsFeature('microphone');
+    }
+  }catch{}
+  return false;
+}
+function openDailyPopoutShell(){
+  try{
+    const w = window.open('/medicopilot-daily-popout.html', 'medicopilot_daily_'+Date.now(), 'popup,width=1120,height=760');
+    if(w){ window.__vcPopout=w; }
+    return w;
+  }catch{return null;}
+}
+function createDailyPopoutProxy(popout){
+  return {
+    __isPopoutProxy:true,
+    meetingState(){
+      if(!popout || popout.closed) return 'left-meeting';
+      try{return popout.__meetingState ? popout.__meetingState() : (window.__vcProxyState.joined?'joined-meeting':'loading');}
+      catch{return window.__vcProxyState.joined?'joined-meeting':'loading';}
+    },
+    transcriptionState(){
+      if(!popout || popout.closed) return {isTranscribing:false};
+      try{return popout.__transcriptionState ? popout.__transcriptionState() : {isTranscribing:window.__vcProxyState.transcribing};}
+      catch{return {isTranscribing:window.__vcProxyState.transcribing};}
+    },
+    startTranscription(opts){
+      if(!popout || popout.closed) return Promise.reject(new Error('Janela da chamada foi fechada'));
+      try{return popout.__startTranscription(opts);}catch(e){return Promise.reject(e);}
+    },
+    stopTranscription(){
+      if(!popout || popout.closed) return Promise.resolve();
+      try{return popout.__stopTranscription ? popout.__stopTranscription() : Promise.resolve();}catch(e){return Promise.reject(e);}
+    },
+    leave(){
+      if(!popout || popout.closed) return Promise.resolve();
+      try{return popout.__closeDaily ? popout.__closeDaily() : (popout.close(), Promise.resolve());}catch(e){try{popout.close();}catch{} return Promise.resolve();}
+    },
+    destroy(){
+      if(popout && !popout.closed){try{popout.close();}catch{}}
+      return Promise.resolve();
+    }
+  };
+}
+async function startDailyInPopout(popout, room){
+  for(let i=0;i<90;i++){
+    if(!popout || popout.closed) throw new Error('Janela da chamada foi fechada');
+    try{
+      if(popout.__startDaily){
+        const p = popout.__startDaily({url:room.url,name:room.name,token:room.token}, getDailyUserName());
+        if(p && typeof p.catch==='function') p.catch(err=>handleDailyError({message:(err&&err.message)||err}));
+        return;
+      }
+    }catch(e){throw e;}
+    await new Promise(resolve=>setTimeout(resolve,100));
+  }
+  throw new Error('A janela da chamada não carregou');
+}
+function handleDailyTranscriptionStarted(){
+  window.__vcProxyState.transcribing=true;
+  const btn=document.getElementById('vc-transcribe');
+  if(btn){ btn.innerHTML='<i class="ti ti-player-stop"></i> Parar transcrição'; btn.classList.add('live'); }
+  const lbl=document.getElementById('trans-lbl');
+  if(lbl){ lbl.textContent='Transcrevendo chamada em tempo real...'; lbl.className='trans-lbl live-lbl'; }
+  const td=document.getElementById('tdot'); if(td) td.classList.add('live');
+}
+function handleDailyTranscriptionStopped(){
+  window.__vcProxyState.transcribing=false;
+  const btn=document.getElementById('vc-transcribe');
+  if(btn){ btn.innerHTML='<i class="ti ti-microphone-2"></i> Transcrever chamada'; btn.classList.remove('live'); }
+  const td=document.getElementById('tdot'); if(td) td.classList.remove('live');
+  listening=false; setOrbState('idle'); setListenBtnState('idle');
+}
+function handleDailyTranscriptionError(ev){
+  const msg = (ev && (ev.errorMsg || ev.message)) || 'erro de transcrição';
+  addTranscriptLine('[ Erro Daily: '+msg+' ]');
+}
+function handleDailyTranscriptionMessage(ev){
+  const text = (ev && (ev.text || (ev.rawResponse && ev.rawResponse.channel && ev.rawResponse.channel.alternatives && ev.rawResponse.channel.alternatives[0] && ev.rawResponse.channel.alternatives[0].transcript)) || '').trim();
+  if(!text) return;
+  const isFinal = (ev && ev.rawResponse) ? !!ev.rawResponse.is_final : true;
+  if(isFinal){ if(dgLive.removeInterim) dgLive.removeInterim(); addTranscriptLine(text); }
+  else if(dgLive.showInterim){ dgLive.showInterim(text); }
+}
+function handleDailyJoined(){
+  window.__vcProxyState.joined=true;
+  setVideoStatus(null);
+}
+function handleDailyError(ev){
+  const msg = (ev && (ev.errorMsg || ev.error || ev.message)) || 'erro Daily';
+  setVideoStatus('Erro na chamada:<br><span style="opacity:.8;font-size:12px">'+String(msg)+'</span>', 'error');
+}
+window.addEventListener('message', (event)=>{
+  if(event.origin !== window.location.origin) return;
+  const data = event.data || {};
+  if(data.source !== 'medicopilot-daily-popout') return;
+  if(data.type === 'joined-meeting') handleDailyJoined();
+  else if(data.type === 'left-meeting'){ window.__vcProxyState.joined=false; window.__vcProxyState.transcribing=false; handleDailyTranscriptionStopped(); }
+  else if(data.type === 'transcription-started') handleDailyTranscriptionStarted();
+  else if(data.type === 'transcription-stopped') handleDailyTranscriptionStopped();
+  else if(data.type === 'transcription-error') handleDailyTranscriptionError(data.payload || {});
+  else if(data.type === 'transcription-message') handleDailyTranscriptionMessage(data.payload || {});
+  else if(data.type === 'error') handleDailyError(data.payload || {});
+});
 async function destroyVideoFrame(){
   if(window.__vcDestroying){
     try{ await window.__vcDestroying; }catch{}
@@ -6115,6 +6226,8 @@ async function destroyVideoFrame(){
   try{ await window.__vcDestroying; }finally{ window.__vcDestroying=null; }
 }
 async function openVideoCall(){
+  const usePopout = embeddedPreviewBlocksMedia();
+  const popout = usePopout ? openDailyPopoutShell() : null;
   const ov=document.getElementById('modal-overlay');
   const m=document.getElementById('m-video');
   document.querySelectorAll('#modal-overlay .modal').forEach(el=>el.style.display='none');
@@ -6127,6 +6240,7 @@ async function openVideoCall(){
   const frame=document.getElementById('vc-frame');
   const copyBtn=document.getElementById('vc-copy');
   copyBtn.style.display='none';
+  window.__vcProxyState={joined:false,transcribing:false};
   await destroyVideoFrame();
   setVideoStatus('Criando sala…');
   try{
@@ -6140,6 +6254,19 @@ async function openVideoCall(){
       window.__vcRoom=await r.json();
     }
     const url=window.__vcRoom.url;
+    if(usePopout){
+      if(!popout || popout.closed){
+        setVideoStatus('O navegador bloqueou a janela da chamada. Clique novamente em Vídeo para abrir em uma janela com acesso à câmera e ao microfone.', 'action');
+        return;
+      }
+      copyBtn.style.display='inline-flex';
+      window.__vcCallFrame = createDailyPopoutProxy(popout);
+      setVideoStatus('Abrindo chamada em janela segura…');
+      await startDailyInPopout(popout, window.__vcRoom);
+      setVideoStatus('Chamada aberta em janela separada para liberar câmera e microfone. Você pode manter este modal aberto para transcrever.');
+      setTimeout(()=>{ if(window.__vcCallFrame && window.__vcCallFrame.__isPopoutProxy) setVideoStatus(null); }, 3200);
+      return;
+    }
     if(!window.DailyIframe){ throw new Error('SDK do Daily não carregou'); }
     setVideoStatus('Carregando vídeo…');
     // Pre-cria o iframe com permissões corretas de mic/câmera/tela para evitar
@@ -6159,35 +6286,12 @@ async function openVideoCall(){
     });
     window.__vcCallFrame = cf;
     // Eventos de transcrição do Daily → mesmo pipeline do Deepgram local
-    cf.on('transcription-started', ()=>{
-      const btn=document.getElementById('vc-transcribe');
-      if(btn){ btn.innerHTML='<i class="ti ti-player-stop"></i> Parar transcrição'; btn.classList.add('live'); }
-      const lbl=document.getElementById('trans-lbl');
-      if(lbl){ lbl.textContent='Transcrevendo chamada em tempo real...'; lbl.className='trans-lbl live-lbl'; }
-      const td=document.getElementById('tdot'); if(td) td.classList.add('live');
-    });
-    cf.on('transcription-stopped', ()=>{
-      const btn=document.getElementById('vc-transcribe');
-      if(btn){ btn.innerHTML='<i class="ti ti-microphone-2"></i> Transcrever chamada'; btn.classList.remove('live'); }
-      const td=document.getElementById('tdot'); if(td) td.classList.remove('live');
-      listening=false; setOrbState('idle'); setListenBtnState('idle');
-    });
-    cf.on('transcription-error', (ev)=>{
-      const msg = (ev && (ev.errorMsg || ev.message)) || 'erro de transcrição';
-      addTranscriptLine('[ Erro Daily: '+msg+' ]');
-    });
-    cf.on('transcription-message', (ev)=>{
-      const text = (ev && (ev.text || (ev.rawResponse && ev.rawResponse.channel && ev.rawResponse.channel.alternatives && ev.rawResponse.channel.alternatives[0] && ev.rawResponse.channel.alternatives[0].transcript)) || '').trim();
-      if(!text) return;
-      const isFinal = (ev && ev.rawResponse) ? !!ev.rawResponse.is_final : true;
-      if(isFinal){ if(dgLive.removeInterim) dgLive.removeInterim(); addTranscriptLine(text); }
-      else if(dgLive.showInterim){ dgLive.showInterim(text); }
-    });
-    cf.on('joined-meeting', ()=>{ setVideoStatus(null); });
-    cf.on('error', (ev)=>{
-      const msg = (ev && (ev.errorMsg || ev.error || ev.message)) || 'erro Daily';
-      setVideoStatus('Erro na chamada:<br><span style="opacity:.8;font-size:12px">'+String(msg)+'</span>', 'error');
-    });
+    cf.on('transcription-started', handleDailyTranscriptionStarted);
+    cf.on('transcription-stopped', handleDailyTranscriptionStopped);
+    cf.on('transcription-error', handleDailyTranscriptionError);
+    cf.on('transcription-message', handleDailyTranscriptionMessage);
+    cf.on('joined-meeting', handleDailyJoined);
+    cf.on('error', handleDailyError);
     cf.on('left-meeting', ()=>{ /* usuário saiu na UI do Daily */ });
     copyBtn.style.display='inline-flex';
     const joinPromise = cf.join({ userName:getDailyUserName(), token:window.__vcRoom.token });
