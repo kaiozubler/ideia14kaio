@@ -1357,6 +1357,93 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
   overflow:hidden;
 }
 #m-video.minimized .mbody{display:none}
+
+/* ===== VIDEOCHAMADA — LIQUID GLASS (call object daily-js) ===== */
+.vc-body{position:relative;display:flex;overflow:hidden;background:#0b1220}
+.vc-view{position:absolute;inset:0;display:none}
+.vc-view.active{display:flex}
+
+/* --- Lobby & Error share the pastel glass backdrop --- */
+.vc-pastel{
+  background:linear-gradient(135deg,#eef8f1 0%,#f3f1fb 45%,#fdf6ec 100%);
+  align-items:center;justify-content:center;position:relative;overflow:hidden;
+}
+.vc-blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55;pointer-events:none}
+.vc-card{
+  position:relative;z-index:1;width:380px;max-width:88%;
+  background:rgba(255,255,255,.7);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
+  border:1px solid rgba(255,255,255,.85);border-radius:28px;
+  box-shadow:0 24px 60px rgba(100,116,139,.18);
+  padding:24px;
+}
+.vc-preview{position:relative;aspect-ratio:16/10;border-radius:20px;overflow:hidden;background:#0f172a;margin-bottom:16px;border:1px solid rgba(255,255,255,.5)}
+.vc-preview video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.vc-preview .vc-avatar{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.vc-preview-ctrls{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px}
+.vc-round-btn{width:38px;height:38px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);color:#fff;backdrop-filter:blur(6px);cursor:pointer;transition:all .15s}
+.vc-round-btn.off{background:#e11d48}
+.vc-round-btn.big{width:56px;height:56px}
+.vc-title{font-size:16px;font-weight:700;color:#1e293b;text-align:center;margin-bottom:4px}
+.vc-sub{font-size:12px;color:#64748b;text-align:center;margin-bottom:16px;line-height:1.45}
+.vc-join-btn{width:100%;padding:13px;border:none;border-radius:999px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;
+  background:linear-gradient(135deg,#34d399,#059669);box-shadow:0 10px 24px rgba(5,150,105,.3);display:flex;align-items:center;justify-content:center;gap:8px}
+.vc-join-btn:disabled{opacity:.55;cursor:not-allowed}
+.vc-waiting{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.8);border-radius:16px;padding:12px 14px;font-size:12px;color:#475569}
+.vc-dots{display:flex;gap:4px}
+.vc-dots span{width:6px;height:6px;border-radius:50%;background:#059669;animation:vcPulse 1s infinite ease-in-out}
+.vc-dots span:nth-child(2){animation-delay:.15s}
+.vc-dots span:nth-child(3){animation-delay:.3s}
+@keyframes vcPulse{0%,80%,100%{opacity:.3}40%{opacity:1}}
+
+/* --- Active call --- */
+.vc-call-view{background:#0b1220}
+.vc-topbar{position:absolute;top:0;left:0;right:0;z-index:5;display:flex;justify-content:space-between;padding:14px 16px;pointer-events:none}
+.vc-pill{pointer-events:auto;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.14);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:7px 13px;color:#fff;font-size:12px}
+.vc-brand-badge{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#34d399,#059669);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.vc-grid{position:absolute;inset:0;display:grid;gap:8px;padding:56px 14px 92px;grid-template-columns:1fr}
+.vc-grid.n2{grid-template-columns:1fr 1fr}
+.vc-grid.n4{grid-template-columns:1fr 1fr}
+.vc-tile{position:relative;border-radius:18px;overflow:hidden;background:#1e293b;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center}
+.vc-tile.speaking{border-color:#34d399;box-shadow:0 0 0 2px rgba(52,211,153,.4)}
+.vc-tile video{width:100%;height:100%;object-fit:cover}
+.vc-tile .vc-avatar{width:64px;height:64px;font-size:20px}
+.vc-tile-tag{position:absolute;bottom:8px;left:8px;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);border-radius:999px;padding:5px 10px;font-size:11px;color:#fff}
+.vc-avatar{border-radius:50%;background:linear-gradient(135deg,#8b8f99,#4b5563);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700}
+.vc-dock{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:5;display:flex;gap:8px;background:rgba(255,255,255,.16);backdrop-filter:blur(18px) saturate(180%);border:1px solid rgba(255,255,255,.18);border-radius:22px;padding:8px}
+.vc-dockbtn{width:44px;height:44px;border-radius:14px;border:none;display:flex;align-items:center;justify-content:center;color:#fff;background:rgba(255,255,255,.12);cursor:pointer;transition:all .15s;font-size:17px}
+.vc-dockbtn:hover{background:rgba(255,255,255,.22)}
+.vc-dockbtn.active{background:linear-gradient(135deg,#34d399,#059669)}
+.vc-dockbtn.danger{background:linear-gradient(135deg,#f43f5e,#e11d48)}
+.vc-dockbtn.sep{width:1px;background:rgba(255,255,255,.18);cursor:default;margin:6px 2px}
+.vc-dockbtn.sep:hover{background:rgba(255,255,255,.18)}
+
+/* --- Side panels (chat / participants) --- */
+.vc-side{position:absolute;top:0;right:0;bottom:0;width:270px;z-index:6;background:rgba(255,255,255,.9);backdrop-filter:blur(20px) saturate(180%);border-left:1px solid rgba(255,255,255,.6);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .22s ease}
+.vc-side.open{transform:translateX(0)}
+.vc-side-hd{padding:14px 16px;border-bottom:1px solid var(--n150);display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:13px;color:#1e293b}
+.vc-side-body{flex:1;overflow-y:auto;padding:12px}
+.vc-copy-row{display:flex;align-items:center;gap:10px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:16px;padding:10px 12px;cursor:pointer;margin-bottom:12px}
+.vc-copy-ico{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#34d399,#059669);display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0}
+.vc-copy-txt{font-size:12px;font-weight:600;color:#065f46}
+.vc-copy-url{font-size:10.5px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vc-plist-item{display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:12px}
+.vc-plist-item:hover{background:var(--n75)}
+.vc-chat-msg{max-width:85%;padding:8px 11px;border-radius:14px;font-size:12px;margin-bottom:8px;line-height:1.4}
+.vc-chat-msg.mine{background:linear-gradient(135deg,#34d399,#059669);color:#fff;margin-left:auto}
+.vc-chat-msg.theirs{background:var(--n100);color:#1e293b}
+.vc-chat-input-row{display:flex;gap:8px;padding:10px;border-top:1px solid var(--n150)}
+.vc-chat-input-row input{flex:1;border:1px solid var(--n200);border-radius:999px;padding:8px 13px;font-size:12px;outline:none}
+.vc-chat-input-row input:focus{border-color:#34d399}
+.vc-chat-send{width:34px;height:34px;border-radius:50%;border:none;background:linear-gradient(135deg,#34d399,#059669);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+
+/* --- Ended / Error --- */
+.vc-icon-badge{width:52px;height:52px;border-radius:18px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;margin:0 auto 14px}
+.vc-contact-card{background:rgba(255,255,255,.65);border:1px solid rgba(255,255,255,.85);border-radius:18px;padding:14px;margin-top:14px;text-align:left}
+.vc-contact-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:8px}
+.vc-contact-row{display:flex;align-items:center;gap:10px;font-size:12.5px;color:#334155;text-decoration:none;padding:4px 0}
+.vc-contact-ico{width:28px;height:28px;border-radius:9px;background:linear-gradient(135deg,#34d399,#059669);display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;font-size:13px}
+.vc-btn-secondary{width:100%;padding:11px;border-radius:999px;border:1px solid var(--n200);background:rgba(255,255,255,.7);color:#475569;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;margin-top:8px}
+.vc-device-row{display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.8);border-radius:14px;padding:9px 12px;font-size:11.5px;color:#475569;margin-bottom:8px}
 </style>
 </head>
 <body>
@@ -2306,15 +2393,100 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
   <div class="modal" id="m-video" style="display:none;width:960px;max-width:96vw;height:640px;max-height:92vh;border-radius:20px;overflow:hidden;background:rgba(255,255,255,.92);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border:1px solid rgba(255,255,255,.9);box-shadow:0 32px 80px rgba(100,116,139,.22),0 8px 32px rgba(100,116,139,.12)">
     <div class="mhd"><span class="mhd-title"><i class="ti ti-video"></i> Chamada de vídeo</span>
       <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn sm" id="vc-copy" onclick="copyVideoLink()" style="display:none"><i class="ti ti-link"></i> Copiar link do paciente</button>
-        <button class="btn sm" id="vc-transcribe" onclick="toggleCallTranscription()" title="Capturar áudio da chamada para transcrição"><i class="ti ti-microphone-2"></i> Transcrever chamada</button>
         <button class="mclose" onclick="toggleMinimizeVideoCall()" title="Minimizar"><i class="ti ti-minus" id="vc-minimize-icon"></i></button>
         <button class="mclose" onclick="closeVideoCall()"><i class="ti ti-x"></i></button>
       </div>
     </div>
-    <div class="mbody" id="vc-body" style="padding:0;height:calc(100% - 56px);background:#0b1220;display:flex;align-items:center;justify-content:center;color:#e2e8f0;font-size:13px">
-      <div id="vc-frame" style="width:100%;height:100%;position:relative"></div>
-      <div id="vc-status" style="position:absolute;left:0;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:2;background:#0b1220">Criando sala…</div>
+    <div class="mbody vc-body" id="vc-body" style="padding:0;height:calc(100% - 56px)">
+      <!-- LOBBY (sala de espera / pré-entrada) -->
+      <div id="vc-view-lobby" class="vc-view vc-pastel active">
+        <div class="vc-blob" style="width:260px;height:260px;background:#a7f3d0;top:-70px;left:-70px"></div>
+        <div class="vc-blob" style="width:220px;height:220px;background:#c4b5fd;bottom:-60px;right:-40px"></div>
+        <div class="vc-blob" style="width:200px;height:200px;background:#fde0aa;bottom:20px;left:20px"></div>
+        <div class="vc-card">
+          <div class="vc-preview" id="vc-lobby-preview">
+            <video id="vc-lobby-video" autoplay muted playsinline style="display:none"></video>
+            <div class="vc-avatar" id="vc-lobby-avatar" style="width:100%;height:100%;font-size:26px">--</div>
+            <div class="vc-preview-ctrls">
+              <button class="vc-round-btn" id="vc-lobby-mic" onclick="lobbyToggleMic()"><i class="ti ti-microphone"></i></button>
+              <button class="vc-round-btn" id="vc-lobby-cam" onclick="lobbyToggleCam()"><i class="ti ti-video"></i></button>
+            </div>
+          </div>
+          <div class="vc-title">Tudo pronto para a consulta</div>
+          <div class="vc-sub" id="vc-lobby-sub">Confira sua câmera e microfone antes de entrar na sala.</div>
+          <div class="vc-device-row"><span>Câmera e microfone do dispositivo</span><i class="ti ti-chevron-down"></i></div>
+          <button class="vc-join-btn" id="vc-join-btn" onclick="joinDailyCall()"><i class="ti ti-video"></i> Entrar na sala</button>
+        </div>
+      </div>
+      <!-- CHAMADA ATIVA -->
+      <div id="vc-view-call" class="vc-view vc-call-view">
+        <div class="vc-topbar">
+          <div class="vc-pill"><span class="vc-brand-badge" id="vc-brand-badge">C</span><span id="vc-call-title">Consulta em andamento</span></div>
+          <div class="vc-pill"><i class="ti ti-clock" style="font-size:13px"></i><span id="vc-call-timer">00:00</span></div>
+        </div>
+        <div id="vc-grid" class="vc-grid"></div>
+        <div class="vc-dock">
+          <button class="vc-dockbtn active" id="vc-dock-mic" onclick="callToggleMic()" title="Silenciar microfone"><i class="ti ti-microphone"></i></button>
+          <button class="vc-dockbtn active" id="vc-dock-cam" onclick="callToggleCam()" title="Desligar câmera"><i class="ti ti-video"></i></button>
+          <button class="vc-dockbtn" id="vc-dock-share" onclick="callToggleShare()" title="Compartilhar tela"><i class="ti ti-screen-share"></i></button>
+          <button class="vc-dockbtn" id="vc-dock-transcribe" onclick="toggleCallTranscription()" title="Transcrever chamada"><i class="ti ti-microphone-2"></i></button>
+          <button class="vc-dockbtn" id="vc-dock-chat" onclick="toggleVcSide('chat')" title="Chat"><i class="ti ti-message-circle-2"></i></button>
+          <button class="vc-dockbtn" id="vc-dock-people" onclick="toggleVcSide('people')" title="Participantes"><i class="ti ti-users"></i></button>
+          <div class="vc-dockbtn sep"></div>
+          <button class="vc-dockbtn danger" onclick="leaveDailyCall()" title="Sair da consulta"><i class="ti ti-phone-off"></i></button>
+        </div>
+      </div>
+      <!-- SIDEBAR: CHAT -->
+      <div id="vc-side-chat" class="vc-side">
+        <div class="vc-side-hd">Chat da consulta<button class="mclose" onclick="toggleVcSide('chat')"><i class="ti ti-x"></i></button></div>
+        <div class="vc-side-body" id="vc-chat-log" style="display:flex;flex-direction:column"></div>
+        <div class="vc-chat-input-row">
+          <input type="text" id="vc-chat-input" placeholder="Escreva uma mensagem..." onkeydown="if(event.key==='Enter')sendVcChat()">
+          <button class="vc-chat-send" onclick="sendVcChat()"><i class="ti ti-send"></i></button>
+        </div>
+      </div>
+      <!-- SIDEBAR: PARTICIPANTES -->
+      <div id="vc-side-people" class="vc-side">
+        <div class="vc-side-hd"><span id="vc-people-count">Participantes</span><button class="mclose" onclick="toggleVcSide('people')"><i class="ti ti-x"></i></button></div>
+        <div class="vc-side-body">
+          <div class="vc-copy-row" onclick="copyVideoLink()">
+            <div class="vc-copy-ico"><i class="ti ti-link"></i></div>
+            <div style="min-width:0;flex:1">
+              <div class="vc-copy-txt" id="vc-copy-label">Copiar link da chamada</div>
+              <div class="vc-copy-url" id="vc-copy-url-txt">—</div>
+            </div>
+          </div>
+          <div id="vc-people-list"></div>
+        </div>
+      </div>
+      <!-- ENCERRADA -->
+      <div id="vc-view-ended" class="vc-view vc-pastel">
+        <div class="vc-blob" style="width:260px;height:260px;background:#a7f3d0;top:-70px;left:-70px"></div>
+        <div class="vc-blob" style="width:220px;height:220px;background:#c4b5fd;bottom:-60px;right:-40px"></div>
+        <div class="vc-card" style="text-align:center">
+          <div class="vc-icon-badge" style="background:linear-gradient(135deg,#34d399,#059669)"><i class="ti ti-phone-off"></i></div>
+          <div class="vc-title">Chamada encerrada</div>
+          <div class="vc-sub">Duração: <span id="vc-ended-duration">00:00</span></div>
+          <button class="vc-join-btn" onclick="reopenLobby()"><i class="ti ti-arrow-back"></i> Voltar para a sala</button>
+        </div>
+      </div>
+      <!-- ERRO -->
+      <div id="vc-view-error" class="vc-view vc-pastel">
+        <div class="vc-blob" style="width:260px;height:260px;background:#fecdd3;top:-70px;left:-70px"></div>
+        <div class="vc-blob" style="width:220px;height:220px;background:#c4b5fd;bottom:-60px;right:-40px"></div>
+        <div class="vc-card" style="text-align:center">
+          <div class="vc-icon-badge" style="background:linear-gradient(135deg,#fb7185,#e11d48)"><i class="ti ti-alert-triangle"></i></div>
+          <div class="vc-title">Não foi possível conectar</div>
+          <div class="vc-sub" id="vc-error-msg">Houve uma instabilidade na conexão ou o link expirou. Tente novamente ou fale com o suporte.</div>
+          <button class="vc-join-btn" onclick="reopenLobby()"><i class="ti ti-refresh"></i> Tentar novamente</button>
+          <button class="vc-btn-secondary" onclick="closeVideoCall()"><i class="ti ti-arrow-back"></i> Voltar ao início</button>
+          <div class="vc-contact-card">
+            <div class="vc-contact-lbl">Precisa de ajuda? Fale com o suporte</div>
+            <a class="vc-contact-row" id="vc-support-phone" href="#"><span class="vc-contact-ico"><i class="ti ti-phone"></i></span><span id="vc-support-phone-txt">—</span></a>
+            <a class="vc-contact-row" id="vc-support-email" href="#"><span class="vc-contact-ico"><i class="ti ti-mail"></i></span><span id="vc-support-email-txt">—</span></a>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
