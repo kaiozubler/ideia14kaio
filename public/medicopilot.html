@@ -6231,7 +6231,7 @@ async function toggleCallTranscription(){
     listening=true; aiPaused=false;
     setOrbState('listening'); setListenBtnState('listening');
     try{
-      await cf.startTranscription({ language:'pt-BR', model:'nova-2', tier:'nova', punctuate:true, profanity_filter:false, includeRawResponse:true });
+      await cf.startTranscription({ language:'pt-BR', model:'nova-2', punctuate:true, profanity_filter:false, includeRawResponse:true });
     }catch(err){
       if(btn){ btn.innerHTML='<i class="ti ti-microphone-2"></i> Transcrever chamada'; btn.classList.remove('live'); }
       const l=document.getElementById('trans-lbl');if(l){l.textContent='Erro: '+(err.message||err);l.className='trans-lbl';}
