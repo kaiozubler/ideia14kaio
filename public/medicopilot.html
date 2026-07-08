@@ -2306,15 +2306,100 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
   <div class="modal" id="m-video" style="display:none;width:960px;max-width:96vw;height:640px;max-height:92vh;border-radius:20px;overflow:hidden;background:rgba(255,255,255,.92);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border:1px solid rgba(255,255,255,.9);box-shadow:0 32px 80px rgba(100,116,139,.22),0 8px 32px rgba(100,116,139,.12)">
     <div class="mhd"><span class="mhd-title"><i class="ti ti-video"></i> Chamada de vídeo</span>
       <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn sm" id="vc-copy" onclick="copyVideoLink()" style="display:none"><i class="ti ti-link"></i> Copiar link do paciente</button>
-        <button class="btn sm" id="vc-transcribe" onclick="toggleCallTranscription()" title="Capturar áudio da chamada para transcrição"><i class="ti ti-microphone-2"></i> Transcrever chamada</button>
         <button class="mclose" onclick="toggleMinimizeVideoCall()" title="Minimizar"><i class="ti ti-minus" id="vc-minimize-icon"></i></button>
         <button class="mclose" onclick="closeVideoCall()"><i class="ti ti-x"></i></button>
       </div>
     </div>
-    <div class="mbody" id="vc-body" style="padding:0;height:calc(100% - 56px);background:#0b1220;display:flex;align-items:center;justify-content:center;color:#e2e8f0;font-size:13px">
-      <div id="vc-frame" style="width:100%;height:100%;position:relative"></div>
-      <div id="vc-status" style="position:absolute;left:0;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:2;background:#0b1220">Criando sala…</div>
+    <div class="mbody vc-body" id="vc-body" style="padding:0;height:calc(100% - 56px)">
+      <!-- LOBBY (sala de espera / pré-entrada) -->
+      <div id="vc-view-lobby" class="vc-view vc-pastel active">
+        <div class="vc-blob" style="width:260px;height:260px;background:#a7f3d0;top:-70px;left:-70px"></div>
+        <div class="vc-blob" style="width:220px;height:220px;background:#c4b5fd;bottom:-60px;right:-40px"></div>
+        <div class="vc-blob" style="width:200px;height:200px;background:#fde0aa;bottom:20px;left:20px"></div>
+        <div class="vc-card">
+          <div class="vc-preview" id="vc-lobby-preview">
+            <video id="vc-lobby-video" autoplay muted playsinline style="display:none"></video>
+            <div class="vc-avatar" id="vc-lobby-avatar" style="width:100%;height:100%;font-size:26px">--</div>
+            <div class="vc-preview-ctrls">
+              <button class="vc-round-btn" id="vc-lobby-mic" onclick="lobbyToggleMic()"><i class="ti ti-microphone"></i></button>
+              <button class="vc-round-btn" id="vc-lobby-cam" onclick="lobbyToggleCam()"><i class="ti ti-video"></i></button>
+            </div>
+          </div>
+          <div class="vc-title">Tudo pronto para a consulta</div>
+          <div class="vc-sub" id="vc-lobby-sub">Confira sua câmera e microfone antes de entrar na sala.</div>
+          <div class="vc-device-row"><span>Câmera e microfone do dispositivo</span><i class="ti ti-chevron-down"></i></div>
+          <button class="vc-join-btn" id="vc-join-btn" onclick="joinDailyCall()"><i class="ti ti-video"></i> Entrar na sala</button>
+        </div>
+      </div>
+      <!-- CHAMADA ATIVA -->
+      <div id="vc-view-call" class="vc-view vc-call-view">
+        <div class="vc-topbar">
+          <div class="vc-pill"><span class="vc-brand-badge" id="vc-brand-badge">C</span><span id="vc-call-title">Consulta em andamento</span></div>
+          <div class="vc-pill"><i class="ti ti-clock" style="font-size:13px"></i><span id="vc-call-timer">00:00</span></div>
+        </div>
+        <div id="vc-grid" class="vc-grid"></div>
+        <div class="vc-dock">
+          <button class="vc-dockbtn active" id="vc-dock-mic" onclick="callToggleMic()" title="Silenciar microfone"><i class="ti ti-microphone"></i></button>
+          <button class="vc-dockbtn active" id="vc-dock-cam" onclick="callToggleCam()" title="Desligar câmera"><i class="ti ti-video"></i></button>
+          <button class="vc-dockbtn" id="vc-dock-share" onclick="callToggleShare()" title="Compartilhar tela"><i class="ti ti-screen-share"></i></button>
+          <button class="vc-dockbtn" id="vc-dock-transcribe" onclick="toggleCallTranscription()" title="Transcrever chamada"><i class="ti ti-microphone-2"></i></button>
+          <button class="vc-dockbtn" id="vc-dock-chat" onclick="toggleVcSide('chat')" title="Chat"><i class="ti ti-message-circle-2"></i></button>
+          <button class="vc-dockbtn" id="vc-dock-people" onclick="toggleVcSide('people')" title="Participantes"><i class="ti ti-users"></i></button>
+          <div class="vc-dockbtn sep"></div>
+          <button class="vc-dockbtn danger" onclick="leaveDailyCall()" title="Sair da consulta"><i class="ti ti-phone-off"></i></button>
+        </div>
+      </div>
+      <!-- SIDEBAR: CHAT -->
+      <div id="vc-side-chat" class="vc-side">
+        <div class="vc-side-hd">Chat da consulta<button class="mclose" onclick="toggleVcSide('chat')"><i class="ti ti-x"></i></button></div>
+        <div class="vc-side-body" id="vc-chat-log" style="display:flex;flex-direction:column"></div>
+        <div class="vc-chat-input-row">
+          <input type="text" id="vc-chat-input" placeholder="Escreva uma mensagem..." onkeydown="if(event.key==='Enter')sendVcChat()">
+          <button class="vc-chat-send" onclick="sendVcChat()"><i class="ti ti-send"></i></button>
+        </div>
+      </div>
+      <!-- SIDEBAR: PARTICIPANTES -->
+      <div id="vc-side-people" class="vc-side">
+        <div class="vc-side-hd"><span id="vc-people-count">Participantes</span><button class="mclose" onclick="toggleVcSide('people')"><i class="ti ti-x"></i></button></div>
+        <div class="vc-side-body">
+          <div class="vc-copy-row" onclick="copyVideoLink()">
+            <div class="vc-copy-ico"><i class="ti ti-link"></i></div>
+            <div style="min-width:0;flex:1">
+              <div class="vc-copy-txt" id="vc-copy-label">Copiar link da chamada</div>
+              <div class="vc-copy-url" id="vc-copy-url-txt">—</div>
+            </div>
+          </div>
+          <div id="vc-people-list"></div>
+        </div>
+      </div>
+      <!-- ENCERRADA -->
+      <div id="vc-view-ended" class="vc-view vc-pastel">
+        <div class="vc-blob" style="width:260px;height:260px;background:#a7f3d0;top:-70px;left:-70px"></div>
+        <div class="vc-blob" style="width:220px;height:220px;background:#c4b5fd;bottom:-60px;right:-40px"></div>
+        <div class="vc-card" style="text-align:center">
+          <div class="vc-icon-badge" style="background:linear-gradient(135deg,#34d399,#059669)"><i class="ti ti-phone-off"></i></div>
+          <div class="vc-title">Chamada encerrada</div>
+          <div class="vc-sub">Duração: <span id="vc-ended-duration">00:00</span></div>
+          <button class="vc-join-btn" onclick="reopenLobby()"><i class="ti ti-arrow-back"></i> Voltar para a sala</button>
+        </div>
+      </div>
+      <!-- ERRO -->
+      <div id="vc-view-error" class="vc-view vc-pastel">
+        <div class="vc-blob" style="width:260px;height:260px;background:#fecdd3;top:-70px;left:-70px"></div>
+        <div class="vc-blob" style="width:220px;height:220px;background:#c4b5fd;bottom:-60px;right:-40px"></div>
+        <div class="vc-card" style="text-align:center">
+          <div class="vc-icon-badge" style="background:linear-gradient(135deg,#fb7185,#e11d48)"><i class="ti ti-alert-triangle"></i></div>
+          <div class="vc-title">Não foi possível conectar</div>
+          <div class="vc-sub" id="vc-error-msg">Houve uma instabilidade na conexão ou o link expirou. Tente novamente ou fale com o suporte.</div>
+          <button class="vc-join-btn" onclick="reopenLobby()"><i class="ti ti-refresh"></i> Tentar novamente</button>
+          <button class="vc-btn-secondary" onclick="closeVideoCall()"><i class="ti ti-arrow-back"></i> Voltar ao início</button>
+          <div class="vc-contact-card">
+            <div class="vc-contact-lbl">Precisa de ajuda? Fale com o suporte</div>
+            <a class="vc-contact-row" id="vc-support-phone" href="#"><span class="vc-contact-ico"><i class="ti ti-phone"></i></span><span id="vc-support-phone-txt">—</span></a>
+            <a class="vc-contact-row" id="vc-support-email" href="#"><span class="vc-contact-ico"><i class="ti ti-mail"></i></span><span id="vc-support-email-txt">—</span></a>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
