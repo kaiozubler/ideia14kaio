@@ -6142,10 +6142,16 @@ async function openVideoCall(){
     const url=window.__vcRoom.url;
     if(!window.DailyIframe){ throw new Error('SDK do Daily não carregou'); }
     setVideoStatus('Carregando vídeo…');
-    const cf = window.DailyIframe.createFrame(frame, {
+    // Pre-cria o iframe com permissões corretas de mic/câmera/tela para evitar
+    // que o navegador bloqueie o getUserMedia dentro do iframe do Daily.
+    const dailyIframeEl = document.createElement('iframe');
+    dailyIframeEl.allow = 'camera; microphone; autoplay; display-capture; fullscreen; screen-wake-lock';
+    dailyIframeEl.setAttribute('allowfullscreen', 'true');
+    dailyIframeEl.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0';
+    frame.appendChild(dailyIframeEl);
+    const cf = window.DailyIframe.wrap(dailyIframeEl, {
       url,
       token:window.__vcRoom.token,
-      iframeStyle:{ position:'absolute', inset:'0', width:'100%', height:'100%', border:'0' },
       userName:getDailyUserName(),
       showUserNameChangeUI:false,
       lang:'pt-BR',
