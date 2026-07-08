@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -13,13 +14,9 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  return (
-    <iframe
-      src="/medicopilot.html"
-      title="MediCopilot"
-      allow="camera; microphone; autoplay; display-capture; fullscreen; screen-wake-lock"
-      allowFullScreen
-      style={{ border: 0, width: "100vw", height: "100vh", display: "block" }}
-    />
-  );
+  useEffect(() => {
+    window.location.replace("/medicopilot.html");
+  }, []);
+
+  return null;
 }
