@@ -6084,6 +6084,7 @@ function renderAgCards(body,apts){
 window.__vcRoom=null;
 window.__vcDestroying=null;
 window.__vcPermissionStream=null;
+const DAILY_MEDIA_ALLOW='camera *; microphone *; autoplay *; display-capture *; fullscreen *; screen-wake-lock *';
 function setVideoStatus(message, mode){
   const status=document.getElementById('vc-status');
   if(!status)return;
@@ -6201,7 +6202,8 @@ async function openVideoCall(){
     // Pre-cria o iframe com permissões corretas de mic/câmera/tela para evitar
     // que o navegador bloqueie o getUserMedia dentro do iframe do Daily.
     const dailyIframeEl = document.createElement('iframe');
-    dailyIframeEl.allow = 'camera; microphone; autoplay; display-capture; fullscreen; screen-wake-lock';
+    dailyIframeEl.allow = DAILY_MEDIA_ALLOW;
+    dailyIframeEl.setAttribute('allow', DAILY_MEDIA_ALLOW);
     dailyIframeEl.setAttribute('allowfullscreen', 'true');
     dailyIframeEl.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0';
     frame.appendChild(dailyIframeEl);
