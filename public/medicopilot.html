@@ -6663,8 +6663,8 @@ async function toggleCallTranscription(){
     const td=document.getElementById('tdot');if(td)td.classList.remove('live');
     return;
   }
-if(typeof dgLive!=='undefined' && (dgLive.active || dgLive.starting)){
-  try{ await dgLive.stop(); }catch{}  const lbl=document.getElementById('trans-lbl');if(lbl){lbl.textContent='Conectando ao Deepgram (chamada)...';lbl.className='trans-lbl live-lbl';}
+  if(dgLive.active || dgLive.starting){ try{ await dgLive.stop(); }catch{} }
+  const lbl=document.getElementById('trans-lbl');if(lbl){lbl.textContent='Conectando ao Deepgram (chamada)...';lbl.className='trans-lbl live-lbl';}
   const td=document.getElementById('tdot');if(td)td.classList.add('live');
   listening=true; aiPaused=false;
   setOrbState('listening'); setListenBtnState('listening');
