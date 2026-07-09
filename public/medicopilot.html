@@ -6416,6 +6416,11 @@ async function openVideoCall(){
   if(joinBtn) joinBtn.disabled=true;
   await destroyDailyCallObject();
   window.__vcJoined=false;
+  // Libera o microfone que a transcrição presencial (Deepgram) possa estar segurando,
+  // senão o Daily não consegue abrir o mesmo dispositivo e cai em mic-in-use.
+  if(typeof dgLive!=='undefined' && (dgLive.active || dgLive.starting)){
+    try{ await dgLive.stop(); }catch(e){ console.warn('dgLive.stop falhou:',e); }
+  }
   try{
     if(!(window.__vcRoom && window.__vcRoom.expires_at*1000 > Date.now()+60000)){
       const pid=(typeof currentPatient!=='undefined'&&currentPatient&&currentPatient.id)?String(currentPatient.id):'';
