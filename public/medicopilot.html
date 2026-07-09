@@ -6253,55 +6253,72 @@ function renderAgCards(body,apts){
   body.innerHTML=html;
   // restore frame styles when leaving cards view next time via renderAgenda
 }
+/* ================================================================
+   VIDEOCHAMADA — Daily.co em modo "call object" (sem Prebuilt/iframe)
+   Estados: lobby (pré-entrada) → call (ativa) → ended | error
+   ================================================================ */
 window.__vcRoom=null;
+window.__vcCallFrame=null;     // instância DailyCall (createCallObject)
 window.__vcDestroying=null;
-window.__vcPermissionStream=null;
-const DAILY_MEDIA_ALLOW='camera *; microphone *; autoplay *; display-capture *; fullscreen *; screen-wake-lock *';
-function setVideoStatus(message, mode){
-  const status=document.getElementById('vc-status');
-  if(!status)return;
-  if(!message){status.style.display='none';status.innerHTML='';return;}
-  status.style.display='flex';
-  status.style.pointerEvents = 'none';
-  status.style.background = mode === 'error' ? 'rgba(11,18,32,.92)' : '#0b1220';
-  status.innerHTML = mode === 'error'
-    ? '<div style="color:#fca5a5;text-align:center">'+message+'</div>'
-    : message;
-}
+window.__vcJoined=false;
+window.__vcTimer=null;
+window.__vcElapsed=0;
+
+// Dados de contato de suporte exibidos na tela de erro.
+const VC_SUPPORT={ phone:'(11) 4002-8922', email:'suporte@medicopilot.com.br' };
+
 function getDailyUserName(){
   const p = (typeof currentPatient !== 'undefined' && currentPatient) ? currentPatient : null;
   const patient = (p && (p.nome || p.name)) ? String(p.nome || p.name).trim() : '';
   return patient ? 'Dr(a). — '+patient : 'Profissional';
 }
-function primeDailyMediaPermissions(){
-  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-    return Promise.reject(new Error('Seu navegador não permite acesso à câmera e ao microfone nesta página.'));
-  }
-  // Precisa ser chamado diretamente pelo clique em "Vídeo", antes de qualquer await/fetch,
-  // para preservar a permissão do navegador para o Daily dentro do modal.
-  return navigator.mediaDevices.getUserMedia({
-    audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true },
-    video:true
-  }).then(stream=>{
-    window.__vcPermissionStream=stream;
-    return stream;
-  });
+function getClinicName(){
+  const el=document.getElementById('cli-fantasia');
+  const v = el && el.value && el.value.trim();
+  return v || 'Clínica';
 }
-function releaseDailyMediaPermissions(){
-  const stream=window.__vcPermissionStream;
-  window.__vcPermissionStream=null;
-  if(stream && stream.getTracks){stream.getTracks().forEach(track=>{try{track.stop();}catch{}});}
+function vcInitials(name){
+  return (name||'').replace(/^(Dr\(a\)\.|Dr\.|Dra\.)\s*—?\s*/i,'').trim()
+    .split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('') || '?';
 }
+function vcFmtTime(s){
+  const m=String(Math.floor(s/60)).padStart(2,'0');
+  const ss=String(s%60).padStart(2,'0');
+  return m+':'+ss;
+}
+function vcShowView(id){
+  document.querySelectorAll('#vc-body .vc-view').forEach(v=>v.classList.remove('active'));
+  const el=document.getElementById('vc-view-'+id);
+  if(el) el.classList.add('active');
+  const sc=document.getElementById('vc-side-chat'); if(sc) sc.classList.remove('open');
+  const sp=document.getElementById('vc-side-people'); if(sp) sp.classList.remove('open');
+  const dc=document.getElementById('vc-dock-chat'); if(dc) dc.classList.remove('active');
+  const dp=document.getElementById('vc-dock-people'); if(dp) dp.classList.remove('active');
+}
+function vcSetError(msgHtml){
+  const el=document.getElementById('vc-error-msg');
+  if(el && msgHtml) el.innerHTML=msgHtml;
+  const phoneA=document.getElementById('vc-support-phone');
+  const emailA=document.getElementById('vc-support-email');
+  const phoneT=document.getElementById('vc-support-phone-txt');
+  const emailT=document.getElementById('vc-support-email-txt');
+  if(phoneA) phoneA.href='tel:'+VC_SUPPORT.phone.replace(/\D/g,'');
+  if(emailA) emailA.href='mailto:'+VC_SUPPORT.email;
+  if(phoneT) phoneT.textContent=VC_SUPPORT.phone;
+  if(emailT) emailT.textContent=VC_SUPPORT.email;
+  vcShowView('error');
+}
+
 function handleDailyTranscriptionStarted(){
-  const btn=document.getElementById('vc-transcribe');
-  if(btn){ btn.innerHTML='<i class="ti ti-player-stop"></i> Parar transcrição'; btn.classList.add('live'); }
+  const btn=document.getElementById('vc-dock-transcribe');
+  if(btn){ btn.classList.add('active'); btn.title='Parar transcrição'; }
   const lbl=document.getElementById('trans-lbl');
   if(lbl){ lbl.textContent='Transcrevendo chamada em tempo real...'; lbl.className='trans-lbl live-lbl'; }
   const td=document.getElementById('tdot'); if(td) td.classList.add('live');
 }
 function handleDailyTranscriptionStopped(){
-  const btn=document.getElementById('vc-transcribe');
-  if(btn){ btn.innerHTML='<i class="ti ti-microphone-2"></i> Transcrever chamada'; btn.classList.remove('live'); }
+  const btn=document.getElementById('vc-dock-transcribe');
+  if(btn){ btn.classList.remove('active'); btn.title='Transcrever chamada'; }
   const td=document.getElementById('tdot'); if(td) td.classList.remove('live');
   listening=false; setOrbState('idle'); setListenBtnState('idle');
 }
@@ -6316,32 +6333,41 @@ function handleDailyTranscriptionMessage(ev){
   if(isFinal){ if(dgLive.removeInterim) dgLive.removeInterim(); addTranscriptLine(text); }
   else if(dgLive.showInterim){ dgLive.showInterim(text); }
 }
-function handleDailyJoined(){
-  setVideoStatus(null);
+
+function bindDailyEvents(cf){
+  cf.on('participant-joined', renderVcGrid);
+  cf.on('participant-updated', renderVcGrid);
+  cf.on('participant-left', renderVcGrid);
+  cf.on('track-started', renderVcGrid);
+  cf.on('track-stopped', renderVcGrid);
+  cf.on('app-message', handleVcAppMessage);
+  cf.on('transcription-started', handleDailyTranscriptionStarted);
+  cf.on('transcription-stopped', handleDailyTranscriptionStopped);
+  cf.on('transcription-error', handleDailyTranscriptionError);
+  cf.on('transcription-message', handleDailyTranscriptionMessage);
+  cf.on('camera-error', ()=>{
+    vcSetError('Não foi possível acessar a câmera ou o microfone.<br>Verifique as permissões do navegador para este site.');
+  });
+  cf.on('error', (ev)=>{
+    const msg=(ev && (ev.errorMsg || ev.error || ev.message)) || 'erro na chamada';
+    vcSetError('A chamada foi interrompida.<br><span style="opacity:.8;font-size:12px">'+String(msg)+'</span>');
+  });
 }
-function handleDailyError(ev){
-  const msg = (ev && (ev.errorMsg || ev.error || ev.message)) || 'erro Daily';
-  setVideoStatus('Erro na chamada:<br><span style="opacity:.8;font-size:12px">'+String(msg)+'</span>', 'error');
-}
-async function destroyVideoFrame(){
-  if(window.__vcDestroying){
-    try{ await window.__vcDestroying; }catch{}
-  }
-  const frame=document.getElementById('vc-frame');
-  const cf = window.__vcCallFrame || (window.DailyIframe && window.DailyIframe.getCallInstance && window.DailyIframe.getCallInstance());
-  window.__vcCallFrame = null;
-  if(!cf){ if(frame) frame.innerHTML=''; return; }
-  window.__vcDestroying = (async ()=>{
+
+async function destroyDailyCallObject(){
+  if(window.__vcDestroying){ try{ await window.__vcDestroying; }catch{} }
+  const cf=window.__vcCallFrame;
+  window.__vcCallFrame=null;
+  if(!cf) return;
+  window.__vcDestroying=(async()=>{
     try{ await cf.stopTranscription(); }catch{}
     try{ await cf.leave(); }catch{}
     try{ await cf.destroy(); }catch{}
-    releaseDailyMediaPermissions();
-    if(frame) frame.innerHTML='';
   })();
-  try{ await window.__vcDestroying; }finally{ window.__vcDestroying=null; }
+  try{ await window.__vcDestroying; } finally{ window.__vcDestroying=null; }
 }
+
 async function openVideoCall(){
-  const mediaPermissionPromise = primeDailyMediaPermissions();
   const ov=document.getElementById('modal-overlay');
   const m=document.getElementById('m-video');
   document.querySelectorAll('#modal-overlay .modal').forEach(el=>el.style.display='none');
@@ -6350,66 +6376,244 @@ async function openVideoCall(){
   m.style.display='flex';m.style.flexDirection='column';
   ov.classList.add('open');
   ov.classList.add('video-floating');
-  const status=document.getElementById('vc-status');
-  const frame=document.getElementById('vc-frame');
-  const copyBtn=document.getElementById('vc-copy');
-  copyBtn.style.display='none';
-  await destroyVideoFrame();
-  setVideoStatus('Criando sala…');
+  vcShowView('lobby');
+  const sub=document.getElementById('vc-lobby-sub');
+  const joinBtn=document.getElementById('vc-join-btn');
+  if(sub) sub.textContent='Criando sala…';
+  if(joinBtn) joinBtn.disabled=true;
+  await destroyDailyCallObject();
+  window.__vcJoined=false;
   try{
-    if(window.__vcRoom && window.__vcRoom.expires_at*1000 > Date.now()+60000){
-      // reuse
-    }else{
+    if(!(window.__vcRoom && window.__vcRoom.expires_at*1000 > Date.now()+60000)){
       const pid=(typeof currentPatient!=='undefined'&&currentPatient&&currentPatient.id)?String(currentPatient.id):'';
       const name=('consulta-'+pid+'-'+Date.now().toString(36)).toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,40);
       const r=await fetch('/api/daily-room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
       if(!r.ok){throw new Error(await r.text());}
       window.__vcRoom=await r.json();
     }
-    const url=window.__vcRoom.url;
-    if(!window.DailyIframe){ throw new Error('SDK do Daily não carregou'); }
-    await mediaPermissionPromise;
-    releaseDailyMediaPermissions();
-    setVideoStatus('Carregando vídeo…');
-    // Pre-cria o iframe com permissões corretas de mic/câmera/tela para evitar
-    // que o navegador bloqueie o getUserMedia dentro do iframe do Daily.
-    const dailyIframeEl = document.createElement('iframe');
-    dailyIframeEl.allow = DAILY_MEDIA_ALLOW;
-    dailyIframeEl.setAttribute('allow', DAILY_MEDIA_ALLOW);
-    dailyIframeEl.setAttribute('allowfullscreen', 'true');
-    dailyIframeEl.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0';
-    frame.appendChild(dailyIframeEl);
-    const cf = window.DailyIframe.wrap(dailyIframeEl, {
-      url,
-      token:window.__vcRoom.token,
-      userName:getDailyUserName(),
-      showUserNameChangeUI:false,
-      lang:'pt-BR',
-      showLeaveButton:true, showFullscreenButton:true,
+    if(!window.DailyIframe){ throw new Error('SDK do Daily não carregou. Verifique sua conexão e recarregue a página.'); }
+    const copyTxt=document.getElementById('vc-copy-url-txt');
+    if(copyTxt) copyTxt.textContent=window.__vcRoom.url;
+
+    if(sub) sub.textContent='Carregando câmera e microfone…';
+    const cf=window.DailyIframe.createCallObject({
+      url:window.__vcRoom.url,
+      subscribeToTracksAutomatically:true,
     });
-    window.__vcCallFrame = cf;
-    // Eventos de transcrição do Daily → mesmo pipeline do Deepgram local
-    cf.on('transcription-started', handleDailyTranscriptionStarted);
-    cf.on('transcription-stopped', handleDailyTranscriptionStopped);
-    cf.on('transcription-error', handleDailyTranscriptionError);
-    cf.on('transcription-message', handleDailyTranscriptionMessage);
-    cf.on('joined-meeting', handleDailyJoined);
-    cf.on('error', handleDailyError);
-    cf.on('left-meeting', ()=>{ /* usuário saiu na UI do Daily */ });
-    copyBtn.style.display='inline-flex';
-    const joinPromise = cf.join({ userName:getDailyUserName(), token:window.__vcRoom.token });
-    setTimeout(()=>{ if(window.__vcCallFrame===cf) setVideoStatus(null); }, 650);
-    joinPromise.catch(joinErr=>{
-      if(window.__vcCallFrame!==cf) return;
-      setVideoStatus('Falha ao entrar na sala:<br><span style="opacity:.8;font-size:12px">'+String((joinErr && joinErr.message) || joinErr)+'</span>', 'error');
-    });
+    window.__vcCallFrame=cf;
+    bindDailyEvents(cf);
+    await cf.startCamera({ userName:getDailyUserName() });
+
+    const local=cf.participants().local;
+    const videoEl=document.getElementById('vc-lobby-video');
+    const avatar=document.getElementById('vc-lobby-avatar');
+    const hasVideo = local && local.tracks && local.tracks.video && local.tracks.video.persistentTrack;
+    if(videoEl && avatar){
+      if(hasVideo){
+        videoEl.srcObject=new MediaStream([local.tracks.video.persistentTrack]);
+        videoEl.style.display='block'; avatar.style.display='none';
+      }else{
+        videoEl.style.display='none'; avatar.style.display='flex';
+      }
+    }
+    const micBtn=document.getElementById('vc-lobby-mic');
+    const camBtn=document.getElementById('vc-lobby-cam');
+    if(micBtn){ micBtn.classList.remove('off'); }
+    if(camBtn){ camBtn.classList.remove('off'); }
+
+    if(sub) sub.textContent='Confira sua câmera e microfone antes de entrar na sala.';
+    if(joinBtn) joinBtn.disabled=false;
   }catch(e){
-    releaseDailyMediaPermissions();
-    setVideoStatus('Erro ao criar sala:<br><span style="opacity:.8;font-size:12px">'+String(e.message||e)+'</span>', 'error');
+    vcSetError('Não foi possível preparar a sala.<br><span style="opacity:.8;font-size:12px">'+String((e&&e.message)||e)+'</span>');
   }
 }
-function closeVideoCall(){
-  destroyVideoFrame();
+
+function lobbyToggleMic(){
+  const cf=window.__vcCallFrame; if(!cf) return;
+  let cur=true; try{ cur=!!cf.participants().local.audio; }catch{}
+  cf.setLocalAudio(!cur);
+  const btn=document.getElementById('vc-lobby-mic');
+  if(btn) btn.classList.toggle('off', cur);
+}
+function lobbyToggleCam(){
+  const cf=window.__vcCallFrame; if(!cf) return;
+  let cur=true; try{ cur=!!cf.participants().local.video; }catch{}
+  cf.setLocalVideo(!cur);
+  const btn=document.getElementById('vc-lobby-cam');
+  const videoEl=document.getElementById('vc-lobby-video');
+  const avatar=document.getElementById('vc-lobby-avatar');
+  if(btn) btn.classList.toggle('off', cur);
+  if(videoEl && avatar){
+    if(cur){ videoEl.style.display='none'; avatar.style.display='flex'; }
+    else{ videoEl.style.display='block'; avatar.style.display='none'; }
+  }
+}
+
+async function joinDailyCall(){
+  const cf=window.__vcCallFrame;
+  if(!cf||!window.__vcRoom) return;
+  const btn=document.getElementById('vc-join-btn');
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="ti ti-loader-2"></i> Entrando na sala…'; }
+  try{
+    await cf.join({ token:window.__vcRoom.token, userName:getDailyUserName() });
+    window.__vcJoined=true;
+    vcShowView('call');
+    const clinic=getClinicName();
+    const badge=document.getElementById('vc-brand-badge');
+    if(badge) badge.textContent=vcInitials(clinic).slice(0,1)||'C';
+    const title=document.getElementById('vc-call-title');
+    if(title) title.textContent=clinic+' · Consulta em andamento';
+    const dockMic=document.getElementById('vc-dock-mic'); if(dockMic) dockMic.classList.add('active');
+    const dockCam=document.getElementById('vc-dock-cam'); if(dockCam) dockCam.classList.add('active');
+    window.__vcElapsed=0;
+    clearInterval(window.__vcTimer);
+    window.__vcTimer=setInterval(()=>{
+      window.__vcElapsed++;
+      const el=document.getElementById('vc-call-timer');
+      if(el) el.textContent=vcFmtTime(window.__vcElapsed);
+    },1000);
+    renderVcGrid();
+  }catch(err){
+    if(btn){ btn.disabled=false; btn.innerHTML='<i class="ti ti-door-enter"></i> Entrar na sala'; }
+    vcSetError('Falha ao entrar na sala.<br><span style="opacity:.8;font-size:12px">'+String((err&&err.message)||err)+'</span>');
+  }
+}
+
+function renderVcGrid(){
+  const cf=window.__vcCallFrame;
+  const grid=document.getElementById('vc-grid');
+  if(!cf||!grid||!window.__vcJoined) return;
+  let parts={};
+  try{ parts=cf.participants()||{}; }catch{}
+  const list=Object.values(parts);
+  grid.className='vc-grid'+(list.length>=3?' n4':list.length===2?' n2':'');
+  grid.innerHTML=list.map(p=>{
+    const name = p.local ? 'Você' : (p.user_name || 'Participante');
+    const hasVideo = p.tracks && p.tracks.video && p.tracks.video.state==='playable' && p.tracks.video.persistentTrack;
+    const micOn = p.audio !== false;
+    return '<div class="vc-tile" id="vc-tile-'+p.session_id+'">'
+      + '<video autoplay playsinline'+(p.local?' muted':'')+'></video>'
+      + (hasVideo ? '' : '<div class="vc-tile-avatar">'+vcInitials(name)+'</div>')
+      + '<div class="vc-tile-name"><i class="ti ti-microphone'+(micOn?'':'-off')+'"></i> '+name+'</div>'
+      + '</div>';
+  }).join('');
+  list.forEach(p=>{
+    const tile=document.getElementById('vc-tile-'+p.session_id);
+    const videoEl=tile && tile.querySelector('video');
+    if(!videoEl) return;
+    const vt = p.tracks && p.tracks.video && p.tracks.video.persistentTrack;
+    const at = (!p.local && p.tracks && p.tracks.audio && p.tracks.audio.persistentTrack);
+    const tracks=[]; if(vt) tracks.push(vt); if(at) tracks.push(at);
+    if(tracks.length) videoEl.srcObject=new MediaStream(tracks);
+  });
+  const peopleCount=document.getElementById('vc-people-count');
+  if(peopleCount) peopleCount.textContent='Participantes ('+list.length+')';
+  const peopleList=document.getElementById('vc-people-list');
+  if(peopleList){
+    peopleList.innerHTML=list.map(p=>{
+      const name = p.local ? 'Você' : (p.user_name || 'Participante');
+      const micOn = p.audio !== false;
+      return '<div class="vc-person"><div class="vc-person-avatar">'+vcInitials(name)+'</div>'
+        +'<div class="vc-person-name">'+name+'</div>'
+        +'<i class="ti ti-microphone'+(micOn?'':'-off')+'"></i></div>';
+    }).join('');
+  }
+}
+
+function callToggleMic(){
+  const cf=window.__vcCallFrame; if(!cf) return;
+  let cur=true; try{ cur=!!cf.participants().local.audio; }catch{}
+  cf.setLocalAudio(!cur);
+  const btn=document.getElementById('vc-dock-mic');
+  if(btn) btn.classList.toggle('active', !cur);
+  renderVcGrid();
+}
+function callToggleCam(){
+  const cf=window.__vcCallFrame; if(!cf) return;
+  let cur=true; try{ cur=!!cf.participants().local.video; }catch{}
+  cf.setLocalVideo(!cur);
+  const btn=document.getElementById('vc-dock-cam');
+  if(btn) btn.classList.toggle('active', !cur);
+  renderVcGrid();
+}
+async function callToggleShare(){
+  const cf=window.__vcCallFrame; if(!cf) return;
+  const btn=document.getElementById('vc-dock-share');
+  let sharing=false; try{ sharing=!!cf.participants().local.screen; }catch{}
+  try{
+    if(sharing){ await cf.stopScreenShare(); if(btn) btn.classList.remove('active'); }
+    else{ await cf.startScreenShare(); if(btn) btn.classList.add('active'); }
+  }catch(e){ if(typeof toast==='function') toast('Não foi possível compartilhar a tela.'); }
+}
+
+function toggleVcSide(which){
+  const chat=document.getElementById('vc-side-chat');
+  const people=document.getElementById('vc-side-people');
+  const dockChat=document.getElementById('vc-dock-chat');
+  const dockPeople=document.getElementById('vc-dock-people');
+  if(which==='chat'){
+    const willOpen=!chat.classList.contains('open');
+    chat.classList.toggle('open', willOpen);
+    people.classList.remove('open');
+    if(dockChat) dockChat.classList.toggle('active', willOpen);
+    if(dockPeople) dockPeople.classList.remove('active');
+  }else{
+    const willOpen=!people.classList.contains('open');
+    people.classList.toggle('open', willOpen);
+    chat.classList.remove('open');
+    if(dockPeople) dockPeople.classList.toggle('active', willOpen);
+    if(dockChat) dockChat.classList.remove('active');
+    if(willOpen) renderVcGrid();
+  }
+}
+
+function vcAppendChatMsg(name, text, mine){
+  const log=document.getElementById('vc-chat-log'); if(!log) return;
+  const div=document.createElement('div');
+  div.className='vc-chat-msg '+(mine?'mine':'theirs');
+  div.textContent=(mine?'':name+': ')+text;
+  log.appendChild(div);
+  log.scrollTop=log.scrollHeight;
+}
+function sendVcChat(){
+  const input=document.getElementById('vc-chat-input');
+  const text=(input.value||'').trim();
+  if(!text) return;
+  const cf=window.__vcCallFrame;
+  if(cf){ try{ cf.sendAppMessage({ vcChat:true, text:text }, '*'); }catch{} }
+  vcAppendChatMsg('Você', text, true);
+  input.value='';
+}
+function handleVcAppMessage(ev){
+  const data=ev && ev.data;
+  if(!data || !data.vcChat) return;
+  const cf=window.__vcCallFrame;
+  let name='Participante';
+  try{ const parts=cf&&cf.participants(); const p=parts&&parts[ev.fromId]; if(p) name=p.user_name||name; }catch{}
+  vcAppendChatMsg(name, data.text, false);
+}
+
+async function leaveDailyCall(){
+  clearInterval(window.__vcTimer);
+  const duration=vcFmtTime(window.__vcElapsed);
+  await destroyDailyCallObject();
+  window.__vcJoined=false;
+  const dur=document.getElementById('vc-ended-duration');
+  if(dur) dur.textContent=duration;
+  if(dgLive.active){ try{ dgLive.stop(); }catch{} }
+  listening=false; setOrbState('idle'); setListenBtnState('idle');
+  const td=document.getElementById('tdot'); if(td) td.classList.remove('live');
+  vcShowView('ended');
+}
+
+function reopenLobby(){
+  openVideoCall();
+}
+
+async function closeVideoCall(){
+  clearInterval(window.__vcTimer);
+  await destroyDailyCallObject();
+  window.__vcJoined=false;
   if(dgLive.active){ try{ dgLive.stop(); }catch{} }
   listening=false; setOrbState('idle'); setListenBtnState('idle');
   const td=document.getElementById('tdot'); if(td) td.classList.remove('live');
@@ -6420,13 +6624,12 @@ function closeVideoCall(){
 }
 
 async function toggleCallTranscription(){
-  const btn=document.getElementById('vc-transcribe');
+  const btn=document.getElementById('vc-dock-transcribe');
   const cf = window.__vcCallFrame;
   const cfg = (typeof getCopilotoCfg==='function') ? getCopilotoCfg() : { enabled:true, voz:true };
   if(!cfg.enabled){ if(typeof toast==='function') toast('Ative o copiloto para transcrever a chamada.'); return; }
   if(!cfg.voz){ if(typeof toast==='function') toast('Ative "Permitir gravação de voz" no copiloto.'); return; }
-  // Consulta em vídeo (Daily) → usa transcrição nativa do Daily
-  if(cf){
+  if(cf && window.__vcJoined){
     let meetingState='';
     try{ meetingState = cf.meetingState && cf.meetingState(); }catch{}
     if(meetingState !== 'joined-meeting'){
@@ -6440,21 +6643,19 @@ async function toggleCallTranscription(){
       try{ await cf.stopTranscription(); }catch(e){}
       return;
     }
-    if(btn){ btn.innerHTML='<i class="ti ti-loader-2"></i> Conectando…'; }
     const lbl=document.getElementById('trans-lbl');if(lbl){lbl.textContent='Conectando à transcrição do Daily...';lbl.className='trans-lbl live-lbl';}
     listening=true; aiPaused=false;
     setOrbState('listening'); setListenBtnState('listening');
     try{
       await cf.startTranscription({ language:'pt-BR', model:'nova-2', punctuate:true, profanity_filter:false, includeRawResponse:true });
     }catch(err){
-      if(btn){ btn.innerHTML='<i class="ti ti-microphone-2"></i> Transcrever chamada'; btn.classList.remove('live'); }
+      if(btn){ btn.classList.remove('active'); }
       const l=document.getElementById('trans-lbl');if(l){l.textContent='Erro: '+(err.message||err);l.className='trans-lbl';}
       addTranscriptLine('[ Erro Daily: '+(err.message||err)+' ]');
       listening=false; setOrbState('idle'); setListenBtnState('idle');
     }
     return;
   }
-  // Consulta presencial (sem chamada de vídeo) → mantém Deepgram
   if(dgLive.active && dgLive.includeCall){
     try{ await dgLive.stop(); }catch{}
     listening=false; aiPaused=false;
@@ -6463,17 +6664,16 @@ async function toggleCallTranscription(){
     return;
   }
   if(dgLive.active || dgLive.starting){ try{ await dgLive.stop(); }catch{} }
-  if(btn){ btn.innerHTML='<i class="ti ti-loader-2"></i> Conectando…'; }
   const lbl=document.getElementById('trans-lbl');if(lbl){lbl.textContent='Conectando ao Deepgram (chamada)...';lbl.className='trans-lbl live-lbl';}
   const td=document.getElementById('tdot');if(td)td.classList.add('live');
   listening=true; aiPaused=false;
   setOrbState('listening'); setListenBtnState('listening');
   try{
     await dgLive.start({ includeCall:true });
-    if(btn){ btn.innerHTML='<i class="ti ti-player-stop"></i> Parar transcrição'; btn.classList.add('live'); }
+    if(btn){ btn.classList.add('active'); }
     const l=document.getElementById('trans-lbl');if(l){l.textContent='Transcrevendo chamada em tempo real...';l.className='trans-lbl live-lbl';}
   }catch(err){
-    if(btn){ btn.innerHTML='<i class="ti ti-microphone-2"></i> Transcrever chamada'; btn.classList.remove('live'); }
+    if(btn){ btn.classList.remove('active'); }
     const l=document.getElementById('trans-lbl');if(l){l.textContent='Erro: '+err.message;l.className='trans-lbl';}
     addTranscriptLine('[ Erro ao transcrever chamada: '+err.message+' ]');
     listening=false; setOrbState('idle'); setListenBtnState('idle');
@@ -6483,10 +6683,12 @@ async function toggleCallTranscription(){
 function copyVideoLink(){
   if(!window.__vcRoom||!window.__vcRoom.url)return;
   navigator.clipboard.writeText(window.__vcRoom.url).then(()=>{
-    const b=document.getElementById('vc-copy');const t=b.innerHTML;
-    b.innerHTML='<i class="ti ti-check"></i> Link copiado';
-    setTimeout(()=>{b.innerHTML=t;},1800);
-  });
+    const lbl=document.getElementById('vc-copy-label');
+    if(!lbl) return;
+    const prev=lbl.textContent;
+    lbl.textContent='Link copiado!';
+    setTimeout(()=>{lbl.textContent=prev;},1800);
+  }).catch(()=>{ if(typeof toast==='function') toast('Não foi possível copiar o link.'); });
 }
 
 /* ===== ARRASTAR E MINIMIZAR JANELA DE VÍDEO ===== */
