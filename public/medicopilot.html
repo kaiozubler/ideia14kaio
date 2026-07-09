@@ -6345,8 +6345,41 @@ function bindDailyEvents(cf){
   cf.on('transcription-stopped', handleDailyTranscriptionStopped);
   cf.on('transcription-error', handleDailyTranscriptionError);
   cf.on('transcription-message', handleDailyTranscriptionMessage);
-  cf.on('camera-error', ()=>{
-    vcSetError('Não foi possível acessar a câmera ou o microfone.<br>Verifique as permissões do navegador para este site.');
+  cf.on('camera-error', (ev)=>{
+    const type = ev && ev.error && (ev.error.type || ev.errorMsg || ev.error.msg || ev.error.message);
+    const raw = ev && (ev.errorMsg || (ev.error && (ev.error.message || ev.error.msg))) || '';
+    let msg;
+    switch(type){
+      case 'cam-in-use':
+      case 'CAMERA_BUSY':
+        msg = 'A câmera está em uso por outro aplicativo ou aba. Feche o que estiver usando a webcam e tente novamente.';
+        break;
+      case 'mic-in-use':
+      case 'MICROPHONE_BUSY':
+        msg = 'O microfone está em uso por outro aplicativo ou pela transcrição presencial. Pare a transcrição e tente novamente.';
+        break;
+      case 'cam-mic-in-use':
+        msg = 'Câmera e microfone estão em uso por outro aplicativo. Feche-o e tente novamente.';
+        break;
+      case 'permissions':
+      case 'PERMISSION_DENIED':
+        msg = 'Permissão de câmera/microfone negada. Habilite o acesso nas configurações do navegador para este site.';
+        break;
+      case 'not-found':
+      case 'DEVICE_NOT_FOUND':
+        msg = 'Nenhuma câmera ou microfone encontrado. Verifique se os dispositivos estão conectados.';
+        break;
+      case 'constraints':
+        msg = 'As configurações de câmera/microfone não são suportadas por este dispositivo.';
+        break;
+      case 'undefined-mediadevices':
+        msg = 'Este navegador não suporta acesso a câmera/microfone (verifique se está usando HTTPS).';
+        break;
+      default:
+        msg = 'Não foi possível acessar a câmera ou o microfone.<br>Verifique as permissões do navegador para este site.';
+    }
+    const detail = raw && String(raw)!==String(type) ? '<br><span style="opacity:.7;font-size:12px">'+String(raw)+'</span>' : '';
+    vcSetError(msg+detail);
   });
   cf.on('error', (ev)=>{
     const msg=(ev && (ev.errorMsg || ev.error || ev.message)) || 'erro na chamada';
@@ -6383,6 +6416,11 @@ async function openVideoCall(){
   if(joinBtn) joinBtn.disabled=true;
   await destroyDailyCallObject();
   window.__vcJoined=false;
+  // Libera o microfone que a transcrição presencial (Deepgram) possa estar segurando,
+  // senão o Daily não consegue abrir o mesmo dispositivo e cai em mic-in-use.
+  if(typeof dgLive!=='undefined' && (dgLive.active || dgLive.starting)){
+    try{ await dgLive.stop(); }catch(e){ console.warn('dgLive.stop falhou:',e); }
+  }
   try{
     if(!(window.__vcRoom && window.__vcRoom.expires_at*1000 > Date.now()+60000)){
       const pid=(typeof currentPatient!=='undefined'&&currentPatient&&currentPatient.id)?String(currentPatient.id):'';
