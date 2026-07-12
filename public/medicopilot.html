@@ -1352,11 +1352,55 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 }
 #m-video .mhd{cursor:move;user-select:none}
 #m-video.minimized{
-  width:300px !important;
-  height:48px !important;
-  overflow:hidden;
+  width:280px !important;
+  height:210px !important;
+  border-radius:18px !important;
+  overflow:hidden !important;
+  box-shadow:0 16px 50px rgba(0,0,0,.35),0 6px 20px rgba(0,0,0,.22) !important;
 }
-#m-video.minimized .mbody{display:none}
+#m-video.minimized .mhd{
+  position:absolute;
+  top:0;left:0;right:0;
+  height:28px;
+  padding:4px 8px;
+  background:rgba(0,0,0,.35);
+  color:#fff;
+  border-bottom:none;
+  z-index:10;
+  opacity:0;
+  transition:opacity .15s ease;
+}
+#m-video.minimized:hover .mhd{opacity:1}
+#m-video.minimized .mhd-title{display:none}
+#m-video.minimized .mclose{
+  width:22px;height:22px;
+  color:#fff;
+  background:rgba(255,255,255,.15);
+  border-radius:6px;
+}
+#m-video.minimized .mclose:hover{background:rgba(255,255,255,.3)}
+#m-video.minimized .mbody{
+  display:flex !important;
+  height:100% !important;
+  padding:0 !important;
+}
+#m-video.minimized .vc-body{border-radius:18px}
+#m-video.minimized .vc-topbar,
+#m-video.minimized .vc-dock,
+#m-video.minimized .vc-side{display:none !important}
+#m-video.minimized .vc-view{position:absolute;inset:0}
+#m-video.minimized .vc-view-call{display:flex !important}
+#m-video.minimized .vc-grid{
+  position:absolute;
+  inset:0;
+  padding:0 !important;
+  grid-template-columns:1fr !important;
+  grid-template-rows:1fr !important;
+  gap:0 !important;
+}
+#m-video.minimized .vc-tile{border-radius:0;border:none}
+#m-video.minimized .vc-tile-name{display:none}
+#m-video.minimized .vc-tile-avatar{transform:scale(.55)}
 
 /* ===== VIDEOCHAMADA — LIQUID GLASS (call object daily-js) ===== */
 .vc-body{position:relative;display:flex;overflow:hidden;background:#0b1220}
@@ -1407,6 +1451,8 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .vc-tile.speaking{border-color:#34d399;box-shadow:0 0 0 2px rgba(52,211,153,.4)}
 .vc-tile video{width:100%;height:100%;object-fit:cover}
 .vc-tile .vc-avatar{width:64px;height:64px;font-size:20px}
+.vc-tile-name{position:absolute;bottom:8px;left:8px;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);border-radius:999px;padding:5px 10px;font-size:11px;color:#fff}
+.vc-tile-name .ti{font-size:12px}
 .vc-tile-tag{position:absolute;bottom:8px;left:8px;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);border-radius:999px;padding:5px 10px;font-size:11px;color:#fff}
 .vc-avatar{border-radius:50%;background:linear-gradient(135deg,#8b8f99,#4b5563);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700}
 .vc-dock{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:5;display:flex;gap:8px;background:rgba(255,255,255,.16);backdrop-filter:blur(18px) saturate(180%);border:1px solid rgba(255,255,255,.18);border-radius:22px;padding:8px}
@@ -6520,16 +6566,25 @@ async function joinDailyCall(){
 function renderVcGrid(){
   const cf=window.__vcCallFrame;
   const grid=document.getElementById('vc-grid');
+  const modal=document.getElementById('m-video');
   if(!cf||!grid||!window.__vcJoined) return;
   let parts={};
   try{ parts=cf.participants()||{}; }catch{}
-  const list=Object.values(parts);
-  grid.className='vc-grid'+(list.length>=3?' n4':list.length===2?' n2':'');
+  let list=Object.values(parts);
+  const minimized=modal && modal.classList.contains('minimized');
+  if(minimized){
+    // No modo minimizado mostra preferencialmente o outro participante.
+    const remote=list.filter(p=>!p.local);
+    list = remote.length ? [remote[0]] : [list.find(p=>p.local)||list[0]];
+    grid.className='vc-grid';
+  }else{
+    grid.className='vc-grid'+(list.length>=3?' n4':list.length===2?' n2':'');
+  }
   grid.innerHTML=list.map(p=>{
     const name = p.local ? 'Você' : (p.user_name || 'Participante');
     const hasVideo = p.tracks && p.tracks.video && p.tracks.video.state==='playable' && p.tracks.video.persistentTrack;
     const micOn = p.audio !== false;
-    return '<div class="vc-tile" id="vc-tile-'+p.session_id+'">'
+    return '<div class="vc-tile'+(p.speaking?' speaking':'')+'" id="vc-tile-'+p.session_id+'">'
       + '<video autoplay playsinline'+(p.local?' muted':'')+'></video>'
       + (hasVideo ? '' : '<div class="vc-tile-avatar">'+vcInitials(name)+'</div>')
       + '<div class="vc-tile-name"><i class="ti ti-microphone'+(micOn?'':'-off')+'"></i> '+name+'</div>'
@@ -6545,10 +6600,10 @@ function renderVcGrid(){
     if(tracks.length) videoEl.srcObject=new MediaStream(tracks);
   });
   const peopleCount=document.getElementById('vc-people-count');
-  if(peopleCount) peopleCount.textContent='Participantes ('+list.length+')';
+  if(peopleCount) peopleCount.textContent='Participantes ('+Object.values(parts).length+')';
   const peopleList=document.getElementById('vc-people-list');
   if(peopleList){
-    peopleList.innerHTML=list.map(p=>{
+    peopleList.innerHTML=Object.values(parts).map(p=>{
       const name = p.local ? 'Você' : (p.user_name || 'Participante');
       const micOn = p.audio !== false;
       return '<div class="vc-person"><div class="vc-person-avatar">'+vcInitials(name)+'</div>'
@@ -6770,9 +6825,19 @@ function copyVideoLink(){
   header.addEventListener('mousedown', onDragStart);
   header.addEventListener('touchstart', onDragStart, {passive:true});
   window.toggleMinimizeVideoCall = function(){
+    const willMinimize = !modal.classList.contains('minimized');
     modal.classList.toggle('minimized');
     const icon=document.getElementById('vc-minimize-icon');
     if(icon) icon.className = modal.classList.contains('minimized') ? 'ti ti-square' : 'ti ti-minus';
+    if(willMinimize && window.__vcJoined){
+      // Garante que o vídeo da chamada continue visível enquanto minimizado.
+      vcShowView('call');
+      const chat=document.getElementById('vc-side-chat');
+      const people=document.getElementById('vc-side-people');
+      if(chat) chat.classList.remove('open');
+      if(people) people.classList.remove('open');
+      renderVcGrid();
+    }
   };
 })();
 </script>
