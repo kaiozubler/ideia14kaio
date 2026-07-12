@@ -6825,9 +6825,19 @@ function copyVideoLink(){
   header.addEventListener('mousedown', onDragStart);
   header.addEventListener('touchstart', onDragStart, {passive:true});
   window.toggleMinimizeVideoCall = function(){
+    const willMinimize = !modal.classList.contains('minimized');
     modal.classList.toggle('minimized');
     const icon=document.getElementById('vc-minimize-icon');
     if(icon) icon.className = modal.classList.contains('minimized') ? 'ti ti-square' : 'ti ti-minus';
+    if(willMinimize && window.__vcJoined){
+      // Garante que o vídeo da chamada continue visível enquanto minimizado.
+      vcShowView('call');
+      const chat=document.getElementById('vc-side-chat');
+      const people=document.getElementById('vc-side-people');
+      if(chat) chat.classList.remove('open');
+      if(people) people.classList.remove('open');
+      renderVcGrid();
+    }
   };
 })();
 </script>
