@@ -1858,10 +1858,10 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
               <button class="panel-expand" onclick="togglePanelExpand('left',event)" title="Expandir prontuário" id="exp-left-btn"><i class="ti ti-arrows-diagonal" id="exp-left-icon"></i></button>
               <div class="pront-header">
                 <span class="pront-label">Prontuário</span>
-                <span id="save-status" class="save-status" title="Salvar atendimento" onclick="saveAtend()" style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--n400);cursor:pointer;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.6);border:0.5px solid var(--n150);transition:all .15s">
-                  <i class="ti ti-cloud-check" id="save-status-icon" style="font-size:12px"></i>
-                  <span id="save-status-lbl">Salvo</span>
-                </span>
+                <button type="button" id="save-status" class="save-status state-saved" title="Salvar e finalizar atendimento" onclick="saveAtend(event)" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:0;font-family:inherit">
+                  <i class="ti ti-device-floppy" id="save-status-icon" style="font-size:13px"></i>
+                  <span id="save-status-lbl">Salvar e Finalizar</span>
+                </button>
               </div>
               <div class="toolbar">
                 <button class="tbtn" title="Negrito"><b>B</b></button>
