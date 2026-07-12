@@ -3730,6 +3730,7 @@ function showNovoAtend(restore){
 async function saveAtendFromProgress(){const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;await saveAtendInternal({finalize:true});}
 async function saveAtendInternal(opts){
   const finalize=!!(opts&&opts.finalize);
+  const keepOpen=!!(opts&&opts.keepOpen);
   const now=new Date();
   const dateStr=now.toLocaleDateString('pt-BR');
   const timeStr=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
@@ -3740,7 +3741,7 @@ async function saveAtendInternal(opts){
   let data=null,error=null;
   if(window._idConsultaAtual){({data,error}=await sb.from('consulta').update(payload).eq('id',window._idConsultaAtual).select('*').single());}
   if(error||!data){({data,error}=await sb.from('consulta').insert(payload).select('*').single());}
-  if(error){if(finalize)showToast('Erro ao salvar atendimento: '+error.message,'error');return;}
+  if(error){if(finalize)showToast('Erro ao salvar atendimento: '+error.message,'error');throw (error||new Error('save failed'));}
   window._idConsultaAtual=data.id;
   if(!finalize){
     // pré-salvamento: mantém o atendimento aberto para continuação
@@ -3749,11 +3750,18 @@ async function saveAtendInternal(opts){
   atendimentos=atendimentos.filter(a=>a.id!==data.id);
   atendimentos.unshift(mapConsultaRow(data));
   await addTimelineEvent({date:dateStr,type:'atend',icon:'ti-stethoscope',title:'Atendimento registrado — '+timeStr,sub:medicoNames[currentPatient.medico]||'Médico responsável'});
-  atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[]};
-  window._idConsultaAtual=null;
-  clearAtendDraft();
-  stopAtendAutoSave();
-  updateAtendProgress();renderAtendimentos();renderTimeline();renderProntuario();showToast('Atendimento salvo com sucesso','success');
+  if(keepOpen){
+    // Mantém o atendimento aberto na mesma tela; apenas reseta flag dirty
+    atendEmAndamento.dirty=false;
+    updateAtendProgress();renderTimeline();renderProntuario();
+    showToast('Atendimento salvo com sucesso','success');
+  }else{
+    atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[]};
+    window._idConsultaAtual=null;
+    clearAtendDraft();
+    stopAtendAutoSave();
+    updateAtendProgress();renderAtendimentos();renderTimeline();renderProntuario();showToast('Atendimento salvo com sucesso','success');
+  }
 }
 async function saveAtend(ev){
   if(ev&&ev.stopPropagation)ev.stopPropagation();
