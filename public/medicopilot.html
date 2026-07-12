@@ -3567,10 +3567,11 @@ function scheduleAutoSave(){
 function updateSaveStatus(state){
   const el=document.getElementById('save-status');if(!el)return;
   const ic=document.getElementById('save-status-icon');const lb=document.getElementById('save-status-lbl');
-  if(state==='dirty'){el.style.color='#92400e';el.style.background='rgba(254,243,199,.8)';el.style.borderColor='#fde68a';ic.className='ti ti-cloud-up';lb.textContent='Alterações...';}
-  else if(state==='saving'){el.style.color='var(--n500)';el.style.background='rgba(255,255,255,.7)';el.style.borderColor='var(--n150)';ic.className='ti ti-loader-2';ic.style.animation='spin 1s linear infinite';lb.textContent='Salvando...';}
-  else if(state==='saved'){el.style.color='var(--g600)';el.style.background='rgba(220,252,231,.7)';el.style.borderColor='#86efac';ic.className='ti ti-cloud-check';ic.style.animation='';const t=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});lb.textContent='Salvo '+t;}
-  else if(state==='error'){el.style.color='#b91c1c';el.style.background='rgba(254,226,226,.8)';el.style.borderColor='#fca5a5';ic.className='ti ti-alert-circle';ic.style.animation='';lb.textContent='Erro ao salvar';}
+  el.classList.remove('state-dirty','state-saving','state-saved','state-error');
+  if(state==='dirty'){el.classList.add('state-dirty');ic.className='ti ti-cloud-up';ic.style.animation='';lb.textContent='Salvar e Finalizar';}
+  else if(state==='saving'){el.classList.add('state-saving');ic.className='ti ti-loader-2';ic.style.animation='spin 1s linear infinite';lb.textContent='Salvando...';}
+  else if(state==='saved'){el.classList.add('state-saved');ic.className='ti ti-cloud-check';ic.style.animation='';const t=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});lb.textContent='Salvo '+t;}
+  else if(state==='error'){el.classList.add('state-error');ic.className='ti ti-alert-circle';ic.style.animation='';lb.textContent='Erro ao salvar';}
 }
 function updateAtendProgress(){const p=document.getElementById('atend-progress');if(p)p.classList.toggle('show',atendEmAndamento.dirty);}
 function openTabFromProgress(){
