@@ -6566,16 +6566,25 @@ async function joinDailyCall(){
 function renderVcGrid(){
   const cf=window.__vcCallFrame;
   const grid=document.getElementById('vc-grid');
+  const modal=document.getElementById('m-video');
   if(!cf||!grid||!window.__vcJoined) return;
   let parts={};
   try{ parts=cf.participants()||{}; }catch{}
-  const list=Object.values(parts);
-  grid.className='vc-grid'+(list.length>=3?' n4':list.length===2?' n2':'');
+  let list=Object.values(parts);
+  const minimized=modal && modal.classList.contains('minimized');
+  if(minimized){
+    // No modo minimizado mostra preferencialmente o outro participante.
+    const remote=list.filter(p=>!p.local);
+    list = remote.length ? [remote[0]] : [list.find(p=>p.local)||list[0]];
+    grid.className='vc-grid';
+  }else{
+    grid.className='vc-grid'+(list.length>=3?' n4':list.length===2?' n2':'');
+  }
   grid.innerHTML=list.map(p=>{
     const name = p.local ? 'Você' : (p.user_name || 'Participante');
     const hasVideo = p.tracks && p.tracks.video && p.tracks.video.state==='playable' && p.tracks.video.persistentTrack;
     const micOn = p.audio !== false;
-    return '<div class="vc-tile" id="vc-tile-'+p.session_id+'">'
+    return '<div class="vc-tile'+(p.speaking?' speaking':'')+'" id="vc-tile-'+p.session_id+'">'
       + '<video autoplay playsinline'+(p.local?' muted':'')+'></video>'
       + (hasVideo ? '' : '<div class="vc-tile-avatar">'+vcInitials(name)+'</div>')
       + '<div class="vc-tile-name"><i class="ti ti-microphone'+(micOn?'':'-off')+'"></i> '+name+'</div>'
@@ -6591,10 +6600,10 @@ function renderVcGrid(){
     if(tracks.length) videoEl.srcObject=new MediaStream(tracks);
   });
   const peopleCount=document.getElementById('vc-people-count');
-  if(peopleCount) peopleCount.textContent='Participantes ('+list.length+')';
+  if(peopleCount) peopleCount.textContent='Participantes ('+Object.values(parts).length+')';
   const peopleList=document.getElementById('vc-people-list');
   if(peopleList){
-    peopleList.innerHTML=list.map(p=>{
+    peopleList.innerHTML=Object.values(parts).map(p=>{
       const name = p.local ? 'Você' : (p.user_name || 'Participante');
       const micOn = p.audio !== false;
       return '<div class="vc-person"><div class="vc-person-avatar">'+vcInitials(name)+'</div>'
