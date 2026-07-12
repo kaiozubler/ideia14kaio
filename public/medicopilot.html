@@ -3755,9 +3755,16 @@ async function saveAtendInternal(opts){
   stopAtendAutoSave();
   updateAtendProgress();renderAtendimentos();renderTimeline();renderProntuario();showToast('Atendimento salvo com sucesso','success');
 }
-async function saveAtend(){
+async function saveAtend(ev){
+  if(ev&&ev.stopPropagation)ev.stopPropagation();
   const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;
-  await saveAtendInternal({finalize:true});showAtendList();
+  updateSaveStatus('saving');
+  try{
+    await saveAtendInternal({finalize:true,keepOpen:true});
+    updateSaveStatus('saved');
+  }catch(e){
+    updateSaveStatus('error');
+  }
 }
 
 /* ========== PATIENT HEADER COLLAPSE ========== */
