@@ -731,7 +731,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 
 /* header (Prontuário title) */
 #atend-novo-view .pront-header{
-  padding:12px 50px 8px 16px;margin:0;
+  padding:12px 60px 8px 16px;margin:0;gap:12px;
 }
 #atend-novo-view .pront-label{
   font-size:14px;font-weight:600;color:#1e293b;gap:10px;
@@ -744,12 +744,24 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
   box-shadow:0 6px 14px rgba(16,185,129,.35);
 }
 #atend-novo-view .save-status{
-  background:rgba(255,255,255,.75) !important;
-  border:0.5px solid rgba(255,255,255,.9) !important;
+  background:linear-gradient(135deg,#10b981,#059669) !important;
+  border:0.5px solid rgba(16,185,129,.6) !important;
   border-radius:999px !important;
-  padding:5px 12px !important;font-size:11px !important;
-  box-shadow:0 2px 6px rgba(15,40,60,.08);
+  padding:6px 14px !important;font-size:11.5px !important;font-weight:600 !important;
+  color:#fff !important;
+  box-shadow:0 4px 10px rgba(16,185,129,.32);
+  position:relative;z-index:31;
+  transition:transform .12s ease, box-shadow .12s ease, filter .12s ease;
 }
+#atend-novo-view .save-status:hover{filter:brightness(1.05);transform:translateY(-1px);box-shadow:0 6px 14px rgba(16,185,129,.4)}
+#atend-novo-view .save-status:active{transform:translateY(0);filter:brightness(.96)}
+#atend-novo-view #save-status-icon{color:#fff}
+#atend-novo-view .save-status.state-dirty{background:linear-gradient(135deg,#f59e0b,#d97706)!important;border-color:rgba(245,158,11,.6)!important;box-shadow:0 4px 10px rgba(245,158,11,.32)!important}
+#atend-novo-view .save-status.state-saving{background:linear-gradient(135deg,#94a3b8,#64748b)!important;border-color:rgba(100,116,139,.6)!important;box-shadow:0 4px 10px rgba(100,116,139,.28)!important}
+#atend-novo-view .save-status.state-saved{background:linear-gradient(135deg,#10b981,#059669)!important;border-color:rgba(16,185,129,.6)!important}
+#atend-novo-view .save-status.state-error{background:linear-gradient(135deg,#ef4444,#b91c1c)!important;border-color:rgba(239,68,68,.6)!important}
+#atend-novo-view .panel-expand{z-index:20}
+#atend-novo-view .pront-header{position:relative;z-index:25}
 
 /* toolbar (intermediate relief) */
 #atend-novo-view .toolbar{
@@ -1846,10 +1858,10 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
               <button class="panel-expand" onclick="togglePanelExpand('left',event)" title="Expandir prontuário" id="exp-left-btn"><i class="ti ti-arrows-diagonal" id="exp-left-icon"></i></button>
               <div class="pront-header">
                 <span class="pront-label">Prontuário</span>
-                <span id="save-status" class="save-status" title="Salvar atendimento" onclick="saveAtend()" style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--n400);cursor:pointer;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.6);border:0.5px solid var(--n150);transition:all .15s">
-                  <i class="ti ti-cloud-check" id="save-status-icon" style="font-size:12px"></i>
-                  <span id="save-status-lbl">Salvo</span>
-                </span>
+                <button type="button" id="save-status" class="save-status state-saved" title="Salvar e finalizar atendimento" onclick="saveAtend(event)" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:0;font-family:inherit">
+                  <i class="ti ti-device-floppy" id="save-status-icon" style="font-size:13px"></i>
+                  <span id="save-status-lbl">Salvar e Finalizar</span>
+                </button>
               </div>
               <div class="toolbar">
                 <button class="tbtn" title="Negrito"><b>B</b></button>
@@ -3555,10 +3567,11 @@ function scheduleAutoSave(){
 function updateSaveStatus(state){
   const el=document.getElementById('save-status');if(!el)return;
   const ic=document.getElementById('save-status-icon');const lb=document.getElementById('save-status-lbl');
-  if(state==='dirty'){el.style.color='#92400e';el.style.background='rgba(254,243,199,.8)';el.style.borderColor='#fde68a';ic.className='ti ti-cloud-up';lb.textContent='Alterações...';}
-  else if(state==='saving'){el.style.color='var(--n500)';el.style.background='rgba(255,255,255,.7)';el.style.borderColor='var(--n150)';ic.className='ti ti-loader-2';ic.style.animation='spin 1s linear infinite';lb.textContent='Salvando...';}
-  else if(state==='saved'){el.style.color='var(--g600)';el.style.background='rgba(220,252,231,.7)';el.style.borderColor='#86efac';ic.className='ti ti-cloud-check';ic.style.animation='';const t=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});lb.textContent='Salvo '+t;}
-  else if(state==='error'){el.style.color='#b91c1c';el.style.background='rgba(254,226,226,.8)';el.style.borderColor='#fca5a5';ic.className='ti ti-alert-circle';ic.style.animation='';lb.textContent='Erro ao salvar';}
+  el.classList.remove('state-dirty','state-saving','state-saved','state-error');
+  if(state==='dirty'){el.classList.add('state-dirty');ic.className='ti ti-cloud-up';ic.style.animation='';lb.textContent='Salvar e Finalizar';}
+  else if(state==='saving'){el.classList.add('state-saving');ic.className='ti ti-loader-2';ic.style.animation='spin 1s linear infinite';lb.textContent='Salvando...';}
+  else if(state==='saved'){el.classList.add('state-saved');ic.className='ti ti-cloud-check';ic.style.animation='';const t=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});lb.textContent='Salvo '+t;}
+  else if(state==='error'){el.classList.add('state-error');ic.className='ti ti-alert-circle';ic.style.animation='';lb.textContent='Erro ao salvar';}
 }
 function updateAtendProgress(){const p=document.getElementById('atend-progress');if(p)p.classList.toggle('show',atendEmAndamento.dirty);}
 function openTabFromProgress(){
@@ -3717,6 +3730,7 @@ function showNovoAtend(restore){
 async function saveAtendFromProgress(){const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;await saveAtendInternal({finalize:true});}
 async function saveAtendInternal(opts){
   const finalize=!!(opts&&opts.finalize);
+  const keepOpen=!!(opts&&opts.keepOpen);
   const now=new Date();
   const dateStr=now.toLocaleDateString('pt-BR');
   const timeStr=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
@@ -3727,7 +3741,7 @@ async function saveAtendInternal(opts){
   let data=null,error=null;
   if(window._idConsultaAtual){({data,error}=await sb.from('consulta').update(payload).eq('id',window._idConsultaAtual).select('*').single());}
   if(error||!data){({data,error}=await sb.from('consulta').insert(payload).select('*').single());}
-  if(error){if(finalize)showToast('Erro ao salvar atendimento: '+error.message,'error');return;}
+  if(error){if(finalize)showToast('Erro ao salvar atendimento: '+error.message,'error');throw (error||new Error('save failed'));}
   window._idConsultaAtual=data.id;
   if(!finalize){
     // pré-salvamento: mantém o atendimento aberto para continuação
@@ -3736,15 +3750,29 @@ async function saveAtendInternal(opts){
   atendimentos=atendimentos.filter(a=>a.id!==data.id);
   atendimentos.unshift(mapConsultaRow(data));
   await addTimelineEvent({date:dateStr,type:'atend',icon:'ti-stethoscope',title:'Atendimento registrado — '+timeStr,sub:medicoNames[currentPatient.medico]||'Médico responsável'});
-  atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[]};
-  window._idConsultaAtual=null;
-  clearAtendDraft();
-  stopAtendAutoSave();
-  updateAtendProgress();renderAtendimentos();renderTimeline();renderProntuario();showToast('Atendimento salvo com sucesso','success');
+  if(keepOpen){
+    // Mantém o atendimento aberto na mesma tela; apenas reseta flag dirty
+    atendEmAndamento.dirty=false;
+    updateAtendProgress();renderTimeline();renderProntuario();
+    showToast('Atendimento salvo com sucesso','success');
+  }else{
+    atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[]};
+    window._idConsultaAtual=null;
+    clearAtendDraft();
+    stopAtendAutoSave();
+    updateAtendProgress();renderAtendimentos();renderTimeline();renderProntuario();showToast('Atendimento salvo com sucesso','success');
+  }
 }
-async function saveAtend(){
+async function saveAtend(ev){
+  if(ev&&ev.stopPropagation)ev.stopPropagation();
   const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;
-  await saveAtendInternal({finalize:true});showAtendList();
+  updateSaveStatus('saving');
+  try{
+    await saveAtendInternal({finalize:true,keepOpen:true});
+    updateSaveStatus('saved');
+  }catch(e){
+    updateSaveStatus('error');
+  }
 }
 
 /* ========== PATIENT HEADER COLLAPSE ========== */
