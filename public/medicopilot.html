@@ -5544,7 +5544,7 @@ async function rxDoSearch(q){
   box.innerHTML='<div style="padding:14px;font-size:12px;color:#94a3b8;text-align:center">Buscando...</div>';
   const like='%'+term.replace(/[,%]/g,' ')+'%';
   const {data,error}=await sb.from('medicamentos')
-    .select('id,nome_comercial,composicao,compostos,apresentacoes,fabricante')
+    .select('id,nome_comercial,composicao,compostos,apresentacoes,fabricante,is_generico')
     .or(`nome_comercial.ilike.${like},composicao.ilike.${like}`)
     .order('nome_comercial')
     .limit(300);
@@ -5552,24 +5552,36 @@ async function rxDoSearch(q){
   const raw=data||[];
   const groups=new Map();
   for(const m of raw){
-    const key=((m.nome_comercial||'').trim().toUpperCase())+'|'+((m.composicao||'').trim().toUpperCase());
+    // Dedup: genéricos → 1 linha por composição (fabricante é irrelevante na lista).
+    // Não-genéricos → 1 linha por nome comercial + fabricante.
+    const isGen=!!m.is_generico;
+    const compKey=((m.composicao||'').trim().toUpperCase())||((m.compostos||[]).join('+').toUpperCase());
+    const key=isGen
+      ? 'G|'+compKey
+      : 'R|'+((m.nome_comercial||'').trim().toUpperCase())+'|'+((m.fabricante||'').trim().toUpperCase())+'|'+compKey;
     let g=groups.get(key);
-    if(!g){g={id:m.id,nome_comercial:m.nome_comercial,composicao:m.composicao,compostos:m.compostos||[],fabricante:m.fabricante,apresentacoes:[],ids:[]};groups.set(key,g);}
+    if(!g){
+      g={id:m.id,nome_comercial:m.nome_comercial,composicao:m.composicao,compostos:m.compostos||[],fabricante:m.fabricante,is_generico:isGen,apresentacoes:[],fabricantes:[],ids:[]};
+      groups.set(key,g);
+    }
     g.ids.push(m.id);
     for(const a of (m.apresentacoes||[])){ if(a && !g.apresentacoes.includes(a)) g.apresentacoes.push(a); }
+    if(m.fabricante && !g.fabricantes.includes(m.fabricante)) g.fabricantes.push(m.fabricante);
     if(!g.fabricante && m.fabricante) g.fabricante=m.fabricante;
   }
-  const list=Array.from(groups.values()).slice(0,30);
+  const list=Array.from(groups.values()).slice(0,50);
   rxLastResults=list;
   if(!list.length){box.style.display='block';box.innerHTML='<div style="padding:14px;font-size:12px;color:#94a3b8;text-align:center">Nenhum medicamento encontrado</div>';return;}
   box.innerHTML=list.map(m=>{
     const aps=(m.apresentacoes||[]);
     const apsPreview=aps.slice(0,3).join(' • ')+(aps.length>3?` +${aps.length-3}`:'');
     const compos=m.composicao||(m.compostos||[]).join(', ');
-    return `<div class="rx-opt" onclick='rxAdd(${JSON.stringify(m.id)})' style="padding:9px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;flex-direction:column;gap:2px">
-      <div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:13px;color:#0f172a">${m.nome_comercial}</span>${m.fabricante?`<span style="font-size:10.5px;color:#94a3b8">· ${m.fabricante}</span>`:''}</div>
-      <div style="font-size:11.5px;color:#64748b">${compos}</div>
-      ${aps.length?`<div style="font-size:10.5px;color:#059669;margin-top:2px"><i class="ti ti-pill" style="font-size:11px"></i> ${aps.length} apresenta${aps.length>1?'ções':'ção'} · ${apsPreview}</div>`:''}
+    const genBadge=m.is_generico?'<span style="font-size:9.5px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 6px;border-radius:4px;letter-spacing:.04em">GENÉRICO</span>':'';
+    const fabLine=(!m.is_generico && m.fabricante)?`<span style="font-size:10.5px;color:#94a3b8">· ${m.fabricante}</span>`:'';
+    return `<div class="rx-opt" onclick='rxAdd(${JSON.stringify(m.id)})' style="padding:11px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;flex-direction:column;gap:3px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:600;font-size:13.5px;color:#0f172a">${m.nome_comercial}</span>${genBadge}${fabLine}</div>
+      <div style="font-size:12px;color:#64748b">${compos}</div>
+      ${aps.length?`<div style="font-size:11px;color:#059669;margin-top:2px"><i class="ti ti-pill" style="font-size:11px"></i> ${aps.length} apresenta${aps.length>1?'ções':'ção'} · ${apsPreview}</div>`:''}
     </div>`;
   }).join('');
   box.style.display='block';
@@ -5581,7 +5593,7 @@ async function rxDoSearch(q){
 function rxAdd(id){
   const med=(rxLastResults||[]).find(m=>m.id===id);if(!med)return;
   const uid=Math.random().toString(36).slice(2,10);
-  rxSelected.push({uid,medicamento_id:med.id,nome_comercial:med.nome_comercial,composicao:med.composicao,compostos:med.compostos||[],apresentacoes:med.apresentacoes||[],apresentacao:(med.apresentacoes||[])[0]||'',posologia:'',quantidade:'1 caixa'});
+  rxSelected.push({uid,medicamento_id:med.id,nome_comercial:med.nome_comercial,composicao:med.composicao,compostos:med.compostos||[],apresentacoes:med.apresentacoes||[],apresentacao:(med.apresentacoes||[])[0]||'',posologia:'',quantidade:'1 caixa',is_generico:!!med.is_generico,fabricantes:med.fabricantes||(med.fabricante?[med.fabricante]:[]),fabricante:med.is_generico?'':(med.fabricante||'')});
   document.getElementById('rx-search').value='';
   document.getElementById('rx-results').style.display='none';
   rxRenderSelected();
