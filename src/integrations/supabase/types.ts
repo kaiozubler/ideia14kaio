@@ -153,33 +153,141 @@ export type Database = {
           },
         ]
       }
+      interacoes_medicamentosas: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          fonte: string | null
+          gravidade: string | null
+          id_interacao: string
+          id_substancia_a: string
+          id_substancia_b: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          fonte?: string | null
+          gravidade?: string | null
+          id_interacao?: string
+          id_substancia_a: string
+          id_substancia_b: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          fonte?: string | null
+          gravidade?: string | null
+          id_interacao?: string
+          id_substancia_a?: string
+          id_substancia_b?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interacoes_medicamentosas_id_substancia_a_fkey"
+            columns: ["id_substancia_a"]
+            isOneToOne: false
+            referencedRelation: "substancias"
+            referencedColumns: ["id_substancia"]
+          },
+          {
+            foreignKeyName: "interacoes_medicamentosas_id_substancia_b_fkey"
+            columns: ["id_substancia_b"]
+            isOneToOne: false
+            referencedRelation: "substancias"
+            referencedColumns: ["id_substancia"]
+          },
+        ]
+      }
+      medicamento_substancias: {
+        Row: {
+          concentracao: string | null
+          id_medicamento: string
+          id_substancia: string
+        }
+        Insert: {
+          concentracao?: string | null
+          id_medicamento: string
+          id_substancia: string
+        }
+        Update: {
+          concentracao?: string | null
+          id_medicamento?: string
+          id_substancia?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medicamento_substancias_id_medicamento_fkey"
+            columns: ["id_medicamento"]
+            isOneToOne: false
+            referencedRelation: "medicamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medicamento_substancias_id_substancia_fkey"
+            columns: ["id_substancia"]
+            isOneToOne: false
+            referencedRelation: "substancias"
+            referencedColumns: ["id_substancia"]
+          },
+        ]
+      }
       medicamentos: {
         Row: {
+          apresentacao: string | null
           apresentacoes: string[]
+          categoria_regulatoria: string | null
+          classe_terapeutica: string | null
+          cnpj_fabricante: string | null
+          codigo_ggrem: string | null
+          comercializado_2025: boolean | null
           composicao: string | null
           compostos: string[]
           created_at: string
           fabricante: string | null
           id: string
+          is_generico: boolean
           nome_comercial: string
+          regime_preco: string | null
+          registro_anvisa: string | null
+          tarja: string | null
         }
         Insert: {
+          apresentacao?: string | null
           apresentacoes?: string[]
+          categoria_regulatoria?: string | null
+          classe_terapeutica?: string | null
+          cnpj_fabricante?: string | null
+          codigo_ggrem?: string | null
+          comercializado_2025?: boolean | null
           composicao?: string | null
           compostos?: string[]
           created_at?: string
           fabricante?: string | null
           id: string
+          is_generico?: boolean
           nome_comercial: string
+          regime_preco?: string | null
+          registro_anvisa?: string | null
+          tarja?: string | null
         }
         Update: {
+          apresentacao?: string | null
           apresentacoes?: string[]
+          categoria_regulatoria?: string | null
+          classe_terapeutica?: string | null
+          cnpj_fabricante?: string | null
+          codigo_ggrem?: string | null
+          comercializado_2025?: boolean | null
           composicao?: string | null
           compostos?: string[]
           created_at?: string
           fabricante?: string | null
           id?: string
+          is_generico?: boolean
           nome_comercial?: string
+          regime_preco?: string | null
+          registro_anvisa?: string | null
+          tarja?: string | null
         }
         Relationships: []
       }
@@ -328,6 +436,27 @@ export type Database = {
           },
         ]
       }
+      substancias: {
+        Row: {
+          created_at: string
+          id_substancia: string
+          nome_dcb: string
+          nome_exibicao: string
+        }
+        Insert: {
+          created_at?: string
+          id_substancia?: string
+          nome_dcb: string
+          nome_exibicao: string
+        }
+        Update: {
+          created_at?: string
+          id_substancia?: string
+          nome_dcb?: string
+          nome_exibicao?: string
+        }
+        Relationships: []
+      }
       timeline_events: {
         Row: {
           created_at: string
@@ -377,8 +506,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      normaliza_substancia: { Args: { t: string }; Returns: string }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
