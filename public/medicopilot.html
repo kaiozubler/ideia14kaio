@@ -215,6 +215,13 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .atend-tag{font-size:10px;padding:1px 7px;border-radius:var(--r4);background:var(--n75);color:var(--n500);border:0.5px solid var(--n200)}
 .atend-tag.green{background:var(--g50);color:var(--g700);border-color:var(--g200)}
 .atend-tag.orange{background:#fff7ed;color:#7c4a00;border-color:#fcd09a}
+/* GLOBAL ATEND CHIP (topbar, visible from any screen) */
+.global-atend-chip{display:none;align-items:center;gap:5px;height:28px;padding:0 10px;margin-right:2px;border-radius:999px;border:0.5px solid #fcd09a;background:#fff7ed;color:#92400e;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;max-width:220px;transition:filter .14s}
+.global-atend-chip.show{display:inline-flex}
+.global-atend-chip:hover{filter:brightness(0.97)}
+.global-atend-chip .ti{font-size:13px;color:#e07800;flex-shrink:0}
+.global-atend-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:900px){.global-atend-chip span{display:none}.global-atend-chip{padding:0 8px}}
 .atend-chev{color:var(--n300);font-size:15px;margin-top:1px;flex-shrink:0}
 .dossie-btn{display:none}
 .dossie-btn.show{display:flex}
@@ -1593,6 +1600,11 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
       <div class="bc" id="breadcrumb"></div>
     </div>
     <div class="topbar-right">
+      <button class="global-atend-chip" id="global-atend-chip" onclick="continuarAtendimentoGlobal()" title="Continuar atendimento em andamento">
+        <i class="ti ti-clock-edit"></i>
+        <span id="global-atend-chip-lbl">Atendimento em andamento</span>
+        <i class="ti ti-arrow-right" style="font-size:12px"></i>
+      </button>
       <button class="ib" title="Notificações"><i class="ti ti-bell"></i><span class="notif-dot"></span></button>
       <button class="ib" title="Configurações" onclick="goScreen('configuracoes')"><i class="ti ti-settings"></i></button>
       <div class="avatar" id="user-avatar" title="Sair" onclick="logout()" style="cursor:pointer"><span>DR</span></div>
