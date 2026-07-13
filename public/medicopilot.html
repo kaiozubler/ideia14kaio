@@ -3751,7 +3751,7 @@ function showNovoAtend(restore){
   nv.style.display='flex';
   if(!restore){
     resetAI();
-    atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[],startedAt:new Date().toISOString()};
+    atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[],startedAt:new Date().toISOString(),patientId:currentPatient?.id,patientName:currentPatient?.name};
     const pa=document.getElementById('pront-area');if(pa)pa.value='';
     const npta=document.getElementById('nota-personal-ta');if(npta)npta.value='';
     aiChatHistory=[];
@@ -6087,6 +6087,8 @@ function tryRestoreAtendDraft(){
     atendEmAndamento.bblHistory=Array.isArray(d.bblHistory)?d.bblHistory:[];
     atendEmAndamento.startedAt=d.startedAt||new Date().toISOString();
     atendEmAndamento.dirty=true;
+    atendEmAndamento.patientId=currentPatient?.id;
+    atendEmAndamento.patientName=currentPatient?.name;
     window._idConsultaAtual=null;
     restoreAiDraft(d);
     updateAtendProgress();
