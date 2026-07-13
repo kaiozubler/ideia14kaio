@@ -3585,7 +3585,31 @@ function updateSaveStatus(state){
   else if(state==='saved'){el.classList.add('state-saved');ic.className='ti ti-cloud-check';ic.style.animation='';const t=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});lb.textContent='Salvo '+t;}
   else if(state==='error'){el.classList.add('state-error');ic.className='ti ti-alert-circle';ic.style.animation='';lb.textContent='Erro ao salvar';}
 }
-function updateAtendProgress(){const p=document.getElementById('atend-progress');if(p)p.classList.toggle('show',atendEmAndamento.dirty);}
+function updateAtendProgress(){
+  const dirty=!!(atendEmAndamento&&atendEmAndamento.dirty);
+  const p=document.getElementById('atend-progress');if(p)p.classList.toggle('show',dirty);
+  const chip=document.getElementById('global-atend-chip');
+  if(chip){
+    chip.classList.toggle('show',dirty);
+    const lbl=document.getElementById('global-atend-chip-lbl');
+    if(lbl){
+      const name=atendEmAndamento&&atendEmAndamento.patientName;
+      lbl.textContent=name?('Continuar atendimento — '+name):'Atendimento em andamento';
+    }
+  }
+}
+async function continuarAtendimentoGlobal(){
+  if(!atendEmAndamento||!atendEmAndamento.dirty)return;
+  const pid=atendEmAndamento.patientId;
+  if(pid&&(!currentPatient||currentPatient.id!==pid)){
+    await openPatient(pid);
+  }else if(!currentPatient){
+    return;
+  }else{
+    goScreen('patient-detail');
+  }
+  openTabFromProgress();
+}
 function openTabFromProgress(){
   openTab('atendimentos',null);
   document.querySelectorAll('.tab').forEach((t,i)=>{if(['cadastro','atendimentos','exames','financeiro','agenda','timeline','prontuario'][i]==='atendimentos')t.classList.add('on');});
@@ -3604,7 +3628,7 @@ function renderAtendimentos(){
       <input type="checkbox" class="atend-cb" onclick="event.stopPropagation();toggleAtend(event,'${a.id}')" id="acb-${a.id}">
       <div class="atend-body">
         <div class="atend-title">${a.title}</div>
-        <div class="atend-sub"><span>${a.date} ${a.hora||''}</span><span class="atend-tag green">${a.acao}</span></div>
+        <div class="atend-sub"><span>${a.date} ${a.hora||''}</span><span class="atend-tag ${a.acao==='Rascunho'?'orange':'green'}">${a.acao}</span></div>
       </div>
       <i class="ti ti-chevron-right atend-chev"></i>
     </div>`).join('');
