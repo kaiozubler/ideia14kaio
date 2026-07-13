@@ -5608,15 +5608,22 @@ function rxRenderSelected(){
   wrap.innerHTML=rxSelected.map(it=>{
     const compos=it.composicao||(it.compostos||[]).join(', ');
     const apsOpts=(it.apresentacoes||[]).map(a=>`<option value="${a.replace(/"/g,'&quot;')}" ${a===it.apresentacao?'selected':''}>${a}</option>`).join('');
+    const fabOpts=(it.fabricantes||[]).map(f=>`<option value="${f.replace(/"/g,'&quot;')}" ${f===it.fabricante?'selected':''}>${f}</option>`).join('');
+    const genBadge=it.is_generico?'<span style="font-size:9.5px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 6px;border-radius:4px;letter-spacing:.04em;margin-left:6px">GENÉRICO</span>':'';
+    const fabBlock=it.is_generico?`<div style="grid-column:1/-1">
+          <label style="font-size:10.5px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:3px">Fabricante <span style="color:#94a3b8;font-weight:500;text-transform:none;letter-spacing:0">(opcional — genérico)</span></label>
+          ${fabOpts?`<select onchange="rxSetField('${it.uid}','fabricante',this.value)" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:#fff"><option value="">Sem fabricante especificado</option>${fabOpts}</select>`:`<input type="text" value="${(it.fabricante||'').replace(/"/g,'&quot;')}" oninput="rxSetField('${it.uid}','fabricante',this.value)" placeholder="Deixe em branco se irrelevante" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">`}
+        </div>`:'';
     return `<div id="rx-item-${it.uid}" style="border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;background:#fff;display:flex;flex-direction:column;gap:8px">
       <div style="display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:13px;color:#0f172a">${it.nome_comercial}</div>
+          <div style="font-weight:600;font-size:13px;color:#0f172a">${it.nome_comercial}${genBadge}</div>
           <div style="font-size:11.5px;color:#64748b">${compos}</div>
         </div>
         <button class="btn sm" onclick="rxRemove('${it.uid}')" title="Remover" style="color:#dc2626;border-color:#fecaca;background:#fef2f2"><i class="ti ti-trash"></i></button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${fabBlock}
         <div>
           <label style="font-size:10.5px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:3px">Apresentação</label>
           ${apsOpts?`<select onchange="rxSetField('${it.uid}','apresentacao',this.value)" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:#fff">${apsOpts}</select>`:`<input type="text" value="${(it.apresentacao||'').replace(/"/g,'&quot;')}" oninput="rxSetField('${it.uid}','apresentacao',this.value)" placeholder="Ex: Comprimido 500mg" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">`}
