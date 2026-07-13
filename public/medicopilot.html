@@ -215,6 +215,13 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .atend-tag{font-size:10px;padding:1px 7px;border-radius:var(--r4);background:var(--n75);color:var(--n500);border:0.5px solid var(--n200)}
 .atend-tag.green{background:var(--g50);color:var(--g700);border-color:var(--g200)}
 .atend-tag.orange{background:#fff7ed;color:#7c4a00;border-color:#fcd09a}
+/* GLOBAL ATEND CHIP (topbar, visible from any screen) */
+.global-atend-chip{display:none;align-items:center;gap:5px;height:28px;padding:0 10px;margin-right:2px;border-radius:999px;border:0.5px solid #fcd09a;background:#fff7ed;color:#92400e;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;max-width:220px;transition:filter .14s}
+.global-atend-chip.show{display:inline-flex}
+.global-atend-chip:hover{filter:brightness(0.97)}
+.global-atend-chip .ti{font-size:13px;color:#e07800;flex-shrink:0}
+.global-atend-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:900px){.global-atend-chip span{display:none}.global-atend-chip{padding:0 8px}}
 .atend-chev{color:var(--n300);font-size:15px;margin-top:1px;flex-shrink:0}
 .dossie-btn{display:none}
 .dossie-btn.show{display:flex}
@@ -1593,6 +1600,11 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
       <div class="bc" id="breadcrumb"></div>
     </div>
     <div class="topbar-right">
+      <button class="global-atend-chip" id="global-atend-chip" onclick="continuarAtendimentoGlobal()" title="Continuar atendimento em andamento">
+        <i class="ti ti-clock-edit"></i>
+        <span id="global-atend-chip-lbl">Atendimento em andamento</span>
+        <i class="ti ti-arrow-right" style="font-size:12px"></i>
+      </button>
       <button class="ib" title="Notificações"><i class="ti ti-bell"></i><span class="notif-dot"></span></button>
       <button class="ib" title="Configurações" onclick="goScreen('configuracoes')"><i class="ti ti-settings"></i></button>
       <div class="avatar" id="user-avatar" title="Sair" onclick="logout()" style="cursor:pointer"><span>DR</span></div>
@@ -3573,7 +3585,31 @@ function updateSaveStatus(state){
   else if(state==='saved'){el.classList.add('state-saved');ic.className='ti ti-cloud-check';ic.style.animation='';const t=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});lb.textContent='Salvo '+t;}
   else if(state==='error'){el.classList.add('state-error');ic.className='ti ti-alert-circle';ic.style.animation='';lb.textContent='Erro ao salvar';}
 }
-function updateAtendProgress(){const p=document.getElementById('atend-progress');if(p)p.classList.toggle('show',atendEmAndamento.dirty);}
+function updateAtendProgress(){
+  const dirty=!!(atendEmAndamento&&atendEmAndamento.dirty);
+  const p=document.getElementById('atend-progress');if(p)p.classList.toggle('show',dirty);
+  const chip=document.getElementById('global-atend-chip');
+  if(chip){
+    chip.classList.toggle('show',dirty);
+    const lbl=document.getElementById('global-atend-chip-lbl');
+    if(lbl){
+      const name=atendEmAndamento&&atendEmAndamento.patientName;
+      lbl.textContent=name?('Continuar atendimento — '+name):'Atendimento em andamento';
+    }
+  }
+}
+async function continuarAtendimentoGlobal(){
+  if(!atendEmAndamento||!atendEmAndamento.dirty)return;
+  const pid=atendEmAndamento.patientId;
+  if(pid&&(!currentPatient||currentPatient.id!==pid)){
+    await openPatient(pid);
+  }else if(!currentPatient){
+    return;
+  }else{
+    goScreen('patient-detail');
+  }
+  openTabFromProgress();
+}
 function openTabFromProgress(){
   openTab('atendimentos',null);
   document.querySelectorAll('.tab').forEach((t,i)=>{if(['cadastro','atendimentos','exames','financeiro','agenda','timeline','prontuario'][i]==='atendimentos')t.classList.add('on');});
@@ -3592,7 +3628,7 @@ function renderAtendimentos(){
       <input type="checkbox" class="atend-cb" onclick="event.stopPropagation();toggleAtend(event,'${a.id}')" id="acb-${a.id}">
       <div class="atend-body">
         <div class="atend-title">${a.title}</div>
-        <div class="atend-sub"><span>${a.date} ${a.hora||''}</span><span class="atend-tag green">${a.acao}</span></div>
+        <div class="atend-sub"><span>${a.date} ${a.hora||''}</span><span class="atend-tag ${a.acao==='Rascunho'?'orange':'green'}">${a.acao}</span></div>
       </div>
       <i class="ti ti-chevron-right atend-chev"></i>
     </div>`).join('');
@@ -3715,7 +3751,7 @@ function showNovoAtend(restore){
   nv.style.display='flex';
   if(!restore){
     resetAI();
-    atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[],startedAt:new Date().toISOString()};
+    atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[],startedAt:new Date().toISOString(),patientId:currentPatient?.id,patientName:currentPatient?.name};
     const pa=document.getElementById('pront-area');if(pa)pa.value='';
     const npta=document.getElementById('nota-personal-ta');if(npta)npta.value='';
     aiChatHistory=[];
@@ -3744,31 +3780,30 @@ async function saveAtendInternal(opts){
   if(error){if(finalize)showToast('Erro ao salvar atendimento: '+error.message,'error');throw (error||new Error('save failed'));}
   window._idConsultaAtual=data.id;
   if(!finalize){
-    // pré-salvamento: mantém o atendimento aberto para continuação
+    // pré-salvamento: mantém o atendimento aberto para continuação, mas o
+    // registro (Rascunho) já existe no banco e reescreve a cada alteração —
+    // atualiza a lista local para que ele fique visível/consultável.
+    atendimentos=atendimentos.filter(a=>a.id!==data.id);
+    atendimentos.unshift(mapConsultaRow(data));
+    renderAtendimentos();
     return;
   }
   atendimentos=atendimentos.filter(a=>a.id!==data.id);
   atendimentos.unshift(mapConsultaRow(data));
   await addTimelineEvent({date:dateStr,type:'atend',icon:'ti-stethoscope',title:'Atendimento registrado — '+timeStr,sub:medicoNames[currentPatient.medico]||'Médico responsável'});
-  if(keepOpen){
-    // Mantém o atendimento aberto na mesma tela; apenas reseta flag dirty
-    atendEmAndamento.dirty=false;
-    updateAtendProgress();renderTimeline();renderProntuario();
-    showToast('Atendimento salvo com sucesso','success');
-  }else{
-    atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[]};
-    window._idConsultaAtual=null;
-    clearAtendDraft();
-    stopAtendAutoSave();
-    updateAtendProgress();renderAtendimentos();renderTimeline();renderProntuario();showToast('Atendimento salvo com sucesso','success');
-  }
+  atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[]};
+  window._idConsultaAtual=null;
+  clearAtendDraft();
+  stopAtendAutoSave();
+  updateAtendProgress();renderAtendimentos();renderTimeline();renderProntuario();showToast('Atendimento salvo com sucesso','success');
+  openTabFromProgress();
 }
 async function saveAtend(ev){
   if(ev&&ev.stopPropagation)ev.stopPropagation();
   const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;
   updateSaveStatus('saving');
   try{
-    await saveAtendInternal({finalize:true,keepOpen:true});
+    await saveAtendInternal({finalize:true});
     updateSaveStatus('saved');
   }catch(e){
     updateSaveStatus('error');
@@ -6052,6 +6087,8 @@ function tryRestoreAtendDraft(){
     atendEmAndamento.bblHistory=Array.isArray(d.bblHistory)?d.bblHistory:[];
     atendEmAndamento.startedAt=d.startedAt||new Date().toISOString();
     atendEmAndamento.dirty=true;
+    atendEmAndamento.patientId=currentPatient?.id;
+    atendEmAndamento.patientName=currentPatient?.name;
     window._idConsultaAtual=null;
     restoreAiDraft(d);
     updateAtendProgress();
