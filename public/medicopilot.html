@@ -3780,31 +3780,30 @@ async function saveAtendInternal(opts){
   if(error){if(finalize)showToast('Erro ao salvar atendimento: '+error.message,'error');throw (error||new Error('save failed'));}
   window._idConsultaAtual=data.id;
   if(!finalize){
-    // pré-salvamento: mantém o atendimento aberto para continuação
+    // pré-salvamento: mantém o atendimento aberto para continuação, mas o
+    // registro (Rascunho) já existe no banco e reescreve a cada alteração —
+    // atualiza a lista local para que ele fique visível/consultável.
+    atendimentos=atendimentos.filter(a=>a.id!==data.id);
+    atendimentos.unshift(mapConsultaRow(data));
+    renderAtendimentos();
     return;
   }
   atendimentos=atendimentos.filter(a=>a.id!==data.id);
   atendimentos.unshift(mapConsultaRow(data));
   await addTimelineEvent({date:dateStr,type:'atend',icon:'ti-stethoscope',title:'Atendimento registrado — '+timeStr,sub:medicoNames[currentPatient.medico]||'Médico responsável'});
-  if(keepOpen){
-    // Mantém o atendimento aberto na mesma tela; apenas reseta flag dirty
-    atendEmAndamento.dirty=false;
-    updateAtendProgress();renderTimeline();renderProntuario();
-    showToast('Atendimento salvo com sucesso','success');
-  }else{
-    atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[]};
-    window._idConsultaAtual=null;
-    clearAtendDraft();
-    stopAtendAutoSave();
-    updateAtendProgress();renderAtendimentos();renderTimeline();renderProntuario();showToast('Atendimento salvo com sucesso','success');
-  }
+  atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[]};
+  window._idConsultaAtual=null;
+  clearAtendDraft();
+  stopAtendAutoSave();
+  updateAtendProgress();renderAtendimentos();renderTimeline();renderProntuario();showToast('Atendimento salvo com sucesso','success');
+  openTabFromProgress();
 }
 async function saveAtend(ev){
   if(ev&&ev.stopPropagation)ev.stopPropagation();
   const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;
   updateSaveStatus('saving');
   try{
-    await saveAtendInternal({finalize:true,keepOpen:true});
+    await saveAtendInternal({finalize:true});
     updateSaveStatus('saved');
   }catch(e){
     updateSaveStatus('error');
