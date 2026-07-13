@@ -44,51 +44,6 @@ export type Database = {
         }
         Relationships: []
       }
-      anvisa_import: {
-        Row: {
-          apresentacao: string | null
-          classe_terapeutica: string | null
-          cnpj: string | null
-          codigo_ggrem: string | null
-          comerc_2025: string | null
-          laboratorio: string | null
-          produto: string | null
-          regime_preco: string | null
-          registro: string | null
-          substancia: string | null
-          tarja: string | null
-          tipo_produto: string | null
-        }
-        Insert: {
-          apresentacao?: string | null
-          classe_terapeutica?: string | null
-          cnpj?: string | null
-          codigo_ggrem?: string | null
-          comerc_2025?: string | null
-          laboratorio?: string | null
-          produto?: string | null
-          regime_preco?: string | null
-          registro?: string | null
-          substancia?: string | null
-          tarja?: string | null
-          tipo_produto?: string | null
-        }
-        Update: {
-          apresentacao?: string | null
-          classe_terapeutica?: string | null
-          cnpj?: string | null
-          codigo_ggrem?: string | null
-          comerc_2025?: string | null
-          laboratorio?: string | null
-          produto?: string | null
-          regime_preco?: string | null
-          registro?: string | null
-          substancia?: string | null
-          tarja?: string | null
-          tipo_produto?: string | null
-        }
-        Relationships: []
-      }
       consulta: {
         Row: {
           acao: string | null
