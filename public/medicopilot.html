@@ -2923,7 +2923,7 @@ Reduzir ingestão de sódio. Hidratação adequada. Evitar situações de estres
     <div class="mbody">
       <div style="position:relative">
         <input type="text" id="rx-search" placeholder="Buscar medicamento por nome comercial, composição ou composto..." oninput="rxSearch(this.value)" autocomplete="off" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;background:#fff">
-        <div id="rx-results" style="position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 22px rgba(15,23,42,.08);max-height:280px;overflow-y:auto;z-index:20;display:none"></div>
+        <div id="rx-results" style="position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 22px rgba(15,23,42,.08);max-height:520px;overflow-y:auto;z-index:20;display:none"></div>
       </div>
       <div style="margin-top:16px">
         <div style="font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Medicamentos selecionados <span id="rx-count" style="color:#94a3b8;font-weight:500">(0)</span></div>
@@ -5544,7 +5544,7 @@ async function rxDoSearch(q){
   box.innerHTML='<div style="padding:14px;font-size:12px;color:#94a3b8;text-align:center">Buscando...</div>';
   const like='%'+term.replace(/[,%]/g,' ')+'%';
   const {data,error}=await sb.from('medicamentos')
-    .select('id,nome_comercial,composicao,compostos,apresentacoes,fabricante')
+    .select('id,nome_comercial,composicao,compostos,apresentacoes,fabricante,is_generico')
     .or(`nome_comercial.ilike.${like},composicao.ilike.${like}`)
     .order('nome_comercial')
     .limit(300);
@@ -5552,24 +5552,36 @@ async function rxDoSearch(q){
   const raw=data||[];
   const groups=new Map();
   for(const m of raw){
-    const key=((m.nome_comercial||'').trim().toUpperCase())+'|'+((m.composicao||'').trim().toUpperCase());
+    // Dedup: genéricos → 1 linha por composição (fabricante é irrelevante na lista).
+    // Não-genéricos → 1 linha por nome comercial + fabricante.
+    const isGen=!!m.is_generico;
+    const compKey=((m.composicao||'').trim().toUpperCase())||((m.compostos||[]).join('+').toUpperCase());
+    const key=isGen
+      ? 'G|'+compKey
+      : 'R|'+((m.nome_comercial||'').trim().toUpperCase())+'|'+((m.fabricante||'').trim().toUpperCase())+'|'+compKey;
     let g=groups.get(key);
-    if(!g){g={id:m.id,nome_comercial:m.nome_comercial,composicao:m.composicao,compostos:m.compostos||[],fabricante:m.fabricante,apresentacoes:[],ids:[]};groups.set(key,g);}
+    if(!g){
+      g={id:m.id,nome_comercial:m.nome_comercial,composicao:m.composicao,compostos:m.compostos||[],fabricante:m.fabricante,is_generico:isGen,apresentacoes:[],fabricantes:[],ids:[]};
+      groups.set(key,g);
+    }
     g.ids.push(m.id);
     for(const a of (m.apresentacoes||[])){ if(a && !g.apresentacoes.includes(a)) g.apresentacoes.push(a); }
+    if(m.fabricante && !g.fabricantes.includes(m.fabricante)) g.fabricantes.push(m.fabricante);
     if(!g.fabricante && m.fabricante) g.fabricante=m.fabricante;
   }
-  const list=Array.from(groups.values()).slice(0,30);
+  const list=Array.from(groups.values()).slice(0,50);
   rxLastResults=list;
   if(!list.length){box.style.display='block';box.innerHTML='<div style="padding:14px;font-size:12px;color:#94a3b8;text-align:center">Nenhum medicamento encontrado</div>';return;}
   box.innerHTML=list.map(m=>{
     const aps=(m.apresentacoes||[]);
     const apsPreview=aps.slice(0,3).join(' • ')+(aps.length>3?` +${aps.length-3}`:'');
     const compos=m.composicao||(m.compostos||[]).join(', ');
-    return `<div class="rx-opt" onclick='rxAdd(${JSON.stringify(m.id)})' style="padding:9px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;flex-direction:column;gap:2px">
-      <div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:13px;color:#0f172a">${m.nome_comercial}</span>${m.fabricante?`<span style="font-size:10.5px;color:#94a3b8">· ${m.fabricante}</span>`:''}</div>
-      <div style="font-size:11.5px;color:#64748b">${compos}</div>
-      ${aps.length?`<div style="font-size:10.5px;color:#059669;margin-top:2px"><i class="ti ti-pill" style="font-size:11px"></i> ${aps.length} apresenta${aps.length>1?'ções':'ção'} · ${apsPreview}</div>`:''}
+    const genBadge=m.is_generico?'<span style="font-size:9.5px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 6px;border-radius:4px;letter-spacing:.04em">GENÉRICO</span>':'';
+    const fabLine=(!m.is_generico && m.fabricante)?`<span style="font-size:10.5px;color:#94a3b8">· ${m.fabricante}</span>`:'';
+    return `<div class="rx-opt" onclick='rxAdd(${JSON.stringify(m.id)})' style="padding:11px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;flex-direction:column;gap:3px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:600;font-size:13.5px;color:#0f172a">${m.nome_comercial}</span>${genBadge}${fabLine}</div>
+      <div style="font-size:12px;color:#64748b">${compos}</div>
+      ${aps.length?`<div style="font-size:11px;color:#059669;margin-top:2px"><i class="ti ti-pill" style="font-size:11px"></i> ${aps.length} apresenta${aps.length>1?'ções':'ção'} · ${apsPreview}</div>`:''}
     </div>`;
   }).join('');
   box.style.display='block';
@@ -5581,7 +5593,7 @@ async function rxDoSearch(q){
 function rxAdd(id){
   const med=(rxLastResults||[]).find(m=>m.id===id);if(!med)return;
   const uid=Math.random().toString(36).slice(2,10);
-  rxSelected.push({uid,medicamento_id:med.id,nome_comercial:med.nome_comercial,composicao:med.composicao,compostos:med.compostos||[],apresentacoes:med.apresentacoes||[],apresentacao:(med.apresentacoes||[])[0]||'',posologia:'',quantidade:'1 caixa'});
+  rxSelected.push({uid,medicamento_id:med.id,nome_comercial:med.nome_comercial,composicao:med.composicao,compostos:med.compostos||[],apresentacoes:med.apresentacoes||[],apresentacao:(med.apresentacoes||[])[0]||'',posologia:'',quantidade:'1 caixa',is_generico:!!med.is_generico,fabricantes:med.fabricantes||(med.fabricante?[med.fabricante]:[]),fabricante:med.is_generico?'':(med.fabricante||'')});
   document.getElementById('rx-search').value='';
   document.getElementById('rx-results').style.display='none';
   rxRenderSelected();
@@ -5596,15 +5608,22 @@ function rxRenderSelected(){
   wrap.innerHTML=rxSelected.map(it=>{
     const compos=it.composicao||(it.compostos||[]).join(', ');
     const apsOpts=(it.apresentacoes||[]).map(a=>`<option value="${a.replace(/"/g,'&quot;')}" ${a===it.apresentacao?'selected':''}>${a}</option>`).join('');
+    const fabOpts=(it.fabricantes||[]).map(f=>`<option value="${f.replace(/"/g,'&quot;')}" ${f===it.fabricante?'selected':''}>${f}</option>`).join('');
+    const genBadge=it.is_generico?'<span style="font-size:9.5px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 6px;border-radius:4px;letter-spacing:.04em;margin-left:6px">GENÉRICO</span>':'';
+    const fabBlock=it.is_generico?`<div style="grid-column:1/-1">
+          <label style="font-size:10.5px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:3px">Fabricante <span style="color:#94a3b8;font-weight:500;text-transform:none;letter-spacing:0">(opcional — genérico)</span></label>
+          ${fabOpts?`<select onchange="rxSetField('${it.uid}','fabricante',this.value)" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:#fff"><option value="">Sem fabricante especificado</option>${fabOpts}</select>`:`<input type="text" value="${(it.fabricante||'').replace(/"/g,'&quot;')}" oninput="rxSetField('${it.uid}','fabricante',this.value)" placeholder="Deixe em branco se irrelevante" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">`}
+        </div>`:'';
     return `<div id="rx-item-${it.uid}" style="border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;background:#fff;display:flex;flex-direction:column;gap:8px">
       <div style="display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:13px;color:#0f172a">${it.nome_comercial}</div>
+          <div style="font-weight:600;font-size:13px;color:#0f172a">${it.nome_comercial}${genBadge}</div>
           <div style="font-size:11.5px;color:#64748b">${compos}</div>
         </div>
         <button class="btn sm" onclick="rxRemove('${it.uid}')" title="Remover" style="color:#dc2626;border-color:#fecaca;background:#fef2f2"><i class="ti ti-trash"></i></button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${fabBlock}
         <div>
           <label style="font-size:10.5px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:3px">Apresentação</label>
           ${apsOpts?`<select onchange="rxSetField('${it.uid}','apresentacao',this.value)" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:#fff">${apsOpts}</select>`:`<input type="text" value="${(it.apresentacao||'').replace(/"/g,'&quot;')}" oninput="rxSetField('${it.uid}','apresentacao',this.value)" placeholder="Ex: Comprimido 500mg" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">`}
