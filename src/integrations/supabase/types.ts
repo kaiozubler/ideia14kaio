@@ -234,57 +234,48 @@ export type Database = {
       medicamentos: {
         Row: {
           apresentacao: string | null
-          apresentacoes: string[]
           categoria_regulatoria: string | null
           classe_terapeutica: string | null
           cnpj_fabricante: string | null
           codigo_ggrem: string | null
           comercializado_2025: boolean | null
-          composicao: string | null
-          compostos: string[]
           created_at: string
           fabricante: string | null
           id: string
           is_generico: boolean
-          nome_comercial: string
+          nome_comercial: string | null
           regime_preco: string | null
           registro_anvisa: string | null
           tarja: string | null
         }
         Insert: {
           apresentacao?: string | null
-          apresentacoes?: string[]
           categoria_regulatoria?: string | null
           classe_terapeutica?: string | null
           cnpj_fabricante?: string | null
           codigo_ggrem?: string | null
           comercializado_2025?: boolean | null
-          composicao?: string | null
-          compostos?: string[]
           created_at?: string
           fabricante?: string | null
           id: string
           is_generico?: boolean
-          nome_comercial: string
+          nome_comercial?: string | null
           regime_preco?: string | null
           registro_anvisa?: string | null
           tarja?: string | null
         }
         Update: {
           apresentacao?: string | null
-          apresentacoes?: string[]
           categoria_regulatoria?: string | null
           classe_terapeutica?: string | null
           cnpj_fabricante?: string | null
           codigo_ggrem?: string | null
           comercializado_2025?: boolean | null
-          composicao?: string | null
-          compostos?: string[]
           created_at?: string
           fabricante?: string | null
           id?: string
           is_generico?: boolean
-          nome_comercial?: string
+          nome_comercial?: string | null
           regime_preco?: string | null
           registro_anvisa?: string | null
           tarja?: string | null
@@ -439,18 +430,21 @@ export type Database = {
       substancias: {
         Row: {
           created_at: string
+          grupo_busca: string | null
           id_substancia: string
           nome_dcb: string
           nome_exibicao: string
         }
         Insert: {
           created_at?: string
+          grupo_busca?: string | null
           id_substancia?: string
           nome_dcb: string
           nome_exibicao: string
         }
         Update: {
           created_at?: string
+          grupo_busca?: string | null
           id_substancia?: string
           nome_dcb?: string
           nome_exibicao?: string
@@ -506,6 +500,46 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      buscar_comerciais: {
+        Args: { termo: string }
+        Returns: {
+          fabricante: string
+          nome_comercial: string
+          qtd_apresentacoes: number
+        }[]
+      }
+      buscar_genericos: {
+        Args: { termo: string }
+        Returns: {
+          grupo_busca: string
+          id_substancia: string
+          nome_exibicao: string
+          qtd_fabricantes: number
+        }[]
+      }
+      grupo_busca_substancia: { Args: { nome_dcb: string }; Returns: string }
+      listar_apresentacoes_comercial: {
+        Args: { p_fabricante: string; p_nome_comercial: string }
+        Returns: {
+          apresentacao: string
+          registro_anvisa: string
+        }[]
+      }
+      listar_apresentacoes_generico: {
+        Args: { p_fabricante?: string; p_id_substancia: string }
+        Returns: {
+          apresentacao: string
+          fabricante: string
+          registro_anvisa: string
+        }[]
+      }
+      listar_fabricantes_generico: {
+        Args: { p_id_substancia: string }
+        Returns: {
+          fabricante: string
+          qtd_apresentacoes: number
+        }[]
+      }
       normaliza_substancia: { Args: { t: string }; Returns: string }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
