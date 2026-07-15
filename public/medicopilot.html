@@ -5676,10 +5676,25 @@ function rxEmitir(){
   showToast&&showToast('Receita adicionada ao prontuário','success');
 }
 async function saveNewPatient(){
-  const nome=document.getElementById('np-nome').value.trim();if(!nome)return;
-  const dob=document.getElementById('np-dob')?.value||null;
-  const grupo=document.getElementById('np-grupo')?.value||'';
-  const {data,error}=await sb.from('pacientes').insert({name:nome,data_nascimento:dob,grupo:grupo||null,user_id:currentUser.id}).select('*').single();
+  const val=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
+  const nome=val('np-nome');if(!nome){alert('Informe o nome do paciente');return;}
+  const payload={
+    name:nome,
+    data_nascimento:val('np-dob')||null,
+    cpf:val('np-cpf')||null,
+    telefone:val('np-tel')||null,
+    email:val('np-email')||null,
+    sus:val('np-sus')||null,
+    mae:val('np-mae')||null,
+    pai:val('np-pai')||null,
+    endereco:val('np-end')||null,
+    convenio:val('np-conv')||'Particular',
+    sexo:val('np-sexo')||null,
+    medico:val('np-medico')||null,
+    grupo:val('np-grupo')||null,
+    user_id:currentUser.id
+  };
+  const {data,error}=await sb.from('pacientes').insert(payload).select('*').single();
   if(error){alert('Erro ao salvar paciente: '+error.message);return;}
   closeModal();
   await loadPatients();
