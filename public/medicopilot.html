@@ -5513,7 +5513,11 @@ function openModal(name){
   document.getElementById('modal-overlay').classList.add('open');
   document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
   const m=document.getElementById('m-'+name);if(m)m.style.display='flex';
-  if(name==='new-patient'){const g=document.getElementById('np-grupo');if(g){populateGrupoSelect(g);g.value='';}}
+  if(name==='new-patient'){
+    ['np-nome','np-cpf','np-dob','np-tel','np-email','np-sus','np-mae','np-pai','np-end'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    ['np-conv','np-sexo','np-medico'].forEach(id=>{const el=document.getElementById(id);if(el)el.selectedIndex=0;});
+    const g=document.getElementById('np-grupo');if(g){populateGrupoSelect(g);g.value='';}
+  }
 }
 function closeModal(){
   document.getElementById('modal-overlay').classList.remove('open');
