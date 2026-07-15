@@ -2566,19 +2566,19 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
     <div class="mbody">
       <div class="form-grid">
         <div class="fld wide"><label>Nome completo *</label><input type="text" id="np-nome" placeholder="Nome completo do paciente"></div>
-        <div class="fld"><label>CPF</label><input type="text" placeholder="000.000.000-00"></div>
+        <div class="fld"><label>CPF</label><input type="text" id="np-cpf" placeholder="000.000.000-00"></div>
         <div class="fld"><label>Data de nascimento</label><input type="date" id="np-dob"></div>
-        <div class="fld"><label>Telefone *</label><input type="text" placeholder="(00) 00000-0000"></div>
-        <div class="fld"><label>E-mail</label><input type="text" placeholder="email@exemplo.com"></div>
-        <div class="fld"><label>Cartão SUS</label><input type="text" placeholder="000 0000 0000 0000"></div>
-        <div class="fld"><label>Nome da mãe</label><input type="text"></div>
-        <div class="fld"><label>Nome do pai</label><input type="text"></div>
-        <div class="fld wide"><label>Endereço</label><input type="text" placeholder="Rua, nº — Bairro, Cidade, UF"></div>
-        <div class="fld"><label>Convênio</label><select><option>Particular</option><option>SUS</option><option>Unimed</option><option>Bradesco</option><option>Amil</option></select></div>
-        <div class="fld"><label>Sexo</label><select><option>Selecionar</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select></div>
+        <div class="fld"><label>Telefone *</label><input type="text" id="np-tel" placeholder="(00) 00000-0000"></div>
+        <div class="fld"><label>E-mail</label><input type="text" id="np-email" placeholder="email@exemplo.com"></div>
+        <div class="fld"><label>Cartão SUS</label><input type="text" id="np-sus" placeholder="000 0000 0000 0000"></div>
+        <div class="fld"><label>Nome da mãe</label><input type="text" id="np-mae"></div>
+        <div class="fld"><label>Nome do pai</label><input type="text" id="np-pai"></div>
+        <div class="fld wide"><label>Endereço</label><input type="text" id="np-end" placeholder="Rua, nº — Bairro, Cidade, UF"></div>
+        <div class="fld"><label>Convênio</label><select id="np-conv"><option>Particular</option><option>SUS</option><option>Unimed</option><option>Bradesco</option><option>Amil</option></select></div>
+        <div class="fld"><label>Sexo</label><select id="np-sexo"><option value="">Selecionar</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select></div>
         <div class="fld">
           <label>Médico preferencial <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
-          <select><option value="">— Nenhum —</option><option>Dr. Rafael Mendes — Clínica Geral</option><option>Dra. Carla Fonseca — Cardiologia</option><option>Dr. Marcos Luz — Endocrinologia</option></select>
+          <select id="np-medico"><option value="">— Nenhum —</option><option>Dr. Rafael Mendes — Clínica Geral</option><option>Dra. Carla Fonseca — Cardiologia</option><option>Dr. Marcos Luz — Endocrinologia</option></select>
         </div>
         <div class="fld">
           <label>Grupo <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
