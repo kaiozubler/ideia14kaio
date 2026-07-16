@@ -5643,18 +5643,23 @@ async function rxFetchComposicaoComercial(nome_comercial,fabricante){
 }
 async function rxFetchComposicaoGenerico(id_substancia,fabricante){
   try{
-    let q=sb.from('medicamentos').select('id').eq('is_generico',true);
+    // Step 1: find medicamentos (generic, from this manufacturer) that contain the requested substance
+    let q=sb.from('medicamentos').select('id,medicamento_substancias!inner(id_substancia)').eq('is_generico',true).eq('medicamento_substancias.id_substancia',id_substancia);
     if(fabricante) q=q.eq('fabricante',fabricante);
-    const {data:meds}=await q.limit(100);
+    const {data:meds}=await q.limit(50);
     const ids=(meds||[]).map(m=>m.id);
     if(!ids.length) return '';
+    // Step 2: get ALL substances of those specific medicamentos (co-formulated compounds)
     const {data:ms}=await sb.from('medicamento_substancias').select('id_medicamento,substancias(nome_exibicao)').in('id_medicamento',ids);
-    // Filter to medicamentos that contain the requested id_substancia
-    const validIds=new Set((ms||[]).filter(x=>x&&x.substancias).map(x=>x.id_medicamento));
+    // Group per medicamento, then pick the composition from the first (they should be equivalent)
     const grouped=new Map();
-    for(const x of (ms||[])){ if(!grouped.has(x.id_medicamento)) grouped.set(x.id_medicamento,[]); if(x?.substancias?.nome_exibicao) grouped.get(x.id_medicamento).push(x.substancias.nome_exibicao); }
+    for(const x of (ms||[])){ if(!grouped.has(x.id_medicamento)) grouped.set(x.id_medicamento,[]); const n=x?.substancias?.nome_exibicao; if(n) grouped.get(x.id_medicamento).push(n); }
+    // Use the shortest composition list (most specific match) or the first one
+    let best=null;
+    for(const [,arr] of grouped){ if(!best || arr.length<best.length) best=arr; }
+    if(!best) return '';
     const seen=new Set(); const names=[];
-    for(const [,arr] of grouped){ for(const n of arr){ if(n && !seen.has(n)){seen.add(n);names.push(n);} } }
+    for(const n of best){ if(n && !seen.has(n)){seen.add(n);names.push(n);} }
     return names.join(' + ');
   }catch(e){console.warn('composicao generico falhou',e);return '';}
 }
