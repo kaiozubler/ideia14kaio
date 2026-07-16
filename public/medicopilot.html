@@ -5627,6 +5627,22 @@ async function rxAdd(key){
 }
 function rxRemove(uid){rxSelected=rxSelected.filter(i=>i.uid!==uid);rxRenderSelected();}
 function rxSetField(uid,field,val){const it=rxSelected.find(i=>i.uid===uid);if(it){it[field]=val;}}
+async function rxOnFabricanteChange(uid,val){
+  const it=rxSelected.find(i=>i.uid===uid);if(!it)return;
+  it.fabricante=val;
+  if(it.is_generico && it.id_substancia){
+    try{
+      const args={p_id_substancia:it.id_substancia};
+      if(val) args.p_fabricante=val;
+      const {data}=await sb.rpc('listar_apresentacoes_generico',args);
+      const seen=new Set(); const aps=[];
+      for(const a of (data||[])){ const k=(a.apresentacao||'').toLowerCase().trim(); if(k && !seen.has(k)){seen.add(k);aps.push(a.apresentacao);} }
+      it.apresentacoes=aps;
+      if(!aps.includes(it.apresentacao)) it.apresentacao=aps[0]||'';
+    }catch(e){console.warn('apresentacoes filter falhou',e);}
+  }
+  rxRenderSelected();
+}
 function rxToggleEdit(uid){const el=document.getElementById('rx-item-'+uid);if(!el)return;const editing=el.getAttribute('data-editing')==='1';el.setAttribute('data-editing',editing?'0':'1');rxRenderSelected();}
 function rxRenderSelected(){
   const wrap=document.getElementById('rx-selected');
@@ -5639,8 +5655,11 @@ function rxRenderSelected(){
     const genBadge=it.is_generico?'<span style="font-size:9.5px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 6px;border-radius:4px;letter-spacing:.04em;margin-left:6px">GENÉRICO</span>':'';
     const fabBlock=it.is_generico?`<div style="grid-column:1/-1">
           <label style="font-size:10.5px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:3px">Fabricante <span style="color:#94a3b8;font-weight:500;text-transform:none;letter-spacing:0">(opcional — genérico)</span></label>
-          ${fabOpts?`<select onchange="rxSetField('${it.uid}','fabricante',this.value)" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:#fff"><option value="">Sem fabricante especificado</option>${fabOpts}</select>`:`<input type="text" value="${(it.fabricante||'').replace(/"/g,'&quot;')}" oninput="rxSetField('${it.uid}','fabricante',this.value)" placeholder="Deixe em branco se irrelevante" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">`}
-        </div>`:'';
+          ${fabOpts?`<select onchange="rxOnFabricanteChange('${it.uid}',this.value)" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:#fff"><option value="">Todos os fabricantes</option>${fabOpts}</select>`:`<input type="text" value="${(it.fabricante||'').replace(/"/g,'&quot;')}" oninput="rxSetField('${it.uid}','fabricante',this.value)" placeholder="Deixe em branco se irrelevante" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">`}
+        </div>`:`<div style="grid-column:1/-1">
+          <label style="font-size:10.5px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:3px">Laboratório / Fabricante</label>
+          <div style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:#f8fafc;color:#0f172a;font-weight:500">${it.fabricante?it.fabricante.replace(/</g,'&lt;'):'<span style=\"color:#94a3b8;font-weight:400\">Não informado</span>'}</div>
+        </div>`;
     return `<div id="rx-item-${it.uid}" style="border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;background:#fff;display:flex;flex-direction:column;gap:8px">
       <div style="display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
