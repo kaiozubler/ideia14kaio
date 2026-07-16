@@ -5593,6 +5593,7 @@ async function rxAdd(key){
   const med=(rxLastResults||[]).find(m=>m.key===key);if(!med)return;
   const uid=Math.random().toString(36).slice(2,10);
   let apresentacoes=[], fabricantes=[];
+  let composicao=med.composicao||'';
   try{
     if(med.is_generico){
       const [fabRes,apsRes]=await Promise.all([
@@ -5605,12 +5606,13 @@ async function rxAdd(key){
     } else {
       const {data}=await sb.rpc('listar_apresentacoes_comercial',{p_nome_comercial:med.nome_comercial,p_fabricante:med.fabricante});
       apresentacoes=(data||[]).map(a=>a.apresentacao).filter(Boolean);
+      composicao=await rxFetchComposicaoComercial(med.nome_comercial,med.fabricante);
     }
   }catch(e){console.error(e);}
   rxSelected.push({
     uid,
     nome_comercial:med.nome_comercial,
-    composicao:med.composicao||'',
+    composicao:composicao||med.composicao||'',
     compostos:[],
     apresentacoes,
     apresentacao:apresentacoes[0]||'',
@@ -5624,6 +5626,37 @@ async function rxAdd(key){
   document.getElementById('rx-search').value='';
   document.getElementById('rx-results').style.display='none';
   rxRenderSelected();
+}
+async function rxFetchComposicaoComercial(nome_comercial,fabricante){
+  try{
+    let q=sb.from('medicamentos').select('id').eq('is_generico',false);
+    if(nome_comercial) q=q.eq('nome_comercial',nome_comercial);
+    if(fabricante) q=q.eq('fabricante',fabricante);
+    const {data:meds}=await q.limit(50);
+    const ids=(meds||[]).map(m=>m.id);
+    if(!ids.length) return '';
+    const {data:ms}=await sb.from('medicamento_substancias').select('substancias(nome_exibicao)').in('id_medicamento',ids);
+    const seen=new Set(); const names=[];
+    for(const x of (ms||[])){ const n=x?.substancias?.nome_exibicao; if(n && !seen.has(n)){seen.add(n);names.push(n);} }
+    return names.join(' + ');
+  }catch(e){console.warn('composicao comercial falhou',e);return '';}
+}
+async function rxFetchComposicaoGenerico(id_substancia,fabricante){
+  try{
+    let q=sb.from('medicamentos').select('id').eq('is_generico',true);
+    if(fabricante) q=q.eq('fabricante',fabricante);
+    const {data:meds}=await q.limit(100);
+    const ids=(meds||[]).map(m=>m.id);
+    if(!ids.length) return '';
+    const {data:ms}=await sb.from('medicamento_substancias').select('id_medicamento,substancias(nome_exibicao)').in('id_medicamento',ids);
+    // Filter to medicamentos that contain the requested id_substancia
+    const validIds=new Set((ms||[]).filter(x=>x&&x.substancias).map(x=>x.id_medicamento));
+    const grouped=new Map();
+    for(const x of (ms||[])){ if(!grouped.has(x.id_medicamento)) grouped.set(x.id_medicamento,[]); if(x?.substancias?.nome_exibicao) grouped.get(x.id_medicamento).push(x.substancias.nome_exibicao); }
+    const seen=new Set(); const names=[];
+    for(const [,arr] of grouped){ for(const n of arr){ if(n && !seen.has(n)){seen.add(n);names.push(n);} } }
+    return names.join(' + ');
+  }catch(e){console.warn('composicao generico falhou',e);return '';}
 }
 function rxRemove(uid){rxSelected=rxSelected.filter(i=>i.uid!==uid);rxRenderSelected();}
 function rxSetField(uid,field,val){const it=rxSelected.find(i=>i.uid===uid);if(it){it[field]=val;}}
@@ -5639,6 +5672,10 @@ async function rxOnFabricanteChange(uid,val){
       for(const a of (data||[])){ const k=(a.apresentacao||'').toLowerCase().trim(); if(k && !seen.has(k)){seen.add(k);aps.push(a.apresentacao);} }
       it.apresentacoes=aps;
       if(!aps.includes(it.apresentacao)) it.apresentacao=aps[0]||'';
+      if(val){
+        const comp=await rxFetchComposicaoGenerico(it.id_substancia,val);
+        if(comp) it.composicao=comp;
+      }
     }catch(e){console.warn('apresentacoes filter falhou',e);}
   }
   rxRenderSelected();
