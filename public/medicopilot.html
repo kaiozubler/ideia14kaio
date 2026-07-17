@@ -10,6 +10,8 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://unpkg.com/@daily-co/daily-js"></script>
+<link rel="stylesheet" href="equipe.css">
+<script src="equipe.js" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -2385,16 +2387,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
     </div>
 
     <!-- SCREEN: MINHA EQUIPE -->
-    <div id="s-equipe" style="display:none">
-      <div style="margin-bottom:14px">
-        <button class="btn ghost sm" onclick="goScreen('configuracoes')"><i class="ti ti-arrow-left"></i> Voltar</button>
-      </div>
-      <div class="rec-empty">
-        <i class="ti ti-users-group"></i>
-        <h3>Minha equipe</h3>
-        <p>Em breve: gerenciamento de membros, permissões e convites.</p>
-      </div>
-    </div>
+    <div id="s-equipe" style="display:none"></div>
 
     <!-- SCREEN: MINHA CLÍNICA -->
     <div id="s-clinica" style="display:none">
@@ -3151,6 +3144,7 @@ function goScreen(name){
   if(name==='anamnese')renderAnamneseList();
   if(name==='copiloto')loadCopilotoCfg();
   if(name==='clinica')loadClinica();
+  if(name==='equipe'&&typeof initEquipe==='function')initEquipe();
   if(['secretaria','anamnese','copiloto'].includes(name)){
     const g=document.getElementById('grp-ia');if(g)g.classList.add('open');
   }
