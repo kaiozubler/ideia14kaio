@@ -3144,6 +3144,7 @@ function goScreen(name){
   if(name==='anamnese')renderAnamneseList();
   if(name==='copiloto')loadCopilotoCfg();
   if(name==='clinica')loadClinica();
+  if(name==='equipe'&&typeof initEquipe==='function')initEquipe();
   if(['secretaria','anamnese','copiloto'].includes(name)){
     const g=document.getElementById('grp-ia');if(g)g.classList.add('open');
   }
