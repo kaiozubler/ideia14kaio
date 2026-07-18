@@ -3574,13 +3574,17 @@ function scheduleAutoSave(){
   },1400);
 }
 function updateSaveStatus(state){
-  const el=document.getElementById('save-status');if(!el)return;
-  const ic=document.getElementById('save-status-icon');const lb=document.getElementById('save-status-lbl');
-  el.classList.remove('state-dirty','state-saving','state-saved','state-error');
-  if(state==='dirty'){el.classList.add('state-dirty');ic.className='ti ti-cloud-up';ic.style.animation='';lb.textContent='Salvar e Finalizar';}
-  else if(state==='saving'){el.classList.add('state-saving');ic.className='ti ti-loader-2';ic.style.animation='spin 1s linear infinite';lb.textContent='Salvando...';}
-  else if(state==='saved'){el.classList.add('state-saved');ic.className='ti ti-cloud-check';ic.style.animation='';const t=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});lb.textContent='Salvo '+t;}
-  else if(state==='error'){el.classList.add('state-error');ic.className='ti ti-alert-circle';ic.style.animation='';lb.textContent='Erro ao salvar';}
+  const targets=[
+    {el:document.getElementById('save-status'),ic:document.getElementById('save-status-icon'),lb:document.getElementById('save-status-lbl')},
+    {el:document.getElementById('global-save-chip'),ic:document.getElementById('global-save-icon'),lb:document.getElementById('global-save-lbl')}
+  ].filter(t=>t.el);
+  targets.forEach(({el,ic,lb})=>{
+    el.classList.remove('state-dirty','state-saving','state-saved','state-error');
+    if(state==='dirty'){el.classList.add('state-dirty');if(ic){ic.className='ti ti-cloud-up';ic.style.animation='';}if(lb)lb.textContent='Salvar e Finalizar';}
+    else if(state==='saving'){el.classList.add('state-saving');if(ic){ic.className='ti ti-loader-2';ic.style.animation='spin 1s linear infinite';}if(lb)lb.textContent='Salvando...';}
+    else if(state==='saved'){el.classList.add('state-saved');if(ic){ic.className='ti ti-cloud-check';ic.style.animation='';}const t=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});if(lb)lb.textContent='Salvo '+t;}
+    else if(state==='error'){el.classList.add('state-error');if(ic){ic.className='ti ti-alert-circle';ic.style.animation='';}if(lb)lb.textContent='Erro ao salvar';}
+  });
 }
 function updateAtendProgress(){
   const dirty=!!(atendEmAndamento&&atendEmAndamento.dirty);
@@ -3594,6 +3598,8 @@ function updateAtendProgress(){
       lbl.textContent=name?('Continuar atendimento — '+name):'Atendimento em andamento';
     }
   }
+  const saveChip=document.getElementById('global-save-chip');
+  if(saveChip){saveChip.style.display=dirty?'inline-flex':'none';}
 }
 async function continuarAtendimentoGlobal(){
   if(!atendEmAndamento||!atendEmAndamento.dirty)return;
