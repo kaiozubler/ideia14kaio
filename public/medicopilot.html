@@ -272,7 +272,7 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .nota-personal-note{font-size:10px;color:var(--n300);margin-top:3px;font-style:italic}
 
 /* FOOTER */
-.left-footer{position:absolute;left:0;right:0;bottom:0;padding:8px 14px 12px 14px;display:flex;flex-direction:column;gap:6px;background:transparent;border:none;border-radius:0;z-index:20;pointer-events:none}
+.left-footer{position:absolute;left:0;right:0;bottom:0;padding:8px 14px 12px 14px;display:flex;flex-direction:column;gap:6px;background:transparent;border:none;border-radius:0;z-index:50;pointer-events:none}
 .left-footer > *{pointer-events:auto}
 .left-footer .lf-actions{align-self:flex-start;padding:5px 8px;background:rgba(255,255,255,.7);backdrop-filter:blur(16px) saturate(180%);border:0.5px solid rgba(255,255,255,.9);border-radius:12px;box-shadow:0 8px 22px -8px rgba(15,40,60,.22),0 2px 6px rgba(0,0,0,.06),inset 0 1px 0 rgba(255,255,255,.7)}
 .lf-label{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--n400)}
@@ -287,7 +287,8 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 
 /* DROPDOWN MENU */
 .dropdown{position:relative;display:inline-flex}
-.dropdown-menu{position:absolute;bottom:calc(100% + 4px);left:0;background:var(--white);border:0.5px solid var(--n200);border-radius:var(--r8);box-shadow:0 4px 16px rgba(0,0,0,.1);min-width:150px;z-index:100;display:none;overflow:hidden}
+.dropdown-menu{position:absolute;bottom:calc(100% + 4px);left:0;background:var(--white);border:0.5px solid var(--n200);border-radius:var(--r8);box-shadow:0 4px 16px rgba(0,0,0,.1);min-width:150px;z-index:9999;display:none;overflow:hidden}
+.dropdown.open,.dropdown:has(.dropdown-menu.open){z-index:9999}
 .dropdown-menu.open{display:block}
 .dm-item{display:flex;align-items:center;gap:8px;padding:9px 12px;font-size:12px;color:var(--n700);cursor:pointer;border-bottom:0.5px solid var(--n100)}
 .dm-item:last-child{border-bottom:none}
@@ -1719,7 +1720,10 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
         <i class="ti ti-clock-edit"></i>
         <span>Atendimento em andamento — não salvo</span>
         <button class="btn sm" style="margin-left:auto" onclick="openTabFromProgress()"><i class="ti ti-arrow-right"></i> Continuar</button>
-        <button class="btn sm primary" onclick="saveAtendFromProgress()"><i class="ti ti-device-floppy"></i> Salvar</button>
+        <button type="button" id="save-status" class="btn sm primary save-status state-saved" onclick="saveAtendFromProgress()" title="Salvar e finalizar atendimento">
+          <i class="ti ti-device-floppy" id="save-status-icon"></i>
+          <span id="save-status-lbl">Salvar e Finalizar</span>
+        </button>
       </div>
 
       <div class="pt-hdr-card" id="pt-hdr-card">
@@ -1872,10 +1876,6 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
               <button class="panel-expand" onclick="togglePanelExpand('left',event)" title="Expandir prontuário" id="exp-left-btn"><i class="ti ti-arrows-diagonal" id="exp-left-icon"></i></button>
               <div class="pront-header">
                 <span class="pront-label">Prontuário</span>
-                <button type="button" id="save-status" class="save-status state-saved" title="Salvar e finalizar atendimento" onclick="saveAtend(event)" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:0;font-family:inherit">
-                  <i class="ti ti-device-floppy" id="save-status-icon" style="font-size:13px"></i>
-                  <span id="save-status-lbl">Salvar e Finalizar</span>
-                </button>
               </div>
               <div class="toolbar">
                 <button class="tbtn" title="Negrito"><b>B</b></button>
@@ -1914,7 +1914,6 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
                   <div class="dropdown" id="actions-dropdown">
                     <button class="btn sm" onclick="toggleDropdown()"><i class="ti ti-dots"></i> Ações <i class="ti ti-chevron-up" style="font-size:10px"></i></button>
                     <div class="dropdown-menu" id="actions-menu">
-                      <div class="dm-item green" onclick="closeDropdown();saveAtend()"><i class="ti ti-device-floppy"></i> Salvar atendimento</div>
                       <div class="dm-item green" onclick="closeDropdown();openReceita()"><i class="ti ti-prescription"></i> Emitir receita</div>
                       <div class="dm-item green" onclick="closeDropdown()"><i class="ti ti-certificate"></i> Emitir atestado</div>
                       <div class="dm-item" onclick="closeDropdown()"><i class="ti ti-paperclip"></i> Anexar arquivo</div>
