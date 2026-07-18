@@ -1719,7 +1719,10 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
         <i class="ti ti-clock-edit"></i>
         <span>Atendimento em andamento — não salvo</span>
         <button class="btn sm" style="margin-left:auto" onclick="openTabFromProgress()"><i class="ti ti-arrow-right"></i> Continuar</button>
-        <button class="btn sm primary" onclick="saveAtendFromProgress()"><i class="ti ti-device-floppy"></i> Salvar</button>
+        <button type="button" id="save-status" class="btn sm primary save-status state-saved" onclick="saveAtendFromProgress()" title="Salvar e finalizar atendimento">
+          <i class="ti ti-device-floppy" id="save-status-icon"></i>
+          <span id="save-status-lbl">Salvar e Finalizar</span>
+        </button>
       </div>
 
       <div class="pt-hdr-card" id="pt-hdr-card">
