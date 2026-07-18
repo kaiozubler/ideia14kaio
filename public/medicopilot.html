@@ -1608,6 +1608,10 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
         <span id="global-atend-chip-lbl">Atendimento em andamento</span>
         <i class="ti ti-arrow-right" style="font-size:12px"></i>
       </button>
+      <button type="button" id="global-save-chip" class="global-atend-chip save-status state-saved" onclick="saveAtendFromProgress()" title="Salvar e finalizar atendimento" style="display:none">
+        <i class="ti ti-device-floppy" id="global-save-icon"></i>
+        <span id="global-save-lbl">Salvar e Finalizar</span>
+      </button>
       <button class="ib" title="Notificações"><i class="ti ti-bell"></i><span class="notif-dot"></span></button>
       <button class="ib" title="Configurações" onclick="goScreen('configuracoes')"><i class="ti ti-settings"></i></button>
       <div class="avatar" id="user-avatar" title="Sair" onclick="logout()" style="cursor:pointer"><span>DR</span></div>
