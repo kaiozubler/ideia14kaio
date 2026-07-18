@@ -287,7 +287,8 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 
 /* DROPDOWN MENU */
 .dropdown{position:relative;display:inline-flex}
-.dropdown-menu{position:absolute;bottom:calc(100% + 4px);left:0;background:var(--white);border:0.5px solid var(--n200);border-radius:var(--r8);box-shadow:0 4px 16px rgba(0,0,0,.1);min-width:150px;z-index:100;display:none;overflow:hidden}
+.dropdown-menu{position:absolute;bottom:calc(100% + 4px);left:0;background:var(--white);border:0.5px solid var(--n200);border-radius:var(--r8);box-shadow:0 4px 16px rgba(0,0,0,.1);min-width:150px;z-index:9999;display:none;overflow:hidden}
+.dropdown.open,.dropdown:has(.dropdown-menu.open){z-index:9999}
 .dropdown-menu.open{display:block}
 .dm-item{display:flex;align-items:center;gap:8px;padding:9px 12px;font-size:12px;color:var(--n700);cursor:pointer;border-bottom:0.5px solid var(--n100)}
 .dm-item:last-child{border-bottom:none}
