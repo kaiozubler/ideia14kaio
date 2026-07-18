@@ -1608,6 +1608,10 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
         <span id="global-atend-chip-lbl">Atendimento em andamento</span>
         <i class="ti ti-arrow-right" style="font-size:12px"></i>
       </button>
+      <button type="button" id="global-save-chip" class="global-atend-chip save-status state-saved" onclick="saveAtendFromProgress()" title="Salvar e finalizar atendimento" style="display:none">
+        <i class="ti ti-device-floppy" id="global-save-icon"></i>
+        <span id="global-save-lbl">Salvar e Finalizar</span>
+      </button>
       <button class="ib" title="Notificações"><i class="ti ti-bell"></i><span class="notif-dot"></span></button>
       <button class="ib" title="Configurações" onclick="goScreen('configuracoes')"><i class="ti ti-settings"></i></button>
       <div class="avatar" id="user-avatar" title="Sair" onclick="logout()" style="cursor:pointer"><span>DR</span></div>
@@ -1720,10 +1724,6 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
         <i class="ti ti-clock-edit"></i>
         <span>Atendimento em andamento — não salvo</span>
         <button class="btn sm" style="margin-left:auto" onclick="openTabFromProgress()"><i class="ti ti-arrow-right"></i> Continuar</button>
-        <button type="button" id="save-status" class="btn sm primary save-status state-saved" onclick="saveAtendFromProgress()" title="Salvar e finalizar atendimento">
-          <i class="ti ti-device-floppy" id="save-status-icon"></i>
-          <span id="save-status-lbl">Salvar e Finalizar</span>
-        </button>
       </div>
 
       <div class="pt-hdr-card" id="pt-hdr-card">
@@ -3570,13 +3570,17 @@ function scheduleAutoSave(){
   },1400);
 }
 function updateSaveStatus(state){
-  const el=document.getElementById('save-status');if(!el)return;
-  const ic=document.getElementById('save-status-icon');const lb=document.getElementById('save-status-lbl');
-  el.classList.remove('state-dirty','state-saving','state-saved','state-error');
-  if(state==='dirty'){el.classList.add('state-dirty');ic.className='ti ti-cloud-up';ic.style.animation='';lb.textContent='Salvar e Finalizar';}
-  else if(state==='saving'){el.classList.add('state-saving');ic.className='ti ti-loader-2';ic.style.animation='spin 1s linear infinite';lb.textContent='Salvando...';}
-  else if(state==='saved'){el.classList.add('state-saved');ic.className='ti ti-cloud-check';ic.style.animation='';const t=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});lb.textContent='Salvo '+t;}
-  else if(state==='error'){el.classList.add('state-error');ic.className='ti ti-alert-circle';ic.style.animation='';lb.textContent='Erro ao salvar';}
+  const targets=[
+    {el:document.getElementById('save-status'),ic:document.getElementById('save-status-icon'),lb:document.getElementById('save-status-lbl')},
+    {el:document.getElementById('global-save-chip'),ic:document.getElementById('global-save-icon'),lb:document.getElementById('global-save-lbl')}
+  ].filter(t=>t.el);
+  targets.forEach(({el,ic,lb})=>{
+    el.classList.remove('state-dirty','state-saving','state-saved','state-error');
+    if(state==='dirty'){el.classList.add('state-dirty');if(ic){ic.className='ti ti-cloud-up';ic.style.animation='';}if(lb)lb.textContent='Salvar e Finalizar';}
+    else if(state==='saving'){el.classList.add('state-saving');if(ic){ic.className='ti ti-loader-2';ic.style.animation='spin 1s linear infinite';}if(lb)lb.textContent='Salvando...';}
+    else if(state==='saved'){el.classList.add('state-saved');if(ic){ic.className='ti ti-cloud-check';ic.style.animation='';}const t=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});if(lb)lb.textContent='Salvo '+t;}
+    else if(state==='error'){el.classList.add('state-error');if(ic){ic.className='ti ti-alert-circle';ic.style.animation='';}if(lb)lb.textContent='Erro ao salvar';}
+  });
 }
 function updateAtendProgress(){
   const dirty=!!(atendEmAndamento&&atendEmAndamento.dirty);
@@ -3590,6 +3594,8 @@ function updateAtendProgress(){
       lbl.textContent=name?('Continuar atendimento — '+name):'Atendimento em andamento';
     }
   }
+  const saveChip=document.getElementById('global-save-chip');
+  if(saveChip){saveChip.style.display=dirty?'inline-flex':'none';}
 }
 async function continuarAtendimentoGlobal(){
   if(!atendEmAndamento||!atendEmAndamento.dirty)return;
