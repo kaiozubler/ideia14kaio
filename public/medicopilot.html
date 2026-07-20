@@ -1163,14 +1163,6 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 }
 #s-patient-detail .tab-body .btn.primary:hover{filter:brightness(1.05)}
 
-/* Atend-progress strip — keep coherent */
-#s-patient-detail .atend-progress{
-  background:rgba(255,255,255,.7);
-  backdrop-filter:blur(18px);
-  border:1px solid rgba(255,255,255,.9);
-  border-radius:18px;
-  box-shadow:0 6px 16px -8px rgba(15,42,80,.18);
-}
 
 /* ============================================================
    LIQUID GLASS — GLOBAL THEME (every screen except #s-patient-detail
@@ -1725,12 +1717,6 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
         <p id="print-sub2">—</p>
         <p id="print-sub3">—</p>
       </div>
-      <!-- ATEND IN PROGRESS INDICATOR -->
-      <div class="atend-progress" id="atend-progress">
-        <i class="ti ti-clock-edit"></i>
-        <span>Atendimento em andamento — não salvo</span>
-      </div>
-
       <div class="pt-hdr-card" id="pt-hdr-card">
         <div class="pth-av" id="pth-av">--</div>
         <div id="pth-full-info" class="pth-main">
@@ -3589,7 +3575,6 @@ function updateSaveStatus(state){
 }
 function updateAtendProgress(){
   const dirty=!!(atendEmAndamento&&atendEmAndamento.dirty);
-  const p=document.getElementById('atend-progress');if(p)p.classList.toggle('show',dirty);
   const chip=document.getElementById('global-atend-chip');
   if(chip){
     chip.classList.toggle('show',dirty);
