@@ -224,6 +224,12 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 .global-atend-chip .ti{font-size:13px;color:#e07800;flex-shrink:0}
 .global-atend-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:900px){.global-atend-chip span{display:none}.global-atend-chip{padding:0 8px}}
+#global-save-chip{background:linear-gradient(135deg,#10b981,#059669);border-color:rgba(16,185,129,.6);color:#fff}
+#global-save-chip .ti{color:#fff}
+#global-save-chip.state-dirty{background:linear-gradient(135deg,#f59e0b,#d97706);border-color:rgba(245,158,11,.6)}
+#global-save-chip.state-saving{background:linear-gradient(135deg,#94a3b8,#64748b);border-color:rgba(100,116,139,.6)}
+#global-save-chip.state-saved{background:linear-gradient(135deg,#10b981,#059669);border-color:rgba(16,185,129,.6)}
+#global-save-chip.state-error{background:linear-gradient(135deg,#ef4444,#b91c1c);border-color:rgba(239,68,68,.6)}
 .atend-chev{color:var(--n300);font-size:15px;margin-top:1px;flex-shrink:0}
 .dossie-btn{display:none}
 .dossie-btn.show{display:flex}
@@ -1723,7 +1729,6 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
       <div class="atend-progress" id="atend-progress">
         <i class="ti ti-clock-edit"></i>
         <span>Atendimento em andamento — não salvo</span>
-        <button class="btn sm" style="margin-left:auto" onclick="openTabFromProgress()"><i class="ti ti-arrow-right"></i> Continuar</button>
       </div>
 
       <div class="pt-hdr-card" id="pt-hdr-card">
