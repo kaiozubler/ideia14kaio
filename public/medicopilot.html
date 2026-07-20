@@ -520,10 +520,6 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 @keyframes spin{to{transform:rotate(360deg)}}
 .spinning{animation:spin .8s linear infinite}
 
-/* ATEND PROGRESS INDICATOR */
-.atend-progress{display:none;padding:6px 12px;background:#fff7ed;border-bottom:0.5px solid #fcd09a;font-size:11px;color:#7c4a00;align-items:center;gap:6px;flex-shrink:0}
-.atend-progress.show{display:flex}
-.atend-progress .ti{font-size:13px;color:#e07800}
 
 /* TOAST */
 .toast{position:fixed;bottom:20px;right:20px;background:var(--n700);color:var(--white);padding:10px 16px;border-radius:var(--r8);font-size:12px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:9999;opacity:0;transform:translateY(12px);transition:opacity .3s,transform .3s;pointer-events:none}
@@ -1163,14 +1159,6 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
 }
 #s-patient-detail .tab-body .btn.primary:hover{filter:brightness(1.05)}
 
-/* Atend-progress strip — keep coherent */
-#s-patient-detail .atend-progress{
-  background:rgba(255,255,255,.7);
-  backdrop-filter:blur(18px);
-  border:1px solid rgba(255,255,255,.9);
-  border-radius:18px;
-  box-shadow:0 6px 16px -8px rgba(15,42,80,.18);
-}
 
 /* ============================================================
    LIQUID GLASS — GLOBAL THEME (every screen except #s-patient-detail
@@ -1725,12 +1713,6 @@ select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff
         <p id="print-sub2">—</p>
         <p id="print-sub3">—</p>
       </div>
-      <!-- ATEND IN PROGRESS INDICATOR -->
-      <div class="atend-progress" id="atend-progress">
-        <i class="ti ti-clock-edit"></i>
-        <span>Atendimento em andamento — não salvo</span>
-      </div>
-
       <div class="pt-hdr-card" id="pt-hdr-card">
         <div class="pth-av" id="pth-av">--</div>
         <div id="pth-full-info" class="pth-main">
@@ -3589,7 +3571,6 @@ function updateSaveStatus(state){
 }
 function updateAtendProgress(){
   const dirty=!!(atendEmAndamento&&atendEmAndamento.dirty);
-  const p=document.getElementById('atend-progress');if(p)p.classList.toggle('show',dirty);
   const chip=document.getElementById('global-atend-chip');
   if(chip){
     chip.classList.toggle('show',dirty);
