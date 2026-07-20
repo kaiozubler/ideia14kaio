@@ -3636,6 +3636,7 @@ function togglePanelExpand(side,ev){
   const other=side==='left'?'exp-right':'exp-left';
   if(w.classList.contains(cls)){w.classList.remove(cls);}
   else{w.classList.remove(other);w.classList.add(cls);}
+  document.body.classList.toggle('panel-expanded-active', w.classList.contains('exp-left')||w.classList.contains('exp-right'));
   const li=document.getElementById('exp-left-icon');const ri=document.getElementById('exp-right-icon');
   if(li)li.className='ti '+(w.classList.contains('exp-left')?'ti-arrows-diagonal-minimize-2':'ti-arrows-diagonal');
   if(ri)ri.className='ti '+(w.classList.contains('exp-right')?'ti-arrows-diagonal-minimize-2':'ti-arrows-diagonal');
@@ -3646,6 +3647,7 @@ document.addEventListener('click',function(e){
   if(!w.classList.contains('exp-left')&&!w.classList.contains('exp-right'))return;
   if(w.contains(e.target))return;
   w.classList.remove('exp-left','exp-right');
+  document.body.classList.remove('panel-expanded-active');
   const li=document.getElementById('exp-left-icon');const ri=document.getElementById('exp-right-icon');
   if(li)li.className='ti ti-arrows-diagonal';
   if(ri)ri.className='ti ti-arrows-diagonal';
