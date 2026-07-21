@@ -363,7 +363,17 @@
     html, body { background: #fff; }
     .builder-note { display: none; }
     .sheet { margin: 0; box-shadow: none; }
-    @page { size: A4; margin: 0; }
+    @page {
+      size: A4;
+      margin: 0;
+      @bottom-right {
+        content: counter(page) "/" counter(pages);
+        font-family: 'Inter', Arial, sans-serif;
+        font-size: 9.5px;
+        color: #5b6660;
+        padding: 4mm 12mm 4mm 0;
+      }
+    }
     thead, tfoot { display: table-header-group; }
   }
 </style>
