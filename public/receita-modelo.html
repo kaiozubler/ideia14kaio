@@ -1,627 +1,597 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <title>{{CLINIC_NAME}} — Receita Médica</title>
-    <!--
-  FONTES: carregadas do Google Fonts com fallback local.
-  Se o renderer PDF bloquear requisições externas, cai para
-  Georgia (serifada) e system-ui (sans-serif) sem quebrar o layout.
--->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <style>
-      /* =========================================================
-         TOKENS
-         {{PRIMARY_COLOR}} DEVE ser substituído pelo backend antes
-         de renderizar (ex: #0E6E5D, #2563eb).
-         Se chegar vazio ou com o placeholder literal, o CSS
-         invalida a declaração e cai para o fallback na linha abaixo.
-         ========================================================= */
-      :root {
-        --primary: #1a5fa8;           /* FALLBACK — sobrescrito abaixo */
-        --primary: {{PRIMARY_COLOR}}; /* backend substitui isso        */
-        --ink: #16201d;
-        --ink-soft: #5b6660;
-        --paper: #ffffff;
-        --paper-soft: #f6f7f5;
-        --hairline: #e1e4e1;
-        --seal-gold: #b08d3f;
-        --ok-bg: #eef6f1;
-        /* cor de destaque suave: fallback estático sem color-mix() */
-        --primary-fade: rgba(26, 95, 168, 0.12);
-      }
+</* =====================================================================
+   MODAL DE GERAÇÃO DE RECEITA
+   Substitua o bloco entre os comentários equivalentes no medicopilot.html
 
-      * { box-sizing: border-box; }
+   INCLUI:
+   · HTML do modal  (#m-receita)
+   · Variáveis de estado (rx*)
+   · Todas as funções rx* + openReceitaPDF + condGerarReceita
 
-      html, body {
-        margin: 0;
-        padding: 0;
-        background: #ebedea;
-        color: var(--ink);
-        /* Inter com fallbacks seguros para PDF renderers offline */
-        font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
-        -webkit-font-smoothing: antialiased;
-      }
+   FIXES aplicados vs versão anterior:
+   1. Template não usa mais var(--primary) — openReceitaPDF injeta
+      {{PRIMARY_COLOR}} diretamente em TODAS as ocorrências do token
+      no HTML, então html2canvas recebe cores absolutas.
+   2. p.data_nascimento → p.nasc  (campo correto de currentPatient)
+   3. .builder-note E .signature-area removidos antes do PDF
+      (signature-area só mantida se clinic.assinatura_url estiver set)
+   4. Logo removida do header quando clinic.logo está vazio
+   ===================================================================== */
 
-      /* =========================================================
-         PÁGINA / IMPRESSÃO
-         thead repete o cabeçalho em toda página; tfoot repete o
-         rodapé; tbody é o que pagina livremente para pág 2, 3...
-         ========================================================= */
-      .sheet {
-        width: 210mm;
-        min-height: 297mm;
-        margin: 24px auto;
-        background: var(--paper);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 12px 32px rgba(22,32,29,0.10);
-      }
 
-      table.doc { width: 100%; border-collapse: collapse; }
-      table.doc > thead > tr > td,
-      table.doc > tfoot > tr > td,
-      table.doc > tbody > tr > td {
-        padding: 0 16mm;
-      }
+/* ── HTML DO MODAL ─────────────────────────────────────────────────────
+   Cole dentro de <div class="overlay" id="modal-overlay"> no lugar do
+   <div class="modal wide" id="m-receita"> existente.
+   ──────────────────────────────────────────────────────────────────── */
+const MODAL_RECEITA_HTML = `
+<div class="modal wide" id="m-receita" style="display:none;width:620px">
+  <div class="mhd">
+    <span class="mhd-title"><i class="ti ti-prescription"></i> Emitir receita</span>
+    <button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+  </div>
 
-      /* ===== CABEÇALHO (repete em toda página) ===== */
-      .letterhead { padding-top: 14mm; }
+  <div class="mbody" style="padding:18px 20px;display:flex;flex-direction:column;gap:16px">
 
-      .brand-row {
-        display: -webkit-flex;
-        display: flex;
-        -webkit-align-items: center;
-        align-items: center;
-        justify-content: space-between;
-        gap: 20px;
-      }
-
-      .brand-left {
-        display: -webkit-flex;
-        display: flex;
-        -webkit-align-items: center;
-        align-items: center;
-        gap: 14px;
-      }
-
-      /* FIX CRÍTICO: logo confinada em bloco de tamanho fixo.
-         Antes, se a imagem falhasse (URL quebrada ou placeholder
-         literal {{LOGO_URL}}), o <img> se expandia à página toda.
-         Agora o slot tem dimensões rígidas e overflow hidden. */
-      .logo-slot {
-        width: 130px;
-        height: 52px;
-        flex-shrink: 0;
-        overflow: hidden;
-        display: -webkit-flex;
-        display: flex;
-        -webkit-align-items: center;
-        align-items: center;
-      }
-
-      .logo-slot img {
-        max-height: 52px;
-        max-width: 130px;
-        width: auto;
-        height: auto;
-        object-fit: contain;
-        display: block;
-        /* Esconde broken-image icon quando URL falha */
-        color: transparent;
-      }
-
-      /* Se a imagem não carregar, mostra placeholder sutil */
-      .logo-slot img::before {
-        content: '';
-        display: block;
-        width: 52px;
-        height: 52px;
-        background: var(--paper-soft);
-        border: 1px dashed var(--hairline);
-        border-radius: 6px;
-      }
-
-      .brand-name {
-        /* Fraunces com fallback serif clássico */
-        font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
-        font-weight: 600;
-        font-size: 19px;
-        letter-spacing: 0.2px;
-        color: var(--ink);
-        margin: 0;
-      }
-
-      .brand-meta {
-        margin: 2px 0 0;
-        font-size: 11px;
-        color: var(--ink-soft);
-        line-height: 1.5;
-      }
-
-      .doctor-block {
-        text-align: right;
-        font-size: 11.5px;
-        color: var(--ink-soft);
-        line-height: 1.5;
-      }
-
-      .doctor-block strong {
-        display: block;
-        font-size: 13.5px;
-        color: var(--ink);
-        font-weight: 600;
-      }
-
-      /* FIX: substituído color-mix() por gradiente com rgba —
-         compatível com Puppeteer v1+, wkhtmltopdf e WebKit antigo */
-      .accent-rule {
-        height: 3px;
-        border-radius: 2px;
-        background: linear-gradient(90deg, var(--primary) 0%, rgba(255,255,255,0) 100%);
-        margin: 12px 0 16px;
-      }
-
-      /* ===== FAIXA PACIENTE ===== */
-      .patient-strip {
-        display: -webkit-flex;
-        display: flex;
-        gap: 28px;
-        background: var(--paper-soft);
-        border: 1px solid var(--hairline);
-        border-radius: 10px;
-        padding: 12px 18px;
-        margin-bottom: 14px;
-      }
-
-      .patient-field { flex: 1; min-width: 0; }
-
-      .eyebrow {
-        display: block;
-        font-size: 9.5px;
-        letter-spacing: 0.09em;
-        text-transform: uppercase;
-        color: var(--ink-soft);
-        margin-bottom: 3px;
-        font-weight: 600;
-      }
-
-      .patient-field .val {
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--ink);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      /* ===== TÍTULO RECEITUÁRIO ===== */
-      .rx-heading {
-        display: -webkit-flex;
-        display: flex;
-        -webkit-align-items: center;
-        align-items: center;
-        gap: 10px;
-        margin: 6px 0 14px;
-      }
-
-      .rx-mark {
-        width: 30px; height: 30px;
-        border-radius: 50%;
-        background: var(--primary);
-        color: #fff;
-        display: -webkit-flex;
-        display: flex;
-        -webkit-align-items: center;
-        align-items: center;
-        justify-content: center;
-        font-family: 'Fraunces', Georgia, serif;
-        font-style: italic;
-        font-weight: 600;
-        font-size: 16px;
-        flex-shrink: 0;
-      }
-
-      .rx-heading h2 {
-        margin: 0;
-        font-size: 12px;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: var(--ink-soft);
-        font-weight: 700;
-      }
-
-      /* ===== CONTEÚDO / ITENS (paginável) ===== */
-      .rx-content { padding-bottom: 10mm; }
-
-      .rx-item {
-        display: -webkit-flex;
-        display: flex;
-        gap: 14px;
-        padding: 14px 0;
-        border-bottom: 1px solid var(--hairline);
-        -webkit-column-break-inside: avoid;
-        break-inside: avoid;
-        page-break-inside: avoid;
-      }
-      .rx-item:last-child { border-bottom: none; }
-
-      .rx-index {
-        width: 24px; height: 24px;
-        border-radius: 50%;
-        border: 1.5px solid var(--primary);
-        color: var(--primary);
-        font-size: 11.5px;
-        font-weight: 700;
-        display: -webkit-flex;
-        display: flex;
-        -webkit-align-items: center;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        margin-top: 1px;
-      }
-
-      .rx-item .med-name {
-        font-size: 14.5px;
-        font-weight: 700;
-        color: var(--ink);
-      }
-
-      .rx-item .med-name .dose {
-        font-weight: 500;
-        color: var(--ink-soft);
-      }
-
-      .rx-item .med-instructions {
-        margin-top: 3px;
-        font-size: 12.5px;
-        color: var(--ink-soft);
-        line-height: 1.5;
-      }
-
-      /* ===== RODAPÉ FINO (repete em toda página) ===== */
-      .page-footer {
-        padding: 8px 0 10mm;
-        display: -webkit-flex;
-        display: flex;
-        justify-content: space-between;
-        font-size: 9.5px;
-        color: var(--ink-soft);
-        border-top: 1px solid var(--hairline);
-      }
-
-      /* =========================================================
-         ASSINATURA DIGITAL
-         Aparece só ao final, fora da tabela paginável.
-         ========================================================= */
-      .signature-area {
-        margin: 0 16mm 14mm;
-        -webkit-column-break-inside: avoid;
-        break-inside: avoid;
-        page-break-inside: avoid;
-      }
-
-      .signature-card {
-        border: 1px solid var(--hairline);
-        border-radius: 14px;
-        background: var(--ok-bg);
-        padding: 18px 22px;
-        display: -webkit-flex;
-        display: flex;
-        -webkit-align-items: center;
-        align-items: center;
-        gap: 20px;
-      }
-
-      .seal {
-        width: 46px; height: 46px;
-        border-radius: 50%;
-        border: 2px solid var(--seal-gold);
-        color: var(--seal-gold);
-        display: -webkit-flex;
-        display: flex;
-        -webkit-align-items: center;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        font-size: 20px;
-      }
-
-      .sig-main { flex: 1; min-width: 0; }
-
-      .sig-status {
-        font-size: 12.5px;
-        font-weight: 700;
-        color: var(--ink);
-        margin-bottom: 2px;
-      }
-
-      .sig-meta {
-        font-size: 11px;
-        color: var(--ink-soft);
-        line-height: 1.5;
-      }
-
-      .sig-meta b { color: var(--ink); font-weight: 600; }
-
-      /* Bloco da imagem da assinatura manuscrita */
-      .sig-graphic {
-        text-align: center;
-        flex-shrink: 0;
-      }
-
-      .sig-graphic-slot {
-        height: 46px;
-        width: 160px;
-        border-bottom: 1px solid var(--ink);
-        display: -webkit-flex;
-        display: flex;
-        -webkit-align-items: flex-end;
-        align-items: flex-end;
-        justify-content: center;
-        overflow: hidden;
-        margin: 0 auto 3px;
-      }
-
-      .sig-graphic-slot img {
-        max-height: 46px;
-        max-width: 160px;
-        object-fit: contain;
-        display: block;
-        color: transparent; /* esconde ícone de imagem quebrada */
-      }
-
-      .sig-name-line {
-        font-size: 11px;
-        font-weight: 600;
-        color: var(--ink);
-        text-align: center;
-        min-width: 150px;
-      }
-
-      /* ===== CAMPO QR CODE ===== */
-      .qr-field {
-        text-align: center;
-        flex-shrink: 0;
-        padding-left: 18px;
-        border-left: 1px solid var(--hairline);
-      }
-
-      .qr-field .eyebrow { text-align: center; margin-bottom: 6px; }
-
-      .qr-box {
-        width: 76px;
-        height: 76px;
-        border: 1px solid var(--hairline);
-        border-radius: 8px;
-        background: #fff;
-        display: -webkit-flex;
-        display: flex;
-        -webkit-align-items: center;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-        margin: 0 auto;
-        /* Fallback visual quando {{QR_CODE_URL}} não carrega */
-        position: relative;
-      }
-
-      .qr-box::before {
-        content: 'QR';
-        position: absolute;
-        font-size: 9px;
-        color: var(--hairline);
-        font-weight: 700;
-        letter-spacing: 1px;
-      }
-
-      .qr-box img {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-        display: block;
-        position: relative; /* fica sobre o ::before quando carrega */
-        background: #fff;
-        color: transparent;
-      }
-
-      .qr-caption {
-        display: block;
-        margin-top: 5px;
-        font-size: 9px;
-        color: var(--ink-soft);
-        max-width: 90px;
-        line-height: 1.35;
-        text-align: center;
-      }
-
-      /* ===== AVISO DE MONTAGEM (não imprime) ===== */
-      .builder-note {
-        width: 210mm;
-        margin: 0 auto 10px;
-        background: #fff7ed;
-        border: 1px solid #fdba74;
-        color: #9a3412;
-        font-size: 12px;
-        padding: 10px 14px;
-        border-radius: 8px;
-        font-family: Arial, sans-serif;
-        line-height: 1.5;
-      }
-
-      /* =========================================================
-         QUEBRA DE PÁGINA MANUAL
-         Adicione .page-break a qualquer .rx-item para forçar
-         início de nova página antes dele.
-         ========================================================= */
-      .page-break {
-        break-before: page;
-        page-break-before: always;
-        -webkit-column-break-before: always;
-      }
-
-      @media print {
-        html, body { background: #fff; }
-        .builder-note { display: none; }
-        .sheet { margin: 0; box-shadow: none; }
-        @page { size: A4; margin: 0; }
-        thead { display: table-header-group; }
-        tfoot { display: table-footer-group; }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="builder-note">
-      <strong>Aviso de montagem</strong> (some na impressão) — substitua todos os <code>{{PLACEHOLDER}}</code> no
-      backend antes de renderizar. Itens críticos: <br />
-      · <code>{{PRIMARY_COLOR}}</code> — cor da marca em hex (ex: <code>#0E6E5D</code>). Sem isso, o layout fica azul
-      padrão.<br />
-      · <code>{{LOGO_URL}}</code> — URL absoluta da logo. Se vazia, aparece um bloco cinza sutil (não quebra o
-      layout).<br />
-      · <code>{{PRESCRIPTION_HTML}}</code> — HTML dos itens com estrutura <code>.rx-item</code> (veja comentário no
-      tbody).<br />
-      · <code>{{QR_CODE_URL}}</code> — URL do QR code de verificação. Se vazia, exibe placeholder "QR".<br />
-      · Adicione <code>.page-break</code> num <code>.rx-item</code> para forçar quebra de página manual.
+    <!-- Busca de medicamento -->
+    <div style="position:relative">
+      <div style="font-size:10.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+        Adicionar medicamento
+      </div>
+      <div style="position:relative">
+        <i class="ti ti-search" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:14px;pointer-events:none"></i>
+        <input
+          type="text"
+          id="rx-search"
+          placeholder="Nome comercial, composição ou princípio ativo..."
+          oninput="rxSearch(this.value)"
+          autocomplete="off"
+          style="width:100%;padding:9px 12px 9px 34px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;background:#fff;transition:border-color .15s"
+          onfocus="this.style.borderColor='#6366f1'"
+          onblur="this.style.borderColor='#e2e8f0'"
+        >
+      </div>
+      <div
+        id="rx-results"
+        style="position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(15,23,42,.10);max-height:min(60vh,520px);overflow-y:auto;z-index:20;display:none"
+      ></div>
     </div>
 
-    <div class="sheet">
-      <table class="doc">
-        <!-- ===== CABEÇALHO — repete em toda página impressa ===== -->
-        <thead>
-          <tr>
-            <td>
-              <div class="letterhead">
-                <div class="brand-row">
-                  <div class="brand-left">
-                    <!-- Logo confinada: se URL quebrar, o slot tem tamanho
-                   fixo e não explode o layout (fix do bug do PDF) -->
-                    <div class="logo-slot">
-                      <img src="{{LOGO_URL}}" alt="{{CLINIC_NAME}}" />
-                    </div>
-                    <div>
-                      <p class="brand-name">{{CLINIC_NAME}}</p>
-                      <p class="brand-meta">{{CLINIC_ADDRESS}}<br />{{CLINIC_PHONE}} · {{CLINIC_EMAIL}}</p>
-                    </div>
-                  </div>
-                  <div class="doctor-block">
-                    <strong>{{DOCTOR_NAME}}</strong>
-                    {{DOCTOR_SPECIALTY}}<br />
-                    CRM {{DOCTOR_CRM}}
-                  </div>
-                </div>
-                <div class="accent-rule"></div>
-
-                <div class="patient-strip">
-                  <div class="patient-field">
-                    <span class="eyebrow">Paciente</span>
-                    <span class="val">{{PATIENT_NAME}}</span>
-                  </div>
-                  <div class="patient-field">
-                    <span class="eyebrow">Idade</span>
-                    <span class="val">{{PATIENT_AGE}}</span>
-                  </div>
-                  <div class="patient-field">
-                    <span class="eyebrow">CPF</span>
-                    <span class="val">{{PATIENT_CPF}}</span>
-                  </div>
-                  <div class="patient-field">
-                    <span class="eyebrow">Data</span>
-                    <span class="val">{{ISSUE_DATE}}</span>
-                  </div>
-                </div>
-
-                <div class="rx-heading">
-                  <div class="rx-mark">℞</div>
-                  <h2>Receituário</h2>
-                </div>
-              </div>
-            </td>
-          </tr>
-        </thead>
-
-        <!-- ===== CONTEÚDO — pagina para pág 2, 3... ===== -->
-        <tbody>
-          <tr>
-            <td>
-              <div class="rx-content">
-                {{PRESCRIPTION_HTML}}
-
-                <!--
-            ESTRUTURA DE CADA ITEM — monte no backend e injete em PRESCRIPTION_HTML:
-
-            <div class="rx-item">
-              <div class="rx-index">1</div>
-              <div>
-                <div class="med-name">
-                  Tadalafila <span class="dose">20 mg</span>
-                </div>
-                <div class="med-instructions">
-                  1 comprimido por dia · 30 dias
-                </div>
-              </div>
-            </div>
-
-            Para forçar quebra de página antes de um item:
-            <div class="rx-item page-break"> ... </div>
-          -->
-              </div>
-            </td>
-          </tr>
-        </tbody>
-
-        <!-- ===== RODAPÉ FINO — repete em toda página impressa ===== -->
-        <tfoot>
-          <tr>
-            <td>
-              <div class="page-footer">
-                <span>{{CLINIC_NAME}} · {{CLINIC_PHONE}}</span>
-                <span>Documento gerado eletronicamente</span>
-              </div>
-            </td>
-          </tr>
-        </tfoot>
-      </table>
-
-      <!-- =========================================================
-       ASSINATURA DIGITAL — uma única vez, ao final do documento
-       ========================================================= -->
-      <div class="signature-area">
-        <div class="signature-card">
-          <!-- Selo de autenticidade -->
-          <div class="seal">✓</div>
-
-          <!-- Metadados da assinatura -->
-          <div class="sig-main">
-            <div class="sig-status">Documento assinado digitalmente</div>
-            <div class="sig-meta">
-              Assinado por <b>{{DOCTOR_NAME}}</b> (CRM {{DOCTOR_CRM}}) em <b>{{SIGNATURE_DATETIME}}</b><br />
-              Certificado: {{SIGNATURE_CERT_ID}}<br />
-              Autenticidade: {{VERIFICATION_URL}}
-            </div>
-          </div>
-
-          <!-- Imagem da assinatura manuscrita / certificado -->
-          <div class="sig-graphic">
-            <div class="sig-graphic-slot">
-              <img src="{{SIGNATURE_IMAGE_URL}}" alt="Assinatura do médico" />
-            </div>
-            <div class="sig-name-line">{{DOCTOR_NAME}}</div>
-          </div>
-
-          <!-- QR code de verificação -->
-          <div class="qr-field">
-            <span class="eyebrow">Verificação</span>
-            <div class="qr-box">
-              <img src="{{QR_CODE_URL}}" alt="QR de verificação" />
-            </div>
-            <span class="qr-caption">Escaneie para confirmar a autenticidade</span>
-          </div>
+    <!-- Lista de selecionados -->
+    <div style="min-height:280px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:10.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em">
+          Medicamentos selecionados <span id="rx-count" style="color:#94a3b8;font-weight:500">(0)</span>
+        </span>
+        <button
+          id="rx-clear-btn"
+          onclick="rxClearAll()"
+          style="display:none;font-size:11px;color:#dc2626;background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px"
+        >
+          <i class="ti ti-trash"></i> Limpar tudo
+        </button>
+      </div>
+      <div id="rx-selected" style="display:flex;flex-direction:column;gap:8px">
+        <div id="rx-empty" style="text-align:center;color:#94a3b8;font-size:12px;padding:28px 16px;border:1px dashed #e2e8f0;border-radius:10px;line-height:1.6">
+          <i class="ti ti-pill" style="font-size:22px;display:block;margin-bottom:6px;opacity:.4"></i>
+          Nenhum medicamento adicionado ainda.<br>
+          <span style="font-size:11px">Use o campo acima para buscar.</span>
         </div>
       </div>
     </div>
-  </body>
-</html>
+  </div>
+
+  <div class="mfoot" style="justify-content:space-between;align-items:center">
+    <span id="rx-footer-info" style="font-size:11.5px;color:#94a3b8"></span>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" onclick="rxEmitir()">
+        <i class="ti ti-file-prescription"></i> Emitir receita
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
+
+/* ── VARIÁVEIS DE ESTADO ──────────────────────────────────────────── */
+let rxSelected = [];
+let rxSearchTimer = null;
+let rxLastResults = [];
+
+
+/* ── FUNÇÕES ─────────────────────────────────────────────────────── */
+
+async function openReceita() {
+  rxSelected = [];
+  openModal('receita');
+  const inp = document.getElementById('rx-search');
+  if (inp) { inp.value = ''; inp.style.borderColor = '#e2e8f0'; }
+  const box = document.getElementById('rx-results');
+  if (box) box.style.display = 'none';
+  rxRenderSelected();
+  setTimeout(() => inp && inp.focus(), 80);
+}
+
+function rxSearch(q) {
+  clearTimeout(rxSearchTimer);
+  rxSearchTimer = setTimeout(() => rxDoSearch(q), 220);
+}
+
+function rxNorm(s) {
+  return (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+async function rxDoSearch(q) {
+  const box = document.getElementById('rx-results');
+  const term = (q || '').trim();
+  if (!term) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = 'block';
+  box.innerHTML = '<div style="padding:14px;font-size:12px;color:#94a3b8;text-align:center"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Buscando...</div>';
+
+  const [genRes, comRes] = await Promise.all([
+    sb.rpc('buscar_genericos', { termo: term }),
+    sb.rpc('buscar_comerciais', { termo: term })
+  ]);
+
+  if (genRes.error || comRes.error) {
+    box.innerHTML = '<div style="padding:14px;font-size:12px;color:#dc2626;text-align:center"><i class="ti ti-alert-circle"></i> Erro ao buscar medicamentos</div>';
+    return;
+  }
+
+  const gens = (genRes.data || []).map(g => ({
+    key: 'G|' + g.id_substancia,
+    is_generico: true,
+    id_substancia: g.id_substancia,
+    nome_comercial: g.nome_exibicao,
+    composicao: g.grupo_busca,
+    qtd_fabricantes: Number(g.qtd_fabricantes || 0)
+  }));
+
+  const coms = (comRes.data || []).map(c => ({
+    key: 'R|' + (c.nome_comercial || '') + '|' + (c.fabricante || ''),
+    is_generico: false,
+    nome_comercial: c.nome_comercial,
+    fabricante: c.fabricante,
+    composicao: '',
+    qtd_apresentacoes: Number(c.qtd_apresentacoes || 0)
+  }));
+
+  const list = [...gens, ...coms].slice(0, 80);
+  rxLastResults = list;
+
+  if (!list.length) {
+    box.innerHTML = '<div style="padding:16px;font-size:12px;color:#94a3b8;text-align:center"><i class="ti ti-mood-empty" style="display:block;font-size:20px;margin-bottom:4px"></i>Nenhum medicamento encontrado</div>';
+    return;
+  }
+
+  box.innerHTML = list.map(m => {
+    const genBadge = m.is_generico
+      ? '<span style="font-size:9.5px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 6px;border-radius:4px;letter-spacing:.04em">GENÉRICO</span>'
+      : '';
+    const fabLine = (!m.is_generico && m.fabricante)
+      ? `<span style="font-size:10.5px;color:#94a3b8">· ${m.fabricante}</span>` : '';
+    const info = m.is_generico
+      ? `<i class="ti ti-building-factory" style="font-size:11px"></i> ${m.qtd_fabricantes} fabricante${m.qtd_fabricantes === 1 ? '' : 's'}`
+      : (m.qtd_apresentacoes ? `<i class="ti ti-pill" style="font-size:11px"></i> ${m.qtd_apresentacoes} apresenta${m.qtd_apresentacoes > 1 ? 'ções' : 'ção'}` : '');
+    const compos = m.composicao ? `<div style="font-size:11.5px;color:#64748b;margin-top:1px">${m.composicao}</div>` : '';
+
+    return `<div class="rx-opt" onclick='rxAdd(${JSON.stringify(m.key)})'
+      style="padding:10px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .1s"
+      onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background=''">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-weight:600;font-size:13px;color:#0f172a">${m.nome_comercial}</span>
+        ${genBadge}${fabLine}
+      </div>
+      ${compos}
+      ${info ? `<div style="font-size:11px;color:#059669;margin-top:2px">${info}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function rxAdd(key) {
+  const med = (rxLastResults || []).find(m => m.key === key);
+  if (!med) return;
+
+  const uid = Math.random().toString(36).slice(2, 10);
+  let apresentacoes = [], fabricantes = [];
+  let composicao = med.composicao || '';
+
+  try {
+    if (med.is_generico) {
+      const [fabRes, apsRes] = await Promise.all([
+        sb.rpc('listar_fabricantes_generico', { p_id_substancia: med.id_substancia }),
+        sb.rpc('listar_apresentacoes_generico', { p_id_substancia: med.id_substancia })
+      ]);
+      fabricantes = (fabRes.data || []).map(f => f.fabricante).filter(Boolean);
+      const seen = new Set();
+      for (const a of (apsRes.data || [])) {
+        const k = (a.apresentacao || '').toLowerCase().trim();
+        if (k && !seen.has(k)) { seen.add(k); apresentacoes.push(a.apresentacao); }
+      }
+    } else {
+      const { data } = await sb.rpc('listar_apresentacoes_comercial', {
+        p_nome_comercial: med.nome_comercial,
+        p_fabricante: med.fabricante
+      });
+      apresentacoes = (data || []).map(a => a.apresentacao).filter(Boolean);
+      composicao = await rxFetchComposicaoComercial(med.nome_comercial, med.fabricante);
+    }
+  } catch (e) { console.error(e); }
+
+  rxSelected.push({
+    uid,
+    nome_comercial: med.nome_comercial,
+    composicao: composicao || med.composicao || '',
+    apresentacoes,
+    apresentacao: apresentacoes[0] || '',
+    posologia: '',
+    quantidade: '1 caixa',
+    is_generico: !!med.is_generico,
+    fabricantes,
+    fabricante: med.is_generico ? '' : (med.fabricante || ''),
+    id_substancia: med.id_substancia || null
+  });
+
+  document.getElementById('rx-search').value = '';
+  document.getElementById('rx-results').style.display = 'none';
+  rxRenderSelected();
+}
+
+async function rxFetchComposicaoComercial(nome_comercial, fabricante) {
+  try {
+    let q = sb.from('medicamentos').select('id').eq('is_generico', false);
+    if (nome_comercial) q = q.eq('nome_comercial', nome_comercial);
+    if (fabricante) q = q.eq('fabricante', fabricante);
+    const { data: meds } = await q.limit(50);
+    const ids = (meds || []).map(m => m.id);
+    if (!ids.length) return '';
+    const { data: ms } = await sb.from('medicamento_substancias').select('substancias(nome_exibicao)').in('id_medicamento', ids);
+    const seen = new Set(); const names = [];
+    for (const x of (ms || [])) { const n = x?.substancias?.nome_exibicao; if (n && !seen.has(n)) { seen.add(n); names.push(n); } }
+    return names.join(' + ');
+  } catch (e) { console.warn('composicao comercial falhou', e); return ''; }
+}
+
+async function rxFetchComposicaoGenerico(id_substancia, fabricante) {
+  try {
+    let q = sb.from('medicamentos').select('id,medicamento_substancias!inner(id_substancia)')
+      .eq('is_generico', true)
+      .eq('medicamento_substancias.id_substancia', id_substancia);
+    if (fabricante) q = q.eq('fabricante', fabricante);
+    const { data: meds } = await q.limit(50);
+    const ids = (meds || []).map(m => m.id);
+    if (!ids.length) return '';
+    const { data: ms } = await sb.from('medicamento_substancias')
+      .select('id_medicamento,substancias(nome_exibicao)').in('id_medicamento', ids);
+    const grouped = new Map();
+    for (const x of (ms || [])) {
+      if (!grouped.has(x.id_medicamento)) grouped.set(x.id_medicamento, []);
+      const n = x?.substancias?.nome_exibicao;
+      if (n) grouped.get(x.id_medicamento).push(n);
+    }
+    let best = null;
+    for (const [, arr] of grouped) { if (!best || arr.length < best.length) best = arr; }
+    if (!best) return '';
+    const seen = new Set(); const names = [];
+    for (const n of best) { if (n && !seen.has(n)) { seen.add(n); names.push(n); } }
+    return names.join(' + ');
+  } catch (e) { console.warn('composicao generico falhou', e); return ''; }
+}
+
+function rxRemove(uid) {
+  rxSelected = rxSelected.filter(i => i.uid !== uid);
+  rxRenderSelected();
+}
+
+function rxClearAll() {
+  if (!rxSelected.length) return;
+  rxSelected = [];
+  rxRenderSelected();
+}
+
+function rxSetField(uid, field, val) {
+  const it = rxSelected.find(i => i.uid === uid);
+  if (it) it[field] = val;
+}
+
+async function rxOnFabricanteChange(uid, val) {
+  const it = rxSelected.find(i => i.uid === uid);
+  if (!it) return;
+  it.fabricante = val;
+  if (it.is_generico && it.id_substancia) {
+    try {
+      const args = { p_id_substancia: it.id_substancia };
+      if (val) args.p_fabricante = val;
+      const { data } = await sb.rpc('listar_apresentacoes_generico', args);
+      const seen = new Set(); const aps = [];
+      for (const a of (data || [])) {
+        const k = (a.apresentacao || '').toLowerCase().trim();
+        if (k && !seen.has(k)) { seen.add(k); aps.push(a.apresentacao); }
+      }
+      it.apresentacoes = aps;
+      if (!aps.includes(it.apresentacao)) it.apresentacao = aps[0] || '';
+      if (val) {
+        const comp = await rxFetchComposicaoGenerico(it.id_substancia, val);
+        if (comp) it.composicao = comp;
+      }
+    } catch (e) { console.warn('apresentacoes filter falhou', e); }
+  }
+  rxRenderSelected();
+}
+
+function rxRenderSelected() {
+  const wrap = document.getElementById('rx-selected');
+  const countEl = document.getElementById('rx-count');
+  const clearBtn = document.getElementById('rx-clear-btn');
+  const footerInfo = document.getElementById('rx-footer-info');
+
+  if (countEl) countEl.textContent = '(' + rxSelected.length + ')';
+  if (clearBtn) clearBtn.style.display = rxSelected.length ? 'inline-flex' : 'none';
+  if (footerInfo) footerInfo.textContent = rxSelected.length
+    ? `${rxSelected.length} medicamento${rxSelected.length > 1 ? 's' : ''} na receita`
+    : '';
+
+  if (!rxSelected.length) {
+    wrap.innerHTML = `<div id="rx-empty" style="text-align:center;color:#94a3b8;font-size:12px;padding:28px 16px;border:1px dashed #e2e8f0;border-radius:10px;line-height:1.6">
+      <i class="ti ti-pill" style="font-size:22px;display:block;margin-bottom:6px;opacity:.4"></i>
+      Nenhum medicamento adicionado ainda.<br>
+      <span style="font-size:11px">Use o campo acima para buscar.</span>
+    </div>`;
+    return;
+  }
+
+  wrap.innerHTML = rxSelected.map((it, idx) => {
+    const compos = it.composicao || '';
+    const apsOpts = (it.apresentacoes || [])
+      .map(a => `<option value="${a.replace(/"/g, '&quot;')}" ${a === it.apresentacao ? 'selected' : ''}>${a}</option>`)
+      .join('');
+    const fabOpts = (it.fabricantes || [])
+      .map(f => `<option value="${f.replace(/"/g, '&quot;')}" ${f === it.fabricante ? 'selected' : ''}>${f}</option>`)
+      .join('');
+    const genBadge = it.is_generico
+      ? '<span style="font-size:9px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 6px;border-radius:4px;letter-spacing:.04em;margin-left:6px">GENÉRICO</span>' : '';
+
+    const fabBlock = it.is_generico
+      ? `<div style="grid-column:1/-1">
+          <label style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">
+            Fabricante <span style="color:#94a3b8;font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span>
+          </label>
+          ${fabOpts
+          ? `<select onchange="rxOnFabricanteChange('${it.uid}',this.value)" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:#fff">
+               <option value="">Todos os fabricantes</option>${fabOpts}
+             </select>`
+          : `<input type="text" value="${(it.fabricante || '').replace(/"/g, '&quot;')}" oninput="rxSetField('${it.uid}','fabricante',this.value)" placeholder="Deixe em branco se irrelevante" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">`
+        }
+        </div>`
+      : `<div style="grid-column:1/-1">
+          <label style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">Laboratório / Fabricante</label>
+          <div style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:#f8fafc;color:#0f172a;font-weight:500">
+            ${it.fabricante ? it.fabricante.replace(/</g, '&lt;') : '<span style="color:#94a3b8;font-weight:400">Não informado</span>'}
+          </div>
+        </div>`;
+
+    return `<div id="rx-item-${it.uid}"
+      style="border:1px solid #e2e8f0;border-radius:10px;padding:11px 13px;background:#fff;display:flex;flex-direction:column;gap:9px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="width:20px;height:20px;border-radius:50%;background:#f1f5f9;color:#475569;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px">${idx + 1}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:13px;color:#0f172a;line-height:1.2">${it.nome_comercial}${genBadge}</div>
+          ${compos ? `<div style="font-size:11.5px;color:#64748b;margin-top:1px">${compos}</div>` : ''}
+        </div>
+        <button onclick="rxRemove('${it.uid}')" title="Remover"
+          style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;border:1px solid #fecaca;border-radius:6px;background:#fef2f2;color:#dc2626;cursor:pointer;flex-shrink:0;font-size:13px">
+          <i class="ti ti-trash"></i>
+        </button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${fabBlock}
+        <div>
+          <label style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">Apresentação</label>
+          ${apsOpts
+          ? `<select onchange="rxSetField('${it.uid}','apresentacao',this.value)" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:#fff">${apsOpts}</select>`
+          : `<input type="text" value="${(it.apresentacao || '').replace(/"/g, '&quot;')}" oninput="rxSetField('${it.uid}','apresentacao',this.value)" placeholder="Ex: Comprimido 500mg" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">`
+        }
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">Quantidade</label>
+          <input type="text" value="${(it.quantidade || '').replace(/"/g, '&quot;')}" oninput="rxSetField('${it.uid}','quantidade',this.value)" placeholder="Ex: 1 caixa" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">
+        </div>
+        <div style="grid-column:1/-1">
+          <label style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">Posologia / orientação</label>
+          <input type="text" value="${(it.posologia || '').replace(/"/g, '&quot;')}" oninput="rxSetField('${it.uid}','posologia',this.value)" placeholder="Ex: 1 comprimido de 8/8h por 7 dias" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function rxEmitir() {
+  if (!rxSelected.length) { showToast && showToast('Adicione ao menos um medicamento', 'warn'); return; }
+
+  // Adiciona ao prontuário
+  const linhas = rxSelected.map((it, i) =>
+    `${i + 1}. ${it.nome_comercial}${it.apresentacao ? ' — ' + it.apresentacao : ''}${it.quantidade ? ' — ' + it.quantidade : ''}${it.posologia ? '\n   ' + it.posologia : ''}`
+  ).join('\n');
+  const ta = document.getElementById('pront-area');
+  if (ta) { ta.value = (ta.value ? ta.value + '\n\n' : '') + 'RECEITA:\n' + linhas; if (typeof markAtendDirty === 'function') markAtendDirty(); }
+
+  // Gera PDF
+  const items = rxSelected.map(it => ({
+    nome: it.nome_comercial,
+    apresentacao: it.apresentacao || it.composicao || '',
+    quantidade: it.quantidade || '',
+    posologia: it.posologia || ''
+  }));
+  openReceitaPDF({ items });
+  closeModal();
+  showToast && showToast('Receita adicionada ao prontuário', 'success');
+}
+
+
+/* ── GERADOR DE PDF ───────────────────────────────────────────────── */
+
+function _rxEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+  );
+}
+
+function _rxIdade(nasc) {
+  if (!nasc) return '';
+  // aceita tanto 'YYYY-MM-DD' quanto 'DD/MM/YYYY'
+  let d;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(nasc)) {
+    d = new Date(nasc + 'T00:00:00');
+  } else {
+    const m = String(nasc).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    d = m ? new Date(`${m[3]}-${m[2]}-${m[1]}T00:00:00`) : null;
+  }
+  if (!d || isNaN(d)) return '';
+  const n = new Date();
+  let a = n.getFullYear() - d.getFullYear();
+  const mo = n.getMonth() - d.getMonth();
+  if (mo < 0 || (mo === 0 && n.getDate() < d.getDate())) a--;
+  return a > 0 ? (a + ' anos') : '';
+}
+
+async function openReceitaPDF({ items }) {
+  if (!items || !items.length) { showToast && showToast('Nenhum medicamento para a receita', 'warn'); return; }
+
+  // Dados da clínica (localStorage)
+  let clinic = {};
+  try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
+
+  // Dados do médico (usuário logado)
+  const u = currentUser || {};
+  const meta = u.user_metadata || {};
+  const doctorName  = meta.full_name || meta.name || (u.email || '').split('@')[0] || 'Médico responsável';
+  const doctorCrm   = meta.crm || meta.CRM || '—';
+  const doctorSpec  = meta.especialidade || meta.specialty || '';
+  const clinicName  = clinic.fantasia || clinic.razao || 'Clínica';
+  const cidadeUf    = [clinic.cidade, clinic.uf].filter(Boolean).join('/');
+  const addr = [
+    [clinic.logradouro, clinic.numero].filter(Boolean).join(', '),
+    clinic.complemento,
+    clinic.bairro,
+    cidadeUf,
+    clinic.cep ? 'CEP ' + clinic.cep : ''
+  ].filter(Boolean).join(' · ');
+
+  // FIX: currentPatient usa .nasc (não .data_nascimento)
+  const p = currentPatient || {};
+  const patientAge = _rxIdade(p.nasc || p.data_nascimento || '');
+
+  // HTML dos medicamentos
+  const itemsHtml = items.map((it, i) => `
+    <div class="rx-item">
+      <div class="rx-index">${i + 1}</div>
+      <div>
+        <div class="med-name">${_rxEsc(it.nome)}${it.apresentacao ? ` <span class="dose">${_rxEsc(it.apresentacao)}</span>` : ''}</div>
+        <div class="med-instructions">${_rxEsc([it.quantidade, it.posologia].filter(Boolean).join(' — ')) || '&nbsp;'}</div>
+      </div>
+    </div>`).join('');
+
+  // Carrega o template
+  let html;
+  try {
+    const resp = await fetch('/receita-modelo.html', { cache: 'no-store' });
+    html = await resp.text();
+  } catch (e) { showToast && showToast('Falha ao carregar modelo de receita', 'error'); return; }
+
+  // FIX PRINCIPAL: substitui {{PRIMARY_COLOR}} em TODAS as ocorrências do HTML
+  // (inclusive dentro dos atributos style e do CSS inline do template).
+  // Assim html2canvas recebe cores absolutas — sem var(--primary) nenhum.
+  const primaryColor = clinic.cor_primaria || '#0E6E5D';
+
+  const repl = {
+    '{{PRIMARY_COLOR}}' : primaryColor,
+    '{{CLINIC_NAME}}'   : _rxEsc(clinicName),
+    '{{CLINIC_ADDRESS}}': _rxEsc(addr || '—'),
+    '{{CLINIC_PHONE}}'  : _rxEsc(clinic.telefone || ''),
+    '{{CLINIC_EMAIL}}'  : _rxEsc(clinic.email || ''),
+    '{{LOGO_URL}}'      : clinic.logo || '',
+    '{{DOCTOR_NAME}}'   : _rxEsc(doctorName),
+    '{{DOCTOR_SPECIALTY}}': _rxEsc(doctorSpec),
+    '{{DOCTOR_CRM}}'    : _rxEsc(doctorCrm),
+    '{{PATIENT_NAME}}'  : _rxEsc(p.name || '—'),
+    '{{PATIENT_AGE}}'   : _rxEsc(patientAge || '—'),
+    '{{PATIENT_CPF}}'   : _rxEsc(p.cpf || '—'),
+    '{{ISSUE_DATE}}'    : _rxEsc(new Date().toLocaleDateString('pt-BR')),
+    '{{PRESCRIPTION_HTML}}': itemsHtml,
+    // Assinatura (placeholders ficam vazios se não configurados)
+    '{{SIGNATURE_DATETIME}}': _rxEsc(new Date().toLocaleString('pt-BR')),
+    '{{SIGNATURE_CERT_ID}}' : _rxEsc(clinic.cert_id || ''),
+    '{{VERIFICATION_URL}}'  : _rxEsc(clinic.verificacao_url || ''),
+    '{{SIGNATURE_IMAGE_URL}}': clinic.assinatura_url || '',
+    '{{QR_CODE_URL}}'       : clinic.qr_url || '',
+  };
+
+  Object.keys(repl).forEach(k => { html = html.split(k).join(repl[k]); });
+
+  // Iframe oculto para renderização
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;height:1123px;border:0;visibility:hidden;';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument;
+  doc.open(); doc.write(html); doc.close();
+
+  const finish = async () => {
+    try {
+      // Remove elementos que não devem ir para o PDF
+      doc.querySelectorAll('.builder-note').forEach(n => n.remove());
+
+      // Mantém assinatura só se a URL da assinatura estiver configurada
+      if (!clinic.assinatura_url) {
+        doc.querySelectorAll('.signature-area').forEach(n => n.remove());
+      }
+
+      // Remove slot de logo se não há logo configurada
+      if (!clinic.logo) {
+        const ls = doc.querySelector('.logo-slot');
+        if (ls) ls.remove();
+      }
+
+      // Aguarda fontes e imagens
+      try { if (doc.fonts && doc.fonts.ready) await doc.fonts.ready; } catch (e) {}
+      const imgs = Array.from(doc.images || []);
+      await Promise.all(imgs.map(img =>
+        img.complete ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; })
+      ));
+
+      const safeName = (p.name || 'paciente').replace(/[^\w\-]+/g, '_').toLowerCase();
+      const filename = `receita_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+      await window.html2pdf().set({
+        margin: 0,
+        filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'] }
+      }).from(doc.body).save();
+
+      showToast && showToast('Receita gerada com sucesso', 'success');
+    } catch (e) {
+      console.error('Falha ao gerar PDF da receita:', e);
+      showToast && showToast('Falha ao gerar PDF da receita', 'error');
+    } finally {
+      setTimeout(() => iframe.remove(), 500);
+    }
+  };
+
+  if (doc.readyState === 'complete') finish();
+  else iframe.addEventListener('load', finish);
+}
+
+/* Chamada a partir do fluxo Conduta > Documentos > botão PDF de Medicamentos */
+function condGerarReceita() {
+  const meds = (condState && condState.medicamentos || []).filter(m => m.selecionado);
+  if (!meds.length) { showToast && showToast('Selecione ao menos um medicamento', 'warn'); return; }
+  const items = meds.map(m => ({
+    nome: m.nome,
+    apresentacao: m.apresentacao || '',
+    quantidade: m.quantidade || '',
+    posologia: m.instrucoes || ''
+  }));
+  openReceitaPDF({ items });
+}
