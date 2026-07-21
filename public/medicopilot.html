@@ -5289,11 +5289,12 @@ function cfRenderDocs(){
     ?`<p style="color:#94a3b8;text-align:center;padding:32px 0;font-size:13px">Nenhum campo foi revisado.</p>`
     :docs.map(c=>{
       const off=!!condState.removidos[c.key];
+      const isMed=c.key==='medicamentos';
       return `<div class="cf-doc${off?' off':''}">
         <span class="cf-nav-badge" style="width:30px;height:30px;background:${off?'linear-gradient(135deg,#94a3b8,#64748b)':c.grad}"><i class="ti ${c.icon}"></i></span>
         <span class="cf-doc-name" style="${off?'color:#94a3b8':''}">${c.label}</span>
         <button class="cf-doc-fmt docx"><i class="ti ti-file-text"></i> DOCX</button>
-        <button class="cf-doc-fmt pdf"><i class="ti ti-file-type-pdf"></i> PDF</button>
+        <button class="cf-doc-fmt pdf"${isMed?' onclick="condGerarReceita()" title="Gerar receita em PDF"':''}><i class="ti ti-file-type-pdf"></i> ${isMed?'Receita PDF':'PDF'}</button>
         <button class="cf-close" style="padding:4px" onclick="cfToggleRemovido('${c.key}')"><i class="ti ${off?'ti-plus':'ti-ban'}" style="color:${off?'#059669':'#f43f5e'}"></i></button>
       </div>`;
     }).join('');
