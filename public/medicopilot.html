@@ -5289,11 +5289,12 @@ function cfRenderDocs(){
     ?`<p style="color:#94a3b8;text-align:center;padding:32px 0;font-size:13px">Nenhum campo foi revisado.</p>`
     :docs.map(c=>{
       const off=!!condState.removidos[c.key];
+      const isMed=c.key==='medicamentos';
       return `<div class="cf-doc${off?' off':''}">
         <span class="cf-nav-badge" style="width:30px;height:30px;background:${off?'linear-gradient(135deg,#94a3b8,#64748b)':c.grad}"><i class="ti ${c.icon}"></i></span>
         <span class="cf-doc-name" style="${off?'color:#94a3b8':''}">${c.label}</span>
         <button class="cf-doc-fmt docx"><i class="ti ti-file-text"></i> DOCX</button>
-        <button class="cf-doc-fmt pdf"><i class="ti ti-file-type-pdf"></i> PDF</button>
+        <button class="cf-doc-fmt pdf"${isMed?' onclick="condGerarReceita()" title="Gerar receita em PDF"':''}><i class="ti ti-file-type-pdf"></i> ${isMed?'Receita PDF':'PDF'}</button>
         <button class="cf-close" style="padding:4px" onclick="cfToggleRemovido('${c.key}')"><i class="ti ${off?'ti-plus':'ti-ban'}" style="color:${off?'#059669':'#f43f5e'}"></i></button>
       </div>`;
     }).join('');
@@ -5728,8 +5729,100 @@ function rxEmitir(){
   const linhas=rxSelected.map((it,i)=>`${i+1}. ${it.nome_comercial}${it.apresentacao?' — '+it.apresentacao:''}${it.quantidade?' — '+it.quantidade:''}${it.posologia?'\n   '+it.posologia:''}`).join('\n');
   const ta=document.getElementById('pront-area');
   if(ta){ta.value=(ta.value?ta.value+'\n\n':'')+'RECEITA:\n'+linhas;if(typeof markAtendDirty==='function')markAtendDirty();}
+  // Gera PDF de receita usando o modelo institucional
+  const items=rxSelected.map(it=>({
+    nome: it.nome_comercial,
+    apresentacao: it.apresentacao||it.composicao||'',
+    quantidade: it.quantidade||'',
+    posologia: it.posologia||''
+  }));
+  openReceitaPDF({items});
   closeModal();
   showToast&&showToast('Receita adicionada ao prontuário','success');
+}
+
+/* ========== GERADOR DE RECEITA (PDF via impressão) ========== */
+function _rxEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function _rxIdade(dob){
+  if(!dob)return '';
+  const d=new Date(dob);if(isNaN(d))return '';
+  const n=new Date();let a=n.getFullYear()-d.getFullYear();
+  const m=n.getMonth()-d.getMonth();if(m<0||(m===0&&n.getDate()<d.getDate()))a--;
+  return a>0?(a+' anos'):'';
+}
+async function openReceitaPDF({items}){
+  if(!items||!items.length){showToast&&showToast('Nenhum medicamento para a receita','warn');return;}
+  let clinic={};try{clinic=JSON.parse(localStorage.getItem(CLINICA_KEY)||'{}');}catch(e){}
+  const u=currentUser||{};const meta=u.user_metadata||{};
+  const doctorName=meta.full_name||meta.name||(u.email||'').split('@')[0]||'Médico responsável';
+  const doctorCrm=meta.crm||meta.CRM||'—';
+  const doctorSpec=meta.especialidade||meta.specialty||'';
+  const clinicName=clinic.fantasia||clinic.razao||'Clínica';
+  const cidadeUf=[clinic.cidade,clinic.uf].filter(Boolean).join('/');
+  const addr=[
+    [clinic.logradouro,clinic.numero].filter(Boolean).join(', '),
+    clinic.complemento,
+    clinic.bairro,
+    cidadeUf,
+    clinic.cep?'CEP '+clinic.cep:''
+  ].filter(Boolean).join(' · ');
+  const p=currentPatient||{};
+  const itemsHtml=items.map((it,i)=>`
+    <div class="rx-item">
+      <div class="rx-index">${i+1}</div>
+      <div>
+        <div class="med-name">${_rxEsc(it.nome)}${it.apresentacao?` <span class="dose">${_rxEsc(it.apresentacao)}</span>`:''}</div>
+        <div class="med-instructions">${_rxEsc([it.quantidade,it.posologia].filter(Boolean).join(' — '))||'&nbsp;'}</div>
+      </div>
+    </div>`).join('');
+  let html;
+  try{
+    const resp=await fetch('/receita-modelo.html',{cache:'no-store'});
+    html=await resp.text();
+  }catch(e){showToast&&showToast('Falha ao carregar modelo de receita','error');return;}
+  const repl={
+    '{{PRIMARY_COLOR}}':'#0E6E5D',
+    '{{CLINIC_NAME}}':_rxEsc(clinicName),
+    '{{CLINIC_ADDRESS}}':_rxEsc(addr||'—'),
+    '{{CLINIC_PHONE}}':_rxEsc(clinic.telefone||''),
+    '{{CLINIC_EMAIL}}':_rxEsc(clinic.email||''),
+    '{{LOGO_URL}}':clinic.logo||'',
+    '{{DOCTOR_NAME}}':_rxEsc(doctorName),
+    '{{DOCTOR_SPECIALTY}}':_rxEsc(doctorSpec),
+    '{{DOCTOR_CRM}}':_rxEsc(doctorCrm),
+    '{{PATIENT_NAME}}':_rxEsc(p.name||'—'),
+    '{{PATIENT_AGE}}':_rxEsc(_rxIdade(p.data_nascimento)||'—'),
+    '{{PATIENT_CPF}}':_rxEsc(p.cpf||'—'),
+    '{{ISSUE_DATE}}':_rxEsc(new Date().toLocaleDateString('pt-BR')),
+    '{{PRESCRIPTION_HTML}}':itemsHtml,
+  };
+  Object.keys(repl).forEach(k=>{html=html.split(k).join(repl[k]);});
+  const w=window.open('','_blank');
+  if(!w){showToast&&showToast('Permita popups para gerar a receita','error');return;}
+  w.document.open();w.document.write(html);w.document.close();
+  // Remove aviso de montagem, área de assinatura (ainda não disponível) e logo vazia
+  const clean=()=>{
+    const d=w.document;
+    d.querySelectorAll('.builder-note,.signature-area').forEach(n=>n.remove());
+    if(!clinic.logo){const ls=d.querySelector('.logo-slot');if(ls)ls.remove();}
+    w.focus();
+    setTimeout(()=>{try{w.print();}catch(e){}},350);
+  };
+  if(w.document.readyState==='complete')clean();
+  else w.addEventListener('load',clean);
+}
+
+/* Chamada a partir do fluxo de Conduta > Documentos (botão PDF de Medicamentos) */
+function condGerarReceita(){
+  const meds=(condState&&condState.medicamentos||[]).filter(m=>m.selecionado);
+  if(!meds.length){showToast&&showToast('Selecione ao menos um medicamento','warn');return;}
+  const items=meds.map(m=>({
+    nome:m.nome,
+    apresentacao:m.apresentacao||'',
+    quantidade:m.quantidade||'',
+    posologia:m.instrucoes||''
+  }));
+  openReceitaPDF({items});
 }
 async function saveNewPatient(){
   const val=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};

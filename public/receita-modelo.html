@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>{{CLINIC_NAME}} — Receita Médica</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* =========================================================
+     TOKENS — troque {{PRIMARY_COLOR}} pela cor da marca do
+     médico/clínica. O resto do sistema de cores é derivado
+     de tons neutros de "papel" e tinta, então qualquer cor
+     de marca funciona sem quebrar o contraste.
+     ========================================================= */
+  :root {
+    --primary: {{PRIMARY_COLOR}};       /* ex: #0E6E5D */
+    --primary-ink: {{PRIMARY_COLOR}};
+    --ink: #16201d;
+    --ink-soft: #5b6660;
+    --paper: #ffffff;
+    --paper-soft: #f6f7f5;
+    --hairline: #e1e4e1;
+    --seal-gold: #b08d3f;
+    --ok-bg: #eef6f1;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #ebedea;
+    color: var(--ink);
+    font-family: 'Inter', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* =========================================================
+     PÁGINA / IMPRESSÃO
+     Truque cross-browser para cabeçalho repetido em todas as
+     páginas impressas: <table><thead> repete automaticamente
+     a cada quebra de página; <tfoot> idem para o rodapé fino.
+     O conteúdo da receita fica no <tbody>, que é o que pagina.
+     ========================================================= */
+  .sheet {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 24px auto;
+    background: var(--paper);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 12px 32px rgba(22,32,29,0.10);
+  }
+
+  table.doc { width: 100%; border-collapse: collapse; }
+  table.doc > thead > tr > td,
+  table.doc > tfoot > tr > td,
+  table.doc > tbody > tr > td {
+    padding: 0 16mm;
+  }
+
+  /* ===== CABEÇALHO (repete em toda página) ===== */
+  .letterhead {
+    padding-top: 14mm;
+  }
+
+  .brand-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+  }
+
+  .brand-left { display: flex; align-items: center; gap: 14px; }
+
+  .logo-slot img {
+    max-height: 56px;
+    max-width: 170px;
+    object-fit: contain;
+    display: block;
+  }
+
+  .brand-name {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 19px;
+    letter-spacing: 0.2px;
+    color: var(--ink);
+    margin: 0;
+  }
+
+  .brand-meta {
+    margin: 2px 0 0;
+    font-size: 11px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+
+  .doctor-block {
+    text-align: right;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+
+  .doctor-block strong {
+    display: block;
+    font-size: 13.5px;
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .accent-rule {
+    height: 3px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 40%, white) 100%);
+    margin: 12px 0 16px;
+  }
+
+  /* ===== FAIXA PACIENTE ===== */
+  .patient-strip {
+    display: flex;
+    gap: 28px;
+    background: var(--paper-soft);
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    padding: 12px 18px;
+    margin-bottom: 14px;
+  }
+
+  .patient-field { flex: 1; min-width: 0; }
+
+  .eyebrow {
+    display: block;
+    font-size: 9.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 3px;
+    font-weight: 600;
+  }
+
+  .patient-field .val {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ===== TÍTULO RECEITUÁRIO ===== */
+  .rx-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0 14px;
+  }
+
+  .rx-mark {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .rx-heading h2 {
+    margin: 0;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 700;
+  }
+
+  /* ===== CONTEÚDO / ITENS (paginável) ===== */
+  .rx-content { padding-bottom: 10mm; }
+
+  .rx-item {
+    display: flex;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--hairline);
+    break-inside: avoid;
+  }
+  .rx-item:last-child { border-bottom: none; }
+
+  .rx-index {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    border: 1.5px solid var(--primary);
+    color: var(--primary);
+    font-size: 11.5px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .rx-item .med-name {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .rx-item .med-name .dose {
+    font-weight: 500;
+    color: var(--ink-soft);
+  }
+
+  .rx-item .med-instructions {
+    margin-top: 3px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+
+  /* ===== RODAPÉ FINO (repete em toda página) ===== */
+  .page-footer {
+    padding: 8px 16mm 10mm;
+    display: flex;
+    justify-content: space-between;
+    font-size: 9.5px;
+    color: var(--ink-soft);
+    border-top: 1px solid var(--hairline);
+  }
+
+  /* =========================================================
+     ASSINATURA DIGITAL
+     Aparece só ao final do documento, fora da tabela paginável
+     (não repete a cada página).
+     ========================================================= */
+  .signature-area {
+    margin: 0 16mm 14mm;
+    break-inside: avoid;
+  }
+
+  .signature-card {
+    border: 1px solid var(--hairline);
+    border-radius: 14px;
+    background: var(--ok-bg);
+    padding: 18px 22px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .seal {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    border: 2px solid var(--seal-gold);
+    color: var(--seal-gold);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 20px;
+  }
+
+  .sig-main { flex: 1; min-width: 0; }
+
+  .sig-status {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+
+  .sig-meta {
+    font-size: 11px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+
+  .sig-meta b { color: var(--ink); font-weight: 600; }
+
+  .sig-graphic {
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .sig-graphic img.handwritten {
+    height: 46px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto 2px;
+  }
+
+  .sig-graphic .sig-name-line {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink);
+    border-top: 1px solid var(--ink);
+    padding-top: 3px;
+    min-width: 150px;
+  }
+
+  .qr-field {
+    text-align: center;
+    flex-shrink: 0;
+    padding-left: 18px;
+    border-left: 1px solid var(--hairline);
+  }
+
+  .qr-field .eyebrow { text-align: center; }
+
+  .qr-field .qr-box {
+    width: 72px; height: 72px;
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    margin: 0 auto;
+  }
+
+  .qr-field .qr-box img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .qr-field .qr-caption {
+    display: block;
+    margin-top: 4px;
+    font-size: 9px;
+    color: var(--ink-soft);
+    max-width: 90px;
+    line-height: 1.3;
+  }
+
+  /* ===== AVISO DE MONTAGEM (não imprime) ===== */
+  .builder-note {
+    width: 210mm;
+    margin: 0 auto 10px;
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    color: #9a3412;
+    font-size: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-family: Arial, sans-serif;
+  }
+
+  /* =========================================================
+     QUEBRA DE PÁGINA MANUAL
+     Aplique a classe .page-break em qualquer bloco dentro do
+     conteúdo paginável (tbody) para forçar o início de uma nova
+     página antes dele — útil para separar, por exemplo, "uso
+     contínuo" de "uso eventual", ou uma orientação extensa que
+     deve começar em página própria. O cabeçalho (thead) e o
+     rodapé fino (tfoot) continuam repetindo normalmente.
+     ========================================================= */
+  .page-break {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  @media print {
+    html, body { background: #fff; }
+    .builder-note { display: none; }
+    .sheet { margin: 0; box-shadow: none; }
+    @page {
+      size: A4;
+      margin: 0;
+      @bottom-right {
+        content: counter(page) "/" counter(pages);
+        font-family: 'Inter', Arial, sans-serif;
+        font-size: 9.5px;
+        color: #5b6660;
+        padding: 4mm 12mm 4mm 0;
+      }
+    }
+    thead, tfoot { display: table-header-group; }
+  }
+</style>
+</head>
+<body>
+
+<div class="builder-note">
+  Aviso de montagem (some na impressão): troque os campos <code>{{ }}</code> no seu backend antes de
+  renderizar. <code>{{PRESCRIPTION_HTML}}</code> deve receber a lista de medicamentos já montada — o
+  cabeçalho (thead) e o rodapé fino (tfoot) repetem automaticamente em todas as páginas impressas. Use
+  a classe <code>.page-break</code> em qualquer bloco do conteúdo para forçar início de nova página
+  manualmente. A caixa de assinatura digital aparece só uma vez, ao final, com campo de QR code em
+  <code>{{QR_CODE_URL}}</code> para validação da receita.
+</div>
+
+<div class="sheet">
+  <table class="doc">
+
+    <!-- ===== CABEÇALHO — repete em toda página impressa ===== -->
+    <thead>
+      <tr><td>
+        <div class="letterhead">
+          <div class="brand-row">
+            <div class="brand-left">
+              <div class="logo-slot"><img src="{{LOGO_URL}}" alt="{{CLINIC_NAME}}"></div>
+              <div>
+                <p class="brand-name">{{CLINIC_NAME}}</p>
+                <p class="brand-meta">{{CLINIC_ADDRESS}}<br>{{CLINIC_PHONE}} · {{CLINIC_EMAIL}}</p>
+              </div>
+            </div>
+            <div class="doctor-block">
+              <strong>{{DOCTOR_NAME}}</strong>
+              {{DOCTOR_SPECIALTY}}<br>
+              CRM {{DOCTOR_CRM}}
+            </div>
+          </div>
+          <div class="accent-rule"></div>
+
+          <div class="patient-strip">
+            <div class="patient-field">
+              <span class="eyebrow">Paciente</span>
+              <span class="val">{{PATIENT_NAME}}</span>
+            </div>
+            <div class="patient-field">
+              <span class="eyebrow">Idade</span>
+              <span class="val">{{PATIENT_AGE}}</span>
+            </div>
+            <div class="patient-field">
+              <span class="eyebrow">CPF</span>
+              <span class="val">{{PATIENT_CPF}}</span>
+            </div>
+            <div class="patient-field">
+              <span class="eyebrow">Data</span>
+              <span class="val">{{ISSUE_DATE}}</span>
+            </div>
+          </div>
+
+          <div class="rx-heading">
+            <div class="rx-mark">℞</div>
+            <h2>Receituário</h2>
+          </div>
+        </div>
+      </td></tr>
+    </thead>
+
+    <!-- ===== CONTEÚDO — pagina livremente, vira página 2, 3... ===== -->
+    <tbody>
+      <tr><td>
+        <div class="rx-content">
+          {{PRESCRIPTION_HTML}}
+
+          <!-- Exemplo de item individual, caso prefira montar item a item
+               no backend ao invés de injetar tudo em PRESCRIPTION_HTML:
+
+          <div class="rx-item">
+            <div class="rx-index">1</div>
+            <div>
+              <div class="med-name">{{MED_NAME}} <span class="dose">{{MED_CONCENTRATION}}</span></div>
+              <div class="med-instructions">{{MED_INSTRUCTIONS}}</div>
+            </div>
+          </div>
+          -->
+
+          <!-- Exemplo de quebra de página manual — use a classe .page-break
+               em qualquer bloco para forçar início de nova página, mesmo
+               que o conteúdo anterior ainda não tenha enchido a página:
+
+          <div class="rx-item page-break">
+            <div class="rx-index">5</div>
+            <div>
+              <div class="med-name">{{MED_NAME}} <span class="dose">{{MED_CONCENTRATION}}</span></div>
+              <div class="med-instructions">{{MED_INSTRUCTIONS}}</div>
+            </div>
+          </div>
+          -->
+        </div>
+      </td></tr>
+    </tbody>
+
+    <!-- ===== RODAPÉ FINO — repete em toda página impressa ===== -->
+    <tfoot>
+      <tr><td>
+        <div class="page-footer">
+          <span>{{CLINIC_NAME}} · {{CLINIC_PHONE}}</span>
+          <span>Documento gerado eletronicamente</span>
+        </div>
+      </td></tr>
+    </tfoot>
+
+  </table>
+
+  <!-- =========================================================
+       ASSINATURA DIGITAL — fora da tabela paginável, aparece
+       uma única vez, no fim do documento.
+       ========================================================= -->
+  <div class="signature-area">
+    <div class="signature-card">
+      <div class="seal">✓</div>
+      <div class="sig-main">
+        <div class="sig-status">Documento assinado digitalmente</div>
+        <div class="sig-meta">
+          Assinado por <b>{{DOCTOR_NAME}}</b> (CRM {{DOCTOR_CRM}}) em <b>{{SIGNATURE_DATETIME}}</b><br>
+          Certificado: {{SIGNATURE_CERT_ID}} · Verifique a autenticidade em {{VERIFICATION_URL}}
+        </div>
+      </div>
+
+      <!-- Se preferir mostrar a assinatura manuscrita/imagem do certificado: -->
+      <div class="sig-graphic">
+        <img class="handwritten" src="{{SIGNATURE_IMAGE_URL}}" alt="Assinatura">
+        <div class="sig-name-line">{{DOCTOR_NAME}}</div>
+      </div>
+
+      <!-- Campo de QR code para validação rápida da receita -->
+      <div class="qr-field">
+        <span class="eyebrow">Verificação</span>
+        <div class="qr-box">
+          <img src="{{QR_CODE_URL}}" alt="QR de verificação">
+        </div>
+        <span class="qr-caption">Escaneie para confirmar a autenticidade</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
