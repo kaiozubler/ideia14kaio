@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
 <script src="https://unpkg.com/@daily-co/daily-js"></script>
 <link rel="stylesheet" href="equipe.css">
 <script src="equipe.js" defer></script>
@@ -5797,19 +5798,41 @@ async function openReceitaPDF({items}){
     '{{PRESCRIPTION_HTML}}':itemsHtml,
   };
   Object.keys(repl).forEach(k=>{html=html.split(k).join(repl[k]);});
-  const w=window.open('','_blank');
-  if(!w){showToast&&showToast('Permita popups para gerar a receita','error');return;}
-  w.document.open();w.document.write(html);w.document.close();
-  // Remove aviso de montagem, área de assinatura (ainda não disponível) e logo vazia
-  const clean=()=>{
-    const d=w.document;
-    d.querySelectorAll('.builder-note,.signature-area').forEach(n=>n.remove());
-    if(!clinic.logo){const ls=d.querySelector('.logo-slot');if(ls)ls.remove();}
-    w.focus();
-    setTimeout(()=>{try{w.print();}catch(e){}},350);
+  // Renderiza em iframe oculto e gera PDF para download imediato
+  const iframe=document.createElement('iframe');
+  iframe.style.cssText='position:fixed;left:-10000px;top:0;width:820px;height:1160px;border:0;';
+  document.body.appendChild(iframe);
+  const doc=iframe.contentDocument;
+  doc.open();doc.write(html);doc.close();
+  const finish=async ()=>{
+    try{
+      doc.querySelectorAll('.builder-note,.signature-area').forEach(n=>n.remove());
+      if(!clinic.logo){const ls=doc.querySelector('.logo-slot');if(ls)ls.remove();}
+      // aguarda fontes/imagens
+      try{await doc.fonts&&doc.fonts.ready;}catch(e){}
+      const imgs=Array.from(doc.images||[]);
+      await Promise.all(imgs.map(img=>img.complete?Promise.resolve():new Promise(r=>{img.onload=img.onerror=r;})));
+      const target=doc.body;
+      const safeName=(p.name||'paciente').replace(/[^\w\-]+/g,'_').toLowerCase();
+      const filename=`receita_${safeName}_${new Date().toISOString().slice(0,10)}.pdf`;
+      await window.html2pdf().set({
+        margin:0,
+        filename,
+        image:{type:'jpeg',quality:0.98},
+        html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
+        jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+        pagebreak:{mode:['css','legacy']}
+      }).from(target).save();
+      showToast&&showToast('Receita gerada','success');
+    }catch(e){
+      console.error(e);
+      showToast&&showToast('Falha ao gerar PDF da receita','error');
+    }finally{
+      setTimeout(()=>iframe.remove(),500);
+    }
   };
-  if(w.document.readyState==='complete')clean();
-  else w.addEventListener('load',clean);
+  if(doc.readyState==='complete')finish();
+  else iframe.addEventListener('load',finish);
 }
 
 /* Chamada a partir do fluxo de Conduta > Documentos (botão PDF de Medicamentos) */
