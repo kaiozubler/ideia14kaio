@@ -6021,12 +6021,12 @@ async function openReceitaPDF({ items }) {
   document.head.appendChild(styleEl);
 
 const clipper = document.createElement('div');
-clipper.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;overflow:hidden;z-index:-1;pointer-events:none;';
+clipper.style.cssText = 'position:fixed;left:0;top:0;width:210mm;height:0;overflow:hidden;z-index:-1;pointer-events:none;';
 document.body.appendChild(clipper);
 
 const holder = document.createElement('div');
 holder.id = scopeId;
-holder.style.cssText = 'position:absolute;left:0;top:0;width:210mm;background:#fff;';
+holder.style.cssText = 'position:relative;width:210mm;background:#fff;';
 holder.innerHTML = rawBody;
 clipper.appendChild(holder);
 
