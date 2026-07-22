@@ -2906,23 +2906,36 @@ Reduzir ingestão de sódio. Hidratação adequada. Evitar situações de estres
   </div>
 
   <!-- EMITIR RECEITA -->
-  <div class="modal wide" id="m-receita" style="display:none">
-    <div class="mhd"><span class="mhd-title"><i class="ti ti-prescription"></i> Emitir receita</span><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
-    <div class="mbody">
+  <div class="modal wide" id="m-receita" style="display:none;width:620px">
+    <div class="mhd">
+      <span class="mhd-title"><i class="ti ti-prescription"></i> Emitir receita</span>
+      <button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="mbody" style="padding:18px 20px;display:flex;flex-direction:column;gap:16px">
       <div style="position:relative">
-        <input type="text" id="rx-search" placeholder="Buscar medicamento por nome comercial, composição ou composto..." oninput="rxSearch(this.value)" autocomplete="off" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;background:#fff">
-        <div id="rx-results" style="position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 22px rgba(15,23,42,.08);max-height:min(70vh,640px);overflow-y:auto;z-index:20;display:none"></div>
+        <div style="font-size:10.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Adicionar medicamento</div>
+        <div style="position:relative">
+          <i class="ti ti-search" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:14px;pointer-events:none"></i>
+          <input type="text" id="rx-search" placeholder="Nome comercial, composição ou princípio ativo..." oninput="rxSearch(this.value)" autocomplete="off" style="width:100%;padding:9px 12px 9px 34px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;background:#fff;transition:border-color .15s" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'">
+        </div>
+        <div id="rx-results" style="position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(15,23,42,.10);max-height:min(60vh,520px);overflow-y:auto;z-index:20;display:none"></div>
       </div>
-      <div style="margin-top:16px;min-height:360px">
-        <div style="font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Medicamentos selecionados <span id="rx-count" style="color:#94a3b8;font-weight:500">(0)</span></div>
+      <div style="min-height:280px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-size:10.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em">Medicamentos selecionados <span id="rx-count" style="color:#94a3b8;font-weight:500">(0)</span></span>
+          <button id="rx-clear-btn" onclick="rxClearAll()" style="display:none;font-size:11px;color:#dc2626;background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px"><i class="ti ti-trash"></i> Limpar tudo</button>
+        </div>
         <div id="rx-selected" style="display:flex;flex-direction:column;gap:8px">
-          <div id="rx-empty" style="text-align:center;color:#94a3b8;font-size:12px;padding:22px;border:1px dashed #e2e8f0;border-radius:10px">Nenhum medicamento adicionado ainda.</div>
+          <div id="rx-empty" style="text-align:center;color:#94a3b8;font-size:12px;padding:28px 16px;border:1px dashed #e2e8f0;border-radius:10px;line-height:1.6"><i class="ti ti-pill" style="font-size:22px;display:block;margin-bottom:6px;opacity:.4"></i>Nenhum medicamento adicionado ainda.<br><span style="font-size:11px">Use o campo acima para buscar.</span></div>
         </div>
       </div>
     </div>
-    <div class="mfoot">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn primary" onclick="rxEmitir()"><i class="ti ti-file-prescription"></i> Emitir receita</button>
+    <div class="mfoot" style="justify-content:space-between;align-items:center">
+      <span id="rx-footer-info" style="font-size:11.5px;color:#94a3b8"></span>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn primary" onclick="rxEmitir()"><i class="ti ti-file-prescription"></i> Emitir receita</button>
+      </div>
     </div>
   </div>
 </div>
