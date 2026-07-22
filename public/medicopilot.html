@@ -5941,9 +5941,13 @@ async function openReceitaPDF({ items }) {
     html = await resp.text();
   } catch (e) { showToast && showToast('Falha ao carregar modelo de receita', 'error'); return; }
 
-  // FIX PRINCIPAL: substitui {{PRIMARY_COLOR}} em TODAS as ocorrências do HTML
-  // (inclusive dentro dos atributos style e do CSS inline do template).
-  // Assim html2canvas recebe cores absolutas — sem var(--primary) nenhum.
+  // Converte logo / assinatura / QR para data URI em paralelo — nenhuma delas
+  // chega ao html2canvas como URL externa.
+  const [logoDataUrl, sigDataUrl, qrDataUrl] = await Promise.all([
+    _rxImgToDataUrl(clinic.logo || ''),
+    _rxImgToDataUrl(clinic.assinatura_url || ''),
+    _rxImgToDataUrl(clinic.qr_url || ''),
+  ]);
   const primaryColor = clinic.cor_primaria || '#0E6E5D';
 
   const repl = {
