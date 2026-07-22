@@ -6022,7 +6022,7 @@ async function openReceitaPDF({ items }) {
 
   const holder = document.createElement('div');
   holder.id = scopeId;
-  holder.style.cssText = 'position:fixed;left:-99999px;top:0;width:210mm;background:#fff;z-index:-1;';
+  holder.style.cssText = 'position:fixed;left:0;top:-99999px;width:210mm;background:#fff;z-index:-1;';
   holder.innerHTML = rawBody;
   document.body.appendChild(holder);
 
