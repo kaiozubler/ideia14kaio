@@ -5971,60 +5971,83 @@ async function openReceitaPDF({ items }) {
 
   Object.keys(repl).forEach(k => { html = html.split(k).join(repl[k]); });
 
-  // Iframe oculto para renderização
-  const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;height:1123px;border:0;visibility:hidden;';
-  document.body.appendChild(iframe);
+  // Renderiza no MESMO documento (não em iframe). html2canvas tem bugs conhecidos
+  // ao clonar elementos de um contentDocument de iframe — os estilos <style> não
+  // são aplicados durante o clone, gerando o layout quebrado.
+  // Extrai <style> e <body> do template e injeta com escopo no documento principal.
+  const scopeId = 'rx-scope-' + Date.now();
+  const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+  const bodyMatch  = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  const rawCss  = styleMatch ? styleMatch[1] : '';
+  const rawBody = bodyMatch  ? bodyMatch[1]  : html;
 
-  const doc = iframe.contentDocument;
-  doc.open(); doc.write(html); doc.close();
-
-  const finish = async () => {
-    try {
-      // Remove elementos que não devem ir para o PDF
-      doc.querySelectorAll('.builder-note').forEach(n => n.remove());
-
-      // Mantém assinatura só se a URL da assinatura estiver configurada
-      if (!clinic.assinatura_url) {
-        doc.querySelectorAll('.signature-area').forEach(n => n.remove());
+  // Prefixa todos os seletores com #scopeId para não vazar estilos do template
+  // para o app. Regex simples: quebra em blocos de regra e prefixa cada seletor.
+  const scopedCss = rawCss.replace(/(^|})\s*([^{}@]+)\{/g, (m, brace, selectors) => {
+    const scoped = selectors.split(',').map(s => {
+      s = s.trim();
+      if (!s) return s;
+      if (s.startsWith('html') || s.startsWith('body')) {
+        return '#' + scopeId;
       }
+      return '#' + scopeId + ' ' + s;
+    }).join(', ');
+    return (brace || '') + ' ' + scoped + '{';
+  });
 
-      // Remove slot de logo se não há logo configurada
-      if (!clinic.logo) {
-        const ls = doc.querySelector('.logo-slot');
-        if (ls) ls.remove();
-      }
+  const styleEl = document.createElement('style');
+  styleEl.setAttribute('data-rx-style', scopeId);
+  styleEl.textContent = scopedCss;
+  document.head.appendChild(styleEl);
 
-      // Aguarda fontes e imagens
-      try { if (doc.fonts && doc.fonts.ready) await doc.fonts.ready; } catch (e) {}
-      const imgs = Array.from(doc.images || []);
-      await Promise.all(imgs.map(img =>
-        img.complete ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; })
-      ));
+  const holder = document.createElement('div');
+  holder.id = scopeId;
+  holder.style.cssText = 'position:fixed;left:-99999px;top:0;width:210mm;background:#fff;z-index:-1;';
+  holder.innerHTML = rawBody;
+  document.body.appendChild(holder);
 
-      const safeName = (p.name || 'paciente').replace(/[^\w\-]+/g, '_').toLowerCase();
-      const filename = `receita_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`;
-
-      await window.html2pdf().set({
-        margin: 0,
-        filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['css', 'legacy'] }
-      }).from(doc.body).save();
-
-      showToast && showToast('Receita gerada com sucesso', 'success');
-    } catch (e) {
-      console.error('Falha ao gerar PDF da receita:', e);
-      showToast && showToast('Falha ao gerar PDF da receita', 'error');
-    } finally {
-      setTimeout(() => iframe.remove(), 500);
-    }
+  const cleanup = () => {
+    try { holder.remove(); } catch(_) {}
+    try { styleEl.remove(); } catch(_) {}
   };
 
-  if (doc.readyState === 'complete') finish();
-  else iframe.addEventListener('load', finish);
+  try {
+    // Remove elementos que não devem ir para o PDF
+    holder.querySelectorAll('.builder-note').forEach(n => n.remove());
+    if (!clinic.assinatura_url) {
+      holder.querySelectorAll('.signature-area').forEach(n => n.remove());
+    }
+    if (!clinic.logo) {
+      const ls = holder.querySelector('.logo-slot');
+      if (ls) ls.remove();
+    }
+
+    // Aguarda fontes e imagens carregarem
+    try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
+    const imgs = Array.from(holder.querySelectorAll('img'));
+    await Promise.all(imgs.map(img =>
+      img.complete ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; })
+    ));
+
+    const safeName = (p.name || 'paciente').replace(/[^\w\-]+/g, '_').toLowerCase();
+    const filename = `receita_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+    await window.html2pdf().set({
+      margin: 0,
+      filename,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, windowWidth: 794 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'] }
+    }).from(holder.querySelector('.sheet') || holder).save();
+
+    showToast && showToast('Receita gerada com sucesso', 'success');
+  } catch (e) {
+    console.error('Falha ao gerar PDF da receita:', e);
+    showToast && showToast('Falha ao gerar PDF da receita', 'error');
+  } finally {
+    setTimeout(cleanup, 300);
+  }
 }
 
 /* Chamada a partir do fluxo Conduta > Documentos > botão PDF de Medicamentos */
