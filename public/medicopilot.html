@@ -2906,23 +2906,36 @@ Reduzir ingestão de sódio. Hidratação adequada. Evitar situações de estres
   </div>
 
   <!-- EMITIR RECEITA -->
-  <div class="modal wide" id="m-receita" style="display:none">
-    <div class="mhd"><span class="mhd-title"><i class="ti ti-prescription"></i> Emitir receita</span><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
-    <div class="mbody">
+  <div class="modal wide" id="m-receita" style="display:none;width:620px">
+    <div class="mhd">
+      <span class="mhd-title"><i class="ti ti-prescription"></i> Emitir receita</span>
+      <button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="mbody" style="padding:18px 20px;display:flex;flex-direction:column;gap:16px">
       <div style="position:relative">
-        <input type="text" id="rx-search" placeholder="Buscar medicamento por nome comercial, composição ou composto..." oninput="rxSearch(this.value)" autocomplete="off" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;background:#fff">
-        <div id="rx-results" style="position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 22px rgba(15,23,42,.08);max-height:min(70vh,640px);overflow-y:auto;z-index:20;display:none"></div>
+        <div style="font-size:10.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Adicionar medicamento</div>
+        <div style="position:relative">
+          <i class="ti ti-search" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:14px;pointer-events:none"></i>
+          <input type="text" id="rx-search" placeholder="Nome comercial, composição ou princípio ativo..." oninput="rxSearch(this.value)" autocomplete="off" style="width:100%;padding:9px 12px 9px 34px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;background:#fff;transition:border-color .15s" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'">
+        </div>
+        <div id="rx-results" style="position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(15,23,42,.10);max-height:min(60vh,520px);overflow-y:auto;z-index:20;display:none"></div>
       </div>
-      <div style="margin-top:16px;min-height:360px">
-        <div style="font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Medicamentos selecionados <span id="rx-count" style="color:#94a3b8;font-weight:500">(0)</span></div>
+      <div style="min-height:280px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-size:10.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em">Medicamentos selecionados <span id="rx-count" style="color:#94a3b8;font-weight:500">(0)</span></span>
+          <button id="rx-clear-btn" onclick="rxClearAll()" style="display:none;font-size:11px;color:#dc2626;background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px"><i class="ti ti-trash"></i> Limpar tudo</button>
+        </div>
         <div id="rx-selected" style="display:flex;flex-direction:column;gap:8px">
-          <div id="rx-empty" style="text-align:center;color:#94a3b8;font-size:12px;padding:22px;border:1px dashed #e2e8f0;border-radius:10px">Nenhum medicamento adicionado ainda.</div>
+          <div id="rx-empty" style="text-align:center;color:#94a3b8;font-size:12px;padding:28px 16px;border:1px dashed #e2e8f0;border-radius:10px;line-height:1.6"><i class="ti ti-pill" style="font-size:22px;display:block;margin-bottom:6px;opacity:.4"></i>Nenhum medicamento adicionado ainda.<br><span style="font-size:11px">Use o campo acima para buscar.</span></div>
         </div>
       </div>
     </div>
-    <div class="mfoot">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn primary" onclick="rxEmitir()"><i class="ti ti-file-prescription"></i> Emitir receita</button>
+    <div class="mfoot" style="justify-content:space-between;align-items:center">
+      <span id="rx-footer-info" style="font-size:11.5px;color:#94a3b8"></span>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn primary" onclick="rxEmitir()"><i class="ti ti-file-prescription"></i> Emitir receita</button>
+      </div>
     </div>
   </div>
 </div>
@@ -5523,329 +5536,508 @@ function closeModal(){
 document.getElementById('modal-overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
 /* ========== EMITIR RECEITA ========== */
-let rxSelected=[]; let rxSearchTimer=null; let rxLastResults=[];
-async function openReceita(){
-  rxSelected=[];
+/* ── VARIÁVEIS DE ESTADO ──────────────────────────────────────────── */
+let rxSelected = [];
+let rxSearchTimer = null;
+let rxLastResults = [];
+
+
+/* ── FUNÇÕES ─────────────────────────────────────────────────────── */
+
+async function openReceita() {
+  rxSelected = [];
   openModal('receita');
-  const inp=document.getElementById('rx-search');if(inp){inp.value='';}
-  document.getElementById('rx-results').style.display='none';
+  const inp = document.getElementById('rx-search');
+  if (inp) { inp.value = ''; inp.style.borderColor = '#e2e8f0'; }
+  const box = document.getElementById('rx-results');
+  if (box) box.style.display = 'none';
   rxRenderSelected();
-  setTimeout(()=>inp&&inp.focus(),80);
+  setTimeout(() => inp && inp.focus(), 80);
 }
-function rxSearch(q){
+
+function rxSearch(q) {
   clearTimeout(rxSearchTimer);
-  rxSearchTimer=setTimeout(()=>rxDoSearch(q),220);
+  rxSearchTimer = setTimeout(() => rxDoSearch(q), 220);
 }
-function rxNorm(s){return (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
-async function rxDoSearch(q){
-  const box=document.getElementById('rx-results');
-  const term=(q||'').trim();
-  if(!term){box.style.display='none';box.innerHTML='';return;}
-  box.style.display='block';
-  box.innerHTML='<div style="padding:14px;font-size:12px;color:#94a3b8;text-align:center">Buscando...</div>';
-  const [genRes,comRes]=await Promise.all([
-    sb.rpc('buscar_genericos',{termo:term}),
-    sb.rpc('buscar_comerciais',{termo:term})
+
+function rxNorm(s) {
+  return (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+async function rxDoSearch(q) {
+  const box = document.getElementById('rx-results');
+  const term = (q || '').trim();
+  if (!term) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = 'block';
+  box.innerHTML = '<div style="padding:14px;font-size:12px;color:#94a3b8;text-align:center"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Buscando...</div>';
+
+  const [genRes, comRes] = await Promise.all([
+    sb.rpc('buscar_genericos', { termo: term }),
+    sb.rpc('buscar_comerciais', { termo: term })
   ]);
-  if(genRes.error||comRes.error){console.error(genRes.error||comRes.error);box.innerHTML='<div style="padding:14px;font-size:12px;color:#dc2626;text-align:center">Erro ao buscar</div>';return;}
-  const gens=(genRes.data||[]).map(g=>({
-    key:'G|'+g.id_substancia,
-    is_generico:true,
-    id_substancia:g.id_substancia,
-    nome_comercial:g.nome_exibicao,
-    composicao:g.grupo_busca,
-    qtd_fabricantes:Number(g.qtd_fabricantes||0)
+
+  if (genRes.error || comRes.error) {
+    box.innerHTML = '<div style="padding:14px;font-size:12px;color:#dc2626;text-align:center"><i class="ti ti-alert-circle"></i> Erro ao buscar medicamentos</div>';
+    return;
+  }
+
+  const gens = (genRes.data || []).map(g => ({
+    key: 'G|' + g.id_substancia,
+    is_generico: true,
+    id_substancia: g.id_substancia,
+    nome_comercial: g.nome_exibicao,
+    composicao: g.grupo_busca,
+    qtd_fabricantes: Number(g.qtd_fabricantes || 0)
   }));
-  const coms=(comRes.data||[]).map(c=>({
-    key:'R|'+(c.nome_comercial||'')+'|'+(c.fabricante||''),
-    is_generico:false,
-    nome_comercial:c.nome_comercial,
-    fabricante:c.fabricante,
-    composicao:'',
-    qtd_apresentacoes:Number(c.qtd_apresentacoes||0)
+
+  const coms = (comRes.data || []).map(c => ({
+    key: 'R|' + (c.nome_comercial || '') + '|' + (c.fabricante || ''),
+    is_generico: false,
+    nome_comercial: c.nome_comercial,
+    fabricante: c.fabricante,
+    composicao: '',
+    qtd_apresentacoes: Number(c.qtd_apresentacoes || 0)
   }));
-  const list=[...gens,...coms].slice(0,80);
-  rxLastResults=list;
-  if(!list.length){box.style.display='block';box.innerHTML='<div style="padding:14px;font-size:12px;color:#94a3b8;text-align:center">Nenhum medicamento encontrado</div>';return;}
-  box.innerHTML=list.map(m=>{
-    const genBadge=m.is_generico?'<span style="font-size:9.5px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 6px;border-radius:4px;letter-spacing:.04em">GENÉRICO</span>':'';
-    const fabLine=(!m.is_generico && m.fabricante)?`<span style="font-size:10.5px;color:#94a3b8">· ${m.fabricante}</span>`:'';
-    const info=m.is_generico
-      ? `<i class="ti ti-building-factory" style="font-size:11px"></i> ${m.qtd_fabricantes} fabricante${m.qtd_fabricantes===1?'':'s'}`
-      : (m.qtd_apresentacoes?`<i class="ti ti-pill" style="font-size:11px"></i> ${m.qtd_apresentacoes} apresenta${m.qtd_apresentacoes>1?'ções':'ção'}`:'');
-    const compos=m.composicao?`<div style="font-size:12px;color:#64748b">${m.composicao}</div>`:'';
-    return `<div class="rx-opt" onclick='rxAdd(${JSON.stringify(m.key)})' style="padding:11px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;flex-direction:column;gap:3px">
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:600;font-size:13.5px;color:#0f172a">${m.nome_comercial}</span>${genBadge}${fabLine}</div>
+
+  const list = [...gens, ...coms].slice(0, 80);
+  rxLastResults = list;
+
+  if (!list.length) {
+    box.innerHTML = '<div style="padding:16px;font-size:12px;color:#94a3b8;text-align:center"><i class="ti ti-mood-empty" style="display:block;font-size:20px;margin-bottom:4px"></i>Nenhum medicamento encontrado</div>';
+    return;
+  }
+
+  box.innerHTML = list.map(m => {
+    const genBadge = m.is_generico
+      ? '<span style="font-size:9.5px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 6px;border-radius:4px;letter-spacing:.04em">GENÉRICO</span>'
+      : '';
+    const fabLine = (!m.is_generico && m.fabricante)
+      ? `<span style="font-size:10.5px;color:#94a3b8">· ${m.fabricante}</span>` : '';
+    const info = m.is_generico
+      ? `<i class="ti ti-building-factory" style="font-size:11px"></i> ${m.qtd_fabricantes} fabricante${m.qtd_fabricantes === 1 ? '' : 's'}`
+      : (m.qtd_apresentacoes ? `<i class="ti ti-pill" style="font-size:11px"></i> ${m.qtd_apresentacoes} apresenta${m.qtd_apresentacoes > 1 ? 'ções' : 'ção'}` : '');
+    const compos = m.composicao ? `<div style="font-size:11.5px;color:#64748b;margin-top:1px">${m.composicao}</div>` : '';
+
+    return `<div class="rx-opt" onclick='rxAdd(${JSON.stringify(m.key)})'
+      style="padding:10px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .1s"
+      onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background=''">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-weight:600;font-size:13px;color:#0f172a">${m.nome_comercial}</span>
+        ${genBadge}${fabLine}
+      </div>
       ${compos}
-      ${info?`<div style="font-size:11px;color:#059669;margin-top:2px">${info}</div>`:''}
+      ${info ? `<div style="font-size:11px;color:#059669;margin-top:2px">${info}</div>` : ''}
     </div>`;
   }).join('');
-  box.style.display='block';
-  box.querySelectorAll('.rx-opt').forEach(el=>{
-    el.addEventListener('mouseenter',()=>el.style.background='#f8fafc');
-    el.addEventListener('mouseleave',()=>el.style.background='');
-  });
 }
-async function rxAdd(key){
-  const med=(rxLastResults||[]).find(m=>m.key===key);if(!med)return;
-  const uid=Math.random().toString(36).slice(2,10);
-  let apresentacoes=[], fabricantes=[];
-  let composicao=med.composicao||'';
-  try{
-    if(med.is_generico){
-      const [fabRes,apsRes]=await Promise.all([
-        sb.rpc('listar_fabricantes_generico',{p_id_substancia:med.id_substancia}),
-        sb.rpc('listar_apresentacoes_generico',{p_id_substancia:med.id_substancia})
+
+async function rxAdd(key) {
+  const med = (rxLastResults || []).find(m => m.key === key);
+  if (!med) return;
+
+  const uid = Math.random().toString(36).slice(2, 10);
+  let apresentacoes = [], fabricantes = [];
+  let composicao = med.composicao || '';
+
+  try {
+    if (med.is_generico) {
+      const [fabRes, apsRes] = await Promise.all([
+        sb.rpc('listar_fabricantes_generico', { p_id_substancia: med.id_substancia }),
+        sb.rpc('listar_apresentacoes_generico', { p_id_substancia: med.id_substancia })
       ]);
-      fabricantes=(fabRes.data||[]).map(f=>f.fabricante).filter(Boolean);
-      const seen=new Set();
-      for(const a of (apsRes.data||[])){ const k=(a.apresentacao||'').toLowerCase().trim(); if(k && !seen.has(k)){seen.add(k);apresentacoes.push(a.apresentacao);} }
+      fabricantes = (fabRes.data || []).map(f => f.fabricante).filter(Boolean);
+      const seen = new Set();
+      for (const a of (apsRes.data || [])) {
+        const k = (a.apresentacao || '').toLowerCase().trim();
+        if (k && !seen.has(k)) { seen.add(k); apresentacoes.push(a.apresentacao); }
+      }
     } else {
-      const {data}=await sb.rpc('listar_apresentacoes_comercial',{p_nome_comercial:med.nome_comercial,p_fabricante:med.fabricante});
-      apresentacoes=(data||[]).map(a=>a.apresentacao).filter(Boolean);
-      composicao=await rxFetchComposicaoComercial(med.nome_comercial,med.fabricante);
+      const { data } = await sb.rpc('listar_apresentacoes_comercial', {
+        p_nome_comercial: med.nome_comercial,
+        p_fabricante: med.fabricante
+      });
+      apresentacoes = (data || []).map(a => a.apresentacao).filter(Boolean);
+      composicao = await rxFetchComposicaoComercial(med.nome_comercial, med.fabricante);
     }
-  }catch(e){console.error(e);}
+  } catch (e) { console.error(e); }
+
   rxSelected.push({
     uid,
-    nome_comercial:med.nome_comercial,
-    composicao:composicao||med.composicao||'',
-    compostos:[],
+    nome_comercial: med.nome_comercial,
+    composicao: composicao || med.composicao || '',
     apresentacoes,
-    apresentacao:apresentacoes[0]||'',
-    posologia:'',
-    quantidade:'1 caixa',
-    is_generico:!!med.is_generico,
+    apresentacao: apresentacoes[0] || '',
+    posologia: '',
+    quantidade: '1 caixa',
+    is_generico: !!med.is_generico,
     fabricantes,
-    fabricante:med.is_generico?'':(med.fabricante||''),
-    id_substancia:med.id_substancia||null
+    fabricante: med.is_generico ? '' : (med.fabricante || ''),
+    id_substancia: med.id_substancia || null
   });
-  document.getElementById('rx-search').value='';
-  document.getElementById('rx-results').style.display='none';
+
+  document.getElementById('rx-search').value = '';
+  document.getElementById('rx-results').style.display = 'none';
   rxRenderSelected();
 }
-async function rxFetchComposicaoComercial(nome_comercial,fabricante){
-  try{
-    let q=sb.from('medicamentos').select('id').eq('is_generico',false);
-    if(nome_comercial) q=q.eq('nome_comercial',nome_comercial);
-    if(fabricante) q=q.eq('fabricante',fabricante);
-    const {data:meds}=await q.limit(50);
-    const ids=(meds||[]).map(m=>m.id);
-    if(!ids.length) return '';
-    const {data:ms}=await sb.from('medicamento_substancias').select('substancias(nome_exibicao)').in('id_medicamento',ids);
-    const seen=new Set(); const names=[];
-    for(const x of (ms||[])){ const n=x?.substancias?.nome_exibicao; if(n && !seen.has(n)){seen.add(n);names.push(n);} }
+
+async function rxFetchComposicaoComercial(nome_comercial, fabricante) {
+  try {
+    let q = sb.from('medicamentos').select('id').eq('is_generico', false);
+    if (nome_comercial) q = q.eq('nome_comercial', nome_comercial);
+    if (fabricante) q = q.eq('fabricante', fabricante);
+    const { data: meds } = await q.limit(50);
+    const ids = (meds || []).map(m => m.id);
+    if (!ids.length) return '';
+    const { data: ms } = await sb.from('medicamento_substancias').select('substancias(nome_exibicao)').in('id_medicamento', ids);
+    const seen = new Set(); const names = [];
+    for (const x of (ms || [])) { const n = x?.substancias?.nome_exibicao; if (n && !seen.has(n)) { seen.add(n); names.push(n); } }
     return names.join(' + ');
-  }catch(e){console.warn('composicao comercial falhou',e);return '';}
+  } catch (e) { console.warn('composicao comercial falhou', e); return ''; }
 }
-async function rxFetchComposicaoGenerico(id_substancia,fabricante){
-  try{
-    // Step 1: find medicamentos (generic, from this manufacturer) that contain the requested substance
-    let q=sb.from('medicamentos').select('id,medicamento_substancias!inner(id_substancia)').eq('is_generico',true).eq('medicamento_substancias.id_substancia',id_substancia);
-    if(fabricante) q=q.eq('fabricante',fabricante);
-    const {data:meds}=await q.limit(50);
-    const ids=(meds||[]).map(m=>m.id);
-    if(!ids.length) return '';
-    // Step 2: get ALL substances of those specific medicamentos (co-formulated compounds)
-    const {data:ms}=await sb.from('medicamento_substancias').select('id_medicamento,substancias(nome_exibicao)').in('id_medicamento',ids);
-    // Group per medicamento, then pick the composition from the first (they should be equivalent)
-    const grouped=new Map();
-    for(const x of (ms||[])){ if(!grouped.has(x.id_medicamento)) grouped.set(x.id_medicamento,[]); const n=x?.substancias?.nome_exibicao; if(n) grouped.get(x.id_medicamento).push(n); }
-    // Use the shortest composition list (most specific match) or the first one
-    let best=null;
-    for(const [,arr] of grouped){ if(!best || arr.length<best.length) best=arr; }
-    if(!best) return '';
-    const seen=new Set(); const names=[];
-    for(const n of best){ if(n && !seen.has(n)){seen.add(n);names.push(n);} }
+
+async function rxFetchComposicaoGenerico(id_substancia, fabricante) {
+  try {
+    let q = sb.from('medicamentos').select('id,medicamento_substancias!inner(id_substancia)')
+      .eq('is_generico', true)
+      .eq('medicamento_substancias.id_substancia', id_substancia);
+    if (fabricante) q = q.eq('fabricante', fabricante);
+    const { data: meds } = await q.limit(50);
+    const ids = (meds || []).map(m => m.id);
+    if (!ids.length) return '';
+    const { data: ms } = await sb.from('medicamento_substancias')
+      .select('id_medicamento,substancias(nome_exibicao)').in('id_medicamento', ids);
+    const grouped = new Map();
+    for (const x of (ms || [])) {
+      if (!grouped.has(x.id_medicamento)) grouped.set(x.id_medicamento, []);
+      const n = x?.substancias?.nome_exibicao;
+      if (n) grouped.get(x.id_medicamento).push(n);
+    }
+    let best = null;
+    for (const [, arr] of grouped) { if (!best || arr.length < best.length) best = arr; }
+    if (!best) return '';
+    const seen = new Set(); const names = [];
+    for (const n of best) { if (n && !seen.has(n)) { seen.add(n); names.push(n); } }
     return names.join(' + ');
-  }catch(e){console.warn('composicao generico falhou',e);return '';}
+  } catch (e) { console.warn('composicao generico falhou', e); return ''; }
 }
-function rxRemove(uid){rxSelected=rxSelected.filter(i=>i.uid!==uid);rxRenderSelected();}
-function rxSetField(uid,field,val){const it=rxSelected.find(i=>i.uid===uid);if(it){it[field]=val;}}
-async function rxOnFabricanteChange(uid,val){
-  const it=rxSelected.find(i=>i.uid===uid);if(!it)return;
-  it.fabricante=val;
-  if(it.is_generico && it.id_substancia){
-    try{
-      const args={p_id_substancia:it.id_substancia};
-      if(val) args.p_fabricante=val;
-      const {data}=await sb.rpc('listar_apresentacoes_generico',args);
-      const seen=new Set(); const aps=[];
-      for(const a of (data||[])){ const k=(a.apresentacao||'').toLowerCase().trim(); if(k && !seen.has(k)){seen.add(k);aps.push(a.apresentacao);} }
-      it.apresentacoes=aps;
-      if(!aps.includes(it.apresentacao)) it.apresentacao=aps[0]||'';
-      if(val){
-        const comp=await rxFetchComposicaoGenerico(it.id_substancia,val);
-        if(comp) it.composicao=comp;
+
+function rxRemove(uid) {
+  rxSelected = rxSelected.filter(i => i.uid !== uid);
+  rxRenderSelected();
+}
+
+function rxClearAll() {
+  if (!rxSelected.length) return;
+  rxSelected = [];
+  rxRenderSelected();
+}
+
+function rxSetField(uid, field, val) {
+  const it = rxSelected.find(i => i.uid === uid);
+  if (it) it[field] = val;
+}
+
+async function rxOnFabricanteChange(uid, val) {
+  const it = rxSelected.find(i => i.uid === uid);
+  if (!it) return;
+  it.fabricante = val;
+  if (it.is_generico && it.id_substancia) {
+    try {
+      const args = { p_id_substancia: it.id_substancia };
+      if (val) args.p_fabricante = val;
+      const { data } = await sb.rpc('listar_apresentacoes_generico', args);
+      const seen = new Set(); const aps = [];
+      for (const a of (data || [])) {
+        const k = (a.apresentacao || '').toLowerCase().trim();
+        if (k && !seen.has(k)) { seen.add(k); aps.push(a.apresentacao); }
       }
-    }catch(e){console.warn('apresentacoes filter falhou',e);}
+      it.apresentacoes = aps;
+      if (!aps.includes(it.apresentacao)) it.apresentacao = aps[0] || '';
+      if (val) {
+        const comp = await rxFetchComposicaoGenerico(it.id_substancia, val);
+        if (comp) it.composicao = comp;
+      }
+    } catch (e) { console.warn('apresentacoes filter falhou', e); }
   }
   rxRenderSelected();
 }
-function rxToggleEdit(uid){const el=document.getElementById('rx-item-'+uid);if(!el)return;const editing=el.getAttribute('data-editing')==='1';el.setAttribute('data-editing',editing?'0':'1');rxRenderSelected();}
-function rxRenderSelected(){
-  const wrap=document.getElementById('rx-selected');
-  document.getElementById('rx-count').textContent='('+rxSelected.length+')';
-  if(!rxSelected.length){wrap.innerHTML='<div id="rx-empty" style="text-align:center;color:#94a3b8;font-size:12px;padding:22px;border:1px dashed #e2e8f0;border-radius:10px">Nenhum medicamento adicionado ainda.</div>';return;}
-  wrap.innerHTML=rxSelected.map(it=>{
-    const compos=it.composicao||(it.compostos||[]).join(', ');
-    const apsOpts=(it.apresentacoes||[]).map(a=>`<option value="${a.replace(/"/g,'&quot;')}" ${a===it.apresentacao?'selected':''}>${a}</option>`).join('');
-    const fabOpts=(it.fabricantes||[]).map(f=>`<option value="${f.replace(/"/g,'&quot;')}" ${f===it.fabricante?'selected':''}>${f}</option>`).join('');
-    const genBadge=it.is_generico?'<span style="font-size:9.5px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 6px;border-radius:4px;letter-spacing:.04em;margin-left:6px">GENÉRICO</span>':'';
-    const fabBlock=it.is_generico?`<div style="grid-column:1/-1">
-          <label style="font-size:10.5px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:3px">Fabricante <span style="color:#94a3b8;font-weight:500;text-transform:none;letter-spacing:0">(opcional — genérico)</span></label>
-          ${fabOpts?`<select onchange="rxOnFabricanteChange('${it.uid}',this.value)" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:#fff"><option value="">Todos os fabricantes</option>${fabOpts}</select>`:`<input type="text" value="${(it.fabricante||'').replace(/"/g,'&quot;')}" oninput="rxSetField('${it.uid}','fabricante',this.value)" placeholder="Deixe em branco se irrelevante" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">`}
-        </div>`:`<div style="grid-column:1/-1">
-          <label style="font-size:10.5px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:3px">Laboratório / Fabricante</label>
-          <div style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:#f8fafc;color:#0f172a;font-weight:500">${it.fabricante?it.fabricante.replace(/</g,'&lt;'):'<span style=\"color:#94a3b8;font-weight:400\">Não informado</span>'}</div>
+
+function rxRenderSelected() {
+  const wrap = document.getElementById('rx-selected');
+  const countEl = document.getElementById('rx-count');
+  const clearBtn = document.getElementById('rx-clear-btn');
+  const footerInfo = document.getElementById('rx-footer-info');
+
+  if (countEl) countEl.textContent = '(' + rxSelected.length + ')';
+  if (clearBtn) clearBtn.style.display = rxSelected.length ? 'inline-flex' : 'none';
+  if (footerInfo) footerInfo.textContent = rxSelected.length
+    ? `${rxSelected.length} medicamento${rxSelected.length > 1 ? 's' : ''} na receita`
+    : '';
+
+  if (!rxSelected.length) {
+    wrap.innerHTML = `<div id="rx-empty" style="text-align:center;color:#94a3b8;font-size:12px;padding:28px 16px;border:1px dashed #e2e8f0;border-radius:10px;line-height:1.6">
+      <i class="ti ti-pill" style="font-size:22px;display:block;margin-bottom:6px;opacity:.4"></i>
+      Nenhum medicamento adicionado ainda.<br>
+      <span style="font-size:11px">Use o campo acima para buscar.</span>
+    </div>`;
+    return;
+  }
+
+  wrap.innerHTML = rxSelected.map((it, idx) => {
+    const compos = it.composicao || '';
+    const apsOpts = (it.apresentacoes || [])
+      .map(a => `<option value="${a.replace(/"/g, '&quot;')}" ${a === it.apresentacao ? 'selected' : ''}>${a}</option>`)
+      .join('');
+    const fabOpts = (it.fabricantes || [])
+      .map(f => `<option value="${f.replace(/"/g, '&quot;')}" ${f === it.fabricante ? 'selected' : ''}>${f}</option>`)
+      .join('');
+    const genBadge = it.is_generico
+      ? '<span style="font-size:9px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 6px;border-radius:4px;letter-spacing:.04em;margin-left:6px">GENÉRICO</span>' : '';
+
+    const fabBlock = it.is_generico
+      ? `<div style="grid-column:1/-1">
+          <label style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">
+            Fabricante <span style="color:#94a3b8;font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span>
+          </label>
+          ${fabOpts
+          ? `<select onchange="rxOnFabricanteChange('${it.uid}',this.value)" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:#fff">
+               <option value="">Todos os fabricantes</option>${fabOpts}
+             </select>`
+          : `<input type="text" value="${(it.fabricante || '').replace(/"/g, '&quot;')}" oninput="rxSetField('${it.uid}','fabricante',this.value)" placeholder="Deixe em branco se irrelevante" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">`
+        }
+        </div>`
+      : `<div style="grid-column:1/-1">
+          <label style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">Laboratório / Fabricante</label>
+          <div style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:#f8fafc;color:#0f172a;font-weight:500">
+            ${it.fabricante ? it.fabricante.replace(/</g, '&lt;') : '<span style="color:#94a3b8;font-weight:400">Não informado</span>'}
+          </div>
         </div>`;
-    return `<div id="rx-item-${it.uid}" style="border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;background:#fff;display:flex;flex-direction:column;gap:8px">
+
+    return `<div id="rx-item-${it.uid}"
+      style="border:1px solid #e2e8f0;border-radius:10px;padding:11px 13px;background:#fff;display:flex;flex-direction:column;gap:9px">
       <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="width:20px;height:20px;border-radius:50%;background:#f1f5f9;color:#475569;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px">${idx + 1}</div>
         <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:13px;color:#0f172a">${it.nome_comercial}${genBadge}</div>
-          <div style="font-size:11.5px;color:#64748b">${compos}</div>
+          <div style="font-weight:600;font-size:13px;color:#0f172a;line-height:1.2">${it.nome_comercial}${genBadge}</div>
+          ${compos ? `<div style="font-size:11.5px;color:#64748b;margin-top:1px">${compos}</div>` : ''}
         </div>
-        <button class="btn sm" onclick="rxRemove('${it.uid}')" title="Remover" style="color:#dc2626;border-color:#fecaca;background:#fef2f2"><i class="ti ti-trash"></i></button>
+        <button onclick="rxRemove('${it.uid}')" title="Remover"
+          style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;border:1px solid #fecaca;border-radius:6px;background:#fef2f2;color:#dc2626;cursor:pointer;flex-shrink:0;font-size:13px">
+          <i class="ti ti-trash"></i>
+        </button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         ${fabBlock}
         <div>
-          <label style="font-size:10.5px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:3px">Apresentação</label>
-          ${apsOpts?`<select onchange="rxSetField('${it.uid}','apresentacao',this.value)" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:#fff">${apsOpts}</select>`:`<input type="text" value="${(it.apresentacao||'').replace(/"/g,'&quot;')}" oninput="rxSetField('${it.uid}','apresentacao',this.value)" placeholder="Ex: Comprimido 500mg" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">`}
+          <label style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">Apresentação</label>
+          ${apsOpts
+          ? `<select onchange="rxSetField('${it.uid}','apresentacao',this.value)" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:#fff">${apsOpts}</select>`
+          : `<input type="text" value="${(it.apresentacao || '').replace(/"/g, '&quot;')}" oninput="rxSetField('${it.uid}','apresentacao',this.value)" placeholder="Ex: Comprimido 500mg" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">`
+        }
         </div>
         <div>
-          <label style="font-size:10.5px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:3px">Quantidade</label>
-          <input type="text" value="${(it.quantidade||'').replace(/"/g,'&quot;')}" oninput="rxSetField('${it.uid}','quantidade',this.value)" placeholder="Ex: 1 caixa" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">
+          <label style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">Quantidade</label>
+          <input type="text" value="${(it.quantidade || '').replace(/"/g, '&quot;')}" oninput="rxSetField('${it.uid}','quantidade',this.value)" placeholder="Ex: 1 caixa" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">
         </div>
         <div style="grid-column:1/-1">
-          <label style="font-size:10.5px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:3px">Posologia / orientação</label>
-          <input type="text" value="${(it.posologia||'').replace(/"/g,'&quot;')}" oninput="rxSetField('${it.uid}','posologia',this.value)" placeholder="Ex: 1 comprimido de 8/8h por 7 dias" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">
+          <label style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">Posologia / orientação</label>
+          <input type="text" value="${(it.posologia || '').replace(/"/g, '&quot;')}" oninput="rxSetField('${it.uid}','posologia',this.value)" placeholder="Ex: 1 comprimido de 8/8h por 7 dias" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">
         </div>
       </div>
     </div>`;
   }).join('');
 }
-function rxEmitir(){
-  if(!rxSelected.length){showToast&&showToast('Adicione ao menos um medicamento','warn');return;}
-  const linhas=rxSelected.map((it,i)=>`${i+1}. ${it.nome_comercial}${it.apresentacao?' — '+it.apresentacao:''}${it.quantidade?' — '+it.quantidade:''}${it.posologia?'\n   '+it.posologia:''}`).join('\n');
-  const ta=document.getElementById('pront-area');
-  if(ta){ta.value=(ta.value?ta.value+'\n\n':'')+'RECEITA:\n'+linhas;if(typeof markAtendDirty==='function')markAtendDirty();}
-  // Gera PDF de receita usando o modelo institucional
-  const items=rxSelected.map(it=>({
+
+function rxEmitir() {
+  if (!rxSelected.length) { showToast && showToast('Adicione ao menos um medicamento', 'warn'); return; }
+
+  // Adiciona ao prontuário
+  const linhas = rxSelected.map((it, i) =>
+    `${i + 1}. ${it.nome_comercial}${it.apresentacao ? ' — ' + it.apresentacao : ''}${it.quantidade ? ' — ' + it.quantidade : ''}${it.posologia ? '\n   ' + it.posologia : ''}`
+  ).join('\n');
+  const ta = document.getElementById('pront-area');
+  if (ta) { ta.value = (ta.value ? ta.value + '\n\n' : '') + 'RECEITA:\n' + linhas; if (typeof markAtendDirty === 'function') markAtendDirty(); }
+
+  // Gera PDF
+  const items = rxSelected.map(it => ({
     nome: it.nome_comercial,
-    apresentacao: it.apresentacao||it.composicao||'',
-    quantidade: it.quantidade||'',
-    posologia: it.posologia||''
+    apresentacao: it.apresentacao || it.composicao || '',
+    quantidade: it.quantidade || '',
+    posologia: it.posologia || ''
   }));
-  openReceitaPDF({items});
+  openReceitaPDF({ items });
   closeModal();
-  showToast&&showToast('Receita adicionada ao prontuário','success');
+  showToast && showToast('Receita adicionada ao prontuário', 'success');
 }
 
-/* ========== GERADOR DE RECEITA (PDF via impressão) ========== */
-function _rxEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function _rxIdade(dob){
-  if(!dob)return '';
-  const d=new Date(dob);if(isNaN(d))return '';
-  const n=new Date();let a=n.getFullYear()-d.getFullYear();
-  const m=n.getMonth()-d.getMonth();if(m<0||(m===0&&n.getDate()<d.getDate()))a--;
-  return a>0?(a+' anos'):'';
+
+/* ── GERADOR DE PDF ───────────────────────────────────────────────── */
+
+function _rxEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+  );
 }
-async function openReceitaPDF({items}){
-  if(!items||!items.length){showToast&&showToast('Nenhum medicamento para a receita','warn');return;}
-  let clinic={};try{clinic=JSON.parse(localStorage.getItem(CLINICA_KEY)||'{}');}catch(e){}
-  const u=currentUser||{};const meta=u.user_metadata||{};
-  const doctorName=meta.full_name||meta.name||(u.email||'').split('@')[0]||'Médico responsável';
-  const doctorCrm=meta.crm||meta.CRM||'—';
-  const doctorSpec=meta.especialidade||meta.specialty||'';
-  const clinicName=clinic.fantasia||clinic.razao||'Clínica';
-  const cidadeUf=[clinic.cidade,clinic.uf].filter(Boolean).join('/');
-  const addr=[
-    [clinic.logradouro,clinic.numero].filter(Boolean).join(', '),
+
+function _rxIdade(nasc) {
+  if (!nasc) return '';
+  // aceita tanto 'YYYY-MM-DD' quanto 'DD/MM/YYYY'
+  let d;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(nasc)) {
+    d = new Date(nasc + 'T00:00:00');
+  } else {
+    const m = String(nasc).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    d = m ? new Date(`${m[3]}-${m[2]}-${m[1]}T00:00:00`) : null;
+  }
+  if (!d || isNaN(d)) return '';
+  const n = new Date();
+  let a = n.getFullYear() - d.getFullYear();
+  const mo = n.getMonth() - d.getMonth();
+  if (mo < 0 || (mo === 0 && n.getDate() < d.getDate())) a--;
+  return a > 0 ? (a + ' anos') : '';
+}
+
+async function openReceitaPDF({ items }) {
+  if (!items || !items.length) { showToast && showToast('Nenhum medicamento para a receita', 'warn'); return; }
+
+  // Dados da clínica (localStorage)
+  let clinic = {};
+  try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
+
+  // Dados do médico (usuário logado)
+  const u = currentUser || {};
+  const meta = u.user_metadata || {};
+  const doctorName  = meta.full_name || meta.name || (u.email || '').split('@')[0] || 'Médico responsável';
+  const doctorCrm   = meta.crm || meta.CRM || '—';
+  const doctorSpec  = meta.especialidade || meta.specialty || '';
+  const clinicName  = clinic.fantasia || clinic.razao || 'Clínica';
+  const cidadeUf    = [clinic.cidade, clinic.uf].filter(Boolean).join('/');
+  const addr = [
+    [clinic.logradouro, clinic.numero].filter(Boolean).join(', '),
     clinic.complemento,
     clinic.bairro,
     cidadeUf,
-    clinic.cep?'CEP '+clinic.cep:''
+    clinic.cep ? 'CEP ' + clinic.cep : ''
   ].filter(Boolean).join(' · ');
-  const p=currentPatient||{};
-  const itemsHtml=items.map((it,i)=>`
+
+  // FIX: currentPatient usa .nasc (não .data_nascimento)
+  const p = currentPatient || {};
+  const patientAge = _rxIdade(p.nasc || p.data_nascimento || '');
+
+  // HTML dos medicamentos
+  const itemsHtml = items.map((it, i) => `
     <div class="rx-item">
-      <div class="rx-index">${i+1}</div>
+      <div class="rx-index">${i + 1}</div>
       <div>
-        <div class="med-name">${_rxEsc(it.nome)}${it.apresentacao?` <span class="dose">${_rxEsc(it.apresentacao)}</span>`:''}</div>
-        <div class="med-instructions">${_rxEsc([it.quantidade,it.posologia].filter(Boolean).join(' — '))||'&nbsp;'}</div>
+        <div class="med-name">${_rxEsc(it.nome)}${it.apresentacao ? ` <span class="dose">${_rxEsc(it.apresentacao)}</span>` : ''}</div>
+        <div class="med-instructions">${_rxEsc([it.quantidade, it.posologia].filter(Boolean).join(' — ')) || '&nbsp;'}</div>
       </div>
     </div>`).join('');
+
+  // Carrega o template
   let html;
-  try{
-    const resp=await fetch('/receita-modelo.html',{cache:'no-store'});
-    html=await resp.text();
-  }catch(e){showToast&&showToast('Falha ao carregar modelo de receita','error');return;}
-  const repl={
-    '{{PRIMARY_COLOR}}':'#0E6E5D',
-    '{{CLINIC_NAME}}':_rxEsc(clinicName),
-    '{{CLINIC_ADDRESS}}':_rxEsc(addr||'—'),
-    '{{CLINIC_PHONE}}':_rxEsc(clinic.telefone||''),
-    '{{CLINIC_EMAIL}}':_rxEsc(clinic.email||''),
-    '{{LOGO_URL}}':clinic.logo||'',
-    '{{DOCTOR_NAME}}':_rxEsc(doctorName),
-    '{{DOCTOR_SPECIALTY}}':_rxEsc(doctorSpec),
-    '{{DOCTOR_CRM}}':_rxEsc(doctorCrm),
-    '{{PATIENT_NAME}}':_rxEsc(p.name||'—'),
-    '{{PATIENT_AGE}}':_rxEsc(_rxIdade(p.data_nascimento)||'—'),
-    '{{PATIENT_CPF}}':_rxEsc(p.cpf||'—'),
-    '{{ISSUE_DATE}}':_rxEsc(new Date().toLocaleDateString('pt-BR')),
-    '{{PRESCRIPTION_HTML}}':itemsHtml,
+  try {
+    const resp = await fetch('/receita-modelo.html', { cache: 'no-store' });
+    html = await resp.text();
+  } catch (e) { showToast && showToast('Falha ao carregar modelo de receita', 'error'); return; }
+
+  // FIX PRINCIPAL: substitui {{PRIMARY_COLOR}} em TODAS as ocorrências do HTML
+  // (inclusive dentro dos atributos style e do CSS inline do template).
+  // Assim html2canvas recebe cores absolutas — sem var(--primary) nenhum.
+  const primaryColor = clinic.cor_primaria || '#0E6E5D';
+
+  const repl = {
+    '{{PRIMARY_COLOR}}' : primaryColor,
+    '{{CLINIC_NAME}}'   : _rxEsc(clinicName),
+    '{{CLINIC_ADDRESS}}': _rxEsc(addr || '—'),
+    '{{CLINIC_PHONE}}'  : _rxEsc(clinic.telefone || ''),
+    '{{CLINIC_EMAIL}}'  : _rxEsc(clinic.email || ''),
+    '{{LOGO_URL}}'      : clinic.logo || '',
+    '{{DOCTOR_NAME}}'   : _rxEsc(doctorName),
+    '{{DOCTOR_SPECIALTY}}': _rxEsc(doctorSpec),
+    '{{DOCTOR_CRM}}'    : _rxEsc(doctorCrm),
+    '{{PATIENT_NAME}}'  : _rxEsc(p.name || '—'),
+    '{{PATIENT_AGE}}'   : _rxEsc(patientAge || '—'),
+    '{{PATIENT_CPF}}'   : _rxEsc(p.cpf || '—'),
+    '{{ISSUE_DATE}}'    : _rxEsc(new Date().toLocaleDateString('pt-BR')),
+    '{{PRESCRIPTION_HTML}}': itemsHtml,
+    // Assinatura (placeholders ficam vazios se não configurados)
+    '{{SIGNATURE_DATETIME}}': _rxEsc(new Date().toLocaleString('pt-BR')),
+    '{{SIGNATURE_CERT_ID}}' : _rxEsc(clinic.cert_id || ''),
+    '{{VERIFICATION_URL}}'  : _rxEsc(clinic.verificacao_url || ''),
+    '{{SIGNATURE_IMAGE_URL}}': clinic.assinatura_url || '',
+    '{{QR_CODE_URL}}'       : clinic.qr_url || '',
   };
-  Object.keys(repl).forEach(k=>{html=html.split(k).join(repl[k]);});
-  // Renderiza em iframe oculto e gera PDF para download imediato
-  const iframe=document.createElement('iframe');
-  iframe.style.cssText='position:fixed;left:-10000px;top:0;width:820px;height:1160px;border:0;';
+
+  Object.keys(repl).forEach(k => { html = html.split(k).join(repl[k]); });
+
+  // Iframe oculto para renderização
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;height:1123px;border:0;visibility:hidden;';
   document.body.appendChild(iframe);
-  const doc=iframe.contentDocument;
-  doc.open();doc.write(html);doc.close();
-  const finish=async ()=>{
-    try{
-      doc.querySelectorAll('.builder-note,.signature-area').forEach(n=>n.remove());
-      if(!clinic.logo){const ls=doc.querySelector('.logo-slot');if(ls)ls.remove();}
-      // aguarda fontes/imagens
-      try{await doc.fonts&&doc.fonts.ready;}catch(e){}
-      const imgs=Array.from(doc.images||[]);
-      await Promise.all(imgs.map(img=>img.complete?Promise.resolve():new Promise(r=>{img.onload=img.onerror=r;})));
-      const target=doc.body;
-      const safeName=(p.name||'paciente').replace(/[^\w\-]+/g,'_').toLowerCase();
-      const filename=`receita_${safeName}_${new Date().toISOString().slice(0,10)}.pdf`;
+
+  const doc = iframe.contentDocument;
+  doc.open(); doc.write(html); doc.close();
+
+  const finish = async () => {
+    try {
+      // Remove elementos que não devem ir para o PDF
+      doc.querySelectorAll('.builder-note').forEach(n => n.remove());
+
+      // Mantém assinatura só se a URL da assinatura estiver configurada
+      if (!clinic.assinatura_url) {
+        doc.querySelectorAll('.signature-area').forEach(n => n.remove());
+      }
+
+      // Remove slot de logo se não há logo configurada
+      if (!clinic.logo) {
+        const ls = doc.querySelector('.logo-slot');
+        if (ls) ls.remove();
+      }
+
+      // Aguarda fontes e imagens
+      try { if (doc.fonts && doc.fonts.ready) await doc.fonts.ready; } catch (e) {}
+      const imgs = Array.from(doc.images || []);
+      await Promise.all(imgs.map(img =>
+        img.complete ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; })
+      ));
+
+      const safeName = (p.name || 'paciente').replace(/[^\w\-]+/g, '_').toLowerCase();
+      const filename = `receita_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
       await window.html2pdf().set({
-        margin:0,
+        margin: 0,
         filename,
-        image:{type:'jpeg',quality:0.98},
-        html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
-        jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
-        pagebreak:{mode:['css','legacy']}
-      }).from(target).save();
-      showToast&&showToast('Receita gerada','success');
-    }catch(e){
-      console.error(e);
-      showToast&&showToast('Falha ao gerar PDF da receita','error');
-    }finally{
-      setTimeout(()=>iframe.remove(),500);
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'] }
+      }).from(doc.body).save();
+
+      showToast && showToast('Receita gerada com sucesso', 'success');
+    } catch (e) {
+      console.error('Falha ao gerar PDF da receita:', e);
+      showToast && showToast('Falha ao gerar PDF da receita', 'error');
+    } finally {
+      setTimeout(() => iframe.remove(), 500);
     }
   };
-  if(doc.readyState==='complete')finish();
-  else iframe.addEventListener('load',finish);
+
+  if (doc.readyState === 'complete') finish();
+  else iframe.addEventListener('load', finish);
 }
 
-/* Chamada a partir do fluxo de Conduta > Documentos (botão PDF de Medicamentos) */
-function condGerarReceita(){
-  const meds=(condState&&condState.medicamentos||[]).filter(m=>m.selecionado);
-  if(!meds.length){showToast&&showToast('Selecione ao menos um medicamento','warn');return;}
-  const items=meds.map(m=>({
-    nome:m.nome,
-    apresentacao:m.apresentacao||'',
-    quantidade:m.quantidade||'',
-    posologia:m.instrucoes||''
+/* Chamada a partir do fluxo Conduta > Documentos > botão PDF de Medicamentos */
+function condGerarReceita() {
+  const meds = (condState && condState.medicamentos || []).filter(m => m.selecionado);
+  if (!meds.length) { showToast && showToast('Selecione ao menos um medicamento', 'warn'); return; }
+  const items = meds.map(m => ({
+    nome: m.nome,
+    apresentacao: m.apresentacao || '',
+    quantidade: m.quantidade || '',
+    posologia: m.instrucoes || ''
   }));
-  openReceitaPDF({items});
+  openReceitaPDF({ items });
 }
 async function saveNewPatient(){
   const val=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
