@@ -5897,6 +5897,28 @@ function _rxIdade(nasc) {
   return a > 0 ? (a + ' anos') : '';
 }
 
+async function _rxImgToDataUrl(url, timeoutMs = 6000) {
+  if (!url) return '';
+  if (url.startsWith('data:')) return url; // já é data URI, nada a fazer
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    const resp = await fetch(url, { signal: ctrl.signal, cache: 'force-cache' });
+    clearTimeout(timer);
+    if (!resp.ok) return '';
+    const blob = await resp.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result || '');
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(blob);
+    });
+  } catch (e) {
+    console.warn('Falha ao converter imagem para data URI, seguindo sem ela:', url, e);
+    return '';
+  }
+}
+
 async function openReceitaPDF({ items }) {
   if (!items || !items.length) { showToast && showToast('Nenhum medicamento para a receita', 'warn'); return; }
 
@@ -5942,7 +5964,7 @@ async function openReceitaPDF({ items }) {
   } catch (e) { showToast && showToast('Falha ao carregar modelo de receita', 'error'); return; }
 
   // Converte logo / assinatura / QR para data URI em paralelo — nenhuma delas
-  // chega ao html2canvas como URL externa.
+  // chega ao html2canvas como URL externa (evita o bug do CORS + alt text gigante).
   const [logoDataUrl, sigDataUrl, qrDataUrl] = await Promise.all([
     _rxImgToDataUrl(clinic.logo || ''),
     _rxImgToDataUrl(clinic.assinatura_url || ''),
@@ -5956,7 +5978,7 @@ async function openReceitaPDF({ items }) {
     '{{CLINIC_ADDRESS}}': _rxEsc(addr || '—'),
     '{{CLINIC_PHONE}}'  : _rxEsc(clinic.telefone || ''),
     '{{CLINIC_EMAIL}}'  : _rxEsc(clinic.email || ''),
-    '{{LOGO_URL}}'      : clinic.logo || '',
+    '{{LOGO_URL}}'      : logoDataUrl,
     '{{DOCTOR_NAME}}'   : _rxEsc(doctorName),
     '{{DOCTOR_SPECIALTY}}': _rxEsc(doctorSpec),
     '{{DOCTOR_CRM}}'    : _rxEsc(doctorCrm),
@@ -5969,39 +5991,33 @@ async function openReceitaPDF({ items }) {
     '{{SIGNATURE_DATETIME}}': _rxEsc(new Date().toLocaleString('pt-BR')),
     '{{SIGNATURE_CERT_ID}}' : _rxEsc(clinic.cert_id || ''),
     '{{VERIFICATION_URL}}'  : _rxEsc(clinic.verificacao_url || ''),
-    '{{SIGNATURE_IMAGE_URL}}': clinic.assinatura_url || '',
-    '{{QR_CODE_URL}}'       : clinic.qr_url || '',
+    '{{SIGNATURE_IMAGE_URL}}': sigDataUrl,
+    '{{QR_CODE_URL}}'       : qrDataUrl,
   };
 
   Object.keys(repl).forEach(k => { html = html.split(k).join(repl[k]); });
 
   // Renderiza no MESMO documento (não em iframe). html2canvas tem bugs conhecidos
-  // ao clonar elementos de um contentDocument de iframe — os estilos <style> não
-  // são aplicados durante o clone, gerando o layout quebrado.
-  // Extrai <style> e <body> do template e injeta com escopo no documento principal.
+  // ao clonar elementos de um contentDocument de iframe.
+  // Em vez de regex genérico sobre TODO o CSS (frágil: comentários com chaves
+  // quebram o parser), tratamos só os dois seletores globais do template
+  // (`*` e `html, body`) manualmente; o resto já é só classes específicas
+  // (.sheet, .rx-item, .brand-row...) sem risco de colidir com o CSS do app.
   const scopeId = 'rx-scope-' + Date.now();
   const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
   const bodyMatch  = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-  const rawCss  = styleMatch ? styleMatch[1] : '';
+  let rawCss    = styleMatch ? styleMatch[1] : '';
   const rawBody = bodyMatch  ? bodyMatch[1]  : html;
 
-  // Prefixa todos os seletores com #scopeId para não vazar estilos do template
-  // para o app. Regex simples: quebra em blocos de regra e prefixa cada seletor.
-  const scopedCss = rawCss.replace(/(^|})\s*([^{}@]+)\{/g, (m, brace, selectors) => {
-    const scoped = selectors.split(',').map(s => {
-      s = s.trim();
-      if (!s) return s;
-      if (s.startsWith('html') || s.startsWith('body')) {
-        return '#' + scopeId;
-      }
-      return '#' + scopeId + ' ' + s;
-    }).join(', ');
-    return (brace || '') + ' ' + scoped + '{';
-  });
+  rawCss = rawCss
+    .replace(/\*\s*\{\s*box-sizing:\s*border-box;\s*margin:\s*0;\s*padding:\s*0;\s*\}/,
+      `#${scopeId} * { box-sizing: border-box; margin: 0; padding: 0; }`)
+    .replace(/html,\s*body\s*\{([^}]*)\}/,
+      (_, decls) => `#${scopeId} { ${decls} }`);
 
   const styleEl = document.createElement('style');
   styleEl.setAttribute('data-rx-style', scopeId);
-  styleEl.textContent = scopedCss;
+  styleEl.textContent = rawCss;
   document.head.appendChild(styleEl);
 
   const holder = document.createElement('div');
@@ -6018,15 +6034,15 @@ async function openReceitaPDF({ items }) {
   try {
     // Remove elementos que não devem ir para o PDF
     holder.querySelectorAll('.builder-note').forEach(n => n.remove());
-    if (!clinic.assinatura_url) {
+    if (!sigDataUrl) {
       holder.querySelectorAll('.signature-area').forEach(n => n.remove());
     }
-    if (!clinic.logo) {
+    if (!logoDataUrl) {
       const ls = holder.querySelector('.logo-slot');
       if (ls) ls.remove();
     }
 
-    // Aguarda fontes e imagens carregarem
+    // Aguarda fontes e imagens carregarem (agora todas data URI, sem risco de CORS)
     try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
     const imgs = Array.from(holder.querySelectorAll('img'));
     await Promise.all(imgs.map(img =>
