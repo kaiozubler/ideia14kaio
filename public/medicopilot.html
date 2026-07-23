@@ -3305,6 +3305,34 @@ body.panel-expanded-active .main > *{
             <button class="btn primary" onclick="saveNewPatient()"><i class="ti ti-check"></i> Salvar paciente</button>
           </div>
         </div>
+      <!-- IDENTIFICAR PACIENTE (atendimento iniciado sem paciente vinculado) -->
+      <div class="modal" id="m-identificar-paciente" style="display:none">
+        <div class="mhd">
+          <span class="mhd-title">Identificar paciente</span
+          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody">
+          <p style="font-size:12.5px;color:var(--n400);margin:0 0 14px">
+            Este atendimento ainda não está vinculado a um paciente identificado. Preencha ao menos o nome para
+            salvar.
+          </p>
+          <div class="form-grid">
+            <div class="fld wide">
+              <label>Nome completo *</label><input type="text" id="ip-nome" placeholder="Nome completo do paciente" />
+            </div>
+            <div class="fld"><label>CPF</label><input type="text" id="ip-cpf" placeholder="000.000.000-00" /></div>
+            <div class="fld">
+              <label>Telefone</label><input type="text" id="ip-tel" placeholder="(00) 00000-0000" />
+            </div>
+          </div>
+        </div>
+        <div class="mfoot">
+          <button class="btn" onclick="closeModal()">Cancelar</button>
+          <button class="btn primary" onclick="salvarIdentificacaoPaciente()">
+            <i class="ti ti-check"></i> Salvar e continuar
+          </button>
+        </div>
+      </div>
       <!-- ADD EXAME -->
       <div class="modal" id="m-add-exame" style="display:none">
         <div class="mhd">
@@ -4814,8 +4842,70 @@ async function saveCadastro(){
         startAtendAutoSave();
       }
       async function saveAtendFromProgress(){const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;await saveAtendInternal({finalize:true});}
+      /* ========== IDENTIFICAÇÃO DO PACIENTE AO SALVAR ==========
+         Atendimentos iniciados sem vínculo a um paciente (botão "Iniciar
+         atendimento") precisam ter nome, CPF e telefone confirmados antes do
+         salvamento final. Se algum estiver faltando, abrimos um modal — só o
+         nome é obrigatório para prosseguir. */
+      let _pendingSaveOpts=null;
+      function precisaIdentificarPaciente(){
+        if(atendEmAndamento&&atendEmAndamento.identificacaoConfirmada)return false;
+        const nome=((currentPatient&&currentPatient.name)||'').trim();
+        const cpf=((currentPatient&&currentPatient.cpf)||'').trim();
+        const tel=((currentPatient&&currentPatient.tel)||'').trim();
+        return !nome||!cpf||!tel;
+      }
+      function abrirModalIdentificarPaciente(opts){
+        _pendingSaveOpts=opts||{finalize:true};
+        const setVal=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
+        setVal('ip-nome',currentPatient&&currentPatient.name);
+        setVal('ip-cpf',currentPatient&&currentPatient.cpf);
+        setVal('ip-tel',currentPatient&&currentPatient.tel);
+        openModal('identificar-paciente');
+      }
+      async function salvarIdentificacaoPaciente(){
+        const val=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
+        const nome=val('ip-nome');
+        if(!nome){alert('Informe o nome do paciente');return;}
+        const cpf=val('ip-cpf');
+        const tel=val('ip-tel');
+        try{
+          if(currentPatient&&currentPatient.id){
+            const payload={name:nome};
+            if(cpf)payload.cpf=cpf;
+            if(tel)payload.telefone=tel;
+            const {data,error}=await sb.from('pacientes').update(payload).eq('paciente_id',currentPatient.id).select('*').single();
+            if(error){alert('Erro ao salvar identificação do paciente: '+error.message);return;}
+            currentPatient.name=data.name;currentPatient.cpf=data.cpf||'';currentPatient.tel=data.telefone||'';
+          }else{
+            const payload={name:nome,cpf:cpf||null,telefone:tel||null,convenio:'Particular',user_id:currentUser.id};
+            const {data,error}=await sb.from('pacientes').insert(payload).select('*').single();
+            if(error){alert('Erro ao criar identificação do paciente: '+error.message);return;}
+            currentPatient.id=data.paciente_id;
+            currentPatient.name=data.name;currentPatient.cpf=data.cpf||'';currentPatient.tel=data.telefone||'';
+            currentPatient.init=(data.name||'').trim().split(/\s+/).filter(Boolean).slice(0,2).map(s=>s[0].toUpperCase()).join('')||'+';
+            await loadPatients();
+          }
+          const nm=document.getElementById('pth-name');if(nm)nm.textContent=currentPatient.name;
+          const av=document.getElementById('pth-av');if(av)av.textContent=currentPatient.init||'--';
+          const bc=document.getElementById('breadcrumb');if(bc)bc.innerHTML='<span>/ '+currentPatient.name+'</span>';
+          atendEmAndamento.identificacaoConfirmada=true;
+          closeModal();
+          showToast&&showToast('Paciente identificado com sucesso','success');
+          const opts=_pendingSaveOpts||{finalize:true};
+          _pendingSaveOpts=null;
+          await saveAtendInternal(opts);
+        }catch(e){
+          console.error('Falha ao identificar paciente:',e);
+          alert('Erro ao salvar identificação do paciente.');
+        }
+      }
       async function saveAtendInternal(opts){
         const finalize=!!(opts&&opts.finalize);
+        if(finalize&&precisaIdentificarPaciente()){
+          abrirModalIdentificarPaciente(opts);
+          return{deferred:true};
+        }
         const keepOpen=!!(opts&&opts.keepOpen);
         const now=new Date();
         const dateStr=now.toLocaleDateString('pt-BR');
@@ -4851,9 +4941,10 @@ async function saveCadastro(){
       async function saveAtend(ev){
         if(ev&&ev.stopPropagation)ev.stopPropagation();
         const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;
-        updateSaveStatus('saving');
+       updateSaveStatus('saving');
         try{
-          await saveAtendInternal({finalize:true});
+          const r=await saveAtendInternal({finalize:true});
+          if(r&&r.deferred){updateSaveStatus('dirty');return;}
           updateSaveStatus('saved');
         }catch(e){
           updateSaveStatus('error');
