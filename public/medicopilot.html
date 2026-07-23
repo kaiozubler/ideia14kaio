@@ -7023,7 +7023,14 @@ pointer-events:none;
 
       const holder = document.createElement('div');
       holder.id = scopeId;
-      holder.style.cssText = 'position:relative;width:210mm;background:#fff;';
+      holder.style.cssText = `
+position:relative;
+width:210mm;
+min-width:210mm;
+max-width:210mm;
+margin:0 auto;
+background:#fff;
+`;
       holder.innerHTML = rawBody;
       clipper.appendChild(holder);
 
