@@ -3963,14 +3963,15 @@
       }
 
       async function bootstrap(){
-        const {data}=await sb.auth.getSession();
-        if(data.session){currentUser=data.session.user;showApp();await loadPatients();}
-        else{showAuthGate();}
-        sb.auth.onAuthStateChange((event,session)=>{
-          if(event==='SIGNED_IN'&&session){currentUser=session.user;showApp();loadPatients();}
-          if(event==='SIGNED_OUT'){location.reload();}
-        });
-      }
+  const {data}=await sb.auth.getSession();
+  if(data.session){currentUser=data.session.user;showApp();await loadPatients();}
+  else{showAuthGate();}
+  sb.auth.onAuthStateChange((event,session)=>{
+    if(event==='SIGNED_IN'&&session){currentUser=session.user;showApp();loadPatients();}
+    if(event==='SIGNED_OUT'){location.reload();}
+  });
+  initCepAutofillFields(); // <-- adicionar aqui
+}
 
       let atendimentos=[];
       let exames=[];
@@ -7116,7 +7117,7 @@
       }
 
       /* ========== INIT ========== */
-      bootstrap();
+      bootstrap()
 
       /* ========== ANAMNESE PROMPTS ========== */
       const ANAMNESE_VARS=[
