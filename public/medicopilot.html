@@ -994,20 +994,15 @@ body.panel-expanded-active #atend-novo-view > *{
         min-height:calc(100% + 40px);
         overflow:hidden;
       }
-      #s-patient-detail::before,
       #s-patient-detail::after{
-        content:"";position:absolute;border-radius:50%;
-        filter:blur(60px);opacity:.55;pointer-events:none;z-index:0;
-      }
-      #s-patient-detail::before{
-        width:340px;height:340px;left:-80px;top:-60px;
-        background:radial-gradient(circle,#a7f3d0,transparent 70%);
-      }
-      #s-patient-detail::after{
-        width:300px;height:300px;right:-60px;bottom:-80px;
-        background:radial-gradient(circle,#ddd6fe,transparent 70%);
-      }
-      #s-patient-detail > *{position:relative;z-index:1}
+  width:300px;height:300px;right:-60px;bottom:-80px;
+  background:radial-gradient(circle,#ddd6fe,transparent 70%);
+}
+#s-patient-detail > *{position:relative;z-index:1}
+body.panel-expanded-active #s-patient-detail,
+body.panel-expanded-active #s-patient-detail > *{
+  z-index:auto !important;
+}
 
       /* Patient header card → glass */
       #s-patient-detail .pt-hdr-card{
@@ -1196,8 +1191,12 @@ body.panel-expanded-active #atend-novo-view > *{
         filter:blur(60px);opacity:.55;pointer-events:none;z-index:0;
       }
       .main::before{width:340px;height:340px;left:-80px;top:40px;background:radial-gradient(circle,#a7f3d0,transparent 70%)}
-      .main::after{width:300px;height:300px;right:-60px;bottom:-80px;background:radial-gradient(circle,#ddd6fe,transparent 70%)}
-      .main > *{position:relative;z-index:1}
+.main::after{width:300px;height:300px;right:-60px;bottom:-80px;background:radial-gradient(circle,#ddd6fe,transparent 70%)}
+.main > *{position:relative;z-index:1}
+body.panel-expanded-active .main,
+body.panel-expanded-active .main > *{
+  z-index:auto !important;
+}
 
       /* Topbar — glass */
       .topbar{
