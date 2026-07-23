@@ -4855,6 +4855,58 @@ async function saveCadastro(){
         const tel=((currentPatient&&currentPatient.tel)||'').trim();
         return !nome||!cpf||!tel;
       }
+      /* Preenche o cabeçalho e a aba Cadastro com os dados atuais de
+         currentPatient. Usado após identificar um paciente pelo modal, para
+         que a tela reflita o que foi salvo (sem precisar recarregar a
+         página). Blindado contra data de nascimento ausente. */
+      function preencherFichaPaciente(){
+        if(!currentPatient)return;
+        const av=document.getElementById('pth-av');if(av)av.textContent=currentPatient.init||'--';
+        const nm=document.getElementById('pth-name');if(nm)nm.textContent=currentPatient.name||'—';
+        const bc=document.getElementById('breadcrumb');if(bc)bc.innerHTML='<span>/ '+(currentPatient.name||'Novo paciente')+'</span>';
+        const yr=new Date().getFullYear();
+        const born=(currentPatient.dob&&currentPatient.dob!=='—')?parseInt(currentPatient.dob.split('/')[2]):NaN;
+        const idade=isNaN(born)?null:(yr-born);
+        const idEl=document.getElementById('pth-idade');if(idEl)idEl.textContent=idade!=null?idade+' anos':'';
+        const dobAge=document.getElementById('pth-dob-age');
+        if(dobAge)dobAge.innerHTML='<i class="ti ti-cake" style="font-size:11px"></i> '+((currentPatient.dob&&currentPatient.dob!=='—')?currentPatient.dob+(idade!=null?' ('+idade+' anos)':''):'—');
+        const sx=document.getElementById('pth-sexo');
+        if(sx){const s=(currentPatient.sexo||'').toLowerCase();const ic=s.startsWith('m')?'ti-mars':(s.startsWith('f')?'ti-venus':'ti-gender-genderless');sx.innerHTML='<i class="ti '+ic+'" style="font-size:11px"></i> '+(currentPatient.sexo||'—');}
+        const cv=document.getElementById('pth-conv');if(cv)cv.innerHTML='<i class="ti ti-shield-check" style="font-size:11px"></i> '+(currentPatient.conv||'—');
+        const sus=document.getElementById('pth-sus');
+        if(sus){if(currentPatient.sus&&currentPatient.sus!=='—'){sus.textContent='SUS: '+currentPatient.sus;sus.style.display='';}else{sus.style.display='none';}}
+        const mb=document.getElementById('pth-medico');
+        if(mb){if(currentPatient.medico&&medicoNames[currentPatient.medico]){mb.textContent=medicoNames[currentPatient.medico];mb.style.display='';}else mb.style.display='none';}
+        const prof=document.getElementById('pth-prof');
+        if(prof)prof.textContent=(currentPatient.medico&&medicoNames[currentPatient.medico])||(currentUser?.email?.split('@')[0])||'—';
+        const pn=document.getElementById('print-name');if(pn)pn.textContent=currentPatient.name||'';
+        const ps1=document.getElementById('print-sub1');if(ps1)ps1.textContent='CPF: '+(currentPatient.cpf||'—')+' · Nasc.: '+(currentPatient.dob||'—')+' · Tel.: '+(currentPatient.tel||'—');
+        const ps2=document.getElementById('print-sub2');if(ps2)ps2.textContent='Endereço: '+(currentPatient.end||'—');
+        const ps3=document.getElementById('print-sub3');if(ps3)ps3.textContent='Convênio: '+(currentPatient.conv||'—')+(currentPatient.medico?' · Médico: '+medicoNames[currentPatient.medico]:'');
+        const setV=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
+        setV('d-nome',currentPatient.name);
+        setV('d-tel',currentPatient.tel);
+        setV('d-cpf',currentPatient.cpf);
+        setV('d-email',currentPatient.email);
+        setV('d-mae',currentPatient.mae);
+        setV('d-pai',currentPatient.pai);
+        setV('d-cep',currentPatient.cep);
+        setV('d-log',currentPatient.logradouro);
+        setV('d-num',currentPatient.numero);
+        setV('d-compl',currentPatient.complemento);
+        setV('d-bairro',currentPatient.bairro);
+        setV('d-cidade',currentPatient.cidade);
+        setV('d-uf',currentPatient.uf);
+        setV('d-pais','Brasil');
+        setV('d-nasc',currentPatient.nasc);
+        setV('d-sus',currentPatient.sus==='—'?'':currentPatient.sus);
+        const cv2=document.getElementById('d-conv');if(cv2)cv2.value=currentPatient.conv||'Particular';
+        const sx2=document.getElementById('d-sexo');if(sx2)sx2.value=currentPatient.sexo||'Feminino';
+        const ms=document.getElementById('d-medico');if(ms)ms.value=currentPatient.medico||'';
+        const op=document.getElementById('d-ocup');if(op)op.value=currentPatient.ocup||'';
+        const gs=document.getElementById('d-grupo');if(gs){populateGrupoSelect(gs);gs.value=getPatientGrupo(currentPatient.id)||'';}
+        const dc=document.getElementById('dados-clinicos-ta');if(dc){dc.value=currentPatient.dadosClinicos||'';updateDcPreview();}
+      }
       function abrirModalIdentificarPaciente(opts){
         _pendingSaveOpts=opts||{finalize:true};
         const setVal=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
@@ -4886,9 +4938,7 @@ async function saveCadastro(){
             currentPatient.init=(data.name||'').trim().split(/\s+/).filter(Boolean).slice(0,2).map(s=>s[0].toUpperCase()).join('')||'+';
             await loadPatients();
           }
-          const nm=document.getElementById('pth-name');if(nm)nm.textContent=currentPatient.name;
-          const av=document.getElementById('pth-av');if(av)av.textContent=currentPatient.init||'--';
-          const bc=document.getElementById('breadcrumb');if(bc)bc.innerHTML='<span>/ '+currentPatient.name+'</span>';
+          preencherFichaPaciente();
           atendEmAndamento.identificacaoConfirmada=true;
           closeModal();
           showToast&&showToast('Paciente identificado com sucesso','success');
