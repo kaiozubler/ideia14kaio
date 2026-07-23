@@ -254,15 +254,15 @@
       .split-left{background:transparent;border:none;border-radius:16px;display:flex;flex-direction:column;overflow:visible;position:relative;box-shadow:none;padding:4px;transition:box-shadow .2s}
       .split-right{background:transparent;border:none;border-radius:16px;display:flex;flex-direction:column;overflow:visible;position:relative;box-shadow:none;padding:4px;transition:box-shadow .2s}
       #atend-novo-view .split-wrap.exp-left .split-left,
-      #atend-novo-view .split-wrap.exp-right .split-right{
-        position:fixed !important;inset:0 !important;z-index:9999 !important;
-        background:#ffffff !important;backdrop-filter:none !important;
-        border:none !important;border-radius:0 !important;
-        padding:18px 22px !important;overflow:auto !important;
-        box-shadow:none !important;
-      }
-      body.panel-expanded-active{overflow:hidden}
-      body.panel-expanded-active::before{content:"";position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:9998;animation:fadeOv .18s ease}
+#atend-novo-view .split-wrap.exp-right .split-right{
+  position:fixed !important;inset:0 !important;z-index:100000 !important;
+  background:#ffffff !important;backdrop-filter:none !important;
+  border:none !important;border-radius:0 !important;
+  padding:18px 22px !important;overflow:auto !important;
+  box-shadow:none !important;
+}
+body.panel-expanded-active{overflow:hidden}
+body.panel-expanded-active::before{content:"";position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:99999;animation:fadeOv .18s ease}
       @keyframes fadeOv{from{opacity:0}to{opacity:1}}
       .panel-expand{position:absolute;top:16px;right:16px;z-index:30;width:24px;height:24px;border-radius:7px;border:0.5px solid var(--n200);background:rgba(255,255,255,.9);backdrop-filter:blur(8px);color:var(--n500);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.08);transition:all .14s}
       .panel-expand:hover{color:var(--g600);border-color:var(--g300);background:var(--g50)}
@@ -728,8 +728,12 @@
         content:"";position:absolute;border-radius:50%;filter:blur(60px);opacity:.55;pointer-events:none;z-index:0;
       }
       #atend-novo-view::before{width:380px;height:380px;background:#a7f3d0;top:-130px;left:-120px}
-      #atend-novo-view::after{width:340px;height:340px;background:#ddd6fe;top:80px;right:-140px}
-      #atend-novo-view > *{position:relative;z-index:1}
+#atend-novo-view::after{width:340px;height:340px;background:#ddd6fe;top:80px;right:-140px}
+#atend-novo-view > *{position:relative;z-index:1}
+body.panel-expanded-active #atend-novo-view,
+body.panel-expanded-active #atend-novo-view > *{
+  z-index:auto !important;
+}
 
       /* split layout */
       #atend-novo-view .split-wrap{gap:22px}
@@ -784,7 +788,7 @@
       #atend-novo-view .save-status.state-saving{background:linear-gradient(135deg,#94a3b8,#64748b)!important;border-color:rgba(100,116,139,.6)!important;box-shadow:0 4px 10px rgba(100,116,139,.28)!important}
       #atend-novo-view .save-status.state-saved{background:linear-gradient(135deg,#10b981,#059669)!important;border-color:rgba(16,185,129,.6)!important}
       #atend-novo-view .save-status.state-error{background:linear-gradient(135deg,#ef4444,#b91c1c)!important;border-color:rgba(239,68,68,.6)!important}
-      #atend-novo-view .panel-expand{z-index:20}
+      #atend-novo-view .panel-expand{z-index:40}
       #atend-novo-view .pront-header{position:relative;z-index:25}
 
       /* toolbar (intermediate relief) */
@@ -1364,11 +1368,14 @@
           linear-gradient(135deg,#eef8f1 0%,#f3f1fb 45%,#fdf6ec 100%) !important;}
 
       /* ===== JANELA FLUTUANTE DA VIDEOCHAMADA ===== */
-      #modal-overlay.video-floating{
-        background:transparent;
-        pointer-events:none;
-        align-items:flex-start;
-        justify-content:flex-start;
+      /* ===== JANELA FLUTUANTE DA VIDEOCHAMADA ===== */
+#modal-overlay.video-floating{
+  background:transparent;
+  pointer-events:none;
+  align-items:flex-start;
+  justify-content:flex-start;
+  z-index:200000 !important;
+}
       }
       #modal-overlay.video-floating #m-video{
         pointer-events:auto;
