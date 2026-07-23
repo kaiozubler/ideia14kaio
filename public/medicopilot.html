@@ -3878,8 +3878,6 @@
       };
       // Pacientes e prontuário vêm do Lovable Cloud e ficam vinculados ao usuário logado.
       let patients=[];
-      conv:p.convenio||'Particular',sus:p.sus||'—',email:p.email||'',mae:p.mae||'',pai:p.pai||'',end:p.endereco||'—',sexo:p.sexo||'',medico:p.medico||'',
-          cep:p.cep||'',logradouro:p.logradouro||'',numero:p.numero||'',complemento:p.complemento||'',bairro:p.bairro||'',cidade:p.cidade||'',uf:p.uf||'',
 
       /* ========== SUPABASE ========== */
       const SUPABASE_URL='https://lgsywisgyvgorppuoehy.supabase.co';
@@ -6989,27 +6987,11 @@
           // Assinatura (placeholders ficam vazios se não configurados)
           '{{SIGNATURE_DATETIME}}': _rxEsc(new Date().toLocaleString('pt-BR')),
           '{{SIGNATURE_CERT_ID}}' : _rxEsc(clinic.cert_id || ''),
-          async function saveNewPatient(){
-        const val=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
-        const nome=val('np-nome');if(!nome){alert('Informe o nome do paciente');return;}
-        const addr=readEnderecoFields('np-');
-        const payload={
-          name:nome,
-          data_nascimento:val('np-dob')||null,
-          cpf:val('np-cpf')||null,
-          telefone:val('np-tel')||null,
-          email:val('np-email')||null,
-          sus:val('np-sus')||null,
-          mae:val('np-mae')||null,
-          pai:val('np-pai')||null,
-          cep:addr.cep||null,
-          logradouro:addr.logradouro||null,
-          numero:addr.numero||null,
-          complemento:addr.complemento||null,
-          bairro:addr.bairro||null,
-          cidade:addr.cidade||null,
-          uf:addr.uf||null,
-          endereco:buildEnderecoConcat(addr),
+        };
+        for (const [k, v] of Object.entries(repl)) {
+          html = html.split(k).join(v);
+        }
+
         const scopeId = 'rx-scope-' + Date.now();
         const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
         const bodyMatch  = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
@@ -7031,7 +7013,6 @@
       clipper.style.cssText = 'position:fixed;left:0;top:0;width:210mm;height:0;overflow:hidden;z-index:-1;pointer-events:none;';
       document.body.appendChild(clipper);
 
-          initCepAutofillFields();
       const holder = document.createElement('div');
       holder.id = scopeId;
       holder.style.cssText = 'position:relative;width:210mm;background:#fff;';
