@@ -168,10 +168,11 @@
       .kcol-empty{padding:24px 12px;text-align:center;color:var(--n400);font-size:11.5px}
 
       /* PATIENT HEADER */
-      .pt-hdr-card{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12);padding:10px 14px;display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-shrink:0;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+      .pt-hdr-card{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12);padding:10px 14px;display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-shrink:0;min-height:64px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
       .pth-av{width:40px;height:40px;border-radius:50%;background:var(--g100);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--g700);flex-shrink:0}
-      .pth-main{display:flex;flex-direction:column;min-width:0;flex:1}
-      .pth-name{font-size:14px;font-weight:600;color:var(--n700);letter-spacing:-.01em;display:flex;align-items:center;gap:6px}
+      .pth-main{display:flex;flex-direction:column;min-width:0;flex:1;max-width:100%}
+      .pth-name{font-size:14px;font-weight:600;color:var(--n700);letter-spacing:-.01em;display:flex;align-items:center;gap:6px;min-width:0}
+      .pth-name span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
       .pth-sub{font-size:11px;color:var(--n400);margin-top:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
       .pth-sub .dot{width:3px;height:3px;border-radius:50%;background:var(--n200)}
       .pth-badges{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap}
@@ -1856,8 +1857,6 @@ body.panel-expanded-active .main > *{
                   <span id="pth-sexo"><i class="ti ti-venus" style="font-size:11px"></i> —</span>
                   <span class="dot"></span>
                   <span id="pth-conv"><i class="ti ti-shield-check" style="font-size:11px"></i> —</span>
-                  <span class="dot"></span>
-                  <span id="pth-tel"><i class="ti ti-phone" style="font-size:11px"></i> —</span>
                 </div>
                 <div class="pth-badges">
                   <span class="pth-badge gray" id="pth-sus" style="display:none">SUS: —</span>
@@ -1880,14 +1879,7 @@ body.panel-expanded-active .main > *{
                   <div class="pic-val" id="pth-prof">—</div>
                 </div>
               </div>
-              <div id="pth-mini-info" style="display:none;flex:1">
-                <span class="pth-name" id="pth-mini-name" style="font-size:13px">—</span>
-                <span class="pth-badge gray" style="margin-left:8px" id="pth-mini-idade">—</span>
-              </div>
               <div class="pth-actions">
-                <button class="ib" onclick="togglePatientHeader()" title="Recolher cadastro" id="pth-collapse-btn">
-                  <i class="ti ti-chevron-up" id="pth-collapse-icon"></i>
-                </button>
                 <button
                   class="ib"
                   onclick="openMemoriaPaciente()"
@@ -1896,7 +1888,6 @@ body.panel-expanded-active .main > *{
                 >
                   <i class="ti ti-brain"></i>
                 </button>
-                <button class="btn sm"><i class="ti ti-edit"></i> Editar</button>
                 <button class="btn sm"><i class="ti ti-dots-vertical"></i></button>
               </div>
             </div>
@@ -4312,7 +4303,6 @@ body.panel-expanded-active .main > *{
   const sx=document.getElementById('pth-sexo');
   if(sx){const s=(currentPatient.sexo||'').toLowerCase();const ic=s.startsWith('m')?'ti-mars':(s.startsWith('f')?'ti-venus':'ti-gender-genderless');sx.innerHTML='<i class="ti '+ic+'" style="font-size:11px"></i> '+(currentPatient.sexo||'—');}
   const cv=document.getElementById('pth-conv');if(cv)cv.innerHTML='<i class="ti ti-shield-check" style="font-size:11px"></i> '+(currentPatient.conv||'—');
-  const tl=document.getElementById('pth-tel');if(tl)tl.innerHTML='<i class="ti ti-phone" style="font-size:11px"></i> '+(currentPatient.tel||'—');
   const sus=document.getElementById('pth-sus');
   if(sus){if(currentPatient.sus&&currentPatient.sus!=='—'){sus.textContent='SUS: '+currentPatient.sus;sus.style.display='';}else{sus.style.display='none';}}
   const mb=document.getElementById('pth-medico');
@@ -4867,32 +4857,6 @@ async function saveCadastro(){
           updateSaveStatus('saved');
         }catch(e){
           updateSaveStatus('error');
-        }
-      }
-
-      /* ========== PATIENT HEADER COLLAPSE ========== */
-      function togglePatientHeader(){
-        const hdr=document.getElementById('pt-hdr-card');
-        const full=document.getElementById('pth-full-info');
-        const mini=document.getElementById('pth-mini-info');
-        const av=document.getElementById('pth-av');
-        const icon=document.getElementById('pth-collapse-icon');
-        const collapsed=full.style.display==='none';
-        if(collapsed){
-          full.style.display='';mini.style.display='none';
-          av.style.display='';
-          hdr.style.padding='16px 20px';
-          icon.className='ti ti-chevron-up';
-        }else{
-          full.style.display='none';mini.style.display='';
-          av.style.display='none';
-          hdr.style.padding='8px 20px';
-          icon.className='ti ti-chevron-down';
-          // fill mini
-          const mn=document.getElementById('pth-mini-name');
-          const mi=document.getElementById('pth-mini-idade');
-          if(mn)mn.textContent=currentPatient?.name||'—';
-          if(mi)mi.textContent=document.getElementById('pth-idade')?.textContent||'—';
         }
       }
 
