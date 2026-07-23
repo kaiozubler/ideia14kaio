@@ -3209,121 +3209,102 @@
         </div>
 
         <!-- NOVO PACIENTE -->
-        <div class="modal" id="m-new-patient" style="display:none">
-          <div class="mhd">
-            <span class="mhd-title">Novo paciente</span>
-            <button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        <div class="wide" style="border-top:1px solid var(--n200);padding-top:14px;margin-top:2px">
+          <div
+            style="font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--n400);margin-bottom:8px"
+          >
+            Endereço
           </div>
-          <div class="mbody">
-            <div class="form-grid">
-              <!-- ... todos os campos np-nome, np-cpf, ..., np-grupo (mesmo conteúdo de antes) ... -->
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px">
+            <div class="fld" style="grid-column:span 2">
+              <label for="np-cep">CEP</label><input type="text" id="np-cep" placeholder="00000-000" />
             </div>
-            <div class="wide" style="border-top:1px solid var(--n200);padding-top:14px;margin-top:14px">
-              <div style="...">Endereço</div>
-              <div style="display:grid;...">
-                <!-- ... campos np-cep, np-log, ..., np-pais (mesmo conteúdo de antes) ... -->
-              </div>
+            <div class="fld" style="grid-column:span 4">
+              <label for="np-log">Logradouro</label><input type="text" id="np-log" placeholder="Rua, avenida..." />
+            </div>
+            <div class="fld" style="grid-column:span 2">
+              <label for="np-num">Número</label><input type="text" id="np-num" />
+            </div>
+            <div class="fld" style="grid-column:span 4">
+              <label for="np-compl">Complemento</label><input type="text" id="np-compl" />
+            </div>
+            <div class="fld" style="grid-column:span 3">
+              <label for="np-bairro">Bairro</label><input type="text" id="np-bairro" />
+            </div>
+            <div class="fld" style="grid-column:span 3">
+              <label for="np-cidade">Cidade</label><input type="text" id="np-cidade" />
+            </div>
+            <div class="fld" style="grid-column:span 1">
+              <label for="np-uf">UF</label><input type="text" id="np-uf" maxlength="2" />
+            </div>
+            <div class="fld" style="grid-column:span 5">
+              <label for="np-pais">País</label><input type="text" id="np-pais" value="Brasil" />
             </div>
           </div>
-          <div class="mfoot">
-            <button class="btn" onclick="closeModal()">Cancelar</button>
-            <button class="btn primary" onclick="saveNewPatient()">Salvar paciente</button>
+        </div>
+        <div class="mhd">
+          <span class="mhd-title">Novo paciente</span
+          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody">
+          <div class="form-grid">
+            <div class="fld wide">
+              <label>Nome completo *</label><input type="text" id="np-nome" placeholder="Nome completo do paciente" />
+            </div>
+            <div class="fld"><label>CPF</label><input type="text" id="np-cpf" placeholder="000.000.000-00" /></div>
+            <div class="fld"><label>Data de nascimento</label><input type="date" id="np-dob" /></div>
+            <div class="fld">
+              <label>Telefone *</label><input type="text" id="np-tel" placeholder="(00) 00000-0000" />
+            </div>
+            <div class="fld">
+              <label>E-mail</label><input type="text" id="np-email" placeholder="email@exemplo.com" />
+            </div>
+            <div class="fld">
+              <label>Cartão SUS</label><input type="text" id="np-sus" placeholder="000 0000 0000 0000" />
+            </div>
+            <div class="fld"><label>Nome da mãe</label><input type="text" id="np-mae" /></div>
+            <div class="fld"><label>Nome do pai</label><input type="text" id="np-pai" /></div>
+            <div class="fld wide">
+              <label>Endereço</label><input type="text" id="np-end" placeholder="Rua, nº — Bairro, Cidade, UF" />
+            </div>
+            <div class="fld">
+              <label>Convênio</label
+              ><select id="np-conv">
+                <option>Particular</option>
+                <option>SUS</option>
+                <option>Unimed</option>
+                <option>Bradesco</option>
+                <option>Amil</option>
+              </select>
+            </div>
+            <div class="fld">
+              <label>Sexo</label
+              ><select id="np-sexo">
+                <option value="">Selecionar</option>
+                <option>Feminino</option>
+                <option>Masculino</option>
+                <option>Outro</option>
+              </select>
+            </div>
+            <div class="fld">
+              <label>Médico preferencial <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
+              <select id="np-medico">
+                <option value="">— Nenhum —</option>
+                <option>Dr. Rafael Mendes — Clínica Geral</option>
+                <option>Dra. Carla Fonseca — Cardiologia</option>
+                <option>Dr. Marcos Luz — Endocrinologia</option>
+              </select>
+            </div>
+            <div class="fld">
+              <label>Grupo <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
+              <select id="np-grupo" onchange="onGrupoSelectChange(this)"></select>
+            </div>
           </div>
         </div>
-        <div
-          style="font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--n400);margin-bottom:8px"
-        >
-          Endereço
+        <div class="mfoot">
+          <button class="btn" onclick="closeModal()">Cancelar</button>
+          <button class="btn primary" onclick="saveNewPatient()"><i class="ti ti-check"></i> Salvar paciente</button>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px">
-          <div class="fld" style="grid-column:span 2">
-            <label for="np-cep">CEP</label><input type="text" id="np-cep" placeholder="00000-000" />
-          </div>
-          <div class="fld" style="grid-column:span 4">
-            <label for="np-log">Logradouro</label><input type="text" id="np-log" placeholder="Rua, avenida..." />
-          </div>
-          <div class="fld" style="grid-column:span 2">
-            <label for="np-num">Número</label><input type="text" id="np-num" />
-          </div>
-          <div class="fld" style="grid-column:span 4">
-            <label for="np-compl">Complemento</label><input type="text" id="np-compl" />
-          </div>
-          <div class="fld" style="grid-column:span 3">
-            <label for="np-bairro">Bairro</label><input type="text" id="np-bairro" />
-          </div>
-          <div class="fld" style="grid-column:span 3">
-            <label for="np-cidade">Cidade</label><input type="text" id="np-cidade" />
-          </div>
-          <div class="fld" style="grid-column:span 1">
-            <label for="np-uf">UF</label><input type="text" id="np-uf" maxlength="2" />
-          </div>
-          <div class="fld" style="grid-column:span 5">
-            <label for="np-pais">País</label><input type="text" id="np-pais" value="Brasil" />
-          </div>
-        </div>
-      </div>
-      <div class="mhd">
-        <span class="mhd-title">Novo paciente</span
-        ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
-      </div>
-      <div class="mbody">
-        <div class="form-grid">
-          <div class="fld wide">
-            <label>Nome completo *</label><input type="text" id="np-nome" placeholder="Nome completo do paciente" />
-          </div>
-          <div class="fld"><label>CPF</label><input type="text" id="np-cpf" placeholder="000.000.000-00" /></div>
-          <div class="fld"><label>Data de nascimento</label><input type="date" id="np-dob" /></div>
-          <div class="fld">
-            <label>Telefone *</label><input type="text" id="np-tel" placeholder="(00) 00000-0000" />
-          </div>
-          <div class="fld">
-            <label>E-mail</label><input type="text" id="np-email" placeholder="email@exemplo.com" />
-          </div>
-          <div class="fld">
-            <label>Cartão SUS</label><input type="text" id="np-sus" placeholder="000 0000 0000 0000" />
-          </div>
-          <div class="fld"><label>Nome da mãe</label><input type="text" id="np-mae" /></div>
-          <div class="fld"><label>Nome do pai</label><input type="text" id="np-pai" /></div>
-          <div class="fld wide">
-            <label>Endereço</label><input type="text" id="np-end" placeholder="Rua, nº — Bairro, Cidade, UF" />
-          </div>
-          <div class="fld">
-            <label>Convênio</label
-            ><select id="np-conv">
-              <option>Particular</option>
-              <option>SUS</option>
-              <option>Unimed</option>
-              <option>Bradesco</option>
-              <option>Amil</option>
-            </select>
-          </div>
-          <div class="fld">
-            <label>Sexo</label
-            ><select id="np-sexo">
-              <option value="">Selecionar</option>
-              <option>Feminino</option>
-              <option>Masculino</option>
-              <option>Outro</option>
-            </select>
-          </div>
-          <div class="fld">
-            <label>Médico preferencial <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
-            <select id="np-medico">
-              <option value="">— Nenhum —</option>
-              <option>Dr. Rafael Mendes — Clínica Geral</option>
-              <option>Dra. Carla Fonseca — Cardiologia</option>
-              <option>Dr. Marcos Luz — Endocrinologia</option>
-            </select>
-          </div>
-          <div class="fld">
-            <label>Grupo <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
-            <select id="np-grupo" onchange="onGrupoSelectChange(this)"></select>
-          </div>
-        </div>
-      </div>
-      <div class="mfoot">
-        <button class="btn" onclick="closeModal()">Cancelar</button>
-        <button class="btn primary" onclick="saveNewPatient()"><i class="ti ti-check"></i> Salvar paciente</button>
       </div>
 
       <!-- ADD EXAME -->
@@ -3884,7 +3865,6 @@
           </div>
         </div>
       </div>
-      <!-- ⬅️ NOVA linha: fecha #modal-overlay -->
     </div>
 
     <script>
