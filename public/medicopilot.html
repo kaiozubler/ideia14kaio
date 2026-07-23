@@ -4443,7 +4443,6 @@ async function saveCadastro(){
   await addTimelineEvent({date:new Date().toLocaleDateString('pt-BR'),type:'cadastro',icon:'ti-user-edit',title:'Cadastro atualizado',sub:'Dados alterados'});
   renderPatients(patients);renderTimeline();
   showToast('Dados do paciente salvos com sucesso','success');
-}
       }
       function backToPatients(){saveAtendState();goScreen('patients');}
       function showToast(msg,type){
