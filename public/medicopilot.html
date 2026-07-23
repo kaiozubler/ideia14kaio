@@ -4281,121 +4281,169 @@
         }
       }
       async function openPatient(id){
-        if(currentPatient&&atendEmAndamento&&atendEmAndamento.dirty){saveAtendState();saveAtendDraft();stopAtendAutoSave();}
-        currentPatient=patients.find(p=>p.id===id);
-        if(!currentPatient)return;
-        currentResumoProntuario='';
-        await loadPatientRecords(id);
-        goScreen('patient-detail');
-        document.getElementById('nav-patients').classList.add('active');
-        const pt2=document.getElementById('page-title');
-        pt2.textContent='Paciente';
-        pt2.style.cursor='pointer';
-        pt2.onclick=backToPatients;
-        pt2.title='Voltar para Pacientes';
-        document.getElementById('breadcrumb').innerHTML='<span>/ '+currentPatient.name+'</span>';
-        document.getElementById('pth-av').textContent=currentPatient.init;
-        document.getElementById('pth-name').textContent=currentPatient.name;
-        const yr=new Date().getFullYear();
-        const born=parseInt(currentPatient.dob.split('/')[2]);
-        const idade=(yr-born);
-        document.getElementById('pth-idade').textContent=idade+' anos';
-        const dobAge=document.getElementById('pth-dob-age');
-        if(dobAge)dobAge.innerHTML='<i class="ti ti-cake" style="font-size:11px"></i> '+currentPatient.dob+' ('+idade+' anos)';
-        const sx=document.getElementById('pth-sexo');
-        if(sx){const s=(currentPatient.sexo||'').toLowerCase();const ic=s.startsWith('m')?'ti-mars':(s.startsWith('f')?'ti-venus':'ti-gender-genderless');sx.innerHTML='<i class="ti '+ic+'" style="font-size:11px"></i> '+(currentPatient.sexo||'—');}
-        const cv=document.getElementById('pth-conv');if(cv)cv.innerHTML='<i class="ti ti-shield-check" style="font-size:11px"></i> '+(currentPatient.conv||'—');
-        const tl=document.getElementById('pth-tel');if(tl)tl.innerHTML='<i class="ti ti-phone" style="font-size:11px"></i> '+(currentPatient.tel||'—');
-        const sus=document.getElementById('pth-sus');
-        if(sus){if(currentPatient.sus&&currentPatient.sus!=='—'){sus.textContent='SUS: '+currentPatient.sus;sus.style.display='';}else{sus.style.display='none';}}
-        const mb=document.getElementById('pth-medico');
-        if(currentPatient.medico&&medicoNames[currentPatient.medico]){mb.textContent=medicoNames[currentPatient.medico];mb.style.display='';}
-        else mb.style.display='none';
-        const printName=document.getElementById('print-name');if(printName)printName.textContent=currentPatient.name||'';
-        const ps1=document.getElementById('print-sub1');if(ps1)ps1.textContent=currentPatient.dob?(currentPatient.dob+' ('+idade+' anos)'):'';
-        const ps2=document.getElementById('print-sub2');if(ps2)ps2.textContent=currentPatient.sexo||'';
-        const ps3=document.getElementById('print-sub3');if(ps3)ps3.textContent=currentPatient.conv||'';
-        const prof=document.getElementById('pth-prof');if(prof)prof.textContent=currentPatient.ocup||'';
-        const lastVisit=document.getElementById('pth-last-visit');
-        if(lastVisit){const at=(atendimentosCache&&atendimentosCache[currentPatient.id])||[];lastVisit.textContent=at.length?('Última visita: '+at[0].date):'Sem visitas anteriores';}
-        const set=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val||'';};
-        set('d-nome',currentPatient.name);
-        set('d-tel',currentPatient.tel);
-        set('d-email',currentPatient.email);
-        set('d-mae',currentPatient.mae);
-        set('d-pai',currentPatient.pai);
-        set('d-nasc',currentPatient.nasc);
-        set('d-sus',currentPatient.sus==='—'?'':currentPatient.sus);
-        set('d-cep',currentPatient.cep);
-        set('d-log',currentPatient.logradouro);
-        set('d-num',currentPatient.numero);
-        set('d-compl',currentPatient.complemento);
-        set('d-bairro',currentPatient.bairro);
-        set('d-cidade',currentPatient.cidade);
-        set('d-uf',currentPatient.uf);
-        const paisEl=document.getElementById('d-pais');if(paisEl)paisEl.value='Brasil';
-        const cv2=document.getElementById('d-conv');if(cv2)cv2.value=currentPatient.conv||'Particular';
-        const sx2=document.getElementById('d-sexo');if(sx2)sx2.value=currentPatient.sexo||'Feminino';
-        const ms=document.getElementById('d-medico');if(ms)ms.value=currentPatient.medico||'';
-        const op=document.getElementById('d-ocup');if(op)op.value=currentPatient.ocup||'';
-        const gs=document.getElementById('d-grupo');if(gs){populateGrupoSelect(gs);gs.value=getPatientGrupo(currentPatient.id)||'';}
-        const dc=document.getElementById('dados-clinicos-ta');if(dc){dc.value=currentPatient.dadosClinicos||'';updateDcPreview();}
-        openTab('cadastro',document.querySelector('.tab'));
-        renderAtendimentos();renderExames();renderTimeline();updateAtendProgress();
-      }
-      /* ========== ENDEREÇO / CEP (ViaCEP) ========== */
-      // Monta o texto concatenado de endereço a partir dos campos estruturados,
-      // no mesmo formato calculado pelo trigger do banco (mantido aqui também
-      // para refletir na UI imediatamente, antes do round-trip com o servidor).
-      function buildEnderecoConcat(a){
-        a=a||{};
-        let parte1=[a.logradouro,a.numero].filter(Boolean).join(', ');
-        if(a.complemento)parte1=[parte1,a.complemento].filter(Boolean).join(' - ');
-        let parte2=[a.cidade,a.uf].filter(Boolean).join('/');
-        if(a.bairro)parte2=[a.bairro,parte2].filter(Boolean).join(', ');
-        return [parte1,parte2].filter(Boolean).join(' - ')||null;
-      }
-      // Lê os campos de endereço de um prefixo de IDs (ex: 'd-', 'np-', 'cli-').
-      function readEnderecoFields(prefix){
-        const v=id=>{const el=document.getElementById(prefix+id);return el?el.value.trim():'';};
-        return {cep:v('cep'),logradouro:v('log'),numero:v('num'),complemento:v('compl'),bairro:v('bairro'),cidade:v('cidade'),uf:v('uf')};
-      }
-      // Consulta a API pública ViaCEP e preenche Logradouro/Bairro/Cidade/UF.
-      // Usado nas 3 telas com endereço: Ficha do paciente (d-), Novo paciente (np-)
-      // e Dados da Clínica (cli-). Não trava o formulário em caso de erro.
-      async function buscarCep(cep,prefix){
-        const digits=String(cep||'').replace(/\D/g,'');
-        if(digits.length!==8)return null;
-        try{
-          const resp=await fetch(`https://viacep.com.br/ws/${digits}/json/`);
-          if(!resp.ok)throw new Error('Falha na consulta de CEP');
-          const data=await resp.json();
-          if(data.erro){showToast('CEP não encontrado','error');return null;}
-          return data;
-        }catch(e){
-          showToast('Não foi possível consultar o CEP agora','error');
-          return null;
-        }
-      }
-      function attachCepAutofill(prefix){
-        const cepEl=document.getElementById(prefix+'cep');
-        if(!cepEl||cepEl.dataset.cepBound)return;
-        cepEl.dataset.cepBound='1';
-        const run=async()=>{
-          const data=await buscarCep(cepEl.value,prefix);
-          if(!data)return;
-          const set=(id,v)=>{const el=document.getElementById(prefix+id);if(el&&v)el.value=v;};
-          set('log',data.logradouro);
-          set('bairro',data.bairro);
-          set('cidade',data.localidade);
-          set('uf',data.uf);
-          if(data.complemento){const c=document.getElementById(prefix+'compl');if(c&&!c.value)c.value=data.complemento;}
-        };
-        cepEl.addEventListener('blur',run);
-        cepEl.addEventListener('paste',()=>setTimeout(run,0));
-      }
-      function initCepAutofillFields(){
-        ['d-','np-','cli-'].forEach(attachCepAutofill);
+  if(currentPatient&&atendEmAndamento&&atendEmAndamento.dirty){saveAtendState();saveAtendDraft();stopAtendAutoSave();}
+  currentPatient=patients.find(p=>p.id===id);
+  if(!currentPatient)return;
+  currentResumoProntuario='';
+  await loadPatientRecords(id);
+  goScreen('patient-detail');
+  document.getElementById('nav-patients').classList.add('active');
+  const pt2=document.getElementById('page-title');
+  pt2.textContent='Paciente';
+  pt2.style.cursor='pointer';
+  pt2.onclick=backToPatients;
+  pt2.title='Voltar para Pacientes';
+  document.getElementById('breadcrumb').innerHTML='<span>/ '+currentPatient.name+'</span>';
+  document.getElementById('pth-av').textContent=currentPatient.init;
+  document.getElementById('pth-name').textContent=currentPatient.name;
+  const yr=new Date().getFullYear();
+  const born=parseInt(currentPatient.dob.split('/')[2]);
+  const idade=(yr-born);
+  document.getElementById('pth-idade').textContent=idade+' anos';
+  const dobAge=document.getElementById('pth-dob-age');
+  if(dobAge)dobAge.innerHTML='<i class="ti ti-cake" style="font-size:11px"></i> '+currentPatient.dob+' ('+idade+' anos)';
+  const sx=document.getElementById('pth-sexo');
+  if(sx){const s=(currentPatient.sexo||'').toLowerCase();const ic=s.startsWith('m')?'ti-mars':(s.startsWith('f')?'ti-venus':'ti-gender-genderless');sx.innerHTML='<i class="ti '+ic+'" style="font-size:11px"></i> '+(currentPatient.sexo||'—');}
+  const cv=document.getElementById('pth-conv');if(cv)cv.innerHTML='<i class="ti ti-shield-check" style="font-size:11px"></i> '+(currentPatient.conv||'—');
+  const tl=document.getElementById('pth-tel');if(tl)tl.innerHTML='<i class="ti ti-phone" style="font-size:11px"></i> '+(currentPatient.tel||'—');
+  const sus=document.getElementById('pth-sus');
+  if(sus){if(currentPatient.sus&&currentPatient.sus!=='—'){sus.textContent='SUS: '+currentPatient.sus;sus.style.display='';}else{sus.style.display='none';}}
+  const mb=document.getElementById('pth-medico');
+  if(currentPatient.medico&&medicoNames[currentPatient.medico]){mb.textContent=medicoNames[currentPatient.medico];mb.style.display='';}
+  else mb.style.display='none';
+  const prof=document.getElementById('pth-prof');
+  if(prof)prof.textContent=(currentPatient.medico&&medicoNames[currentPatient.medico])||(currentUser?.email?.split('@')[0])||'—';
+  const lv=document.getElementById('pth-last-visit');
+  if(lv){try{if(atendimentos&&atendimentos.length){const a=atendimentos[0];lv.textContent=(a.date||a.data||a.consulta||'—');}else lv.textContent='Sem registros';}catch(e){lv.textContent='—';}}
+  document.getElementById('print-name').textContent=currentPatient.name;
+  document.getElementById('print-sub1').textContent='CPF: '+(currentPatient.cpf||'—')+' · Nasc.: '+currentPatient.dob+' · Tel.: '+currentPatient.tel;
+  document.getElementById('print-sub2').textContent='Endereço: '+currentPatient.end;
+  document.getElementById('print-sub3').textContent='Convênio: '+currentPatient.conv+(currentPatient.medico?' · Médico: '+medicoNames[currentPatient.medico]:'');
+  document.getElementById('d-nome').value=currentPatient.name;
+  document.getElementById('d-tel').value=currentPatient.tel;
+  document.getElementById('d-email').value=currentPatient.email;
+  document.getElementById('d-mae').value=currentPatient.mae;
+  document.getElementById('d-pai').value=currentPatient.pai;
+  document.getElementById('d-cep').value=currentPatient.cep||'';
+  document.getElementById('d-log').value=currentPatient.logradouro||'';
+  document.getElementById('d-num').value=currentPatient.numero||'';
+  document.getElementById('d-compl').value=currentPatient.complemento||'';
+  document.getElementById('d-bairro').value=currentPatient.bairro||'';
+  document.getElementById('d-cidade').value=currentPatient.cidade||'';
+  document.getElementById('d-uf').value=currentPatient.uf||'';
+  document.getElementById('d-pais').value='Brasil';
+  document.getElementById('d-nasc').value=currentPatient.nasc;
+  document.getElementById('d-sus').value=currentPatient.sus==='—'?'':currentPatient.sus;
+  const cv2=document.getElementById('d-conv');if(cv2)cv2.value=currentPatient.conv||'Particular';
+  const sx2=document.getElementById('d-sexo');if(sx2)sx2.value=currentPatient.sexo||'Feminino';
+  const ms=document.getElementById('d-medico');if(ms)ms.value=currentPatient.medico||'';
+  const op=document.getElementById('d-ocup');if(op)op.value=currentPatient.ocup||'';
+  const gs=document.getElementById('d-grupo');if(gs){populateGrupoSelect(gs);gs.value=getPatientGrupo(currentPatient.id)||'';}
+  const dc=document.getElementById('dados-clinicos-ta');if(dc){dc.value=currentPatient.dadosClinicos||'';updateDcPreview();}
+  openTab('cadastro',document.querySelector('.tab'));
+  renderAtendimentos();renderExames();renderTimeline();updateAtendProgress();
+}
+function backToPatients(){saveAtendState();goScreen('patients');}
+function showToast(msg,type){
+  const el=document.getElementById('toast');
+  if(!el)return;
+  el.textContent=msg;
+  el.className='toast '+(type||'');
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2800);
+}
+/* ========== ENDEREÇO / CEP (ViaCEP) ========== */
+// Monta o texto concatenado de endereço a partir dos campos estruturados,
+// no mesmo formato calculado pelo trigger do banco (mantido aqui também
+// para refletir na UI imediatamente, antes do round-trip com o servidor).
+function buildEnderecoConcat(a){
+  a=a||{};
+  let parte1=[a.logradouro,a.numero].filter(Boolean).join(', ');
+  if(a.complemento)parte1=[parte1,a.complemento].filter(Boolean).join(' - ');
+  let parte2=[a.cidade,a.uf].filter(Boolean).join('/');
+  if(a.bairro)parte2=[a.bairro,parte2].filter(Boolean).join(', ');
+  return [parte1,parte2].filter(Boolean).join(' - ')||null;
+}
+// Lê os campos de endereço de um prefixo de IDs (ex: 'd-', 'np-', 'cli-').
+function readEnderecoFields(prefix){
+  const v=id=>{const el=document.getElementById(prefix+id);return el?el.value.trim():'';};
+  return {cep:v('cep'),logradouro:v('log'),numero:v('num'),complemento:v('compl'),bairro:v('bairro'),cidade:v('cidade'),uf:v('uf')};
+}
+// Consulta a API pública ViaCEP e preenche Logradouro/Bairro/Cidade/UF.
+// Usado nas 3 telas com endereço: Ficha do paciente (d-), Novo paciente (np-)
+// e Dados da Clínica (cli-). Não trava o formulário em caso de erro.
+async function buscarCep(cep,prefix){
+  const digits=String(cep||'').replace(/\D/g,'');
+  if(digits.length!==8)return null;
+  try{
+    const resp=await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+    if(!resp.ok)throw new Error('Falha na consulta de CEP');
+    const data=await resp.json();
+    if(data.erro){showToast('CEP não encontrado','error');return null;}
+    return data;
+  }catch(e){
+    showToast('Não foi possível consultar o CEP agora','error');
+    return null;
+  }
+}
+function attachCepAutofill(prefix){
+  const cepEl=document.getElementById(prefix+'cep');
+  if(!cepEl||cepEl.dataset.cepBound)return;
+  cepEl.dataset.cepBound='1';
+  const run=async()=>{
+    const data=await buscarCep(cepEl.value,prefix);
+    if(!data)return;
+    const set=(id,v)=>{const el=document.getElementById(prefix+id);if(el&&v)el.value=v;};
+    set('log',data.logradouro);
+    set('bairro',data.bairro);
+    set('cidade',data.localidade);
+    set('uf',data.uf);
+    if(data.complemento){const c=document.getElementById(prefix+'compl');if(c&&!c.value)c.value=data.complemento;}
+  };
+  cepEl.addEventListener('blur',run);
+  cepEl.addEventListener('paste',()=>setTimeout(run,0));
+}
+function initCepAutofillFields(){
+  ['d-','np-','cli-'].forEach(attachCepAutofill);
+}
+async function saveCadastro(){
+  if(!currentPatient||!currentUser)return;
+  const addr=readEnderecoFields('d-');
+  const payload={
+    name:document.getElementById('d-nome')?.value.trim()||currentPatient.name,
+    telefone:document.getElementById('d-tel')?.value.trim()||null,
+    email:document.getElementById('d-email')?.value.trim()||null,
+    mae:document.getElementById('d-mae')?.value.trim()||null,
+    pai:document.getElementById('d-pai')?.value.trim()||null,
+    cep:addr.cep||null,
+    logradouro:addr.logradouro||null,
+    numero:addr.numero||null,
+    complemento:addr.complemento||null,
+    bairro:addr.bairro||null,
+    cidade:addr.cidade||null,
+    uf:addr.uf||null,
+    endereco:buildEnderecoConcat(addr),
+    data_nascimento:document.getElementById('d-nasc')?.value||null,
+    sus:document.getElementById('d-sus')?.value.trim()||null,
+    convenio:document.getElementById('d-conv')?.value||'Particular',
+    sexo:document.getElementById('d-sexo')?.value||null,
+    medico:document.getElementById('d-medico')?.value||null,
+    grupo:document.getElementById('d-grupo')?.value||null,
+    ocupacao:document.getElementById('d-ocup')?.value.trim()||null
+  };
+  const {data,error}=await sb.from('pacientes').update(payload).eq('paciente_id',currentPatient.id).select('*').single();
+  if(error){showToast('Erro ao salvar paciente: '+error.message,'error');return;}
+  const updated=mapPatientRow(data);
+  Object.assign(currentPatient,updated);
+  patients=patients.map(p=>p.id===updated.id?updated:p);
+  if(updated.grupo&&!gruposCache.includes(updated.grupo))saveGrupos([...gruposCache,updated.grupo]);
+  const mb=document.getElementById('pth-medico');
+  if(currentPatient.medico&&medicoNames[currentPatient.medico]){mb.textContent=medicoNames[currentPatient.medico];mb.style.display='';}
+  else mb.style.display='none';
+  await addTimelineEvent({date:new Date().toLocaleDateString('pt-BR'),type:'cadastro',icon:'ti-user-edit',title:'Cadastro atualizado',sub:'Dados alterados'});
+  renderPatients(patients);renderTimeline();
+  showToast('Dados do paciente salvos com sucesso','success');
+}
       }
       function backToPatients(){saveAtendState();goScreen('patients');}
       function showToast(msg,type){
