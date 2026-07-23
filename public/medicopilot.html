@@ -7064,7 +7064,7 @@ background:#fff;
             margin: 0,
             filename,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, windowWidth: windowWidth: holder.querySelector('.sheet').scrollWidth },
+            html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, windowWidth: windowWidth: },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak: { mode: ['css', 'legacy'] }
           }).from(holder.querySelector('.sheet') || holder).save();
