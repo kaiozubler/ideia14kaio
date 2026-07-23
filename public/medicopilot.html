@@ -4299,14 +4299,7 @@
         document.getElementById('pth-name').textContent=currentPatient.name;
         const yr=new Date().getFullYear();
         const born=parseInt(currentPatient.dob.split('/')[2]);
-        document.getElementById('d-cep').value=currentPatient.cep||'';
-        document.getElementById('d-log').value=currentPatient.logradouro||'';
-        document.getElementById('d-num').value=currentPatient.numero||'';
-        document.getElementById('d-compl').value=currentPatient.complemento||'';
-        document.getElementById('d-bairro').value=currentPatient.bairro||'';
-        document.getElementById('d-cidade').value=currentPatient.cidade||'';
-        document.getElementById('d-uf').value=currentPatient.uf||'';
-        document.getElementById('d-pais').value='Brasil';
+        const idade=(yr-born);
         document.getElementById('pth-idade').textContent=idade+' anos';
         const dobAge=document.getElementById('pth-dob-age');
         if(dobAge)dobAge.innerHTML='<i class="ti ti-cake" style="font-size:11px"></i> '+currentPatient.dob+' ('+idade+' anos)';
@@ -4319,7 +4312,38 @@
         const mb=document.getElementById('pth-medico');
         if(currentPatient.medico&&medicoNames[currentPatient.medico]){mb.textContent=medicoNames[currentPatient.medico];mb.style.display='';}
         else mb.style.display='none';
-        }
+        const printName=document.getElementById('print-name');if(printName)printName.textContent=currentPatient.name||'';
+        const ps1=document.getElementById('print-sub1');if(ps1)ps1.textContent=currentPatient.dob?(currentPatient.dob+' ('+idade+' anos)'):'';
+        const ps2=document.getElementById('print-sub2');if(ps2)ps2.textContent=currentPatient.sexo||'';
+        const ps3=document.getElementById('print-sub3');if(ps3)ps3.textContent=currentPatient.conv||'';
+        const prof=document.getElementById('pth-prof');if(prof)prof.textContent=currentPatient.ocup||'';
+        const lastVisit=document.getElementById('pth-last-visit');
+        if(lastVisit){const at=(atendimentosCache&&atendimentosCache[currentPatient.id])||[];lastVisit.textContent=at.length?('Última visita: '+at[0].date):'Sem visitas anteriores';}
+        const set=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val||'';};
+        set('d-nome',currentPatient.name);
+        set('d-tel',currentPatient.tel);
+        set('d-email',currentPatient.email);
+        set('d-mae',currentPatient.mae);
+        set('d-pai',currentPatient.pai);
+        set('d-nasc',currentPatient.nasc);
+        set('d-sus',currentPatient.sus==='—'?'':currentPatient.sus);
+        set('d-cep',currentPatient.cep);
+        set('d-log',currentPatient.logradouro);
+        set('d-num',currentPatient.numero);
+        set('d-compl',currentPatient.complemento);
+        set('d-bairro',currentPatient.bairro);
+        set('d-cidade',currentPatient.cidade);
+        set('d-uf',currentPatient.uf);
+        const paisEl=document.getElementById('d-pais');if(paisEl)paisEl.value='Brasil';
+        const cv2=document.getElementById('d-conv');if(cv2)cv2.value=currentPatient.conv||'Particular';
+        const sx2=document.getElementById('d-sexo');if(sx2)sx2.value=currentPatient.sexo||'Feminino';
+        const ms=document.getElementById('d-medico');if(ms)ms.value=currentPatient.medico||'';
+        const op=document.getElementById('d-ocup');if(op)op.value=currentPatient.ocup||'';
+        const gs=document.getElementById('d-grupo');if(gs){populateGrupoSelect(gs);gs.value=getPatientGrupo(currentPatient.id)||'';}
+        const dc=document.getElementById('dados-clinicos-ta');if(dc){dc.value=currentPatient.dadosClinicos||'';updateDcPreview();}
+        openTab('cadastro',document.querySelector('.tab'));
+        renderAtendimentos();renderExames();renderTimeline();updateAtendProgress();
+      }
       /* ========== ENDEREÇO / CEP (ViaCEP) ========== */
       // Monta o texto concatenado de endereço a partir dos campos estruturados,
       // no mesmo formato calculado pelo trigger do banco (mantido aqui também
@@ -4374,6 +4398,15 @@
       function initCepAutofillFields(){
         ['d-','np-','cli-'].forEach(attachCepAutofill);
       }
+      function backToPatients(){saveAtendState();goScreen('patients');}
+      function showToast(msg,type){
+        const el=document.getElementById('toast');
+        if(!el)return;
+        el.textContent=msg;
+        el.className='toast '+(type||'');
+        el.classList.add('show');
+        setTimeout(()=>el.classList.remove('show'),2800);
+      }
       async function saveCadastro(){
         if(!currentPatient||!currentUser)return;
         const addr=readEnderecoFields('d-');
@@ -4391,39 +4424,6 @@
           cidade:addr.cidade||null,
           uf:addr.uf||null,
           endereco:buildEnderecoConcat(addr),
-        document.getElementById('d-email').value=currentPatient.email;
-        document.getElementById('d-mae').value=currentPatient.mae;
-        document.getElementById('d-pai').value=currentPatient.pai;
-        document.getElementById('d-end').value=currentPatient.end;
-        document.getElementById('d-nasc').value=currentPatient.nasc;
-        document.getElementById('d-sus').value=currentPatient.sus==='—'?'':currentPatient.sus;
-        const cv2=document.getElementById('d-conv');if(cv2)cv2.value=currentPatient.conv||'Particular';
-        const sx2=document.getElementById('d-sexo');if(sx2)sx2.value=currentPatient.sexo||'Feminino';
-        const ms=document.getElementById('d-medico');if(ms)ms.value=currentPatient.medico||'';
-        const op=document.getElementById('d-ocup');if(op)op.value=currentPatient.ocup||'';
-        const gs=document.getElementById('d-grupo');if(gs){populateGrupoSelect(gs);gs.value=getPatientGrupo(currentPatient.id)||'';}
-        const dc=document.getElementById('dados-clinicos-ta');if(dc){dc.value=currentPatient.dadosClinicos||'';updateDcPreview();}
-        openTab('cadastro',document.querySelector('.tab'));
-        renderAtendimentos();renderExames();renderTimeline();updateAtendProgress();
-      }
-      function backToPatients(){saveAtendState();goScreen('patients');}
-      function showToast(msg,type){
-        const el=document.getElementById('toast');
-        if(!el)return;
-        el.textContent=msg;
-        el.className='toast '+(type||'');
-        el.classList.add('show');
-        setTimeout(()=>el.classList.remove('show'),2800);
-      }
-      async function saveCadastro(){
-        if(!currentPatient||!currentUser)return;
-        const payload={
-          name:document.getElementById('d-nome')?.value.trim()||currentPatient.name,
-          telefone:document.getElementById('d-tel')?.value.trim()||null,
-          email:document.getElementById('d-email')?.value.trim()||null,
-          mae:document.getElementById('d-mae')?.value.trim()||null,
-          pai:document.getElementById('d-pai')?.value.trim()||null,
-          endereco:document.getElementById('d-end')?.value.trim()||null,
           data_nascimento:document.getElementById('d-nasc')?.value||null,
           sus:document.getElementById('d-sus')?.value.trim()||null,
           convenio:document.getElementById('d-conv')?.value||'Particular',
