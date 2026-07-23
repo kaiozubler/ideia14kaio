@@ -4409,13 +4409,21 @@
       }
       async function saveCadastro(){
         if(!currentPatient||!currentUser)return;
+        const addr=readEnderecoFields('d-');
         const payload={
           name:document.getElementById('d-nome')?.value.trim()||currentPatient.name,
           telefone:document.getElementById('d-tel')?.value.trim()||null,
           email:document.getElementById('d-email')?.value.trim()||null,
           mae:document.getElementById('d-mae')?.value.trim()||null,
           pai:document.getElementById('d-pai')?.value.trim()||null,
-          endereco:document.getElementById('d-end')?.value.trim()||null,
+          cep:addr.cep||null,
+          logradouro:addr.logradouro||null,
+          numero:addr.numero||null,
+          complemento:addr.complemento||null,
+          bairro:addr.bairro||null,
+          cidade:addr.cidade||null,
+          uf:addr.uf||null,
+          endereco:buildEnderecoConcat(addr),
           data_nascimento:document.getElementById('d-nasc')?.value||null,
           sus:document.getElementById('d-sus')?.value.trim()||null,
           convenio:document.getElementById('d-conv')?.value||'Particular',
