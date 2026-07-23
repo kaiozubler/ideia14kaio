@@ -7067,7 +7067,20 @@ background:#fff;
             html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, windowWidth: 794 },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak: { mode: ['css', 'legacy'] }
-          }).from(holder.querySelector('.sheet') || holder).save();
+          }).from(holder.querySelector('.sheet') || holder)
+          const sheet = holder.querySelector('.sheet');
+
+await html2pdf()
+.set({
+    ...
+})
+.from(sheet)
+.toPdf()
+.get('pdf')
+.then(pdf => {
+    pdf.internal.pageSize.getWidth();
+})
+.save();
 
           showToast && showToast('Receita gerada com sucesso', 'success');
         } catch (e) {
