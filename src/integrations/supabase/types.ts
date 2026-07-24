@@ -100,6 +100,57 @@ export type Database = {
           },
         ]
       }
+      doctor_certificates: {
+        Row: {
+          certificate_fingerprint: string | null
+          certificate_serial: string | null
+          certificate_subject: string | null
+          certificate_valid_from: string | null
+          certificate_valid_until: string | null
+          created_at: string
+          credential_expires_at: string | null
+          credential_id: string
+          doctor_id: string
+          id: string
+          product_name: string | null
+          provider_name: string | null
+          raw_metadata: Json | null
+          updated_at: string
+        }
+        Insert: {
+          certificate_fingerprint?: string | null
+          certificate_serial?: string | null
+          certificate_subject?: string | null
+          certificate_valid_from?: string | null
+          certificate_valid_until?: string | null
+          created_at?: string
+          credential_expires_at?: string | null
+          credential_id: string
+          doctor_id: string
+          id?: string
+          product_name?: string | null
+          provider_name?: string | null
+          raw_metadata?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          certificate_fingerprint?: string | null
+          certificate_serial?: string | null
+          certificate_subject?: string | null
+          certificate_valid_from?: string | null
+          certificate_valid_until?: string | null
+          created_at?: string
+          credential_expires_at?: string | null
+          credential_id?: string
+          doctor_id?: string
+          id?: string
+          product_name?: string | null
+          provider_name?: string | null
+          raw_metadata?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       exames: {
         Row: {
           created_at: string
@@ -447,6 +498,39 @@ export type Database = {
             referencedColumns: ["paciente_id"]
           },
         ]
+      }
+      signature_pkce_sessions: {
+        Row: {
+          code_verifier_encrypted: string
+          created_at: string
+          doctor_id: string
+          expires_at: string
+          id: string
+          request_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          code_verifier_encrypted: string
+          created_at?: string
+          doctor_id: string
+          expires_at?: string
+          id?: string
+          request_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          code_verifier_encrypted?: string
+          created_at?: string
+          doctor_id?: string
+          expires_at?: string
+          id?: string
+          request_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       substancias: {
         Row: {
