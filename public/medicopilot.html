@@ -535,9 +535,16 @@ body.panel-expanded-active::before{content:"";position:fixed;inset:0;background:
 
 
       /* TOAST */
+      /* TOAST */
       .toast{position:fixed;bottom:20px;right:20px;background:var(--n700);color:var(--white);padding:10px 16px;border-radius:var(--r8);font-size:12px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:9999;opacity:0;transform:translateY(12px);transition:opacity .3s,transform .3s;pointer-events:none}
       .toast.show{opacity:1;transform:translateY(0)}
       .toast.success{background:var(--g600)}
+
+      /* CADASTRO — floating save bar (fixed to bottom-right of the screen) */
+      .cadastro-float-bar{position:fixed;bottom:24px;right:24px;display:none;align-items:center;gap:8px;z-index:500;padding:8px;background:rgba(255,255,255,.7);backdrop-filter:blur(18px) saturate(180%);border:1px solid rgba(255,255,255,.9);border-radius:999px;box-shadow:0 16px 32px -12px rgba(15,42,80,.28),0 4px 10px rgba(15,42,80,.08)}
+      .cadastro-float-bar.show{display:flex}
+      .cadastro-float-bar .btn{border-radius:999px}
+      .cadastro-float-bar .btn.primary{box-shadow:0 10px 22px -6px rgba(16,185,129,.55),0 2px 4px rgba(16,185,129,.25)}
       /* ===== CONVERSAS / WHATSAPP SCREEN ===== */
       .cv-wrap{display:flex;height:100%;background:#f9fafb;border:0.5px solid var(--n150);border-radius:8px;overflow:hidden}
       .cv-col-left{width:300px;border-right:1px solid #e5e7eb;background:#fff;display:flex;flex-direction:column;flex-shrink:0}
@@ -1530,6 +1537,13 @@ body.panel-expanded-active .main > *{
   </head>
   <body>
     <div id="toast" class="toast"></div>
+    <!-- Barra flutuante de salvar do Cadastro (fica sobre a tela, sem precisar rolar) -->
+    <div id="cadastro-float-bar" class="cadastro-float-bar">
+      <button class="btn sm">Cancelar</button>
+      <button class="btn primary sm" onclick="saveCadastro()">
+        <i class="ti ti-device-floppy"></i> Salvar cadastro
+      </button>
+    </div>
     <!-- AUTH GATE -->
     <div
       id="auth-gate"
@@ -1904,49 +1918,61 @@ body.panel-expanded-active .main > *{
 
             <!-- TAB CADASTRO -->
             <div class="tab-body" id="tb-cadastro">
+              <div class="sec-hd" style="margin-top:0;border-top:0;padding-top:0">Dados pessoais</div>
               <div class="form-grid">
                 <div class="fld wide"><label>Nome completo</label><input type="text" id="d-nome" /></div>
                 <div class="fld"><label>CPF</label><input type="text" id="d-cpf" /></div>
                 <div class="fld"><label>Data de nascimento</label><input type="date" id="d-nasc" /></div>
-                <div class="fld"><label>Telefone</label><input type="text" id="d-tel" /></div>
-                <div class="fld"><label>E-mail</label><input type="text" id="d-email" /></div>
+                <div class="fld">
+                  <label>Sexo</label>
+                  <select id="d-sexo">
+                    <option>Feminino</option>
+                    <option>Masculino</option>
+                    <option>Outro</option>
+                  </select>
+                </div>
+                <div class="fld"><label>Cartão SUS</label><input type="text" id="d-sus" /></div>
                 <div class="fld"><label>Nome da mãe</label><input type="text" id="d-mae" /></div>
                 <div class="fld"><label>Nome do pai</label><input type="text" id="d-pai" /></div>
-                <div class="fld"><label>Cartão SUS</label><input type="text" id="d-sus" /></div>
-                <div class="wide" style="border-top:1px solid var(--n200);padding-top:14px;margin-top:2px">
-                  <div
-                    style="font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--n400);margin-bottom:8px"
-                  >
-                    Endereço
-                  </div>
-                  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px">
-                    <div class="fld" style="grid-column:span 2">
-                      <label for="d-cep">CEP</label><input type="text" id="d-cep" placeholder="00000-000" />
-                    </div>
-                    <div class="fld" style="grid-column:span 4">
-                      <label for="d-log">Logradouro</label
-                      ><input type="text" id="d-log" placeholder="Rua, avenida..." />
-                    </div>
-                    <div class="fld" style="grid-column:span 2">
-                      <label for="d-num">Número</label><input type="text" id="d-num" />
-                    </div>
-                    <div class="fld" style="grid-column:span 4">
-                      <label for="d-compl">Complemento</label><input type="text" id="d-compl" />
-                    </div>
-                    <div class="fld" style="grid-column:span 3">
-                      <label for="d-bairro">Bairro</label><input type="text" id="d-bairro" />
-                    </div>
-                    <div class="fld" style="grid-column:span 3">
-                      <label for="d-cidade">Cidade</label><input type="text" id="d-cidade" />
-                    </div>
-                    <div class="fld" style="grid-column:span 1">
-                      <label for="d-uf">UF</label><input type="text" id="d-uf" maxlength="2" />
-                    </div>
-                    <div class="fld" style="grid-column:span 5">
-                      <label for="d-pais">País</label><input type="text" id="d-pais" value="Brasil" />
-                    </div>
-                  </div>
+              </div>
+
+              <div class="sec-hd">Contato</div>
+              <div class="form-grid">
+                <div class="fld"><label>Telefone</label><input type="text" id="d-tel" /></div>
+                <div class="fld"><label>E-mail</label><input type="text" id="d-email" /></div>
+              </div>
+
+              <div class="sec-hd">Endereço</div>
+              <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px">
+                <div class="fld" style="grid-column:span 2">
+                  <label for="d-cep">CEP</label><input type="text" id="d-cep" placeholder="00000-000" />
                 </div>
+                <div class="fld" style="grid-column:span 4">
+                  <label for="d-log">Logradouro</label
+                  ><input type="text" id="d-log" placeholder="Rua, avenida..." />
+                </div>
+                <div class="fld" style="grid-column:span 2">
+                  <label for="d-num">Número</label><input type="text" id="d-num" />
+                </div>
+                <div class="fld" style="grid-column:span 4">
+                  <label for="d-compl">Complemento</label><input type="text" id="d-compl" />
+                </div>
+                <div class="fld" style="grid-column:span 3">
+                  <label for="d-bairro">Bairro</label><input type="text" id="d-bairro" />
+                </div>
+                <div class="fld" style="grid-column:span 3">
+                  <label for="d-cidade">Cidade</label><input type="text" id="d-cidade" />
+                </div>
+                <div class="fld" style="grid-column:span 1">
+                  <label for="d-uf">UF</label><input type="text" id="d-uf" maxlength="2" />
+                </div>
+                <div class="fld" style="grid-column:span 5">
+                  <label for="d-pais">País</label><input type="text" id="d-pais" value="Brasil" />
+                </div>
+              </div>
+
+              <div class="sec-hd">Atendimento</div>
+              <div class="form-grid">
                 <div class="fld">
                   <label>Convênio</label>
                   <select id="d-conv">
@@ -1956,18 +1982,6 @@ body.panel-expanded-active .main > *{
                     <option>Bradesco</option>
                     <option>Amil</option>
                   </select>
-                </div>
-                <div class="fld">
-                  <label>Sexo</label>
-                  <select id="d-sexo">
-                    <option>Feminino</option>
-                    <option>Masculino</option>
-                    <option>Outro</option>
-                  </select>
-                </div>
-                <div class="fld wide">
-                  <label>Ocupação</label
-                  ><input type="text" id="d-ocup" placeholder="Ex: Trabalho de escritório, professora, motorista..." />
                 </div>
                 <div class="fld">
                   <label>Médico preferencial <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
@@ -1984,7 +1998,12 @@ body.panel-expanded-active .main > *{
                   <label>Grupo <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
                   <select id="d-grupo" onchange="onGrupoSelectChange(this)"></select>
                 </div>
+                <div class="fld wide">
+                  <label>Ocupação</label
+                  ><input type="text" id="d-ocup" placeholder="Ex: Trabalho de escritório, professora, motorista..." />
+                </div>
               </div>
+
               <div class="sec-hd">Documentos do cadastro</div>
               <div class="attach-row">
                 <div class="attach-item"><i class="ti ti-file-text"></i> RG_paciente.pdf</div>
@@ -1993,12 +2012,7 @@ body.panel-expanded-active .main > *{
                   <i class="ti ti-plus" style="color:var(--n400)"></i> Adicionar
                 </div>
               </div>
-              <div style="display:flex;justify-content:flex-end;margin-top:14px;gap:7px">
-                <button class="btn">Cancelar</button>
-                <button class="btn primary" onclick="saveCadastro()">
-                  <i class="ti ti-device-floppy"></i> Salvar cadastro
-                </button>
-              </div>
+              <div style="height:64px"></div>
             </div>
 
             <!-- TAB ATENDIMENTOS -->
@@ -4083,6 +4097,7 @@ body.panel-expanded-active .main > *{
       function goScreen(name){
         const leavingPatientDetail=name!=='patient-detail'&&document.getElementById('s-patient-detail')?.style.display!=='none';
         if(leavingPatientDetail&&currentPatient&&atendEmAndamento&&atendEmAndamento.dirty){saveAtendState();saveAtendDraft();stopAtendAutoSave();}
+        if(name!=='patient-detail')updateCadastroFloatBar(null);
         ['atendimentos','patients','patient-detail','receitas','agenda','indicadores','secretaria','anamnese','copiloto','configuracoes','equipe','clinica'].forEach(s=>{
           const el=document.getElementById('s-'+s);
           if(el)el.style.display='none';
@@ -4619,6 +4634,11 @@ async function saveCadastro(){
         if(name==='atendimentos')restoreAtendState();
         if(name==='prontuario')renderProntuario();
         if(name==='timeline')renderTimeline();
+        updateCadastroFloatBar(name);
+      }
+      function updateCadastroFloatBar(activeTab){
+        const bar=document.getElementById('cadastro-float-bar');
+        if(bar)bar.classList.toggle('show',activeTab==='cadastro');
       }
       function saveAtendState(){
         const pa=document.getElementById('pront-area');
