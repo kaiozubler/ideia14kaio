@@ -6174,7 +6174,7 @@ async function saveCadastro(){
       let condState=null;
       function cfDefaultState(){
         return{
-          sugSel:null,
+          sugSel:[],  // array para multiselect
           ativados:{conduta:true,medicamentos:true,orientacoes:true,exames:true,atestado:true,laudo:true},
           vistos:{},
           removidos:{},
@@ -6248,25 +6248,26 @@ async function saveCadastro(){
         cfRenderSugestao();
       }
       function cfRenderSugestao(){
-        const list=document.getElementById('cf-sug-list');
-        const html=CF_SUGESTOES.map((s,i)=>{
-          const isLast=i===CF_SUGESTOES.length-1;
-          const act=condState.sugSel===i;
-          return `<button class="cf-sug${act?' active':''}${isLast?' dashed':''}" onclick="cfSelectSug(${i})"><span style="flex:1">${s}</span>${act?'<i class="ti ti-check" style="color:#059669"></i>':''}</button>`;
-        }).join('');
-        // Preserva mensagem de erro (se houver) acima da lista
-        const err=list.querySelector('div[style*="fef2f2"]');
-        list.innerHTML=(err?err.outerHTML:'')+html;
-        document.getElementById('cf-sug-outra').style.display=condState.sugSel===CF_SUGESTOES.length-1?'block':'none';
-        document.getElementById('cf-sug-next').disabled=condState.sugSel===null;
-      }
-      function cfSelectSug(i){condState.sugSel=i;cfRenderSugestao();}
+  const list=document.getElementById('cf-sug-list');
+  const html=CF_SUGESTOES.map((s,i)=>{
+    const isLast=i===CF_SUGESTOES.length-1;
+    const act=condState.sugSel===i;
+    return `<button class="cf-sug${act?' active':''}${isLast?' dashed':''}" onclick="cfSelectSug(${i})"><span style="flex:1">${s}</span>${act?'<i class="ti ti-check" style="color:#059669"></i>':''}</button>`;
+  }).join('');
+  const err=list.querySelector('div[style*="fef2f2"]');
+  list.innerHTML=(err?err.outerHTML:'')+html;
+  document.getElementById('cf-sug-outra').style.display=condState.sugSel===CF_SUGESTOES.length-1?'block':'none';
+  document.getElementById('cf-sug-next').disabled=condState.sugSel===null;
+}
+function cfSelectSug(i){condState.sugSel=i;cfRenderSugestao();}
       function cfCondutaTextoSelecionado(){
-        if(condState.sugSel==null)return '';
-        if(condState.sugSel===CF_SUGESTOES.length-1){
-          return (document.getElementById('cf-sug-outra')?.value||'').trim()||'Outra conduta';
-        }
-        return CF_SUGESTOES[condState.sugSel]||'';
+  if(!condState.sugSel||condState.sugSel.length===0)return '';
+  const outraIdx=CF_SUGESTOES.length-1;
+  return condState.sugSel.map(i=>{
+    if(i===outraIdx) return (document.getElementById('cf-sug-outra')?.value||'').trim()||'Outra conduta';
+    return CF_SUGESTOES[i]||'';
+  }).filter(Boolean).join('; ');
+}
       }
       async function condGoConduta(){
         const conduta=cfCondutaTextoSelecionado();
@@ -6435,15 +6436,49 @@ async function saveCadastro(){
         return '';
       }
       function cfNavClick(key){
-        if(!condState.ativados[key])return;
-        condState.vistos[key]=true;
-        const sec=document.querySelector(`#cf-cond-scroll .cf-section[data-key="${key}"]`);
-        if(sec)sec.scrollIntoView({behavior:'smooth',block:'start'});
-        cfRenderConduta();
+  if(!condState.ativados[key])return;
+  condState.vistos[key]=true;
+  const sec=document.querySelector(`#cf-cond-scroll .cf-section[data-key="${key}"]`);
+  if(sec)sec.scrollIntoView({behavior:'smooth',block:'start'});
+  // Atualiza badge do nav em-place
+  document.querySelectorAll('#cf-nav-list .cf-nav-item').forEach(item=>{
+    const btn=item.querySelector('.cf-nav-btn');
+    const badge=item.querySelector('.cf-nav-badge');
+    const dataKey=btn&&btn.getAttribute('onclick')&&btn.getAttribute('onclick').match(/cfNavClick\('([^']+)'\)/)?.[1];
+    if(dataKey===key){
+      btn.classList.add('visto');
+      if(badge)badge.style.background='linear-gradient(135deg,#34d399,#059669)';
+    }
+  });
+  // Atualiza cabeçalho da seção em-place
+  const hd=sec&&sec.querySelector('.cf-section-hd');
+  if(hd){
+    const badge=hd.querySelector('.cf-nav-badge');
+    const title=hd.querySelector('span[style]');
+    if(badge)badge.style.background='linear-gradient(135deg,#34d399,#059669)';
+    if(title)title.style.color='#065f46';
+    const genTag=hd.querySelector('span:last-child');
+    if(genTag&&genTag.textContent.includes('gerado'))
+      genTag.outerHTML='<span class="cf-pill-tag">✓ revisado</span>';
+  }
+  cfUpdateConduFooter();
+}
       }
       function cfToggleAtivo(key,ev){ev.stopPropagation();condState.ativados[key]=!condState.ativados[key];if(!condState.ativados[key])delete condState.vistos[key];cfRenderConduta();}
-      function cfToggleMed(id){const m=condState.medicamentos.find(x=>x.id===id);if(m){m.selecionado=!m.selecionado;cfRenderConduta();}}
-      function cfToggleExame(id){const e=condState.exames.find(x=>x.id===id);if(e){e.selecionado=!e.selecionado;cfRenderConduta();}}
+      function cfToggleMed(id){
+  const m=condState.medicamentos.find(x=>x.id===id);
+  if(!m)return;
+  m.selecionado=!m.selecionado;
+  const el=document.querySelector(`#cf-cond-scroll .cf-med[data-med-id="${id}"]`);
+  if(el){el.classList.toggle('sel',m.selecionado);el.classList.toggle('off',!m.selecionado);}
+}
+function cfToggleExame(id){
+  const e=condState.exames.find(x=>x.id===id);
+  if(!e)return;
+  e.selecionado=!e.selecionado;
+  const el=document.querySelector(`#cf-cond-scroll .cf-med[data-exame-id="${id}"]`);
+  if(el){el.classList.toggle('sel',e.selecionado);el.classList.toggle('off',!e.selecionado);}
+}
       function cfUpdateConduFooter(){
         const ativos=CF_CAMPOS.filter(c=>condState.ativados[c.key]);
         const falt=ativos.filter(c=>!condState.vistos[c.key]).length;
