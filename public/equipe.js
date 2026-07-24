@@ -441,6 +441,60 @@ function openDetailPanel(user){
       const idx=S.users.findIndex(x=>x.id===form.id);if(idx>=0)S.users[idx]=JSON.parse(JSON.stringify(form));
       close();renderUsers();
     };
+    // ICP-Brasil certificate connection (only for doctors)
+    const certBtn=wrap.querySelector('#eq-d-cert-connect');
+    const certStatus=wrap.querySelector('#eq-d-cert-status');
+    if(certBtn&&certStatus){
+      (async()=>{
+        try{
+          const {data}=await window.sb.auth.getSession();
+          const token=data?.session?.access_token;
+          if(!token){certStatus.textContent='Faça login para conectar o certificado.';return;}
+          const res=await fetch('/api/signature/credential',{headers:{Authorization:'Bearer '+token}});
+          const j=await res.json();
+          if(j.credential){
+            const c=j.credential;
+            const exp=c.credential_expires_at?new Date(c.credential_expires_at).toLocaleDateString('pt-BR'):'—';
+            certStatus.innerHTML=c.expired
+              ? `<b style="color:#dc2626">Expirado</b> — reconecte o certificado.`
+              : `<b style="color:#059669">Conectado</b> · ${esc(c.certificate_subject||c.provider_name||'')} · válido até ${exp}`;
+          } else {
+            certStatus.textContent='Nenhum certificado vinculado.';
+          }
+        }catch(err){certStatus.textContent='Não foi possível verificar o status.';}
+      })();
+      certBtn.onclick=async()=>{
+        const cpf=prompt('Informe o CPF do titular do certificado (somente números):');
+        if(!cpf)return;
+        certBtn.disabled=true;certStatus.textContent='Conectando ao provedor…';
+        try{
+          const {data}=await window.sb.auth.getSession();
+          const token=data?.session?.access_token;
+          if(!token){alert('Sessão expirada. Faça login novamente.');return;}
+          const callbackUrl=window.location.origin+'/api/public/signature/callback';
+          const res=await fetch('/api/signature/authenticate',{
+            method:'POST',
+            headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
+            body:JSON.stringify({cpf,callbackUrl}),
+          });
+          const j=await res.json();
+          if(!res.ok){
+            const msg=j.message||j.error||'Falha ao iniciar autenticação.';
+            certStatus.innerHTML=`<b style="color:#dc2626">${esc(msg)}</b>`;
+            return;
+          }
+          if(j.redirectUrl){window.location.href=j.redirectUrl;return;}
+          if(j.clearances&&j.clearances.length>1){
+            const pick=prompt('Escolha o provedor:\n'+j.clearances.map((c,i)=>`${i+1}) ${c.provider} — ${c.product||''}`).join('\n'));
+            const idx=Number(pick)-1;
+            if(j.clearances[idx]?.authorizationUrl){window.location.href=j.clearances[idx].authorizationUrl;return;}
+          }
+          certStatus.textContent='Nenhum provedor disponível retornado.';
+        }catch(err){
+          certStatus.innerHTML=`<b style="color:#dc2626">Erro: ${esc(String(err))}</b>`;
+        }finally{certBtn.disabled=false;}
+      };
+    }
   }
   function confirmNew(){
     const name=(newSpecialtyInput||"").trim();
