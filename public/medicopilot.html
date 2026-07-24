@@ -6288,7 +6288,6 @@ function cfSelectSug(i){condState.sugSel=i;cfRenderSugestao();}
     return CF_SUGESTOES[i]||'';
   }).filter(Boolean).join('; ');
 }
-      }
       async function condGoConduta(){
         const conduta=cfCondutaTextoSelecionado();
         if(!conduta){showToast('Selecione uma conduta','error');return;}
@@ -6483,7 +6482,6 @@ function cfSelectSug(i){condState.sugSel=i;cfRenderSugestao();}
   }
   cfUpdateConduFooter();
 }
-      }
       function cfToggleAtivo(key,ev){ev.stopPropagation();condState.ativados[key]=!condState.ativados[key];if(!condState.ativados[key])delete condState.vistos[key];cfRenderConduta();}
       function cfToggleMed(id){
   const m=condState.medicamentos.find(x=>x.id===id);
