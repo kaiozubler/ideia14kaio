@@ -359,7 +359,12 @@ function openDetailPanel(user){
               <select id="eq-d-crm-uf">${BR_STATES.map(s=>`<option ${form.crm?.uf===s?'selected':''}>${s}</option>`).join('')}</select>
               <input class="eq-input eq-crm-num" id="eq-d-crm-num" maxlength="6" placeholder="000000" value="${esc(form.crm?.number||'')}">
               ${form.crm?.uf&&form.crm?.number?.length===6?`<span class="eq-crm-ok">CRM/${esc(form.crm.uf)} ${esc(form.crm.number)}</span>`:''}
-            </div></div>`:''}
+            </div></div>
+          <div>
+            <label class="eq-label"><i class="ti ti-certificate"></i> Certificado ICP-Brasil</label>
+            <div id="eq-d-cert-status" style="font-size:12px;color:#64748b;margin-bottom:8px">Verificando…</div>
+            <button type="button" class="eq-btn eq-btn-ghost" id="eq-d-cert-connect"><i class="ti ti-shield-lock"></i> Conectar certificado</button>
+          </div>`:''}
         <div><label class="eq-label"><i class="ti ti-briefcase"></i> Grupo</label>
           <select class="eq-input" id="eq-d-group">${S.groups.map(gg=>`<option value="${gg.id}" ${gg.id===form.group?'selected':''}>${esc(gg.name)}</option>`).join('')}</select></div>
         <button class="eq-linkrow" id="eq-d-sched">
