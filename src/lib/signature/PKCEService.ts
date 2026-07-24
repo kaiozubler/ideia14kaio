@@ -61,9 +61,9 @@ export async function decryptVerifier(payload: string, secret: string): Promise<
   if (!ivB64 || !ctB64) throw new Error("invalid encrypted verifier");
   const key = await importKey(secret);
   const pt = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: fromB64(ivB64) },
+    { name: "AES-GCM", iv: fromB64(ivB64) as BufferSource },
     key,
-    fromB64(ctB64),
+    fromB64(ctB64) as BufferSource,
   );
   return new TextDecoder().decode(pt);
 }
