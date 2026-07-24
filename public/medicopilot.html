@@ -434,6 +434,18 @@ body.panel-expanded-active::before{content:"";position:fixed;inset:0;background:
       .pront-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
       .pront-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:20px;background:var(--g50);color:var(--g700);border:0.5px solid var(--g200)}
       .pront-badge .ti{font-size:11px;color:var(--g500)}
+      .pront-filter-row{display:flex;align-items:center;gap:8px;margin:0 0 12px 0;flex-wrap:wrap}
+      .pront-filter-row .lbl{font-size:11px;font-weight:600;color:var(--n400);text-transform:uppercase;letter-spacing:.04em}
+      .pront-filter-inp{height:30px;border:0.5px solid var(--n200);border-radius:var(--r6);padding:0 8px;font-size:12px;color:var(--n700);background:var(--n50);outline:none}
+      .pront-filter-inp:focus{border-color:var(--g400);background:var(--white)}
+      .pront-item{margin-bottom:12px;border:0.5px solid var(--n150);border-radius:8px;background:var(--n50);overflow:hidden}
+      .pront-item-hd{display:flex;align-items:center;gap:8px;padding:12px 14px;cursor:pointer;user-select:none}
+      .pront-item-chev{font-size:14px;color:var(--n400);transition:transform .15s ease;flex-shrink:0}
+      .pront-item[data-open="0"] .pront-item-chev{transform:rotate(-90deg)}
+      .pront-item[data-open="0"] .pront-item-body{display:none}
+      .pront-item-title{flex:1;font-size:12px;font-weight:600;color:var(--n700)}
+      .pront-item-badge{font-size:10px;padding:2px 7px;border-radius:4px;background:var(--g50);color:var(--g700);border:0.5px solid var(--g200)}
+      .pront-item-body{padding:0 14px 12px 14px}
       .reprocess-bar{background:var(--n50);border:0.5px solid var(--n150);border-radius:var(--r8);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
       .reprocess-info{display:flex;align-items:center;gap:8px}
       .reprocess-info .ti{font-size:16px;color:var(--g500)}
@@ -2453,6 +2465,24 @@ body.panel-expanded-active .main > *{
                   </button>
                 </div>
               </div>
+              <div class="pront-filter-row">
+                <i class="ti ti-calendar" style="font-size:14px;color:var(--n400)"></i>
+                <span class="lbl">Período</span>
+                <input type="date" id="pront-filtro-de" class="pront-filter-inp" onchange="renderProntuario()" />
+                <span style="font-size:11px;color:var(--n400)">até</span>
+                <input type="date" id="pront-filtro-ate" class="pront-filter-inp" onchange="renderProntuario()" />
+                <button class="btn sm ghost" onclick="prontResetFiltro()" title="Voltar para os últimos 6 meses">
+                  Últimos 6 meses
+                </button>
+                <button
+                  class="btn sm"
+                  id="pront-toggle-all-btn"
+                  style="margin-left:auto"
+                  onclick="prontToggleAll()"
+                >
+                  <i class="ti ti-chevrons-up"></i> Recolher todos
+                </button>
+              </div>
               <div id="prontuario-main-area"></div>
             </div>
           </div>
@@ -4016,6 +4046,7 @@ body.panel-expanded-active .main > *{
       let atendimentos=[];
       let exames=[];
       let timelineEvents=[];
+      let prontAllCollapsed=false;
 
       /* ========== STATE ========== */
       let currentPatient=null;
@@ -4297,7 +4328,7 @@ body.panel-expanded-active .main > *{
         const d=a.started_at?new Date(a.started_at):new Date();
         const dateStr=d.toLocaleDateString('pt-BR');
         const timeStr=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-        return {id:a.id,id_medico:a.id_medico||null,title:a.title||('Consulta — '+dateStr),date:dateStr,hora:timeStr,acao:a.acao||'Consulta',resumo:a.resumo||'Atendimento registrado.',notas:a.notas||'Sem anotações.',notaPersonal:a.nota_personal||'',anamneseIa:a.anamnese_ia||''};
+        return {id:a.id,id_medico:a.id_medico||null,title:a.title||('Consulta — '+dateStr),date:dateStr,hora:timeStr,startedAt:a.started_at||d.toISOString(),acao:a.acao||'Consulta',resumo:a.resumo||'Atendimento registrado.',notas:a.notas||'Sem anotações.',notaPersonal:a.nota_personal||'',anamneseIa:a.anamnese_ia||''};
       }
       function mapExameRow(e){return {id:e.id,nome:e.nome,tipo:e.tipo||'Outro',data:e.data||'',obs:e.obs||'',file:e.file_name||'—',validade:e.validade||'',validadeDias:e.validade_dias||null};}
       function mapTimelineRow(ev){return {id:ev.id,date:ev.event_date,type:ev.type,icon:ev.icon,title:ev.title,sub:ev.sub||''};}
@@ -5170,7 +5201,7 @@ async function saveCadastro(){
               <span id="pront-resumo-meta" style="font-size:10.5px;color:var(--n500);margin-left:4px">—</span>
               <button id="pront-resumo-refresh" class="btn sm" style="margin-left:auto" onclick="forceRefreshResumoProntuario()" title="Forçar atualização"><i class="ti ti-refresh" id="pront-resumo-refresh-ico"></i> Atualizar</button>
             </div>
-            <div id="pront-resumo-text" style="font-size:12.5px;color:var(--n700);line-height:1.7;white-space:pre-wrap">Carregando…</div>`;
+            <div id="pront-resumo-text" class="resumo-pre rich">Carregando…</div>`;
           area.parentNode.insertBefore(wrap,area);
         }
         // Alerta de prontuário desatualizado (>90 dias)
@@ -5179,6 +5210,7 @@ async function saveCadastro(){
 
         // Dados clínicos
         renderInfoCompSummary();
+        prontInitFiltroPadrao();
         const dc=document.getElementById('dados-clinicos-ta')?.value;
         let html='';
         if(dc){
@@ -5187,17 +5219,75 @@ async function saveCadastro(){
             <div><div style="font-size:10px;font-weight:600;color:#92400e;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px">Dados Clínicos</div>
             <div style="font-size:12.5px;color:#78350f;line-height:1.65">${dc}</div></div></div>`;
         }
-        atendimentos.forEach(a=>{
-          html+=`<div style="margin-bottom:12px;padding:12px 14px;border:0.5px solid var(--n150);border-radius:8px;background:var(--n50)">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-              <span style="font-size:12px;font-weight:600;color:var(--n700)">${a.date} ${a.hora?'— '+a.hora:''} \u00a0·\u00a0 ${a.title}</span>
-              <span style="font-size:10px;padding:2px 7px;border-radius:4px;background:var(--g50);color:var(--g700);border:0.5px solid var(--g200)">${a.acao}</span>
+        const {de,ate}=prontGetFiltro();
+        const filtrados=atendimentos.filter(a=>{
+          const t=new Date(a.startedAt||a.date.split('/').reverse().join('-')).getTime();
+          return !isNaN(t)&&t>=de.getTime()&&t<=ate.getTime();
+        });
+        filtrados.forEach((a,idx)=>{
+          html+=`<div class="pront-item" data-open="${prontAllCollapsed?0:1}">
+            <div class="pront-item-hd" onclick="prontToggleItem(this)">
+              <i class="ti ti-chevron-down pront-item-chev"></i>
+              <span class="pront-item-title">${a.date} ${a.hora?'— '+a.hora:''} \u00a0·\u00a0 ${a.title}</span>
+              <span class="pront-item-badge">${a.acao}</span>
             </div>
-            <div style="font-family:var(--mono);font-size:11.5px;color:var(--n700);line-height:1.75;white-space:pre-wrap">${renderNotasWithHighlight(a.notas)}</div>
-            ${a.notaPersonal?`<div class="nota-personal-section" style="margin-top:8px;padding:7px 10px;border:0.5px dashed var(--n200);border-radius:6px;background:var(--white)"><div style="font-size:10px;font-weight:600;color:var(--n400);letter-spacing:.04em;text-transform:uppercase;margin-bottom:3px"><i class="ti ti-lock" style="font-size:10px"></i> Nota pessoal</div><div style="font-size:11.5px;color:var(--n600);font-style:italic">${a.notaPersonal}</div></div>`:''}
+            <div class="pront-item-body">
+              <div style="font-family:var(--mono);font-size:11.5px;color:var(--n700);line-height:1.75;white-space:pre-wrap">${renderNotasWithHighlight(a.notas)}</div>
+              ${a.notaPersonal?`<div class="nota-personal-section" style="margin-top:8px;padding:7px 10px;border:0.5px dashed var(--n200);border-radius:6px;background:var(--white)"><div style="font-size:10px;font-weight:600;color:var(--n400);letter-spacing:.04em;text-transform:uppercase;margin-bottom:3px"><i class="ti ti-lock" style="font-size:10px"></i> Nota pessoal</div><div style="font-size:11.5px;color:var(--n600);font-style:italic">${a.notaPersonal}</div></div>`:''}
+            </div>
           </div>`;
         });
+        if(!filtrados.length&&atendimentos.length){
+          html+=`<div class="empty-st"><i class="ti ti-calendar-off"></i><p>Nenhum atendimento no período selecionado</p></div>`;
+        }
         area.innerHTML=html||'<div class="empty-st"><i class="ti ti-notes"></i><p>Nenhum atendimento registrado</p></div>';
+      }
+      // Preenche o filtro de período com o padrão (6 meses atrás até hoje), só se ainda estiver vazio
+      function prontInitFiltroPadrao(){
+        const de=document.getElementById('pront-filtro-de');
+        const ate=document.getElementById('pront-filtro-ate');
+        if(!de||!ate)return;
+        if(!de.value||!ate.value){
+          const hoje=new Date();
+          const seisMesesAtras=new Date(hoje);
+          seisMesesAtras.setMonth(seisMesesAtras.getMonth()-6);
+          de.value=seisMesesAtras.toISOString().slice(0,10);
+          ate.value=hoje.toISOString().slice(0,10);
+        }
+      }
+      function prontGetFiltro(){
+        const deEl=document.getElementById('pront-filtro-de');
+        const ateEl=document.getElementById('pront-filtro-ate');
+        const hoje=new Date();
+        const padraoDe=new Date(hoje);padraoDe.setMonth(padraoDe.getMonth()-6);
+        const de=deEl&&deEl.value?new Date(deEl.value+'T00:00:00'):padraoDe;
+        const ate=ateEl&&ateEl.value?new Date(ateEl.value+'T23:59:59'):hoje;
+        return {de,ate};
+      }
+      function prontResetFiltro(){
+        const hoje=new Date();
+        const seisMesesAtras=new Date(hoje);
+        seisMesesAtras.setMonth(seisMesesAtras.getMonth()-6);
+        const de=document.getElementById('pront-filtro-de');
+        const ate=document.getElementById('pront-filtro-ate');
+        if(de)de.value=seisMesesAtras.toISOString().slice(0,10);
+        if(ate)ate.value=hoje.toISOString().slice(0,10);
+        renderProntuario();
+      }
+      // Colapsa/expande um registro individual do prontuário
+      function prontToggleItem(hd){
+        const item=hd.closest('.pront-item');if(!item)return;
+        const open=item.getAttribute('data-open')==='1';
+        item.setAttribute('data-open',open?'0':'1');
+      }
+      // Colapsa/expande todos os registros da listagem de uma vez
+      function prontToggleAll(){
+        prontAllCollapsed=!prontAllCollapsed;
+        document.querySelectorAll('#prontuario-main-area .pront-item').forEach(item=>{
+          item.setAttribute('data-open',prontAllCollapsed?'0':'1');
+        });
+        const btn=document.getElementById('pront-toggle-all-btn');
+        if(btn)btn.innerHTML=prontAllCollapsed?'<i class="ti ti-chevrons-down"></i> Expandir todos':'<i class="ti ti-chevrons-up"></i> Recolher todos';
       }
       async function saveDadosClinicos(){
         if(!currentPatient)return;
@@ -5976,7 +6066,7 @@ async function saveCadastro(){
       function refreshPanelResumo(text,updatedAt){
         const t=document.getElementById('pront-resumo-text');
         const m=document.getElementById('pront-resumo-meta');
-        if(t)t.textContent=text||'(sem resumo)';
+        if(t)t.innerHTML=mdToHtml(text||'(sem resumo)');
         if(m&&updatedAt){
           const d=new Date(updatedAt);
           m.textContent='Atualizado em '+d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
