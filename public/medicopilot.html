@@ -6489,9 +6489,9 @@ function cfAplicarModelo(idx){
   condState=JSON.parse(JSON.stringify(modelo.state));
   condState.vistos={};
   cfCloseSavedPopup();
-  // Vai direto para o último modal (documentos) sem passar pelo de revisão
   cfRenderDocs();
   document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
+  document.getElementById('modal-overlay').classList.add('open');
   const m=document.getElementById('m-cond-docs');
   if(m)m.style.display='flex';
 }
@@ -6514,10 +6514,9 @@ function cfRemoverModelo(idx){
       async function condGoConduta(){
   const conduta=cfCondutaTextoSelecionado();
   if(!conduta){showToast('Selecione uma conduta','error');return;}
-  // Prepara o loading ANTES de trocar de modal para evitar flash
   cfRenderCondutaLoading(conduta);
-  // Troca de modal sem fechar o overlay: esconde o atual, mostra o próximo
   document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
+  document.getElementById('modal-overlay').classList.add('open');
   const mc=document.getElementById('m-cond-conduta');
   if(mc)mc.style.display='flex';
   try{
@@ -6628,11 +6627,13 @@ function cfRemoverModelo(idx){
       function condBackToSugestao(){
   cfRenderSugestao();
   document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
+  document.getElementById('modal-overlay').classList.add('open');
   document.getElementById('m-cond-sugestao').style.display='flex';
 }
       function condBackToConduta(){
   cfRenderConduta();
   document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
+  document.getElementById('modal-overlay').classList.add('open');
   document.getElementById('m-cond-conduta').style.display='flex';
 }
       function cfRenderConduta(){
@@ -6877,6 +6878,7 @@ function cfToggleExame(id){
       function condGoDocs(){
   cfRenderDocs();
   document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
+  document.getElementById('modal-overlay').classList.add('open');
   document.getElementById('m-cond-docs').style.display='flex';
 }
       function cfRenderDocs(){
