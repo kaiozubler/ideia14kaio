@@ -6827,7 +6827,157 @@ function cfRemoveExame(id){
   cfRenderConduta();
 }
 // ─────────────────────────────────────────────────────────────────────────
-      function cfNavClick(key){
+     // ── Busca de medicamentos dentro do modal de conduta ─────────────────────
+let cfMedSearchTimer = null;
+let cfMedLastResults = [];
+
+function cfMedSearch(q) {
+  clearTimeout(cfMedSearchTimer);
+  cfMedSearchTimer = setTimeout(() => cfMedDoSearch(q), 220);
+}
+
+async function cfMedDoSearch(q) {
+  const box = document.getElementById('cf-med-results');
+  if (!box) return;
+  const term = (q || '').trim();
+  if (!term) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = 'block';
+  box.innerHTML = '<div style="padding:14px;font-size:12px;color:#94a3b8;text-align:center"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Buscando...</div>';
+  try {
+    const [genRes, comRes] = await Promise.all([
+      sb.rpc('buscar_genericos', { termo: term }),
+      sb.rpc('buscar_comerciais', { termo: term })
+    ]);
+    if (genRes.error || comRes.error) {
+      box.innerHTML = '<div style="padding:14px;font-size:12px;color:#dc2626;text-align:center"><i class="ti ti-alert-circle"></i> Erro ao buscar</div>';
+      return;
+    }
+    const gens = (genRes.data || []).map(g => ({
+      key: 'G|' + g.id_substancia,
+      is_generico: true,
+      id_substancia: g.id_substancia,
+      nome_comercial: g.nome_exibicao,
+      composicao: g.grupo_busca,
+      qtd_fabricantes: Number(g.qtd_fabricantes || 0)
+    }));
+    const coms = (comRes.data || []).map(c => ({
+      key: 'R|' + (c.nome_comercial || '') + '|' + (c.fabricante || ''),
+      is_generico: false,
+      nome_comercial: c.nome_comercial,
+      fabricante: c.fabricante,
+      composicao: '',
+      qtd_apresentacoes: Number(c.qtd_apresentacoes || 0)
+    }));
+    const list = [...gens, ...coms].slice(0, 80);
+    cfMedLastResults = list;
+    if (!list.length) {
+      box.innerHTML = '<div style="padding:16px;font-size:12px;color:#94a3b8;text-align:center"><i class="ti ti-mood-empty" style="display:block;font-size:20px;margin-bottom:4px"></i>Nenhum medicamento encontrado</div>';
+      return;
+    }
+    box.innerHTML = list.map(m => {
+      const genBadge = m.is_generico
+        ? '<span style="font-size:9.5px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 6px;border-radius:4px">GENÉRICO</span>' : '';
+      const fabLine = (!m.is_generico && m.fabricante)
+        ? `<span style="font-size:10.5px;color:#94a3b8">· ${m.fabricante}</span>` : '';
+      const compos = m.composicao
+        ? `<div style="font-size:11.5px;color:#64748b;margin-top:1px">${m.composicao}</div>` : '';
+      const info = m.is_generico
+        ? `<i class="ti ti-building-factory" style="font-size:11px"></i> ${m.qtd_fabricantes} fabricante${m.qtd_fabricantes === 1 ? '' : 's'}`
+        : (m.qtd_apresentacoes ? `<i class="ti ti-pill" style="font-size:11px"></i> ${m.qtd_apresentacoes} apresenta${m.qtd_apresentacoes > 1 ? 'ções' : 'ção'}` : '');
+      return `<div onclick='cfMedAdd(${JSON.stringify(m.key)})'
+        style="padding:10px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .1s"
+        onmouseenter="this.style.background='#f8fafc'"
+        onmouseleave="this.style.background=''">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-weight:600;font-size:13px;color:#0f172a">${m.nome_comercial}</span>
+          ${genBadge}${fabLine}
+        </div>
+        ${compos}
+        ${info ? `<div style="font-size:11px;color:#059669;margin-top:2px">${info}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch (e) {
+    box.innerHTML = '<div style="padding:14px;font-size:12px;color:#dc2626;text-align:center">Erro: ' + e.message + '</div>';
+  }
+}
+
+async function cfMedAdd(key) {
+  const med = (cfMedLastResults || []).find(m => m.key === key);
+  if (!med) return;
+  const id = Date.now();
+  let apresentacoes = [], fabricantes = [], composicao = med.composicao || '';
+  try {
+    if (med.is_generico) {
+      const [fabRes, apsRes] = await Promise.all([
+        sb.rpc('listar_fabricantes_generico', { p_id_substancia: med.id_substancia }),
+        sb.rpc('listar_apresentacoes_generico', { p_id_substancia: med.id_substancia })
+      ]);
+      fabricantes = (fabRes.data || []).map(f => f.fabricante).filter(Boolean);
+      const seen = new Set();
+      for (const a of (apsRes.data || [])) {
+        const k = (a.apresentacao || '').toLowerCase().trim();
+        if (k && !seen.has(k)) { seen.add(k); apresentacoes.push(a.apresentacao); }
+      }
+    } else {
+      const { data } = await sb.rpc('listar_apresentacoes_comercial', {
+        p_nome_comercial: med.nome_comercial,
+        p_fabricante: med.fabricante
+      });
+      apresentacoes = (data || []).map(a => a.apresentacao).filter(Boolean);
+      composicao = await rxFetchComposicaoComercial(med.nome_comercial, med.fabricante);
+    }
+  } catch (e) { console.error(e); }
+
+  condState.medicamentos.push({
+    id,
+    nome: med.nome_comercial,
+    composicao,
+    principio_ativo: med.composicao || '',
+    apresentacao: apresentacoes[0] || '',
+    apresentacoes_db: apresentacoes,
+    quantidade: '1 caixa',
+    instrucoes: '',
+    selecionado: true,
+    is_generico: !!med.is_generico,
+    fabricantes,
+    fabricante: med.is_generico ? '' : (med.fabricante || ''),
+    id_substancia: med.id_substancia || null,
+    medicamento_id: null
+  });
+
+  const inp = document.getElementById('cf-med-search');
+  const box = document.getElementById('cf-med-results');
+  if (inp) inp.value = '';
+  if (box) box.style.display = 'none';
+  cfRenderConduta();
+}
+
+async function cfMedSetFab(id, val) {
+  const m = condState.medicamentos.find(x => x.id === id);
+  if (!m) return;
+  m.fabricante = val;
+  if (m.is_generico && m.id_substancia) {
+    try {
+      const args = { p_id_substancia: m.id_substancia };
+      if (val) args.p_fabricante = val;
+      const { data } = await sb.rpc('listar_apresentacoes_generico', args);
+      const seen = new Set(); const aps = [];
+      for (const a of (data || [])) {
+        const k = (a.apresentacao || '').toLowerCase().trim();
+        if (k && !seen.has(k)) { seen.add(k); aps.push(a.apresentacao); }
+      }
+      m.apresentacoes_db = aps;
+      if (!aps.includes(m.apresentacao)) m.apresentacao = aps[0] || '';
+      if (val) {
+        const comp = await rxFetchComposicaoGenerico(m.id_substancia, val);
+        if (comp) m.composicao = comp;
+      }
+    } catch (e) { console.warn(e); }
+  }
+  cfRenderConduta();
+}
+// ─────────────────────────────────────────────────────────────────────────────
+            function cfNavClick(key){
   if(!condState.ativados[key])return;
   condState.vistos[key]=true;
   const sec=document.querySelector(`#cf-cond-scroll .cf-section[data-key="${key}"]`);
