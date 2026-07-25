@@ -4854,7 +4854,7 @@ async function saveCadastro(){
         const a=atendimentos.find(x=>String(x.id)===String(id));
         if(!a){console.warn('Atendimento não encontrado',id);return;}
         document.getElementById('atend-list-view').style.display='none';
-        document.getElementById('atend-detail-view').style.display='block';
+        document.getElementById('atend-detail-view').style.display='flex';
         document.getElementById('atend-novo-view').style.display='none';
         document.getElementById('adv-title').textContent=a.title;
         document.getElementById('adv-date').textContent=a.date+(a.hora?' — '+a.hora:'');
