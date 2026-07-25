@@ -4822,7 +4822,7 @@ async function saveCadastro(){
       function updateDossieBtn(){const b=document.getElementById('dossie-btn');if(b)b.classList.toggle('show',checkedAtends.size>0);}
       function showAtendList(){
         if(atendEmAndamento&&atendEmAndamento.dirty){saveAtendState();saveAtendDraft();}
-        document.getElementById('atend-list-view').style.display='block';
+        document.getElementById('atend-list-view').style.display='flex';
         document.getElementById('atend-detail-view').style.display='none';
         document.getElementById('atend-novo-view').style.display='none';
         renderAtendimentos();
