@@ -4705,9 +4705,7 @@ async function saveCadastro(){
         if(npta)atendEmAndamento.notaPessoal=npta.value;
       }
       function restoreAtendState(){
-        if(atendEmAndamento.dirty)showNovoAtend(true);
-        else if(hasAtendDraft())showNovoAtend(false);
-        else showAtendList();
+        showAtendList();
       }
       function markAtendDirty(){
         if(!atendEmAndamento.dirty){atendEmAndamento.dirty=true;updateAtendProgress();}
@@ -4769,7 +4767,7 @@ async function saveCadastro(){
         document.querySelectorAll('.tab').forEach((t,i)=>{if(['cadastro','atendimentos','exames','financeiro','agenda','timeline','prontuario'][i]==='atendimentos')t.classList.add('on');});
         document.querySelectorAll('.tab-body').forEach(b=>b.style.display='none');
         document.getElementById('tb-atendimentos').style.display='block';
-        restoreAtendState();
+        showNovoAtend(true);
       }
 
       /* ========== ATENDIMENTOS ========== */
