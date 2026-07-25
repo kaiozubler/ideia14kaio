@@ -38,6 +38,8 @@ export async function embedCMSIntoPDF(params: EmbedParams): Promise<{
       pdfBuffer: buf,
       reason: params.reason,
       name: params.name,
+      contactInfo: "",
+      location: "",
       signatureLength: SIGNATURE_LENGTH,
     }) as Buffer;
   } catch (e) {
@@ -47,12 +49,9 @@ export async function embedCMSIntoPDF(params: EmbedParams): Promise<{
   // Signer wrapper compatible with @signpdf/signpdf ISigner.
   const externalSigner = {
     async sign(pdfBufferToSign: Buffer): Promise<Buffer> {
-      const digest = await sha256Base64(
-        pdfBufferToSign.buffer.slice(
-          pdfBufferToSign.byteOffset,
-          pdfBufferToSign.byteOffset + pdfBufferToSign.byteLength,
-        ),
-      );
+      const copy = new Uint8Array(pdfBufferToSign.byteLength);
+      copy.set(pdfBufferToSign);
+      const digest = await sha256Base64(copy.buffer);
       const cmsBase64 = await params.signer(digest);
       return Buffer.from(cmsBase64, "base64");
     },
