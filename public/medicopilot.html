@@ -4866,11 +4866,11 @@ async function saveCadastro(){
           }
           med.textContent=nome;
         }
-        // Anamnese gerada (se houver)
+        // Prontuário preenchido nesta consulta (inclui a anamnese gerada pela IA e o que o médico editou/acrescentou)
         const anam=document.getElementById('adv-anamnese');
         const anamBlock=document.getElementById('adv-anamnese-block');
         if(anam&&anamBlock){
-          if(a.anamneseIa){anam.textContent=a.anamneseIa;anamBlock.style.display='';}
+          if(a.notas&&a.notas!=='Sem anotações.'){anam.textContent=a.notas;anamBlock.style.display='';}
           else{anamBlock.style.display='none';}
         }
         // Inicia chat IA contextual da consulta
