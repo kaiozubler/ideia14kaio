@@ -103,8 +103,15 @@ export const CredentialRepository = {
     return { doctorId: data.doctor_id, codeVerifier };
   },
 
-  async upsertCertificate(doctorId: string, cred: CredentialData) {
+  async upsertCertificate(
+    doctorId: string,
+    cred: CredentialData,
+    codeVerifier?: string,
+  ) {
     const sb = await admin();
+    const codeVerifierEncrypted = codeVerifier
+      ? await encryptVerifier(codeVerifier, requireEncryptionKey())
+      : undefined;
     const { error } = await sb
       .from("doctor_certificates")
       .upsert(
@@ -120,6 +127,7 @@ export const CredentialRepository = {
           certificate_valid_until: cred.certificateValidUntil,
           credential_expires_at: cred.credentialExpiresAt,
           raw_metadata: cred.raw as never,
+          ...(codeVerifierEncrypted ? { code_verifier_encrypted: codeVerifierEncrypted } : {}),
         },
         { onConflict: "doctor_id,credential_id" },
       );
@@ -137,5 +145,15 @@ export const CredentialRepository = {
       .maybeSingle();
     if (error) throw error;
     return data;
+  },
+
+  async getActiveCertificateWithVerifier(doctorId: string) {
+    const cert = await this.getActiveCertificate(doctorId);
+    if (!cert) return null;
+    const enc = (cert as unknown as { code_verifier_encrypted?: string | null })
+      .code_verifier_encrypted;
+    if (!enc) return { cert, codeVerifier: null as string | null };
+    const codeVerifier = await decryptVerifier(enc, requireEncryptionKey());
+    return { cert, codeVerifier };
   },
 };
