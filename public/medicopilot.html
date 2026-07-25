@@ -2049,7 +2049,7 @@ body.panel-expanded-active .main > *{
                 <button class="back-btn" onclick="showAtendList()">
                   <i class="ti ti-arrow-left"></i> Atendimentos
                 </button>
-                <div class="atend-detail-hd">
+                <div class="atend-detail-hd" style="justify-content:space-between;align-items:flex-start">
                   <div>
                     <div class="atend-detail-title" id="adv-title">—</div>
                     <div class="atend-detail-date" id="adv-date">—</div>
@@ -2057,15 +2057,15 @@ body.panel-expanded-active .main > *{
                       <i class="ti ti-user-circle" style="font-size:12px"></i> Médico: <span id="adv-medico">—</span>
                     </div>
                   </div>
+                  <div style="display:flex;gap:6px;flex-shrink:0">
+                    <button class="btn sm ghost" title="Ver receita"><i class="ti ti-file-prescription"></i></button>
+                    <button class="btn sm ghost" title="Ver atestado"><i class="ti ti-certificate"></i></button>
+                    <button class="btn sm" title="Imprimir"><i class="ti ti-printer"></i></button>
+                  </div>
                 </div>
                 <div class="notes-block" id="adv-anamnese-block" style="display:none;margin-top:10px">
                   <div class="notes-label"><i class="ti ti-file-text"></i> Anamnese gerada</div>
                   <div class="notes-text" id="adv-anamnese" style="white-space:pre-wrap">—</div>
-                </div>
-                <div class="atend-links">
-                  <button class="btn sm ghost"><i class="ti ti-file-prescription"></i> Ver receita</button>
-                  <button class="btn sm ghost"><i class="ti ti-certificate"></i> Ver atestado</button>
-                  <button class="btn sm"><i class="ti ti-printer"></i> Imprimir</button>
                 </div>
                 <div style="margin-top:16px;border:0.5px solid var(--n150);border-radius:var(--r8);overflow:hidden">
                   <div
