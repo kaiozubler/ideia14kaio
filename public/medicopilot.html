@@ -6649,21 +6649,114 @@ function cfRemoverModelo(idx){
           </div>`;
         }).join('');
         // observer for vistos
-        if(window.__cfObs)window.__cfObs.disconnect();
-        window.__cfObs=new IntersectionObserver((ents)=>{
-          let changed=false;
-          ents.forEach(e=>{if(e.isIntersecting){const k=e.target.dataset.key;if(!condState.vistos[k]){condState.vistos[k]=true;changed=true;}}});
-          if(changed)cfUpdateConduFooter();
-        },{root:scroll,threshold:.25});
-        scroll.querySelectorAll('.cf-section').forEach(el=>window.__cfObs.observe(el));
-        cfUpdateConduFooter();
+        // observer for vistos — delay prevents marking all sections on initial render
+if(window.__cfObs)window.__cfObs.disconnect();
+requestAnimationFrame(()=>{
+  let ready=false;
+  setTimeout(()=>{ready=true;},600);
+  window.__cfObs=new IntersectionObserver((ents)=>{
+    if(!ready)return;
+    let changed=false;
+    ents.forEach(e=>{if(e.isIntersecting){const k=e.target.dataset.key;if(!condState.vistos[k]){condState.vistos[k]=true;changed=true;}}});
+    if(changed)cfUpdateConduFooter();
+  },{root:scroll,threshold:.35});
+  scroll.querySelectorAll('.cf-section').forEach(el=>window.__cfObs.observe(el));
+});
+cfUpdateConduFooter();
       }
       function cfRenderBody(key){
-        const s=condState;
-        if(key==='conduta')return s.condutaCards.map(c=>`<div class="cf-card${c.tipo==='atencao'?' alert':''}"><div class="cf-card-title"><i class="ti ${c.tipo==='atencao'?'ti-alert-triangle':'ti-check'}"></i>${c.titulo}</div><p class="cf-card-text">${c.texto}</p></div>`).join('');
-        if(key==='medicamentos')return s.medicamentos.map(m=>`<div class="cf-med${m.selecionado?' sel':' off'}" onclick="cfToggleMed(${m.id})"><div style="flex:1"><span class="cf-med-name">${m.nome}</span><span class="cf-med-sub">${m.apresentacao} · ${m.quantidade}</span><div style="font-size:11px;color:#64748b;margin-top:4px">${m.instrucoes}</div></div></div>`).join('');
+        const escH=v=>(String(v||'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+if(key==='conduta')return s.condutaCards.map(c=>`
+  <div class="cf-card${c.tipo==='atencao'?' alert':''}">
+    <div class="cf-card-title" style="justify-content:space-between">
+      <span style="display:flex;align-items:center;gap:5px">
+        <i class="ti ${c.tipo==='atencao'?'ti-alert-triangle':'ti-check'}"></i>${escH(c.titulo)}
+      </span>
+      <span style="display:flex;gap:3px;flex-shrink:0">
+        <button class="cf-close" style="padding:3px" onclick="cfEditCard(${c.id})" title="Editar">
+          <i class="ti ti-pencil" style="color:#64748b;font-size:11px"></i>
+        </button>
+        <button class="cf-close" style="padding:3px" onclick="cfRemoveCard(${c.id})" title="Remover">
+          <i class="ti ti-trash" style="color:#dc2626;font-size:11px"></i>
+        </button>
+      </span>
+    </div>
+    <div id="cf-card-view-${c.id}"><p class="cf-card-text">${escH(c.texto)}</p></div>
+    <div id="cf-card-edit-${c.id}" style="display:none;margin-top:6px">
+      <input class="cf-inp" style="margin-bottom:5px;font-weight:600;font-size:12px"
+        value="${escH(c.titulo)}"
+        oninput="cfUpdateCard(${c.id},'titulo',this.value)"
+        placeholder="Título">
+      <textarea class="cf-ta" style="min-height:60px"
+        oninput="cfUpdateCard(${c.id},'texto',this.value)">${escH(c.texto)}</textarea>
+    </div>
+  </div>`).join('');a
+        if(key==='medicamentos')return `<div>${s.medicamentos.map(m=>`
+  <div class="cf-med${m.selecionado?' sel':' off'}" data-med-id="${m.id}"
+    onclick="cfToggleMed(${m.id})"
+    style="flex-direction:column;align-items:stretch;cursor:pointer">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <input class="cf-inp"
+            style="width:160px;font-weight:600;font-size:12px;background:transparent;border-color:rgba(203,213,225,.4);padding:4px 8px"
+            value="${escH(m.nome)}"
+            oninput="event.stopPropagation();cfEditMed(${m.id},'nome',this.value)"
+            onclick="event.stopPropagation()"
+            placeholder="Nome">
+          <input class="cf-inp"
+            style="width:150px;font-size:11px;background:transparent;border-color:rgba(203,213,225,.4);padding:4px 8px"
+            value="${escH(m.apresentacao)}"
+            oninput="event.stopPropagation();cfEditMed(${m.id},'apresentacao',this.value)"
+            onclick="event.stopPropagation()"
+            placeholder="Apresentação">
+          <input class="cf-inp"
+            style="width:110px;font-size:11px;background:transparent;border-color:rgba(203,213,225,.4);padding:4px 8px"
+            value="${escH(m.quantidade)}"
+            oninput="event.stopPropagation();cfEditMed(${m.id},'quantidade',this.value)"
+            onclick="event.stopPropagation()"
+            placeholder="Quantidade">
+        </div>
+      </div>
+      <button class="cf-close" style="padding:4px;flex-shrink:0"
+        onclick="event.stopPropagation();cfRemoveMed(${m.id})" title="Remover">
+        <i class="ti ti-trash" style="font-size:11px;color:#dc2626"></i>
+      </button>
+    </div>
+    <textarea class="cf-ta"
+      style="min-height:40px;margin-top:6px;font-size:11px"
+      oninput="event.stopPropagation();cfEditMed(${m.id},'instrucoes',this.value)"
+      onclick="event.stopPropagation()"
+      placeholder="Instruções de uso">${escH(m.instrucoes)}</textarea>
+  </div>`).join('')}
+  <button onclick="cfAddMed()"
+    style="display:flex;align-items:center;gap:6px;padding:7px 12px;background:rgba(255,255,255,.55);border:1.5px dashed rgba(167,243,208,.8);border-radius:12px;font-size:12px;color:#059669;cursor:pointer;margin-top:4px;font-weight:500">
+    <i class="ti ti-plus" style="font-size:13px"></i> Adicionar medicamento
+  </button>
+</div>`;
         if(key==='orientacoes')return `<textarea class="cf-ta" style="min-height:160px" oninput="condState.orientacoes=this.value">${s.orientacoes}</textarea>`;
-        if(key==='exames')return s.exames.map(e=>`<div class="cf-med${e.selecionado?' sel':' off'}" onclick="cfToggleExame(${e.id})"><div style="flex:1"><span class="cf-med-name">${e.nome}</span><div style="font-size:11px;color:#64748b;margin-top:4px">${e.instrucoes}</div></div></div>`).join('');
+        if(key==='exames')return s.exames.map(e=>`
+  <div class="cf-med${e.selecionado?' sel':' off'}" data-exame-id="${e.id}"
+    onclick="cfToggleExame(${e.id})"
+    style="flex-direction:column;align-items:stretch;cursor:pointer">
+    <div style="display:flex;align-items:center;gap:8px">
+      <input class="cf-inp"
+        style="flex:1;font-weight:600;font-size:12px;background:transparent;border-color:rgba(203,213,225,.4);padding:4px 8px"
+        value="${escH(e.nome)}"
+        oninput="event.stopPropagation();cfEditExame(${e.id},'nome',this.value)"
+        onclick="event.stopPropagation()"
+        placeholder="Nome do exame">
+      <button class="cf-close" style="padding:4px;flex-shrink:0"
+        onclick="event.stopPropagation();cfRemoveExame(${e.id})" title="Remover">
+        <i class="ti ti-trash" style="font-size:11px;color:#dc2626"></i>
+      </button>
+    </div>
+    <textarea class="cf-ta"
+      style="min-height:36px;margin-top:6px;font-size:11px"
+      oninput="event.stopPropagation();cfEditExame(${e.id},'instrucoes',this.value)"
+      onclick="event.stopPropagation()"
+      placeholder="Instruções adicionais">${escH(e.instrucoes)}</textarea>
+  </div>`).join('');
         if(key==='atestado'){
           const at=s.atestado||{tipo:'Repouso',dias:0,texto:''};
           const opts=['Repouso','Somente presença','Afastamento do trabalho'];
@@ -6677,6 +6770,48 @@ function cfRemoverModelo(idx){
         if(key==='laudo')return `<textarea class="cf-ta" style="min-height:200px;font-family:var(--mono);font-size:11px" oninput="condState.laudo=this.value">${(s.laudo||'').replace(/</g,'&lt;')}</textarea>`;
         return '';
       }
+            // ── Helpers de edição em-estado (não escrevem no banco) ──────────────────
+function cfEditCard(id){
+  const v=document.getElementById('cf-card-view-'+id);
+  const e=document.getElementById('cf-card-edit-'+id);
+  if(v&&e){
+    const show=e.style.display==='none';
+    v.style.display=show?'none':'';
+    e.style.display=show?'block':'none';
+  }
+}
+function cfUpdateCard(id,field,val){
+  const c=condState.condutaCards.find(x=>x.id===id);
+  if(c)c[field]=val;
+}
+function cfRemoveCard(id){
+  condState.condutaCards=condState.condutaCards.filter(x=>x.id!==id);
+  cfRenderConduta();
+}
+function cfEditMed(id,field,val){
+  const m=condState.medicamentos.find(x=>x.id===id);
+  if(m)m[field]=val;
+  // NÃO chama Supabase — apenas atualiza condState em memória
+}
+function cfRemoveMed(id){
+  condState.medicamentos=condState.medicamentos.filter(x=>x.id!==id);
+  cfRenderConduta();
+}
+function cfAddMed(){
+  condState.medicamentos.push({
+    id:Date.now(),nome:'',apresentacao:'',quantidade:'',instrucoes:'',selecionado:true
+  });
+  cfRenderConduta();
+}
+function cfEditExame(id,field,val){
+  const e=condState.exames.find(x=>x.id===id);
+  if(e)e[field]=val;
+}
+function cfRemoveExame(id){
+  condState.exames=condState.exames.filter(x=>x.id!==id);
+  cfRenderConduta();
+}
+// ─────────────────────────────────────────────────────────────────────────
       function cfNavClick(key){
   if(!condState.ativados[key])return;
   condState.vistos[key]=true;
