@@ -4709,7 +4709,7 @@ async function saveCadastro(){
         if(el)el.classList.add('on');
         else{const idx=names.indexOf(name);if(idx>=0)document.querySelectorAll('.tab')[idx].classList.add('on');}
         const body=document.getElementById('tb-'+name);
-        if(body)body.style.display='block';
+        if(body)body.style.display=(name==='atendimentos'?'flex':'block');
         if(name!=='atendimentos')saveAtendState();
         if(name==='atendimentos')restoreAtendState();
         if(name==='prontuario')renderProntuario();
