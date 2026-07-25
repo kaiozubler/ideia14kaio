@@ -4814,7 +4814,6 @@ async function saveCadastro(){
         updateAtendProgress();
         showNovoAtend(true);
       }
-      }
       function toggleAtend(e,id){if(e.target.checked)checkedAtends.add(id);else checkedAtends.delete(id);updateDossieBtn();}
       function toggleAll(cb){atendimentos.forEach(a=>{const el=document.getElementById('acb-'+a.id);if(el)el.checked=cb.checked;if(cb.checked)checkedAtends.add(a.id);else checkedAtends.delete(a.id);});updateDossieBtn();}
       function updateDossieBtn(){const b=document.getElementById('dossie-btn');if(b)b.classList.toggle('show',checkedAtends.size>0);}
