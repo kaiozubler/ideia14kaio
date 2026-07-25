@@ -3760,6 +3760,21 @@ body.panel-expanded-active .main > *{
         .cf-ta{width:100%;padding:10px 12px;border:1.5px solid rgba(203,213,225,.7);border-radius:12px;font-size:12px;outline:none;color:#334155;line-height:1.6;background:rgba(255,255,255,.65);box-sizing:border-box;font-family:inherit;resize:vertical;min-height:72px}
         .cf-check{display:flex;align-items:center;gap:10px;padding:12px 15px;margin-top:14px;border-radius:14px;border:1.5px solid rgba(203,213,225,.6);background:rgba(255,255,255,.6);cursor:pointer;font-size:13px;color:#475569}
         .cf-check.on{background:rgba(209,250,229,.75);border-color:rgba(52,211,153,.8);color:#065f46;font-weight:600;box-shadow:0 2px 10px rgba(5,150,105,.15)}
+        
+        /* Modelos Conduta */
+.cf-saved-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 15px;border-radius:14px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;border:1.5px solid rgba(203,213,225,.5);background:rgba(255,255,255,.5);color:#94a3b8;transition:all .15s}
+.cf-saved-btn:hover{color:#475569;border-color:rgba(148,163,184,.7)}
+.cf-saved-popup{position:absolute;bottom:calc(100% + 8px);left:0;width:340px;max-height:340px;background:rgba(255,255,255,.97);border:1.5px solid rgba(203,213,225,.7);border-radius:16px;box-shadow:0 12px 40px rgba(100,116,139,.18),0 4px 12px rgba(100,116,139,.1);z-index:999;display:flex;flex-direction:column;overflow:hidden;backdrop-filter:blur(16px)}
+.cf-saved-popup-hd{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid #f0f4f8;flex-shrink:0}
+.cf-saved-popup-hd span{font-size:12px;font-weight:700;color:#1e293b}
+.cf-saved-popup-list{overflow-y:auto;padding:8px}
+.cf-saved-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:12px;cursor:pointer;transition:background .13s;border:1.5px solid transparent}
+.cf-saved-row:hover{background:rgba(209,250,229,.5);border-color:rgba(52,211,153,.4)}
+.cf-saved-row-name{flex:1;font-size:12px;font-weight:600;color:#1e293b}
+.cf-saved-row-date{font-size:10px;color:#94a3b8;white-space:nowrap}
+.cf-saved-icons{display:flex;gap:3px;align-items:center}
+.cf-saved-ic{width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff}
+.cf-saved-empty{padding:28px 14px;text-align:center;color:#94a3b8;font-size:12px}
       </style>
 
       <div class="modal" id="m-cond-sugestao" style="display:none">
@@ -3782,13 +3797,30 @@ body.panel-expanded-active .main > *{
               ></textarea>
             </div>
           </div>
-          <div class="cf-ft">
-            <button class="cf-btn" onclick="closeModal()">Cancelar</button>
-            <button class="cf-btn primary" id="cf-sug-next" disabled onclick="condGoConduta()">Gerar Conduta</button>
-          </div>
-        </div>
+          <div class="cf-ft" style="position:relative">
+  <div style="position:relative">
+    <button class="cf-saved-btn" onclick="cfToggleSavedPopup(event)">
+      <span style="width:18px;height:18px;border-radius:6px;background:linear-gradient(135deg,#818cf8,#6d28d9);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="ti ti-layout-list" style="font-size:10px;color:#fff"></i>
+      </span>
+      Modelos Salvos
+    </button>
+    <div class="cf-saved-popup" id="cf-saved-popup" style="display:none">
+      <div class="cf-saved-popup-hd">
+        <span>Minhas Condutas</span>
+        <button class="cf-close" style="padding:3px" onclick="cfCloseSavedPopup()">
+          <i class="ti ti-x" style="font-size:12px"></i>
+        </button>
       </div>
-
+      <div class="cf-saved-popup-list" id="cf-saved-popup-list"></div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button class="cf-btn" onclick="closeModal()">Cancelar</button>
+    <button class="cf-btn primary" id="cf-sug-next" disabled onclick="condGoConduta()">Gerar Conduta</button>
+  </div>
+</div>
+      
       <div class="modal" id="m-cond-conduta" style="display:none">
         <div class="cf-modal">
           <div class="cf-hd">
@@ -6376,6 +6408,100 @@ function cfSelectSug(i){
   if(pos===-1)condState.sugSel.push(i);else condState.sugSel.splice(pos,1);
   cfRenderSugestao();
 }
+            // ── Modelos Salvos de Conduta ──────────────────────────────────────────────
+const CF_SAVED_KEY = 'cf_modelos_conduta';
+
+function cfGetSavedCondutas(){
+  try{ return JSON.parse(localStorage.getItem(CF_SAVED_KEY)||'[]'); }
+  catch{ return []; }
+}
+
+function cfSaveConduta(nome, state){
+  const lista = cfGetSavedCondutas();
+  // Ícones de quais campos têm dados reais
+  const campos = [
+    { key:'conduta',      grad:'linear-gradient(135deg,#34d399,#059669)', icon:'ti-clipboard'  },
+    { key:'medicamentos', grad:'linear-gradient(135deg,#818cf8,#6d28d9)', icon:'ti-pill'       },
+    { key:'orientacoes',  grad:'linear-gradient(135deg,#f472b6,#db2777)', icon:'ti-heart'      },
+    { key:'exames',       grad:'linear-gradient(135deg,#38bdf8,#0284c7)', icon:'ti-flask'      },
+    { key:'atestado',     grad:'linear-gradient(135deg,#fb923c,#ea580c)', icon:'ti-award'      },
+    { key:'laudo',        grad:'linear-gradient(135deg,#a78bfa,#7c3aed)', icon:'ti-eye'        },
+  ];
+  const ativos = campos.filter(c => state.ativados && state.ativados[c.key]);
+  lista.push({
+    nome: nome.trim(),
+    data: new Date().toLocaleDateString('pt-BR'),
+    campos: ativos,
+    state: JSON.parse(JSON.stringify(state)), // deep clone; só em memória
+  });
+  localStorage.setItem(CF_SAVED_KEY, JSON.stringify(lista));
+}
+
+function cfToggleSavedPopup(e){
+  e.stopPropagation();
+  const popup = document.getElementById('cf-saved-popup');
+  const open  = popup.style.display === 'none';
+  popup.style.display = open ? 'flex' : 'none';
+  if(open) cfRenderSavedPopup();
+}
+
+function cfCloseSavedPopup(){
+  const popup = document.getElementById('cf-saved-popup');
+  if(popup) popup.style.display = 'none';
+}
+
+// Fecha popup ao clicar fora
+document.addEventListener('click', function(e){
+  const popup = document.getElementById('cf-saved-popup');
+  if(popup && !popup.contains(e.target) && !e.target.closest('.cf-saved-btn'))
+    popup.style.display = 'none';
+});
+
+function cfRenderSavedPopup(){
+  const el    = document.getElementById('cf-saved-popup-list');
+  const lista = cfGetSavedCondutas();
+  if(!lista.length){
+    el.innerHTML = '<div class="cf-saved-empty"><i class="ti ti-clipboard" style="font-size:24px;display:block;margin-bottom:6px;color:#cbd5e1"></i>Nenhuma conduta salva ainda.<br><span style="font-size:11px">Salve no último passo do fluxo.</span></div>';
+    return;
+  }
+  el.innerHTML = lista.map((c, i) => `
+    <div class="cf-saved-row" onclick="cfAplicarModelo(${i})">
+      <div style="flex:1;min-width:0">
+        <div class="cf-saved-row-name">${c.nome}</div>
+        <div class="cf-saved-icons" style="margin-top:4px">
+          ${(c.campos||[]).map(f=>`
+            <span class="cf-saved-ic" style="background:${f.grad}" title="${f.key}">
+              <i class="ti ${f.icon}"></i>
+            </span>`).join('')}
+        </div>
+      </div>
+      <span class="cf-saved-row-date">${c.data||''}</span>
+      <button class="cf-close" style="padding:3px;flex-shrink:0" title="Remover"
+        onclick="event.stopPropagation();cfRemoverModelo(${i})">
+        <i class="ti ti-trash" style="font-size:11px;color:#dc2626"></i>
+      </button>
+    </div>`).join('');
+}
+function cfAplicarModelo(idx){
+  const lista = cfGetSavedCondutas();
+  const modelo = lista[idx];
+  if(!modelo) return;
+  // Pula direto para a tela de conduta com o state salvo
+  condState = JSON.parse(JSON.stringify(modelo.state));
+  condState.vistos  = {};  // reseta confirmações para o médico rever
+  cfCloseSavedPopup();
+  // Vai direto para o modal de conduta (pula sugestão)
+  document.getElementById('m-cond-sugestao').style.display = 'none';
+  document.getElementById('m-cond-conduta').style.display  = 'flex';
+  cfRenderConduta();
+}
+
+function cfRemoverModelo(idx){
+  const lista = cfGetSavedCondutas();
+  lista.splice(idx, 1);
+  localStorage.setItem(CF_SAVED_KEY, JSON.stringify(lista));
+  cfRenderSavedPopup();
+}
       function cfCondutaTextoSelecionado(){
   const sel=Array.isArray(condState.sugSel)?condState.sugSel:[];
   if(sel.length===0)return '';
@@ -6680,6 +6806,14 @@ function cfToggleExame(id){
               }
             }
           }catch(e){showToast('Erro ao gerar anamnese: '+(e.message||e),'error');btn.disabled=false;btn.innerHTML=origHtml;return;}
+            // Salvar conduta se checkbox marcado
+if(condState.salvarModelo){
+  const nomeInp = document.getElementById('cf-save-nome');
+  const nome = nomeInp ? nomeInp.value.trim() : '';
+  if(nome) cfSaveConduta(nome, condState);
+}
+showToast('Documentos enviados...', 'success');
+closeModal();
         }
         showToast('Documentos enviados via '+(condState.canal==='whatsapp'?'WhatsApp':'e-mail')+(modelId?' • Anamnese adicionada ao prontuário':''),'success');
         closeModal();
