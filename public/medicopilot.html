@@ -6483,17 +6483,17 @@ function cfRenderSavedPopup(){
     </div>`).join('');
 }
 function cfAplicarModelo(idx){
-  const lista = cfGetSavedCondutas();
-  const modelo = lista[idx];
-  if(!modelo) return;
-  // Pula direto para a tela de conduta com o state salvo
-  condState = JSON.parse(JSON.stringify(modelo.state));
-  condState.vistos  = {};  // reseta confirmações para o médico rever
+  const lista=cfGetSavedCondutas();
+  const modelo=lista[idx];
+  if(!modelo)return;
+  condState=JSON.parse(JSON.stringify(modelo.state));
+  condState.vistos={};
   cfCloseSavedPopup();
-  // Vai direto para o modal de conduta (pula sugestão)
-  document.getElementById('m-cond-sugestao').style.display = 'none';
-  document.getElementById('m-cond-conduta').style.display  = 'flex';
-  cfRenderConduta();
+  // Vai direto para o último modal (documentos) sem passar pelo de revisão
+  cfRenderDocs();
+  document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
+  const m=document.getElementById('m-cond-docs');
+  if(m)m.style.display='flex';
 }
 
 function cfRemoverModelo(idx){
@@ -6512,21 +6512,24 @@ function cfRemoverModelo(idx){
   }).filter(Boolean).join('; ');
 }
       async function condGoConduta(){
-        const conduta=cfCondutaTextoSelecionado();
-        if(!conduta){showToast('Selecione uma conduta','error');return;}
-        closeModal();
-        cfRenderCondutaLoading(conduta);
-        openModal('cond-conduta');
-        try{
-          const data=await cfGerarCondutaDetalhada(conduta);
-          cfApplyCondutaData(data);
-          await cfEnrichMedicamentos();
-          cfRenderConduta();
-        }catch(e){
-          console.error(e);
-          document.getElementById('cf-cond-scroll').innerHTML='<div style="padding:24px;text-align:center;color:#dc2626;font-size:13px">⚠️ Erro ao gerar conduta: '+(e.message||e)+'</div>';
-        }
-      }
+  const conduta=cfCondutaTextoSelecionado();
+  if(!conduta){showToast('Selecione uma conduta','error');return;}
+  // Prepara o loading ANTES de trocar de modal para evitar flash
+  cfRenderCondutaLoading(conduta);
+  // Troca de modal sem fechar o overlay: esconde o atual, mostra o próximo
+  document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
+  const mc=document.getElementById('m-cond-conduta');
+  if(mc)mc.style.display='flex';
+  try{
+    const data=await cfGerarCondutaDetalhada(conduta);
+    cfApplyCondutaData(data);
+    await cfEnrichMedicamentos();
+    cfRenderConduta();
+  }catch(e){
+    console.error(e);
+    document.getElementById('cf-cond-scroll').innerHTML='<div style="padding:24px;text-align:center;color:#dc2626;font-size:13px">⚠️ Erro ao gerar conduta: '+(e.message||e)+'</div>';
+  }
+}
       function cfRenderCondutaLoading(conduta){
         document.getElementById('cf-nav-list').innerHTML='';
         document.getElementById('cf-cond-scroll').innerHTML=`<div style="padding:32px;text-align:center;color:#64748b;font-size:13px"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite;font-size:22px;color:#059669"></i><div style="margin-top:10px;font-weight:600">Gerando conduta com a IA…</div><div style="font-size:11px;color:#94a3b8;margin-top:4px">"${conduta.replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]))}"</div></div>`;
@@ -6622,8 +6625,16 @@ function cfRemoverModelo(idx){
           }catch(e){console.warn('cfEnrichMedicamentos',term,e);}
         }
       }
-      function condBackToSugestao(){closeModal();cfRenderSugestao();openModal('cond-sugestao');}
-      function condBackToConduta(){closeModal();cfRenderConduta();openModal('cond-conduta');}
+      function condBackToSugestao(){
+  cfRenderSugestao();
+  document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
+  document.getElementById('m-cond-sugestao').style.display='flex';
+}
+      function condBackToConduta(){
+  cfRenderConduta();
+  document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
+  document.getElementById('m-cond-conduta').style.display='flex';
+}
       function cfRenderConduta(){
         const nav=document.getElementById('cf-nav-list');
         nav.innerHTML=CF_CAMPOS.map(c=>{
@@ -6665,8 +6676,9 @@ requestAnimationFrame(()=>{
 cfUpdateConduFooter();
       }
       function cfRenderBody(key){
-        const escH=v=>(String(v||'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-if(key==='conduta')return s.condutaCards.map(c=>`
+  const s=condState;
+  const escH=v=>(String(v||'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  if(key==='conduta')return s.condutaCards.map(c=>`
   <div class="cf-card${c.tipo==='atencao'?' alert':''}">
     <div class="cf-card-title" style="justify-content:space-between">
       <span style="display:flex;align-items:center;gap:5px">
@@ -6862,7 +6874,11 @@ function cfToggleExame(id){
         document.getElementById('cf-cond-falta').textContent=all?'':`${falt} campo${falt>1?'s':''} ainda não revisado${falt>1?'s':''}`;
         document.getElementById('cf-cond-next').disabled=!all;
       }
-      function condGoDocs(){closeModal();cfRenderDocs();openModal('cond-docs');}
+      function condGoDocs(){
+  cfRenderDocs();
+  document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
+  document.getElementById('m-cond-docs').style.display='flex';
+}
       function cfRenderDocs(){
         const list=document.getElementById('cf-doc-list');
         const docs=CF_CAMPOS.filter(c=>condState.ativados[c.key]&&condState.vistos[c.key]);
