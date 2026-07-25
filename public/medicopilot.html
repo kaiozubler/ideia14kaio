@@ -6705,7 +6705,7 @@ cfUpdateConduFooter();
       <textarea class="cf-ta" style="min-height:60px"
         oninput="cfUpdateCard(${c.id},'texto',this.value)">${escH(c.texto)}</textarea>
     </div>
-  </div>`).join('');a
+  </div>`).join('');
         if(key==='medicamentos')return `<div>${s.medicamentos.map(m=>`
   <div class="cf-med${m.selecionado?' sel':' off'}" data-med-id="${m.id}"
     onclick="cfToggleMed(${m.id})"
