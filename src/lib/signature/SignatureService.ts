@@ -3,13 +3,10 @@
 import { CredentialRepository } from "./CredentialRepository";
 import { IntegraICPProvider } from "./IntegraICPProvider";
 import { generatePKCE } from "./PKCEService";
-import { sha256Base64 } from "./DigestService";
 import { SignatureErrors } from "./errors";
 import type {
   AuthenticateInput,
   AuthenticateResult,
-  SignRequest,
-  SignResult,
   SignatureProvider,
 } from "./types";
 
@@ -52,7 +49,9 @@ export const SignatureService = {
       credentialId: params.credentialId,
       codeVerifier,
     });
-    await CredentialRepository.upsertCertificate(doctorId, cred);
+    // Store the verifier alongside the credential so we can sign new
+    // documents within the credential lifetime without a new auth flow.
+    await CredentialRepository.upsertCertificate(doctorId, cred, codeVerifier);
     return { doctorId, credential: cred };
   },
 
@@ -65,18 +64,66 @@ export const SignatureService = {
     return { ...cert, expired };
   },
 
-  async signDocument(req: SignRequest): Promise<SignResult> {
-    const cert = await CredentialRepository.getActiveCertificate(req.doctorId);
-    if (!cert) throw SignatureErrors.CredentialExpired("Nenhum certificado ativo.");
+  async signDocument(req: {
+    doctorId: string;
+    documentId: string;
+    pdfBuffer: Uint8Array;
+    contentDescription?: string;
+    filename?: string;
+  }): Promise<{ signedPdfUrl: string; signaturePath: string; signatureTimestamp: string | null }> {
+    const active = await CredentialRepository.getActiveCertificateWithVerifier(req.doctorId);
+    if (!active) throw SignatureErrors.CredentialExpired("Nenhum certificado ativo.");
+    const { cert, codeVerifier } = active;
     if (
       cert.credential_expires_at &&
       new Date(cert.credential_expires_at).getTime() < Date.now()
     ) {
       throw SignatureErrors.CredentialExpired();
     }
-    // Phase 2 will store the verifier durably; for now signing requires an
-    // active PKCE session (not yet consumed). Signing flow is out of scope
-    // for phase 1 and will be wired end-to-end in phase 2.
-    throw SignatureErrors.NotConfigured("Assinatura será liberada na Fase 2.");
+    if (!codeVerifier) {
+      throw SignatureErrors.InvalidPKCE(
+        "Verificador PKCE ausente para este certificado. Reconecte o certificado.",
+      );
+    }
+
+    const { embedCMSIntoPDF } = await import("./PadesEmbedder.server");
+    const signed = await embedCMSIntoPDF({
+      pdfBuffer: req.pdfBuffer,
+      reason: req.contentDescription ?? "Assinatura ICP-Brasil",
+      name: cert.certificate_subject ?? "Médico",
+      signer: async (digestBase64) => {
+        const result = await provider.sign({
+          credentialId: cert.credential_id,
+          codeVerifier,
+          documentId: req.documentId,
+          contentDigest: digestBase64,
+          contentDescription: req.contentDescription ?? "Receita",
+        });
+        return result.signedContent; // base64 CMS
+      },
+    });
+
+    // Upload the signed PDF to Storage (private bucket, per-doctor folder).
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const safeName = (req.filename ?? `documento_${req.documentId}.pdf`).replace(/[^\w.\-]+/g, "_");
+    const path = `${req.doctorId}/${Date.now()}_${safeName}`;
+    const { error: upErr } = await supabaseAdmin.storage
+      .from("signed-documents")
+      .upload(path, signed.signedPdf, {
+        contentType: "application/pdf",
+        upsert: false,
+      });
+    if (upErr) throw upErr;
+
+    const { data: signedUrl, error: urlErr } = await supabaseAdmin.storage
+      .from("signed-documents")
+      .createSignedUrl(path, 60 * 60 * 24 * 7); // 7 days
+    if (urlErr) throw urlErr;
+
+    return {
+      signedPdfUrl: signedUrl.signedUrl,
+      signaturePath: path,
+      signatureTimestamp: signed.signatureTimestamp,
+    };
   },
 };

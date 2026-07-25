@@ -107,6 +107,7 @@ export type Database = {
           certificate_subject: string | null
           certificate_valid_from: string | null
           certificate_valid_until: string | null
+          code_verifier_encrypted: string | null
           created_at: string
           credential_expires_at: string | null
           credential_id: string
@@ -123,6 +124,7 @@ export type Database = {
           certificate_subject?: string | null
           certificate_valid_from?: string | null
           certificate_valid_until?: string | null
+          code_verifier_encrypted?: string | null
           created_at?: string
           credential_expires_at?: string | null
           credential_id: string
@@ -139,6 +141,7 @@ export type Database = {
           certificate_subject?: string | null
           certificate_valid_from?: string | null
           certificate_valid_until?: string | null
+          code_verifier_encrypted?: string | null
           created_at?: string
           credential_expires_at?: string | null
           credential_id?: string
