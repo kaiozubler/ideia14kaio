@@ -2035,7 +2035,7 @@ body.panel-expanded-active .main > *{
                       <i class="ti ti-file-report"></i> Gerar dossiê
                     </button>
                   </div>
-                  <button class="btn primary sm" onclick="showNovoAtend()">
+                  <button class="btn primary sm" onclick="handleNovoAtendimentoClick()">
                     <i class="ti ti-plus"></i> Novo atendimento
                   </button>
                 </div>
@@ -3367,6 +3367,25 @@ body.panel-expanded-active .main > *{
           <button class="btn" onclick="closeModal()">Cancelar</button>
           <button class="btn primary" onclick="salvarIdentificacaoPaciente()">
             <i class="ti ti-check"></i> Salvar e continuar
+          </button>
+        </div>
+      </div>
+      <!-- RASCUNHO EM ANDAMENTO -->
+      <div class="modal" id="m-confirm-rascunho" style="display:none">
+        <div class="mhd">
+          <span class="mhd-title">Atendimento em rascunho</span
+          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody">
+          <p style="font-size:12.5px;color:var(--n400);margin:0">
+            Já existe um atendimento em rascunho para este paciente. Você pode continuar de onde parou ou descartar
+            esse rascunho e começar um novo atendimento em branco.
+          </p>
+        </div>
+        <div class="mfoot">
+          <button class="btn" onclick="descartarRascunhoEIniciarNovo()">Descartar e iniciar novo</button>
+          <button class="btn primary" onclick="continuarRascunhoAtual()">
+            <i class="ti ti-arrow-right"></i> Continuar rascunho
           </button>
         </div>
       </div>
@@ -4776,7 +4795,7 @@ async function saveCadastro(){
         const cbAll=document.getElementById('cb-all');if(cbAll)cbAll.checked=false;
         updateDossieBtn();
         document.getElementById('atend-list').innerHTML=atendimentos.map(a=>`
-          <div class="atend-item" onclick="openAtend('${a.id}')">
+          <div class="atend-item" onclick="${a.acao==='Rascunho'?`continuarRascunho('${a.id}')`:`openAtend('${a.id}')`}">
             <input type="checkbox" class="atend-cb" onclick="event.stopPropagation();toggleAtend(event,'${a.id}')" id="acb-${a.id}">
             <div class="atend-body">
               <div class="atend-title">${a.title}</div>
@@ -4784,6 +4803,17 @@ async function saveCadastro(){
             </div>
             <i class="ti ti-chevron-right atend-chev"></i>
           </div>`).join('');
+      }
+      function continuarRascunho(id){
+        const a=atendimentos.find(x=>String(x.id)===String(id));
+        if(!a){console.warn('Atendimento não encontrado',id);return;}
+        if(!(atendEmAndamento&&atendEmAndamento.dirty&&String(window._idConsultaAtual)===String(a.id))){
+          atendEmAndamento={pront:a.notas||'',notaPessoal:a.notaPersonal||'',dirty:true,bblHistory:[],startedAt:a.startedAt,patientId:currentPatient?.id,patientName:currentPatient?.name};
+          window._idConsultaAtual=a.id;
+        }
+        updateAtendProgress();
+        showNovoAtend(true);
+      }
       }
       function toggleAtend(e,id){if(e.target.checked)checkedAtends.add(id);else checkedAtends.delete(id);updateDossieBtn();}
       function toggleAll(cb){atendimentos.forEach(a=>{const el=document.getElementById('acb-'+a.id);if(el)el.checked=cb.checked;if(cb.checked)checkedAtends.add(a.id);else checkedAtends.delete(a.id);});updateDossieBtn();}
@@ -4897,6 +4927,33 @@ async function saveCadastro(){
             atendChatHistory.push({role:'assistant',content:reply});
             appendAdvChat('assistant',reply);
           }).catch(e=>{if(loading)loading.remove();appendAdvChat('assistant','⚠️ Erro: '+(e.message||e));});
+      }
+      function handleNovoAtendimentoClick(){
+        if(atendEmAndamento&&atendEmAndamento.dirty){
+          openModal('confirm-rascunho');
+          return;
+        }
+        showNovoAtend();
+      }
+      function continuarRascunhoAtual(){
+        closeModal();
+        showNovoAtend(true);
+      }
+      async function descartarRascunhoEIniciarNovo(){
+        closeModal();
+        const idDescartado=window._idConsultaAtual;
+        stopAtendAutoSave();
+        clearAtendDraft();
+        window._idConsultaAtual=null;
+        atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[]};
+        if(idDescartado){
+          try{
+            await sb.from('consulta').delete().eq('id',idDescartado);
+            atendimentos=atendimentos.filter(a=>a.id!==idDescartado);
+          }catch(e){console.warn('Falha ao descartar rascunho anterior',e);}
+        }
+        renderAtendimentos();
+        showNovoAtend();
       }
       function showNovoAtend(restore){
         document.getElementById('atend-list-view').style.display='none';
@@ -8383,7 +8440,6 @@ background:#fff;
           atendEmAndamento.dirty=true;
           atendEmAndamento.patientId=currentPatient?.id;
           atendEmAndamento.patientName=currentPatient?.name;
-          window._idConsultaAtual=null;
           restoreAiDraft(d);
           updateAtendProgress();
           showToast&&showToast('Rascunho retomado automaticamente','success');
