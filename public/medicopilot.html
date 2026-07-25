@@ -7654,16 +7654,61 @@ background:#fff;
           const safeName = (p.name || 'paciente').replace(/[^\w\-]+/g, '_').toLowerCase();
           const filename = `receita_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
-          await window.html2pdf().set({
+          const pdfBlob = await window.html2pdf().set({
             margin: 0,
             filename,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak: { mode: ['css', 'legacy'] }
-          }).from(holder.querySelector('.sheet') || holder).save();
+          }).from(holder.querySelector('.sheet') || holder).outputPdf('blob');
 
-          showToast && showToast('Receita gerada com sucesso', 'success');
+          // Try to sign with ICP-Brasil. Fallback to unsigned download.
+          let finalBlob = pdfBlob;
+          let signedUrl = null;
+          try {
+            const { data: sess } = await window.sb.auth.getSession();
+            const token = sess?.session?.access_token;
+            if (token) {
+              const pdfBase64 = await new Promise((resolve, reject) => {
+                const r = new FileReader();
+                r.onload = () => resolve(String(r.result).split(',')[1] || '');
+                r.onerror = reject;
+                r.readAsDataURL(pdfBlob);
+              });
+              const resp = await fetch('/api/signature/sign', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                body: JSON.stringify({
+                  pdfBase64,
+                  filename,
+                  contentDescription: `Receita para ${p.name || 'paciente'}`,
+                }),
+              });
+              if (resp.ok) {
+                const j = await resp.json();
+                signedUrl = j.signedPdfUrl;
+                const dl = await fetch(signedUrl);
+                if (dl.ok) finalBlob = await dl.blob();
+              } else {
+                const j = await resp.json().catch(() => ({}));
+                if (j.error && j.error !== 'not_configured' && j.error !== 'credential_expired') {
+                  console.warn('Assinatura ICP falhou:', j);
+                }
+              }
+            }
+          } catch (e) { console.warn('Assinatura opcional falhou, salvando sem assinatura:', e); }
+
+          const url = URL.createObjectURL(finalBlob);
+          const a = document.createElement('a');
+          a.href = url; a.download = filename; document.body.appendChild(a);
+          a.click(); a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 4000);
+
+          showToast && showToast(
+            signedUrl ? 'Receita assinada digitalmente ✓' : 'Receita gerada com sucesso',
+            'success'
+          );
         } catch (e) {
           console.error('Falha ao gerar PDF da receita:', e);
           showToast && showToast('Falha ao gerar PDF da receita', 'error');
