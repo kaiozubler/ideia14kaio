@@ -269,16 +269,11 @@
             </div>
           </div>
         </div>
-        ${
-          isDoctor(p.role)
-            ? `
         <div>
           <label class="eq-label"><i class="ti ti-certificate"></i> Certificado ICP-Brasil</label>
           <div id="eq-p-cert-status" style="font-size:12px;color:#64748b;margin-bottom:8px">Verificando…</div>
           <button type="button" class="eq-btn eq-btn-ghost" id="eq-p-cert-connect"><i class="ti ti-shield-lock"></i> Conectar certificado</button>
-        </div>`
-            : ""
-        }
+        </div>
         <div class="eq-reset-row">
           <div class="eq-info"><i class="ti ti-key"></i> <span id="eq-p-reset-msg">Redefina sua senha por e-mail.</span></div>
           <button class="eq-btn eq-btn-ghost" id="eq-p-reset"><i class="ti ti-key"></i> Redefinir senha</button>
