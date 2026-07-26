@@ -3899,9 +3899,21 @@ body.panel-expanded-active .main > *{
               </div>
               <input id="cf-doc-contato" class="cf-inp" placeholder="(47) 99999-9999" />
               <label class="cf-check" id="cf-ciente-lbl" onclick="condToggleCiente(event)">
-                <input type="checkbox" id="cf-ciente" style="width:15px;height:15px;accent-color:#059669" />
-                <span>Estou ciente dos dados gerados e confirmo as informações.</span>
-              </label>
+  <input type="checkbox" id="cf-ciente" style="width:15px;height:15px;accent-color:#059669" />
+  <span>Estou ciente dos dados gerados e confirmo as informações.</span>
+</label>
+<div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc">
+  <input type="checkbox" id="cf-salvar-conduta"
+    style="width:15px;height:15px;accent-color:#6366f1;flex-shrink:0;cursor:pointer"
+    onchange="cfToggleSalvarConduta(this.checked)">
+  <label for="cf-salvar-conduta"
+    style="font-size:12px;font-weight:500;color:#475569;cursor:pointer;flex-shrink:0;white-space:nowrap">
+    Salvar conduta como modelo
+  </label>
+  <input type="text" id="cf-salvar-nome"
+    placeholder="Nome do modelo..." disabled
+    style="flex:1;padding:5px 9px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;outline:none;background:#fff;opacity:.45;transition:opacity .15s;min-width:0">
+</div>
             </div>
           </div>
           <div class="cf-ft">
@@ -7176,8 +7188,22 @@ function cfToggleExame(id){
           }).join('');
         document.getElementById('cf-ch-wa').classList.toggle('active',condState.canal==='whatsapp');
         document.getElementById('cf-ch-em').classList.toggle('active',condState.canal==='email');
-        document.getElementById('cf-doc-contato').placeholder=condState.canal==='whatsapp'?'(47) 99999-9999':'email@paciente.com';
+        const _isWa=condState.canal==='whatsapp';
+document.getElementById('cf-doc-contato').placeholder=_isWa?'(47) 99999-9999':'email@paciente.com';
+// Pre-fill com dados do paciente se campo estiver vazio
+const _inp=document.getElementById('cf-doc-contato');
+if(!_inp.value){
+  const _patTel=(currentPatient&&currentPatient.tel||'').trim();
+  const _patEmail=(currentPatient&&currentPatient.email||'').trim();
+  if(_isWa&&_patTel) _inp.value=_patTel;
+  else if(!_isWa&&_patEmail) _inp.value=_patEmail;
+}
         document.getElementById('cf-ciente').checked=condState.ciente;
+// Reset salvar conduta a cada abertura
+const _chkEl=document.getElementById('cf-salvar-conduta');
+const _nomeEl=document.getElementById('cf-salvar-nome');
+if(_chkEl){_chkEl.checked=false;}
+if(_nomeEl){_nomeEl.value='';_nomeEl.disabled=true;_nomeEl.style.opacity='.45';}
         document.getElementById('cf-ciente-lbl').classList.toggle('on',condState.ciente);
         // Popula seletor de modelo de anamnese
         const sel=document.getElementById('cf-anamnese-model');
@@ -7191,7 +7217,13 @@ function cfToggleExame(id){
         cfUpdateSendBtn();
       }
       function cfToggleRemovido(k){condState.removidos[k]=!condState.removidos[k];cfRenderDocs();}
-      function condSetCanal(c){condState.canal=c;cfRenderDocs();}
+      function cfToggleSalvarConduta(on){
+  const inp=document.getElementById('cf-salvar-nome');
+  if(!inp)return;
+  inp.disabled=!on;
+  inp.style.opacity=on?'1':'.45';
+  if(on)inp.focus();
+}
       function condToggleCiente(ev){
         if(ev.target.id==='cf-ciente'){condState.ciente=ev.target.checked;}
         else{condState.ciente=!condState.ciente;document.getElementById('cf-ciente').checked=condState.ciente;}
