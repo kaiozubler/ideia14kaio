@@ -3979,6 +3979,7 @@ body.panel-expanded-active .main > *{
                 <i class="ti ti-trash"></i> Limpar tudo
               </button>
             </div>
+            <div id="rx-interacoes" style="display:none;margin-bottom:10px"></div>
             <div id="rx-selected" style="display:flex;flex-direction:column;gap:8px">
               <div
                 id="rx-empty"
@@ -7911,6 +7912,64 @@ showToast('Documentos enviados via '+(condState.canal==='whatsapp'?'WhatsApp':'e
         rxRenderSelected();
       }
 
+      /* ===== Alerta de interações medicamentosas (100% local, sem chamar API) ===== */
+      let rxInteracoesToken = 0;
+
+      function rxEscape(s) {
+        return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      }
+
+      async function rxCheckInteracoes() {
+        const box = document.getElementById('rx-interacoes');
+        if (!box) return;
+        const token = ++rxInteracoesToken;
+
+        if (rxSelected.length < 2) { box.style.display = 'none'; box.innerHTML = ''; return; }
+
+        // termos = princípios ativos (composição) + nome comercial
+        const termos = [];
+        for (const it of rxSelected) {
+          const comp = (it.composicao || '').split('+');
+          for (const c of comp) { const t = c.trim(); if (t) termos.push(t); }
+          if (it.nome_comercial) termos.push(it.nome_comercial);
+        }
+        if (!termos.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+
+        try {
+          // consulta EXCLUSIVAMENTE a base local
+          const { data, error } = await sb.rpc('verificar_interacoes', { p_termos: termos });
+          if (token !== rxInteracoesToken) return;
+          if (error) throw error;
+
+          const lista = data || [];
+          if (!lista.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+
+          const grave = lista.some(i => /contraindic|evitar/i.test(i.acao || ''));
+          const cor = grave ? { bg: '#fef2f2', bd: '#fecaca', fg: '#991b1b' } : { bg: '#fffbeb', bd: '#fde68a', fg: '#92400e' };
+
+          box.innerHTML = `
+            <div style="border:1px solid ${cor.bd};background:${cor.bg};border-radius:10px;padding:11px 13px">
+              <div style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:${cor.fg};margin-bottom:8px">
+                <i class="ti ti-alert-triangle" style="font-size:15px"></i>
+                ${lista.length} interação${lista.length > 1 ? 'ões' : ''} medicamentosa${lista.length > 1 ? 's' : ''} detectada${lista.length > 1 ? 's' : ''}
+              </div>
+              ${lista.map(i => `
+                <div style="border-top:1px solid ${cor.bd};padding-top:7px;margin-top:7px">
+                  <div style="font-size:12px;font-weight:600;color:#0f172a">
+                    ${rxEscape(i.farmaco_1)} <span style="color:#94a3b8">×</span> ${rxEscape(i.farmaco_2)}
+                    ${i.acao ? `<span style="font-size:9.5px;font-weight:700;color:${cor.fg};background:#fff;border:1px solid ${cor.bd};padding:1px 6px;border-radius:4px;margin-left:6px">${rxEscape(i.acao).toUpperCase()}</span>` : ''}
+                  </div>
+                  ${i.mecanismo_efeito ? `<div style="font-size:11.5px;color:#475569;margin-top:3px"><b>Mecanismo/efeito:</b> ${rxEscape(i.mecanismo_efeito)}</div>` : ''}
+                  ${i.recomendacoes ? `<div style="font-size:11.5px;color:#475569;margin-top:2px"><b>Recomendações:</b> ${rxEscape(i.recomendacoes)}</div>` : ''}
+                </div>`).join('')}
+            </div>`;
+          box.style.display = 'block';
+        } catch (e) {
+          console.warn('verificacao de interacoes falhou', e);
+          if (token === rxInteracoesToken) { box.style.display = 'none'; box.innerHTML = ''; }
+        }
+      }
+
       function rxRenderSelected() {
         const wrap = document.getElementById('rx-selected');
         const countEl = document.getElementById('rx-count');
@@ -7929,6 +7988,7 @@ showToast('Documentos enviados via '+(condState.canal==='whatsapp'?'WhatsApp':'e
             Nenhum medicamento adicionado ainda.<br>
             <span style="font-size:11px">Use o campo acima para buscar.</span>
           </div>`;
+          rxCheckInteracoes();
           return;
         }
 
@@ -7995,6 +8055,8 @@ showToast('Documentos enviados via '+(condState.canal==='whatsapp'?'WhatsApp':'e
             </div>
           </div>`;
         }).join('');
+
+        rxCheckInteracoes();
       }
 
       function rxEmitir() {

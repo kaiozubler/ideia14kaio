@@ -17,6 +17,7 @@ import { Route as ApiSignatureSignRouteImport } from './routes/api/signature/sig
 import { Route as ApiSignatureCredentialRouteImport } from './routes/api/signature/credential'
 import { Route as ApiSignatureAuthenticateRouteImport } from './routes/api/signature/authenticate'
 import { Route as ApiPublicSignatureCallbackRouteImport } from './routes/api/public/signature/callback'
+import { Route as ApiPublicHooksSyncInteracoesRouteImport } from './routes/api/public/hooks/sync-interacoes'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -60,6 +61,12 @@ const ApiPublicSignatureCallbackRoute =
     path: '/api/public/signature/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksSyncInteracoesRoute =
+  ApiPublicHooksSyncInteracoesRouteImport.update({
+    id: '/api/public/hooks/sync-interacoes',
+    path: '/api/public/hooks/sync-interacoes',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -69,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
+  '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
 }
 export interface FileRoutesByTo {
@@ -79,6 +87,7 @@ export interface FileRoutesByTo {
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
+  '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
 }
 export interface FileRoutesById {
@@ -90,6 +99,7 @@ export interface FileRoutesById {
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
+  '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
 }
 export interface FileRouteTypes {
@@ -102,6 +112,7 @@ export interface FileRouteTypes {
     | '/api/signature/authenticate'
     | '/api/signature/credential'
     | '/api/signature/sign'
+    | '/api/public/hooks/sync-interacoes'
     | '/api/public/signature/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -112,6 +123,7 @@ export interface FileRouteTypes {
     | '/api/signature/authenticate'
     | '/api/signature/credential'
     | '/api/signature/sign'
+    | '/api/public/hooks/sync-interacoes'
     | '/api/public/signature/callback'
   id:
     | '__root__'
@@ -122,6 +134,7 @@ export interface FileRouteTypes {
     | '/api/signature/authenticate'
     | '/api/signature/credential'
     | '/api/signature/sign'
+    | '/api/public/hooks/sync-interacoes'
     | '/api/public/signature/callback'
   fileRoutesById: FileRoutesById
 }
@@ -133,6 +146,7 @@ export interface RootRouteChildren {
   ApiSignatureAuthenticateRoute: typeof ApiSignatureAuthenticateRoute
   ApiSignatureCredentialRoute: typeof ApiSignatureCredentialRoute
   ApiSignatureSignRoute: typeof ApiSignatureSignRoute
+  ApiPublicHooksSyncInteracoesRoute: typeof ApiPublicHooksSyncInteracoesRoute
   ApiPublicSignatureCallbackRoute: typeof ApiPublicSignatureCallbackRoute
 }
 
@@ -194,6 +208,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSignatureCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/sync-interacoes': {
+      id: '/api/public/hooks/sync-interacoes'
+      path: '/api/public/hooks/sync-interacoes'
+      fullPath: '/api/public/hooks/sync-interacoes'
+      preLoaderRoute: typeof ApiPublicHooksSyncInteracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -205,6 +226,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSignatureAuthenticateRoute: ApiSignatureAuthenticateRoute,
   ApiSignatureCredentialRoute: ApiSignatureCredentialRoute,
   ApiSignatureSignRoute: ApiSignatureSignRoute,
+  ApiPublicHooksSyncInteracoesRoute: ApiPublicHooksSyncInteracoesRoute,
   ApiPublicSignatureCallbackRoute: ApiPublicSignatureCallbackRoute,
 }
 export const routeTree = rootRouteImport

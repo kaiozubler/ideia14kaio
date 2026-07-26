@@ -207,6 +207,60 @@ export type Database = {
           },
         ]
       }
+      interacoes: {
+        Row: {
+          acao: string | null
+          api_interacao_id: number | null
+          created_at: string
+          id: string
+          mecanismo_efeito: string | null
+          medicamento_1_id: string
+          medicamento_2_id: string
+          recomendacoes: string | null
+          ultima_sincronizacao: string
+          updated_at: string
+        }
+        Insert: {
+          acao?: string | null
+          api_interacao_id?: number | null
+          created_at?: string
+          id?: string
+          mecanismo_efeito?: string | null
+          medicamento_1_id: string
+          medicamento_2_id: string
+          recomendacoes?: string | null
+          ultima_sincronizacao?: string
+          updated_at?: string
+        }
+        Update: {
+          acao?: string | null
+          api_interacao_id?: number | null
+          created_at?: string
+          id?: string
+          mecanismo_efeito?: string | null
+          medicamento_1_id?: string
+          medicamento_2_id?: string
+          recomendacoes?: string | null
+          ultima_sincronizacao?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interacoes_medicamento_1_id_fkey"
+            columns: ["medicamento_1_id"]
+            isOneToOne: false
+            referencedRelation: "medicamentos_crfmg"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interacoes_medicamento_2_id_fkey"
+            columns: ["medicamento_2_id"]
+            isOneToOne: false
+            referencedRelation: "medicamentos_crfmg"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       interacoes_medicamentosas: {
         Row: {
           created_at: string
@@ -252,6 +306,51 @@ export type Database = {
           },
         ]
       }
+      interacoes_sync_log: {
+        Row: {
+          created_at: string
+          data_fim: string | null
+          data_inicio: string
+          id: string
+          mensagem_erro: string | null
+          quantidade_atualizadas: number
+          quantidade_erros: number
+          quantidade_novas: number
+          quantidade_processada: number
+          status: string
+          ultimo_medicamento_processado: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          id?: string
+          mensagem_erro?: string | null
+          quantidade_atualizadas?: number
+          quantidade_erros?: number
+          quantidade_novas?: number
+          quantidade_processada?: number
+          status?: string
+          ultimo_medicamento_processado?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          id?: string
+          mensagem_erro?: string | null
+          quantidade_atualizadas?: number
+          quantidade_erros?: number
+          quantidade_novas?: number
+          quantidade_processada?: number
+          status?: string
+          ultimo_medicamento_processado?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       medicamento_substancias: {
         Row: {
           concentracao: string | null
@@ -287,6 +386,7 @@ export type Database = {
       }
       medicamentos: {
         Row: {
+          api_id: number | null
           apresentacao: string | null
           categoria_regulatoria: string | null
           classe_terapeutica: string | null
@@ -303,6 +403,7 @@ export type Database = {
           tarja: string | null
         }
         Insert: {
+          api_id?: number | null
           apresentacao?: string | null
           categoria_regulatoria?: string | null
           classe_terapeutica?: string | null
@@ -319,6 +420,7 @@ export type Database = {
           tarja?: string | null
         }
         Update: {
+          api_id?: number | null
           apresentacao?: string | null
           categoria_regulatoria?: string | null
           classe_terapeutica?: string | null
@@ -335,6 +437,50 @@ export type Database = {
           tarja?: string | null
         }
         Relationships: []
+      }
+      medicamentos_crfmg: {
+        Row: {
+          api_id: number
+          created_at: string
+          id: string
+          id_substancia: string | null
+          indicacoes: string | null
+          nome: string
+          nome_normalizado: string | null
+          ultima_sincronizacao: string | null
+          updated_at: string
+        }
+        Insert: {
+          api_id: number
+          created_at?: string
+          id?: string
+          id_substancia?: string | null
+          indicacoes?: string | null
+          nome: string
+          nome_normalizado?: string | null
+          ultima_sincronizacao?: string | null
+          updated_at?: string
+        }
+        Update: {
+          api_id?: number
+          created_at?: string
+          id?: string
+          id_substancia?: string | null
+          indicacoes?: string | null
+          nome?: string
+          nome_normalizado?: string | null
+          ultima_sincronizacao?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medicamentos_crfmg_id_substancia_fkey"
+            columns: ["id_substancia"]
+            isOneToOne: false
+            referencedRelation: "substancias"
+            referencedColumns: ["id_substancia"]
+          },
+        ]
       }
       mensagens_consulta: {
         Row: {
@@ -537,6 +683,7 @@ export type Database = {
       }
       substancias: {
         Row: {
+          api_id: number | null
           created_at: string
           grupo_busca: string | null
           id_substancia: string
@@ -544,6 +691,7 @@ export type Database = {
           nome_exibicao: string
         }
         Insert: {
+          api_id?: number | null
           created_at?: string
           grupo_busca?: string | null
           id_substancia?: string
@@ -551,6 +699,7 @@ export type Database = {
           nome_exibicao: string
         }
         Update: {
+          api_id?: number | null
           created_at?: string
           grupo_busca?: string | null
           id_substancia?: string
@@ -652,6 +801,18 @@ export type Database = {
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       unaccent: { Args: { "": string }; Returns: string }
+      verificar_interacoes: {
+        Args: { p_termos: string[] }
+        Returns: {
+          acao: string
+          farmaco_1: string
+          farmaco_2: string
+          id: string
+          mecanismo_efeito: string
+          recomendacoes: string
+        }[]
+      }
+      vincular_crfmg_substancias: { Args: never; Returns: number }
     }
     Enums: {
       [_ in never]: never
