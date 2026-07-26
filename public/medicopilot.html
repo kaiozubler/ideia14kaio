@@ -6640,42 +6640,86 @@ function cfRemoverModelo(idx){
         if(!condState.orientacoes)condState.ativados.orientacoes=false;
       }
       async function cfEnrichMedicamentos(){
-        // Para cada medicamento sugerido pela IA, procura no banco pelo princípio ativo
-        // e monta lista de apresentações disponíveis, escolhendo a mais próxima da sugerida.
-        for(const med of condState.medicamentos){
-          const term=(med.principio_ativo||med.nome||'').trim();
-          if(!term)continue;
-          try{
-            const like='%'+term.replace(/[,%]/g,' ')+'%';
-            const {data,error}=await sb.from('medicamentos')
-              .select('id,nome_comercial,composicao,apresentacoes')
-              .or(`composicao.ilike.${like},nome_comercial.ilike.${like}`)
-              .limit(50);
-            if(error||!data||!data.length)continue;
-            // Agrupa apresentações únicas de todos os matches
-            const apsSet=new Set();
-            data.forEach(r=>(r.apresentacoes||[]).forEach(a=>a&&apsSet.add(a)));
-            const aps=Array.from(apsSet);
-            med.apresentacoes_db=aps;
-            // Escolhe apresentação mais parecida
-            if(aps.length){
-              const alvo=rxNorm(med.apresentacao);
-              let best=aps[0],bestScore=-1;
-              aps.forEach(a=>{
-                const an=rxNorm(a);
-                let score=0;
-                alvo.split(/\s+/).forEach(tok=>{if(tok&&an.includes(tok))score++;});
-                if(score>bestScore){bestScore=score;best=a;}
-              });
-              med.apresentacao=best;
-              // Guarda o primeiro medicamento_id compatível com essa apresentação
-              const hit=data.find(r=>(r.apresentacoes||[]).includes(best))||data[0];
-              med.medicamento_id=hit.id;
-              med.nome=hit.nome_comercial||med.nome;
-            }
-          }catch(e){console.warn('cfEnrichMedicamentos',term,e);}
+  for(const med of condState.medicamentos){
+    const term=(med.principio_ativo||med.nome||'').trim();
+    if(!term)continue;
+    try{
+      // Busca pelo princípio ativo usando o mesmo RPC do Gerar Receita
+      const {data:genData,error:genErr}=await sb.rpc('buscar_genericos',{termo:term});
+      if(!genErr&&genData&&genData.length){
+        // Encontrou como genérico — pega o primeiro resultado
+        const g=genData[0];
+        med.is_generico=true;
+        med.id_substancia=g.id_substancia;
+        med.composicao=g.grupo_busca||'';
+
+        // Busca apresentações disponíveis (sem filtrar por fabricante)
+        const {data:apsData}=await sb.rpc('listar_apresentacoes_generico',{
+          p_id_substancia:g.id_substancia
+        });
+        const seen=new Set();const aps=[];
+        for(const a of(apsData||[])){
+          const k=(a.apresentacao||'').toLowerCase().trim();
+          if(k&&!seen.has(k)){seen.add(k);aps.push(a.apresentacao);}
+        }
+        med.apresentacoes_db=aps;
+        med.fabricantes=[];    // genérico = todos os fabricantes
+        med.fabricante='';
+
+        // Escolhe a apresentação mais parecida com o que a IA sugeriu
+        if(aps.length){
+          const alvo=rxNorm(med.apresentacao);
+          let best=aps[0],bestScore=-1;
+          aps.forEach(a=>{
+            const an=rxNorm(a);
+            let score=0;
+            alvo.split(/\s+/).forEach(tok=>{if(tok&&an.includes(tok))score++;});
+            if(score>bestScore){bestScore=score;best=a;}
+          });
+          med.apresentacao=best;
+        }
+        continue;
+      }
+
+      // Não encontrou como genérico — tenta como comercial
+      const {data:comData,error:comErr}=await sb.rpc('buscar_comerciais',{termo:term});
+      if(!comErr&&comData&&comData.length){
+        const c=comData[0];
+        med.is_generico=false;
+        med.fabricante=c.fabricante||'';
+        med.fabricantes=[];
+
+        // Busca apresentações do comercial
+        const {data:apsData}=await sb.rpc('listar_apresentacoes_comercial',{
+          p_nome_comercial:c.nome_comercial,
+          p_fabricante:c.fabricante
+        });
+        const aps=(apsData||[]).map(a=>a.apresentacao).filter(Boolean);
+        med.apresentacoes_db=aps;
+        med.nome=c.nome_comercial||med.nome;
+
+        // Busca composição
+        try{
+          const comp=await rxFetchComposicaoComercial(c.nome_comercial,c.fabricante);
+          if(comp)med.composicao=comp;
+        }catch(e){console.warn(e);}
+
+        // Escolhe apresentação mais parecida
+        if(aps.length){
+          const alvo=rxNorm(med.apresentacao);
+          let best=aps[0],bestScore=-1;
+          aps.forEach(a=>{
+            const an=rxNorm(a);
+            let score=0;
+            alvo.split(/\s+/).forEach(tok=>{if(tok&&an.includes(tok))score++;});
+            if(score>bestScore){bestScore=score;best=a;}
+          });
+          med.apresentacao=best;
         }
       }
+    }catch(e){console.warn('cfEnrichMedicamentos',term,e);}
+  }
+}
       function condBackToSugestao(){
   cfRenderSugestao();
   document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
