@@ -7277,7 +7277,30 @@ if(condState.salvarModelo){
 showToast('Documentos enviados...', 'success');
 closeModal();
         }
-        showToast('Documentos enviados via '+(condState.canal==='whatsapp'?'WhatsApp':'e-mail')+(modelId?' • Anamnese adicionada ao prontuário':''),'success');
+        // Salvar conduta como modelo se checkbox marcado
+const _chkSalvar=document.getElementById('cf-salvar-conduta');
+const _nomeSalvar=(document.getElementById('cf-salvar-nome')?.value||'').trim();
+if(_chkSalvar&&_chkSalvar.checked&&_nomeSalvar){
+  try{
+    const _lista=cfGetSavedCondutas();
+    const _campos=[
+      {key:'conduta',     grad:'linear-gradient(135deg,#34d399,#059669)', icon:'ti-clipboard'},
+      {key:'medicamentos',grad:'linear-gradient(135deg,#818cf8,#6d28d9)', icon:'ti-pill'},
+      {key:'orientacoes', grad:'linear-gradient(135deg,#f472b6,#db2777)', icon:'ti-heart'},
+      {key:'exames',      grad:'linear-gradient(135deg,#38bdf8,#0284c7)', icon:'ti-flask'},
+      {key:'atestado',    grad:'linear-gradient(135deg,#fb923c,#ea580c)', icon:'ti-award'},
+      {key:'laudo',       grad:'linear-gradient(135deg,#a78bfa,#7c3aed)', icon:'ti-eye'},
+    ];
+    _lista.push({
+      nome: _nomeSalvar,
+      data: new Date().toLocaleDateString('pt-BR'),
+      campos: _campos.filter(c=>condState.ativados&&condState.ativados[c.key]),
+      state: JSON.parse(JSON.stringify(condState))
+    });
+    localStorage.setItem(CF_SAVED_KEY, JSON.stringify(_lista));
+  }catch(_e){console.warn('Erro ao salvar conduta',_e);}
+}
+showToast('Documentos enviados via '+(condState.canal==='whatsapp'?'WhatsApp':'e-mail')+(modelId?' • Anamnese adicionada ao prontuário':''),'success');
         closeModal();
       }
       function runAnamneseGeneration(modelId){
