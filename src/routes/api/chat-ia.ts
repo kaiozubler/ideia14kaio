@@ -27,6 +27,44 @@ Responda de forma curta, objetiva e profissional, em português do Brasil.
 Use o resumo do prontuário do paciente (quando fornecido) e o histórico da conversa
 para sugerir hipóteses, condutas e perguntas relevantes. Nunca invente dados do paciente
 não presentes no contexto. Se faltar informação, peça ao médico.`;
+Quando o usuário pedir para criar um documento médico (receita, orientações, atestado), responda em JSON com este formato EXATO — sem texto fora do JSON:
+
+{
+  "reply": "mensagem para exibir no chat",
+  "action": {
+    "type": "tipo_da_acao",
+    ...campos específicos...
+  }
+}
+
+Tipos de ação disponíveis:
+
+1. Receita:
+{
+  "type": "open_receita",
+  "medicamentos": [
+    {
+      "nome": "Nome comercial ou princípio ativo",
+      "apresentacao": "Ex: 500mg comprimido",
+      "quantidade": "Ex: 1 caixa",
+      "posologia": "Ex: 1 comprimido de 8/8h por 5 dias"
+    }
+  ]
+}
+
+2. Orientações ao paciente (não precisa de assinatura):
+{
+  "type": "send_orientacoes",
+  "texto": "Texto completo das orientações"
+}
+
+3. Abrir fluxo de conduta completo:
+{
+  "type": "open_conduta",
+  "sugestao": "descrição da conduta sugerida"
+}
+
+Se a mensagem não for um pedido de documento, responda normalmente em texto puro (sem JSON).
 
 const SYSTEM_RESUMO = `Você é um assistente clínico. Gere um RESUMO ESTRUTURADO do prontuário
 do paciente em português do Brasil, organizado em seções:
@@ -92,45 +130,6 @@ Retorne EXCLUSIVAMENTE um JSON válido (sem comentários, sem markdown, sem cerc
   "hipoteses_diagnosticas": [],
   "condutas_sugeridas": []
 }`;
-
-Quando o usuário pedir para criar um documento médico (receita, orientações, atestado), responda em JSON com este formato EXATO — sem texto fora do JSON:
-
-{
-  "reply": "mensagem para exibir no chat",
-  "action": {
-    "type": "tipo_da_acao",
-    ...campos específicos...
-  }
-}
-
-Tipos de ação disponíveis:
-
-1. Receita:
-{
-  "type": "open_receita",
-  "medicamentos": [
-    {
-      "nome": "Nome comercial ou princípio ativo",
-      "apresentacao": "Ex: 500mg comprimido",
-      "quantidade": "Ex: 1 caixa",
-      "posologia": "Ex: 1 comprimido de 8/8h por 5 dias"
-    }
-  ]
-}
-
-2. Orientações ao paciente (não precisa de assinatura):
-{
-  "type": "send_orientacoes",
-  "texto": "Texto completo das orientações"
-}
-
-3. Abrir fluxo de conduta completo:
-{
-  "type": "open_conduta",
-  "sugestao": "descrição da conduta sugerida"
-}
-
-Se a mensagem não for um pedido de documento, responda normalmente em texto puro (sem JSON).
 
 async function callGateway(messages: ChatMessage[], apiKey: string) {
   const res = await fetch(GATEWAY_URL, {
