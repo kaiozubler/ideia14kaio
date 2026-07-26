@@ -6195,7 +6195,183 @@ async function saveCadastro(){
         try{await ensureResumoProntuario(currentPatient.id,{force:true});}
         finally{if(ico)ico.classList.remove('spinning');if(btn)btn.disabled=false;}
       }
+// ── IA Action Executor ────────────────────────────────────────────────────
+async function iaExecuteAction(action){
+  if(!action||!action.type)return;
 
+  // ── Receita ──────────────────────────────────────────────────────────────
+  if(action.type==='open_receita'){
+    const meds=Array.isArray(action.medicamentos)?action.medicamentos:[];
+    // Abre o modal de receita limpo
+    rxSelected=[];
+    openModal('receita');
+    const inp=document.getElementById('rx-search');
+    if(inp){inp.value='';inp.style.borderColor='#e2e8f0';}
+    const box=document.getElementById('rx-results');
+    if(box)box.style.display='none';
+    rxRenderSelected();
+    // Busca cada medicamento no banco e adiciona à receita
+    for(const m of meds){
+      try{
+        const term=(m.nome||'').trim();
+        if(!term)continue;
+        // Tenta buscar como genérico primeiro
+        const {data:gData}=await sb.rpc('buscar_genericos',{termo:term});
+        if(gData&&gData.length){
+          const g=gData[0];
+          const uid='rx-ia-'+Date.now()+'-'+Math.random().toString(36).slice(2,6);
+          const {data:apsData}=await sb.rpc('listar_apresentacoes_generico',{p_id_substancia:g.id_substancia});
+          const seen=new Set();const aps=[];
+          for(const a of(apsData||[])){const k=(a.apresentacao||'').toLowerCase().trim();if(k&&!seen.has(k)){seen.add(k);aps.push(a.apresentacao);}}
+          // Escolhe apresentação mais próxima da sugerida pela IA
+          let best=aps[0]||m.apresentacao||'';
+          if(m.apresentacao&&aps.length){
+            const alvo=rxNorm(m.apresentacao);let bestScore=-1;
+            aps.forEach(a=>{const an=rxNorm(a);let sc=0;alvo.split(/\s+/).forEach(t=>{if(t&&an.includes(t))sc++;});if(sc>bestScore){bestScore=sc;best=a;}});
+          }
+          rxSelected.push({uid,nome_comercial:g.nome_exibicao,composicao:g.grupo_busca||'',apresentacoes:aps,apresentacao:best,posologia:m.posologia||'',quantidade:m.quantidade||'1 caixa',is_generico:true,fabricantes:[],fabricante:'',id_substancia:g.id_substancia});
+          continue;
+        }
+        // Tenta como comercial
+        const {data:cData}=await sb.rpc('buscar_comerciais',{termo:term});
+        if(cData&&cData.length){
+          const c=cData[0];
+          const uid='rx-ia-'+Date.now()+'-'+Math.random().toString(36).slice(2,6);
+          const {data:apsData}=await sb.rpc('listar_apresentacoes_comercial',{p_nome_comercial:c.nome_comercial,p_fabricante:c.fabricante});
+          const aps=(apsData||[]).map(a=>a.apresentacao).filter(Boolean);
+          let best=aps[0]||m.apresentacao||'';
+          if(m.apresentacao&&aps.length){
+            const alvo=rxNorm(m.apresentacao);let bestScore=-1;
+            aps.forEach(a=>{const an=rxNorm(a);let sc=0;alvo.split(/\s+/).forEach(t=>{if(t&&an.includes(t))sc++;});if(sc>bestScore){bestScore=sc;best=a;}});
+          }
+          rxSelected.push({uid,nome_comercial:c.nome_comercial,composicao:'',apresentacoes:aps,apresentacao:best,posologia:m.posologia||'',quantidade:m.quantidade||'1 caixa',is_generico:false,fabricantes:[],fabricante:c.fabricante||'',id_substancia:null});
+        }
+      }catch(e){console.warn('iaExecuteAction receita',e);}
+    }
+    rxRenderSelected();
+    // Após fechar o modal, IA pergunta sobre envio
+    window.__iaAfterReceita=true;
+    return;
+  }
+
+  // ── Orientações (sem assinatura) ─────────────────────────────────────────
+  if(action.type==='send_orientacoes'){
+    const texto=(action.texto||'').trim();
+    if(!texto)return;
+    // Mostra preview no chat com botões de confirmação
+    const layer=document.getElementById('bubbles-layer');
+    if(!layer)return;
+    const ph=document.getElementById('orb-center-placeholder');if(ph)ph.style.display='none';
+    const previewId='bbl-orient-'+Date.now();
+    const el=document.createElement('div');
+    el.className='bbl ia';
+    el.id=previewId;
+    el.innerHTML=`
+      <span class="bbl-text">
+        <strong>📋 Orientações ao paciente:</strong><br>
+        <span style="white-space:pre-line;font-size:11px">${texto.replace(/</g,'&lt;')}</span>
+      </span>
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+        <button onclick="iaEnviarOrientacoes(${JSON.stringify(texto).replace(/"/g,'&quot;')},this)"
+          style="padding:5px 12px;border-radius:7px;background:linear-gradient(135deg,#34d399,#059669);color:#fff;border:none;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px">
+          <i class="ti ti-brand-whatsapp"></i> Enviar por WhatsApp
+        </button>
+        <button onclick="iaEnviarOrientacoes(${JSON.stringify(texto).replace(/"/g,'&quot;')},this,'email')"
+          style="padding:5px 12px;border-radius:7px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px">
+          <i class="ti ti-mail"></i> Enviar por E-mail
+        </button>
+        <button onclick="document.getElementById('${previewId}').querySelector('.ia-orient-btns')?.remove()"
+          style="padding:5px 10px;border-radius:7px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-size:11px;cursor:pointer">
+          Cancelar
+        </button>
+      </div>`;
+    el.querySelector('div').className='ia-orient-btns';
+    layer.appendChild(el);
+    layer.scrollTop=layer.scrollHeight;
+    return;
+  }
+
+  // ── Abrir fluxo de conduta ────────────────────────────────────────────────
+  if(action.type==='open_conduta'){
+    condState=cfDefaultState();
+    if(action.sugestao){
+      condState.sugSel=[0];
+      window._iaSugestaoOverride=action.sugestao;
+    }
+    openCondutaFlow();
+    return;
+  }
+}
+
+async function iaEnviarOrientacoes(texto, btn, canal='whatsapp'){
+  const contato=canal==='whatsapp'
+    ?(currentPatient&&currentPatient.tel||'').trim()
+    :(currentPatient&&currentPatient.email||'').trim();
+  if(!contato){
+    showToast('Paciente sem '+(canal==='whatsapp'?'WhatsApp':'e-mail')+' cadastrado','error');
+    return;
+            async function iaEnviarReceita(canal, btn){
+  const contato=canal==='whatsapp'
+    ?(currentPatient&&currentPatient.tel||'').trim()
+    :(currentPatient&&currentPatient.email||'').trim();
+  if(!contato){
+    showToast('Paciente sem '+(canal==='whatsapp'?'WhatsApp':'e-mail')+' cadastrado','error');
+    return;
+  }
+  const orig=btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Enviando...';
+  try{
+    await fetch('/api/enviar-documento',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        tipo:'receita',
+        canal,
+        contato,
+        paciente:currentPatient&&currentPatient.name||'Paciente',
+        medicamentos:rxSelected.map(m=>({
+          nome:m.nome_comercial,
+          apresentacao:m.apresentacao,
+          quantidade:m.quantidade,
+          posologia:m.posologia
+        }))
+      })
+    });
+    showToast('Receita enviada via '+(canal==='whatsapp'?'WhatsApp':'e-mail'),'success');
+    btn.closest('.ia-orient-btns')?.remove();
+    spawnBubble('ia','✅ Receita enviada para '+(currentPatient&&currentPatient.name||'o paciente')+'.');
+  }catch(e){
+    showToast('Erro ao enviar: '+(e.message||e),'error');
+    btn.disabled=false;btn.innerHTML=orig;
+  }
+}
+  const orig=btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Enviando...';
+  try{
+    // Chama o mesmo endpoint de envio que o restante do sistema usa
+    await fetch('/api/enviar-documento',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        tipo:'orientacoes',
+        canal,
+        contato,
+        paciente:currentPatient&&currentPatient.name||'Paciente',
+        texto
+      })
+    });
+    showToast('Orientações enviadas via '+(canal==='whatsapp'?'WhatsApp':'e-mail'),'success');
+    // Remove os botões após envio
+    btn.closest('.ia-orient-btns')?.remove();
+    spawnBubble('ia','✅ Orientações enviadas para '+(currentPatient&&currentPatient.name||'o paciente')+'.');
+  }catch(e){
+    showToast('Erro ao enviar: '+(e.message||e),'error');
+    btn.disabled=false;btn.innerHTML=orig;
+  }
+}
+// ────────────────────────────────────────────────────────────────────────────
       function sendAIMsg(){
         const inp=document.getElementById('ai-inp');if(!inp||!inp.value.trim())return;
         if(aiBusy)return;
@@ -6212,12 +6388,23 @@ async function saveCadastro(){
         })
         .then(async r=>{if(!r.ok)throw new Error(await r.text());return r.json();})
         .then(d=>{
-          const reply=(d.reply||'').trim()||'(sem resposta)';
-          aiChatHistory.push({role:'assistant',content:reply});
-          removeTypingBubble(typingId);
-          spawnBubble('ia',reply);
-          // Persiste mensagens da consulta atual (best-effort)
-          if(window._idConsultaAtual){
+  const raw=(d.reply||'').trim()||'(sem resposta)';
+  // Tenta detectar uma action no JSON da resposta
+  let reply=raw, action=null;
+  try{
+    const firstBrace=raw.indexOf('{');
+    if(firstBrace>=0){
+      const parsed=JSON.parse(raw.slice(firstBrace));
+      if(parsed.action){reply=parsed.reply||'Pronto!';action=parsed.action;}
+    }
+  }catch(e){}
+  aiChatHistory.push({role:'assistant',content:reply});
+  removeTypingBubble(typingId);
+  spawnBubble('ia',reply);
+  // Executa a ação se existir
+  if(action) iaExecuteAction(action);
+  // Persiste mensagens da consulta atual (best-effort)
+  if(window._idConsultaAtual){
             sb.from('mensagens_consulta').insert([
               {id_consulta:window._idConsultaAtual,role:'user',content:userText},
               {id_consulta:window._idConsultaAtual,role:'assistant',content:reply}
@@ -7458,6 +7645,39 @@ showToast('Documentos enviados via '+(condState.canal==='whatsapp'?'WhatsApp':'e
       function closeModal(){
         document.getElementById('modal-overlay').classList.remove('open');
         document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
+            function closeModal(){
+  // Se havia uma receita gerada pela IA, pergunta sobre envio
+  if(window.__iaAfterReceita&&rxSelected&&rxSelected.length){
+    window.__iaAfterReceita=false;
+    const nomes=rxSelected.map(m=>m.nome_comercial).join(', ');
+    setTimeout(()=>{
+      spawnBubble('ia','Receita com '+nomes+' montada. Deseja que eu envie ao paciente?');
+      // Adiciona botões de confirmação na última bolha
+      const layer=document.getElementById('bubbles-layer');
+      const lastBbl=layer&&layer.lastElementChild;
+      if(lastBbl){
+        const btns=document.createElement('div');
+        btns.className='ia-orient-btns';
+        btns.style.cssText='display:flex;gap:6px;margin-top:8px;flex-wrap:wrap';
+        btns.innerHTML=`
+          <button onclick="iaEnviarReceita('whatsapp',this)"
+            style="padding:5px 12px;border-radius:7px;background:linear-gradient(135deg,#34d399,#059669);color:#fff;border:none;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px">
+            <i class="ti ti-brand-whatsapp"></i> Sim, WhatsApp
+          </button>
+          <button onclick="iaEnviarReceita('email',this)"
+            style="padding:5px 12px;border-radius:7px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px">
+            <i class="ti ti-mail"></i> Sim, E-mail
+          </button>
+          <button onclick="this.closest('.ia-orient-btns').remove()"
+            style="padding:5px 10px;border-radius:7px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-size:11px;cursor:pointer">
+            Não enviar
+          </button>`;
+        lastBbl.appendChild(btns);
+      }
+    },300);
+  }
+  window.__iaAfterReceita=false;
+  // ... restante original do closeModal ...
       }
       document.getElementById('modal-overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
