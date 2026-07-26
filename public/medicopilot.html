@@ -523,8 +523,11 @@
 .file-preview .ti{font-size:18px;color:var(--g500)}
 .file-preview span{font-size:12px;color:var(--n700);flex:1}
 .ai-process-btn{width:26px;height:26px;border-radius:var(--r4);border:0.5px solid #ddd6fe;background:#f5f3ff;display:flex;align-items:center;justify-content:center;color:#7c3aed;cursor:pointer;flex-shrink:0;transition:all .12s}
-.ai-process-btn:hover{background:#ede9fe;border-color:#c4b5fd}
-.ai-process-btn .ti{font-size:14px;color:#7c3aed}
+            .ai-process-btn:hover{background:#ede9fe;border-color:#c4b5fd}
+            .ai-process-btn .ti{font-size:14px;color:#7c3aed}
+            .ve-value{font-size:12.5px;color:var(--n700);background:var(--n50);border:0.5px solid var(--n200);border-radius:var(--r6);padding:7px 10px;margin:0;min-height:18px;white-space:pre-wrap}
+            #ve-preview-img{max-width:100%;border-radius:var(--r8);border:0.5px solid var(--n200)}
+            #ve-preview-pdf{width:100%;height:420px;border:0.5px solid var(--n200);border-radius:var(--r8)}
 
             /* PRINT */
             @media print{
@@ -3474,6 +3477,32 @@
         </div>
       </div>
 
+      <!-- VIEW EXAME -->
+      <div class="modal" id="m-view-exame" style="display:none">
+        <div class="mhd">
+          <span class="mhd-title">Detalhes do exame</span
+          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody">
+          <div id="ve-preview-wrap" style="display:none;margin-bottom:12px">
+            <img id="ve-preview-img" style="display:none" />
+            <iframe id="ve-preview-pdf" style="display:none"></iframe>
+          </div>
+          <p id="ve-no-file" style="display:none;font-size:12px;color:var(--n400);font-style:italic;margin-bottom:12px"></p>
+          <div class="form-grid">
+            <div class="fld wide"><label>Nome / título</label><p id="ve-nome" class="ve-value"></p></div>
+            <div class="fld"><label>Data do exame</label><p id="ve-data" class="ve-value"></p></div>
+            <div class="fld"><label>Tipo</label><p id="ve-tipo" class="ve-value"></p></div>
+            <div class="fld"><label>Tempo de validade</label><p id="ve-validade" class="ve-value"></p></div>
+            <div class="fld wide"><label>Observação</label><p id="ve-obs" class="ve-value"></p></div>
+            <div class="fld wide"><label>Resultado</label><p id="ve-resultado" class="ve-value"></p></div>
+          </div>
+        </div>
+        <div class="mfoot">
+          <button class="btn" onclick="closeModal()">Fechar</button>
+        </div>
+      </div>
+
       <!-- DOSSIÊ -->
       <div class="modal wide" id="m-dossie" style="display:none">
         <div class="mhd">
@@ -4436,7 +4465,7 @@
               const timeStr=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
               return {id:a.id,id_medico:a.id_medico||null,title:a.title||('Consulta — '+dateStr),date:dateStr,hora:timeStr,startedAt:a.started_at||d.toISOString(),acao:a.acao||'Consulta',resumo:a.resumo||'Atendimento registrado.',notas:a.notas||'Sem anotações.',notaPersonal:a.nota_personal||'',anamneseIa:a.anamnese_ia||''};
             }
-            function mapExameRow(e){return {id:e.id,nome:e.nome,tipo:e.tipo||'Outro',data:e.data||'',obs:e.obs||'',resultado:e.resultado||'',file:e.file_name||'—',validade:e.validade||'',validadeDias:e.validade_dias||null};}
+            function mapExameRow(e){return {id:e.id,nome:e.nome,tipo:e.tipo||'Outro',data:e.data||'',obs:e.obs||'',resultado:e.resultado||'',arquivoPath:e.arquivo_path||null,file:e.file_name||'—',validade:e.validade||'',validadeDias:e.validade_dias||null};}
             function mapTimelineRow(ev){return {id:ev.id,date:ev.event_date,type:ev.type,icon:ev.icon,title:ev.title,sub:ev.sub||''};}
             async function loadPatientRecords(id){
               const [atRes,exRes,tlRes]=await Promise.all([
@@ -5315,6 +5344,43 @@
               if(input.files.length){const f=input.files[0];name.textContent=f.name;icon.className='ti '+(f.type.includes('image')?'ti-photo':'ti-file-text');wrap.style.display='block';}
             }
             function clearFile(){document.getElementById('file-input').value='';document.getElementById('file-preview-wrap').style.display='none';}
+            async function viewExame(id){
+              const e=exames.find(x=>x.id===id);
+              if(!e)return;
+              document.getElementById('ve-nome').textContent=e.nome||'—';
+              document.getElementById('ve-data').textContent=e.data||'—';
+              document.getElementById('ve-tipo').textContent=e.tipo||'—';
+              document.getElementById('ve-validade').textContent=e.validade||'—';
+              document.getElementById('ve-obs').textContent=e.obs||'—';
+              document.getElementById('ve-resultado').textContent=e.resultado||'—';
+              const previewWrap=document.getElementById('ve-preview-wrap');
+              const img=document.getElementById('ve-preview-img');
+              const pdf=document.getElementById('ve-preview-pdf');
+              const noFile=document.getElementById('ve-no-file');
+              img.style.display='none';pdf.style.display='none';previewWrap.style.display='none';noFile.style.display='none';
+              if(e.arquivoPath){
+                const {data,error}=await sb.storage.from('exames-arquivos').createSignedUrl(e.arquivoPath,300);
+                if(!error && data && data.signedUrl){
+                  previewWrap.style.display='block';
+                  if(/\.pdf$/i.test(e.arquivoPath)){pdf.src=data.signedUrl;pdf.style.display='block';}
+                  else{img.src=data.signedUrl;img.style.display='block';}
+                }else{
+                  noFile.textContent='Não foi possível carregar a pré-visualização do arquivo.';
+                  noFile.style.display='block';
+                }
+              }else{
+                noFile.textContent='Nenhum arquivo anexado a este exame.';
+                noFile.style.display='block';
+              }
+              openModal('view-exame');
+            }
+            async function downloadExame(id){
+              const e=exames.find(x=>x.id===id);
+              if(!e || !e.arquivoPath){showToast('Este exame não possui arquivo anexado','error');return;}
+              const {data,error}=await sb.storage.from('exames-arquivos').createSignedUrl(e.arquivoPath,60,{download:true});
+              if(error || !data){showToast('Erro ao gerar link de download','error');return;}
+              window.open(data.signedUrl,'_blank');
+            }
 
             /* ========== TIMELINE ========== */
             function renderTimeline(){
