@@ -520,8 +520,11 @@
             .upload-zone p{font-size:12px;color:var(--n400)}
             .upload-zone input[type=file]{display:none}
             .file-preview{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--g50);border:0.5px solid var(--g200);border-radius:var(--r6);margin-bottom:10px}
-            .file-preview .ti{font-size:18px;color:var(--g500)}
-            .file-preview span{font-size:12px;color:var(--n700);flex:1}
+.file-preview .ti{font-size:18px;color:var(--g500)}
+.file-preview span{font-size:12px;color:var(--n700);flex:1}
+.ai-process-btn{width:26px;height:26px;border-radius:var(--r4);border:0.5px solid #ddd6fe;background:#f5f3ff;display:flex;align-items:center;justify-content:center;color:#7c3aed;cursor:pointer;flex-shrink:0;transition:all .12s}
+.ai-process-btn:hover{background:#ede9fe;border-color:#c4b5fd}
+.ai-process-btn .ti{font-size:14px;color:#7c3aed}
 
             /* PRINT */
             @media print{
@@ -3404,6 +3407,7 @@
             <div class="file-preview">
               <i class="ti ti-file-check" id="file-icon"></i>
               <span id="file-name">—</span>
+              <button class="ai-process-btn" title="Processar com IA"><i class="ti ti-sparkles"></i></button>
               <button class="btn sm danger" onclick="clearFile()"><i class="ti ti-x"></i></button>
             </div>
           </div>
@@ -3449,8 +3453,18 @@
               </p>
             </div>
             <div class="fld wide">
+              <div class="fld wide">
               <label>Observação</label
               ><input type="text" id="exame-obs" placeholder="Notas adicionais, valores relevantes..." />
+            </div>
+            <div class="fld wide">
+              <label>Resultado</label
+              ><textarea
+                id="exame-resultado"
+                rows="3"
+                placeholder="Principais pontos obtidos no exame..."
+                style="width:100%;font-family:var(--font);font-size:13px;padding:7px 10px;border:0.5px solid var(--n200);border-radius:var(--r6);resize:vertical"
+              ></textarea>
             </div>
           </div>
         </div>
@@ -4422,7 +4436,7 @@
               const timeStr=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
               return {id:a.id,id_medico:a.id_medico||null,title:a.title||('Consulta — '+dateStr),date:dateStr,hora:timeStr,startedAt:a.started_at||d.toISOString(),acao:a.acao||'Consulta',resumo:a.resumo||'Atendimento registrado.',notas:a.notas||'Sem anotações.',notaPersonal:a.nota_personal||'',anamneseIa:a.anamnese_ia||''};
             }
-            function mapExameRow(e){return {id:e.id,nome:e.nome,tipo:e.tipo||'Outro',data:e.data||'',obs:e.obs||'',file:e.file_name||'—',validade:e.validade||'',validadeDias:e.validade_dias||null};}
+            function mapExameRow(e){return {id:e.id,nome:e.nome,tipo:e.tipo||'Outro',data:e.data||'',obs:e.obs||'',resultado:e.resultado||'',file:e.file_name||'—',validade:e.validade||'',validadeDias:e.validade_dias||null};}
             function mapTimelineRow(ev){return {id:ev.id,date:ev.event_date,type:ev.type,icon:ev.icon,title:ev.title,sub:ev.sub||''};}
             async function loadPatientRecords(id){
               const [atRes,exRes,tlRes]=await Promise.all([
@@ -5261,13 +5275,13 @@
                 const map={'30':'30 dias','60':'60 dias','90':'3 meses','180':'6 meses','365':'12 meses','730':'24 meses'};
                 validade=map[durVal]||(validadeDias+' dias');
               }
-              const examePayload={paciente_id:currentPatient.id,user_id:currentUser.id,nome,tipo:document.getElementById('exame-tipo').value,data:document.getElementById('exame-data').value||new Date().toLocaleDateString('pt-BR'),obs:document.getElementById('exame-obs').value,file_name:fn?fn.textContent:'—',validade,validade_dias:validadeDias};
+              const examePayload={paciente_id:currentPatient.id,user_id:currentUser.id,nome,tipo:document.getElementById('exame-tipo').value,data:document.getElementById('exame-data').value||new Date().toLocaleDateString('pt-BR'),obs:document.getElementById('exame-obs').value,resultado:document.getElementById('exame-resultado').value,file_name:fn?fn.textContent:'—',validade,validade_dias:validadeDias};
               const {data,error}=await sb.from('exames').insert(examePayload).select('*').single();
               if(error){showToast('Erro ao salvar exame: '+error.message,'error');return;}
               exames.unshift(mapExameRow(data));
               await addTimelineEvent({date:new Date().toLocaleDateString('pt-BR'),type:'exame',icon:'ti-flask',title:'Exame adicionado: '+nome,sub:document.getElementById('exame-obs').value||''});
               renderExames();renderTimeline();clearFile();
-              document.getElementById('exame-nome').value='';document.getElementById('exame-obs').value='';
+              document.getElementById('exame-nome').value='';document.getElementById('exame-obs').value='';document.getElementById('exame-resultado').value='';
               if(durSel)durSel.value='indef';
               const dcw=document.getElementById('exame-dur-custom-wrap');if(dcw)dcw.style.display='none';
               const dci=document.getElementById('exame-dur-custom');if(dci)dci.value='';
