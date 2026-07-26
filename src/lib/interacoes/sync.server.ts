@@ -105,7 +105,18 @@ export async function sincronizarInteracoes(opts: SyncOptions = {}): Promise<Syn
     logId = novoLog.id as string;
   }
 
-  const gravarLog = async (patch: Record<string, unknown>) => {
+  type LogPatch = Partial<{
+    status: string;
+    mensagem_erro: string | null;
+    quantidade_processada: number;
+    quantidade_novas: number;
+    quantidade_atualizadas: number;
+    quantidade_erros: number;
+    ultimo_medicamento_processado: string | null;
+    data_fim: string | null;
+  }>;
+
+  const gravarLog = async (patch: LogPatch) => {
     await supabaseAdmin.from("interacoes_sync_log").update(patch).eq("id", logId);
   };
 
