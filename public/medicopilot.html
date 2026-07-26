@@ -7700,7 +7700,143 @@ showToast('Documentos enviados via '+(condState.canal==='whatsapp'?'WhatsApp':'e
   }
       }
       document.getElementById('modal-overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+Saída
 
+/* ========== INTERAÇÕES MEDICAMENTOSAS ========== */
+      // Cache: id_substancia -> [{ comId, comNome, descricao, gravidade, fonte }]
+      let interacoesCache = {};
+      // Substâncias que o paciente já usa (resolvidas 1x por paciente a partir do texto livre)
+      let pacienteSubstanciasEmUso = [];
+      let pacienteSubstanciasEmUsoPacienteId = null;
+
+      async function resolverSubstanciasPaciente() {
+        if (!currentPatient) { pacienteSubstanciasEmUso = []; pacienteSubstanciasEmUsoPacienteId = null; return; }
+        if (pacienteSubstanciasEmUsoPacienteId === currentPatient.id) return; // já resolvido para esse paciente
+        const texto = (currentPatient.info_complementar && currentPatient.info_complementar.meds) || '';
+        pacienteSubstanciasEmUso = [];
+        pacienteSubstanciasEmUsoPacienteId = currentPatient.id;
+        if (!texto.trim()) return;
+        try {
+          const { data, error } = await sb.rpc('resolver_substancias_texto', { p_texto: texto });
+          if (!error && data) {
+            pacienteSubstanciasEmUso = data.map(d => ({ id: d.id_substancia, nome: d.nome_exibicao }));
+          }
+        } catch (e) { console.warn('resolverSubstanciasPaciente falhou', e); }
+      }
+
+      // Extrai todos os id_substancia de um item de medicamento (rxSelected ou condState.medicamentos).
+      // Suporta tanto o campo novo `id_substancias` (array, combinações) quanto o antigo `id_substancia` (singular).
+      function idsSubstanciaDoItem(item) {
+        if (Array.isArray(item.id_substancias) && item.id_substancias.length) return item.id_substancias;
+        if (item.id_substancia) return [item.id_substancia];
+        return [];
+      }
+
+      // Recalcula o cache de interações considerando os medicamentos atualmente
+      // selecionados (rxSelected ou condState.medicamentos) + o que o paciente já usa.
+      async function refreshInteracoes(itens) {
+        await resolverSubstanciasPaciente();
+        const idsSelecionados = new Set();
+        itens.forEach(it => idsSubstanciaDoItem(it).forEach(id => idsSelecionados.add(id)));
+        const idsPaciente = pacienteSubstanciasEmUso.map(s => s.id);
+        const nomesPorId = {};
+        pacienteSubstanciasEmUso.forEach(s => nomesPorId[s.id] = s.nome + ' (em uso pelo paciente)');
+
+        const todosIds = Array.from(new Set([...idsSelecionados, ...idsPaciente]));
+        interacoesCache = {};
+        if (todosIds.length < 2) return;
+
+        try {
+          const { data, error } = await sb.rpc('checar_interacoes_substancias', { p_ids: todosIds });
+          if (error || !data) return;
+          data.forEach(row => {
+            const add = (from, to, nomeTo) => {
+              if (!interacoesCache[from]) interacoesCache[from] = [];
+              interacoesCache[from].push({
+                comId: to,
+                comNome: nomesPorId[to] || nomeTo,
+                descricao: row.descricao || '',
+                gravidade: row.gravidade || '',
+                fonte: row.fonte || ''
+              });
+            };
+            add(row.id_substancia_a, row.id_substancia_b, row.nome_b);
+            add(row.id_substancia_b, row.id_substancia_a, row.nome_a);
+          });
+        } catch (e) { console.warn('refreshInteracoes falhou', e); }
+      }
+
+      // Retorna as interações (já deduplicadas) de um item específico, olhando o cache.
+      function interacoesDoItem(item) {
+        const ids = idsSubstanciaDoItem(item);
+        const out = [];
+        const seen = new Set();
+        ids.forEach(id => {
+          (interacoesCache[id] || []).forEach(x => {
+            const k = x.comId + '|' + x.descricao;
+            if (!seen.has(k)) { seen.add(k); out.push(x); }
+          });
+        });
+        return out;
+      }
+
+      // HTML do ícone de alerta (com tooltip) a ser injetado no cabeçalho do card do medicamento.
+      function renderAlertaIconeHtml(item, uidAttr) {
+        const interacoes = interacoesDoItem(item);
+        if (!interacoes.length) return '';
+        return `<span class="med-alerta-icone" onclick='event.stopPropagation();abrirDetalheInteracao(${JSON.stringify(uidAttr)})'>
+          <i class="ti ti-alert-triangle"></i>
+          <span class="med-alerta-tip">Interação identificada</span>
+        </span>`;
+      }
+
+      // Registro temporário para abrir o modal de detalhe a partir do onclick (evita reprocessar JSON gigante inline).
+      let _interacaoDetalheAtual = {};
+      function registrarInteracaoParaDetalhe(uidAttr, item) {
+        _interacaoDetalheAtual[uidAttr] = item;
+      }
+
+      function abrirDetalheInteracao(uidAttr) {
+        const item = _interacaoDetalheAtual[uidAttr];
+        if (!item) return;
+        const interacoes = interacoesDoItem(item);
+        const nomeMed = item.nome_comercial || item.nome || 'Medicamento';
+        const body = document.getElementById('interacao-detalhe-body');
+        if (!interacoes.length) { body.innerHTML = '<p>Nenhuma interação encontrada.</p>'; }
+        else {
+          body.innerHTML = `
+            <p style="margin:0 0 10px;font-weight:600;color:#0f172a">${nomeMed}</p>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              ${interacoes.map(x => `
+                <div style="border:1px solid #fcd34d;background:#fffbeb;border-radius:10px;padding:10px 12px">
+                  <div style="font-weight:700;font-size:12.5px;color:#92400e;margin-bottom:4px">
+                    <i class="ti ti-arrows-left-right" style="font-size:12px"></i> Interage com: ${x.comNome}
+                  </div>
+                  <div style="font-size:12.5px;color:#475569;white-space:pre-line">${(x.descricao || 'Sem descrição detalhada cadastrada.').replace(/</g,'&lt;')}</div>
+                  ${x.fonte ? `<div style="font-size:10.5px;color:#94a3b8;margin-top:4px">Fonte: ${x.fonte}</div>` : ''}
+                </div>`).join('')}
+            </div>`;
+        }
+        document.querySelectorAll('.overlay > .modal').forEach(m => m.style.display = 'none');
+        document.getElementById('modal-overlay').classList.add('open');
+        document.getElementById('m-interacao-detalhe').style.display = 'flex';
+      }
+
+      // Resolve os id_substancia de um item recém adicionado (cobre genérico e comercial/combinação).
+      async function resolverIdsSubstanciaItem(nome_comercial, fabricante, is_generico, id_substancia_generico) {
+        if (is_generico) return id_substancia_generico ? [id_substancia_generico] : [];
+        try {
+          let q = sb.from('medicamentos').select('id').eq('is_generico', false);
+          if (nome_comercial) q = q.eq('nome_comercial', nome_comercial);
+          if (fabricante) q = q.eq('fabricante', fabricante);
+          const { data: meds } = await q.limit(50);
+          const ids = (meds || []).map(m => m.id);
+          if (!ids.length) return [];
+          const { data: ms } = await sb.from('medicamento_substancias').select('id_substancia').in('id_medicamento', ids);
+          return Array.from(new Set((ms || []).map(x => x.id_substancia).filter(Boolean)));
+        } catch (e) { console.warn('resolverIdsSubstanciaItem falhou', e); return []; }
+      }
+            
       /* ========== EMITIR RECEITA ========== */
       /* ── VARIÁVEIS DE ESTADO ──────────────────────────────────────────── */
       let rxSelected = [];
