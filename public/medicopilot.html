@@ -6314,7 +6314,34 @@ async function iaEnviarOrientacoes(texto, btn, canal='whatsapp'){
   if(!contato){
     showToast('Paciente sem '+(canal==='whatsapp'?'WhatsApp':'e-mail')+' cadastrado','error');
     return;
-            async function iaEnviarReceita(canal, btn){
+  }
+  const orig=btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Enviando...';
+  try{
+    // Chama o mesmo endpoint de envio que o restante do sistema usa
+    await fetch('/api/enviar-documento',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        tipo:'orientacoes',
+        canal,
+        contato,
+        paciente:currentPatient&&currentPatient.name||'Paciente',
+        texto
+      })
+    });
+    showToast('Orientações enviadas via '+(canal==='whatsapp'?'WhatsApp':'e-mail'),'success');
+    // Remove os botões após envio
+    btn.closest('.ia-orient-btns')?.remove();
+    spawnBubble('ia','✅ Orientações enviadas para '+(currentPatient&&currentPatient.name||'o paciente')+'.');
+  }catch(e){
+    showToast('Erro ao enviar: '+(e.message||e),'error');
+    btn.disabled=false;btn.innerHTML=orig;
+  }
+}
+
+async function iaEnviarReceita(canal, btn){
   const contato=canal==='whatsapp'
     ?(currentPatient&&currentPatient.tel||'').trim()
     :(currentPatient&&currentPatient.email||'').trim();
@@ -6345,31 +6372,6 @@ async function iaEnviarOrientacoes(texto, btn, canal='whatsapp'){
     showToast('Receita enviada via '+(canal==='whatsapp'?'WhatsApp':'e-mail'),'success');
     btn.closest('.ia-orient-btns')?.remove();
     spawnBubble('ia','✅ Receita enviada para '+(currentPatient&&currentPatient.name||'o paciente')+'.');
-  }catch(e){
-    showToast('Erro ao enviar: '+(e.message||e),'error');
-    btn.disabled=false;btn.innerHTML=orig;
-  }
-}
-  const orig=btn.innerHTML;
-  btn.disabled=true;
-  btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Enviando...';
-  try{
-    // Chama o mesmo endpoint de envio que o restante do sistema usa
-    await fetch('/api/enviar-documento',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        tipo:'orientacoes',
-        canal,
-        contato,
-        paciente:currentPatient&&currentPatient.name||'Paciente',
-        texto
-      })
-    });
-    showToast('Orientações enviadas via '+(canal==='whatsapp'?'WhatsApp':'e-mail'),'success');
-    // Remove os botões após envio
-    btn.closest('.ia-orient-btns')?.remove();
-    spawnBubble('ia','✅ Orientações enviadas para '+(currentPatient&&currentPatient.name||'o paciente')+'.');
   }catch(e){
     showToast('Erro ao enviar: '+(e.message||e),'error');
     btn.disabled=false;btn.innerHTML=orig;
@@ -7649,7 +7651,6 @@ showToast('Documentos enviados via '+(condState.canal==='whatsapp'?'WhatsApp':'e
       function closeModal(){
         document.getElementById('modal-overlay').classList.remove('open');
         document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
-            function closeModal(){
   // Se havia uma receita gerada pela IA, pergunta sobre envio
   if(window.__iaAfterReceita&&rxSelected&&rxSelected.length){
     window.__iaAfterReceita=false;
@@ -7680,8 +7681,6 @@ showToast('Documentos enviados via '+(condState.canal==='whatsapp'?'WhatsApp':'e
       }
     },300);
   }
-  window.__iaAfterReceita=false;
-  // ... restante original do closeModal ...
       }
       document.getElementById('modal-overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
