@@ -812,6 +812,7 @@ export type Database = {
           recomendacoes: string
         }[]
       }
+      vincular_crfmg_substancias: { Args: never; Returns: number }
     }
     Enums: {
       [_ in never]: never
