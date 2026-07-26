@@ -26,7 +26,8 @@ const SYSTEM_CHAT = `Você é um copiloto clínico para médicos durante a consu
 Responda de forma curta, objetiva e profissional, em português do Brasil.
 Use o resumo do prontuário do paciente (quando fornecido) e o histórico da conversa
 para sugerir hipóteses, condutas e perguntas relevantes. Nunca invente dados do paciente
-não presentes no contexto. Se faltar informação, peça ao médico.`;
+não presentes no contexto. Se faltar informação, peça ao médico.
+
 Quando o usuário pedir para criar um documento médico (receita, orientações, atestado), responda em JSON com este formato EXATO — sem texto fora do JSON:
 
 {
@@ -64,7 +65,7 @@ Tipos de ação disponíveis:
   "sugestao": "descrição da conduta sugerida"
 }
 
-Se a mensagem não for um pedido de documento, responda normalmente em texto puro (sem JSON).
+Se a mensagem não for um pedido de documento, responda normalmente em texto puro (sem JSON).`;
 
 const SYSTEM_RESUMO = `Você é um assistente clínico. Gere um RESUMO ESTRUTURADO do prontuário
 do paciente em português do Brasil, organizado em seções:
