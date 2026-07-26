@@ -5250,16 +5250,21 @@
                   <div class="exame-body"><div class="exame-name">${e.nome}</div><div class="exame-obs">${e.obs}${e.validade?' \u00b7 Validade IA: '+e.validade:''}</div></div>
                   <span class="exame-date">${e.data}</span>
                   <div class="exame-acts">
-                    <button class="ra-btn" title="Visualizar"><i class="ti ti-eye"></i></button>
-                    <button class="ra-btn" title="Baixar"><i class="ti ti-download"></i></button>
-                    <button class="ra-btn" title="Excluir" onclick="deleteExame(${e.id})"><i class="ti ti-trash"></i></button>
+                    <button class="ra-btn" title="Visualizar" onclick="viewExame('${e.id}')"><i class="ti ti-eye"></i></button>
+                    <button class="ra-btn" title="Baixar" onclick="downloadExame('${e.id}')"><i class="ti ti-download"></i></button>
+                    <button class="ra-btn" title="Excluir" onclick="deleteExame('${e.id}')"><i class="ti ti-trash"></i></button>
                   </div>
                 </div>`).join('');
             }
             async function deleteExame(id){
+              const exame=exames.find(e=>e.id===id);
               const {error}=await sb.from('exames').delete().eq('id',id);
               if(error){showToast('Erro ao excluir exame: '+error.message,'error');return;}
+              if(exame && exame.arquivoPath){
+                await sb.storage.from('exames-arquivos').remove([exame.arquivoPath]);
+              }
               exames=exames.filter(e=>e.id!==id);renderExames();
+            }
             }
             async function saveExame(){
               const nome=document.getElementById('exame-nome').value.trim();if(!nome)return;
@@ -5278,6 +5283,18 @@
               const examePayload={paciente_id:currentPatient.id,user_id:currentUser.id,nome,tipo:document.getElementById('exame-tipo').value,data:document.getElementById('exame-data').value||new Date().toLocaleDateString('pt-BR'),obs:document.getElementById('exame-obs').value,resultado:document.getElementById('exame-resultado').value,file_name:fn?fn.textContent:'—',validade,validade_dias:validadeDias};
               const {data,error}=await sb.from('exames').insert(examePayload).select('*').single();
               if(error){showToast('Erro ao salvar exame: '+error.message,'error');return;}
+              const fileInput=document.getElementById('file-input');
+              if(fileInput && fileInput.files.length){
+                const file=fileInput.files[0];
+                const path=currentUser.id+'/'+data.id+'-'+file.name;
+                const {error:upErr}=await sb.storage.from('exames-arquivos').upload(path,file,{upsert:true});
+                if(upErr){
+                  showToast('Exame salvo, mas houve erro ao enviar o arquivo: '+upErr.message,'error');
+                }else{
+                  await sb.from('exames').update({arquivo_path:path}).eq('id',data.id);
+                  data.arquivo_path=path;
+                }
+              }
               exames.unshift(mapExameRow(data));
               await addTimelineEvent({date:new Date().toLocaleDateString('pt-BR'),type:'exame',icon:'ti-flask',title:'Exame adicionado: '+nome,sub:document.getElementById('exame-obs').value||''});
               renderExames();renderTimeline();clearFile();
