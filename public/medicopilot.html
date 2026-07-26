@@ -3767,6 +3767,11 @@ body.panel-expanded-active .main > *{
         .cf-med-name{font-weight:600;font-size:12px;color:#475569;flex:1}
         .cf-med.sel .cf-med-name{color:#065f46}
         .cf-med-sub{font-size:11px;color:#94a3b8;margin-left:6px;font-weight:400}
+        .med-alerta-bloco{background:#fffbeb !important;border-color:#f59e0b !important;box-shadow:0 0 0 1px rgba(245,158,11,.25)}
+.med-alerta-icone{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#fef3c7;color:#b45309;font-size:13px;cursor:pointer;flex-shrink:0;border:1px solid #fcd34d;position:relative}
+.med-alerta-icone:hover{background:#fde68a}
+.med-alerta-tip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;font-size:10.5px;font-weight:600;padding:4px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s}
+.med-alerta-icone:hover .med-alerta-tip{opacity:1}
         .cf-doc{display:flex;align-items:center;gap:12px;padding:12px 15px;border-radius:16px;margin-bottom:8px;background:rgba(255,255,255,.7);border:1.5px solid rgba(167,243,208,.6);box-shadow:0 2px 10px rgba(5,150,105,.08)}
         .cf-doc.off{opacity:.4;background:rgba(248,250,252,.5);border-color:rgba(226,232,240,.5);box-shadow:none}
         .cf-doc-name{flex:1;font-weight:600;font-size:13px;color:#1e293b}
@@ -3989,6 +3994,17 @@ body.panel-expanded-active .main > *{
                 medicamento adicionado ainda.<br /><span style="font-size:11px">Use o campo acima para buscar.</span>
               </div>
             </div>
+            <!-- DETALHE DE INTERAÇÃO MEDICAMENTOSA -->
+<div class="modal" id="m-interacao-detalhe" style="display:none;width:440px">
+  <div class="mhd">
+    <span class="mhd-title" style="color:#b45309"><i class="ti ti-alert-triangle"></i> Interação identificada</span>
+    <button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+  </div>
+  <div class="mbody" id="interacao-detalhe-body" style="padding:18px 20px;font-size:13px;color:#334155;max-height:60vh;overflow-y:auto"></div>
+  <div class="mfoot" style="justify-content:flex-end">
+    <button class="btn" onclick="closeModal()">Fechar</button>
+  </div>
+</div>
           </div>
         </div>
         <div class="mfoot" style="justify-content:space-between;align-items:center">
