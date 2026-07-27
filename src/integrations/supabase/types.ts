@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      agendamentos: {
+        Row: {
+          created_at: string
+          data_hora: string
+          duracao_min: number
+          id: string
+          id_medico: string
+          motivo: string | null
+          origem: string | null
+          paciente_id: string | null
+          paciente_nome: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_hora: string
+          duracao_min?: number
+          id?: string
+          id_medico: string
+          motivo?: string | null
+          origem?: string | null
+          paciente_id?: string | null
+          paciente_nome?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_hora?: string
+          duracao_min?: number
+          id?: string
+          id_medico?: string
+          motivo?: string | null
+          origem?: string | null
+          paciente_id?: string | null
+          paciente_nome?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agendamentos_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["paciente_id"]
+          },
+        ]
+      }
       anamnese_models: {
         Row: {
           created_at: string
@@ -153,6 +203,56 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      documentos_paciente: {
+        Row: {
+          canal_envio: string | null
+          conteudo: Json
+          created_at: string
+          enviado_em: string | null
+          id: string
+          id_medico: string
+          paciente_id: string | null
+          paciente_nome: string | null
+          texto: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          canal_envio?: string | null
+          conteudo?: Json
+          created_at?: string
+          enviado_em?: string | null
+          id?: string
+          id_medico: string
+          paciente_id?: string | null
+          paciente_nome?: string | null
+          texto?: string | null
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          canal_envio?: string | null
+          conteudo?: Json
+          created_at?: string
+          enviado_em?: string | null
+          id?: string
+          id_medico?: string
+          paciente_id?: string | null
+          paciente_nome?: string | null
+          texto?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentos_paciente_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["paciente_id"]
+          },
+        ]
       }
       exames: {
         Row: {
