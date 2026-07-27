@@ -3797,6 +3797,25 @@
           </button>
         </div>
       </div>
+      <!-- CONFIRMAÇÃO IA: ATUALIZAÇÃO DAS INFORMAÇÕES COMPLEMENTARES AO FINALIZAR ATENDIMENTO -->
+      <div class="modal" id="m-confirma-info-comp" style="display:none">
+        <div class="mhd">
+          <span class="mhd-title">...A IA identificou dados para o cadastro</span>
+          <button class="mclose" onclick="cancelarConfirmaInfoComp()">...</button>
+        </div>
+        <div class="mbody">
+          <p>...Revise, edite ou desmarque o que não desejar aplicar antes de finalizar.</p>
+          <div id="cic-lista" style="..."></div>
+          <div id="cic-cids-wrap" style="display:none">
+            <label>CIDs sugeridos</label>
+            <div id="cic-cids-chips" style="..."></div>
+          </div>
+        </div>
+        <div class="mfoot">
+          <button class="btn" onclick="cancelarConfirmaInfoComp()">Finalizar sem alterar</button>
+          <button class="btn primary" onclick="confirmarAplicarInfoComp()">Aplicar e finalizar</button>
+        </div>
+      </div>
 
       <!-- MEMÓRIA DO PACIENTE -->
       <div class="modal wide" id="m-memoria-paciente" style="display:none">
