@@ -2866,55 +2866,6 @@
                 </div>
               </div>
             </div>
-
-            <!-- Modal Assistente IA (global, acessível de qualquer tela) -->
-            <div class="ia-assist-modal" id="ia-assist-modal" onclick="if(event.target===this)closeIaAssistModal()">
-              <div class="ia-assist-box">
-                <div class="ia-assist-head">
-                  <div class="ia-assist-head-title"><i class="ti ti-sparkles"></i> Assistente IA</div>
-                  <button class="ia-assist-close" onclick="closeIaAssistModal()"><i class="ti ti-x"></i></button>
-                </div>
-                <div class="ia-assist-stage">
-                  <div class="ia-assist-bg-icon"><i class="ti ti-sparkles"></i></div>
-                  <div class="ia-assist-body" id="ia-assist-bubbles"></div>
-                  <div class="ia-assist-bottom">
-                    <div class="ia-assist-chips" id="ia-assist-chips">
-                      <button class="ia-assist-chip" onclick="iaAssistQuickPrompt('Agendar um paciente')">
-                        <i class="ti ti-calendar-plus"></i> Agendar paciente
-                      </button>
-                      <button class="ia-assist-chip" onclick="iaAssistQuickPrompt('Gerar uma receita')">
-                        <i class="ti ti-prescription"></i> Gerar receita
-                      </button>
-                      <button class="ia-assist-chip" onclick="iaAssistQuickPrompt('Gerar um atestado')">
-                        <i class="ti ti-file-certificate"></i> Atestado/declaração
-                      </button>
-                      <button
-                        class="ia-assist-chip"
-                        onclick="iaAssistQuickPrompt('Quantos pacientes eu já atendi hoje?')"
-                      >
-                        <i class="ti ti-chart-bar"></i> Pacientes hoje
-                      </button>
-                      <button
-                        class="ia-assist-chip"
-                        onclick="iaAssistQuickPrompt('Qual o horário do meu próximo paciente?')"
-                      >
-                        <i class="ti ti-clock"></i> Próximo paciente
-                      </button>
-                    </div>
-                    <div class="ai-input-row">
-                      <input
-                        class="ai-inp"
-                        id="ia-assist-inp"
-                        type="text"
-                        placeholder="Peça algo à IA ou tire uma dúvida..."
-                        onkeydown="if(event.key==='Enter')sendIaAssistMsg()"
-                      />
-                      <button class="ai-sbtn" onclick="sendIaAssistMsg()"><i class="ti ti-send"></i></button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
 
           <!-- (placeholder removido) -->
