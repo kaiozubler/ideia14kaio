@@ -3800,20 +3800,31 @@
       <!-- CONFIRMAÇÃO IA: ATUALIZAÇÃO DAS INFORMAÇÕES COMPLEMENTARES AO FINALIZAR ATENDIMENTO -->
       <div class="modal" id="m-confirma-info-comp" style="display:none">
         <div class="mhd">
-          <span class="mhd-title">...A IA identificou dados para o cadastro</span>
-          <button class="mclose" onclick="cancelarConfirmaInfoComp()">...</button>
+          <span class="mhd-title"
+            ><i class="ti ti-sparkles" style="font-size:14px;margin-right:5px;color:#7c3aed"></i>A IA identificou dados
+            para o cadastro</span
+          ><button class="mclose" onclick="cancelarConfirmaInfoComp()"><i class="ti ti-x"></i></button>
         </div>
         <div class="mbody">
-          <p>...Revise, edite ou desmarque o que não desejar aplicar antes de finalizar.</p>
-          <div id="cic-lista" style="..."></div>
-          <div id="cic-cids-wrap" style="display:none">
-            <label>CIDs sugeridos</label>
-            <div id="cic-cids-chips" style="..."></div>
+          <p style="font-size:11.5px;color:var(--n400);margin-bottom:10px;font-style:italic;line-height:1.5">
+            <i class="ti ti-info-circle" style="font-size:11px"></i>
+            Com base neste atendimento, a IA sugere os ajustes abaixo em "Informações complementares" do paciente.
+            Revise, edite ou desmarque o que não desejar aplicar antes de finalizar.
+          </p>
+          <div id="cic-lista" style="display:flex;flex-direction:column;gap:8px"></div>
+          <div id="cic-cids-wrap" style="margin-top:14px;display:none">
+            <label
+              style="font-size:11px;font-weight:600;color:var(--n500);text-transform:uppercase;letter-spacing:.04em"
+              >CIDs sugeridos</label
+            >
+            <div id="cic-cids-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px"></div>
           </div>
         </div>
         <div class="mfoot">
           <button class="btn" onclick="cancelarConfirmaInfoComp()">Finalizar sem alterar</button>
-          <button class="btn primary" onclick="confirmarAplicarInfoComp()">Aplicar e finalizar</button>
+          <button class="btn primary" onclick="confirmarAplicarInfoComp()">
+            <i class="ti ti-device-floppy"></i> Aplicar e finalizar
+          </button>
         </div>
       </div>
 

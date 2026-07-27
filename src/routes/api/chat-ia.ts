@@ -26,16 +26,34 @@ type RequestBody = {
 const IC_FIELD_META: Record<string, { label: string; tipo: "texto" | "numero" | "select"; opcoes?: string[] }> = {
   peso: { label: "Peso (kg)", tipo: "numero" },
   altura: { label: "Altura (cm)", tipo: "numero" },
-  sangue: { label: "Tipo sanguíneo", tipo: "select", opcoes: ["A+","A-","B+","B-","AB+","AB-","O+","O-"] },
-  sedent: { label: "Sedentarismo", tipo: "select", opcoes: [...] },
-  tab: { label: "Tabagismo", tipo: "select", opcoes: ["Nunca fumou","Ex-tabagista","Tabagista ativo"] },
-  eti: { label: "Etilismo", tipo: "select", opcoes: [...] },
-  sono: { label: "Sono", tipo: "select", opcoes: [...] },
+  sangue: { label: "Tipo sanguíneo", tipo: "select", opcoes: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] },
+  sedent: {
+    label: "Sedentarismo",
+    tipo: "select",
+    opcoes: ["Sedentário", "Atividade leve (1-2x/sem)", "Atividade moderada (3-4x/sem)", "Atividade intensa (5+x/sem)"],
+  },
+  tab: { label: "Tabagismo", tipo: "select", opcoes: ["Nunca fumou", "Ex-tabagista", "Tabagista ativo"] },
+  eti: {
+    label: "Etilismo",
+    tipo: "select",
+    opcoes: ["Não consome", "Social / ocasional", "Frequente", "Etilista crônico"],
+  },
+  sono: {
+    label: "Sono",
+    tipo: "select",
+    opcoes: [
+      "Bom / reparador",
+      "Regular",
+      "Insônia ocasional",
+      "Insônia frequente",
+      "Sonolência diurna excessiva",
+      "Suspeita de apneia do sono",
+    ],
+  },
   meds: { label: "Medicamentos em uso", tipo: "texto" },
   alerg: { label: "Alergias", tipo: "texto" },
   fam: { label: "Antecedentes familiares", tipo: "texto" },
   outros: { label: "Outras observações relevantes", tipo: "texto" },
-};
 };
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -151,17 +169,52 @@ Retorne EXCLUSIVAMENTE um JSON válido (sem comentários, sem markdown, sem cerc
   "condutas_sugeridas": []
 }`;
 const SYSTEM_EXTRAI_COMPLEMENTARES = `Você é um assistente clínico responsável por revisar o conteúdo de UM
-atendimento (...) e identificar informações objetivas que deveriam atualizar o cadastro
-"Informações complementares" do paciente.
-REGRAS CRÍTICAS (siga rigorosamente): ...`;
+atendimento (anotações do prontuário, transcrição, anamnese e notas do médico) e identificar
+informações objetivas que deveriam atualizar o cadastro "Informações complementares" do paciente.
+
+REGRAS CRÍTICAS (siga rigorosamente):
+- Só proponha uma alteração quando a informação for EXPLÍCITA, CLARA e POSITIVA no conteúdo do
+  atendimento (algo que o médico ou o paciente efetivamente afirmou). NUNCA infira, deduza,
+  presuma ou complete lacunas.
+- Nunca proponha uma alteração para um campo cujo valor atual já reflete a mesma informação.
+- Cada campo tem metadados em "campos" (label, tipo e, quando for "select", a lista exata de
+  "opcoes"). Para campos do tipo "select", o "valor_sugerido" deve ser EXATAMENTE IGUAL a uma das
+  opções da lista. Se a informação do atendimento não corresponder claramente a nenhuma opção, não
+  proponha nada para aquele campo.
+- Para campos de texto livre ("texto"), o "valor_sugerido" deve ser o TEXTO FINAL completo do
+  campo: preserve todo o conteúdo já existente em "info_complementar_atual" e apenas acrescente a
+  informação nova e explícita, sem duplicar o que já existe e sem reescrever o que já estava
+  correto.
+- Para campos numéricos ("numero"), só proponha se houver um valor numérico explícito mencionado.
+- Para CIDs, só sugira itens presentes na lista "cid_opcoes" fornecida (use o mesmo "code" e
+  "description" da lista), e apenas quando o atendimento indicar claramente um
+  diagnóstico/condição correspondente. Nunca repita um código já presente em "cids_atuais".
+- Se nada disso se aplicar a nenhum campo, retorne listas vazias. Não force sugestões apenas para
+  preencher a resposta.
+
+Retorne EXCLUSIVAMENTE um JSON válido (sem comentários, sem markdown, sem cercas de código) no
+formato exato:
+{
+  "alteracoes": [ { "campo": "nome_do_campo_conforme_recebido", "valor_sugerido": "..." } ],
+  "cids_sugeridos": [ { "code": "...", "description": "..." } ]
+}`;
 
 function parseJsonLoose(text: string): Record<string, unknown> {
   try {
-    const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "");
+    const cleaned = text
+      .trim()
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/```\s*$/i, "");
     return JSON.parse(cleaned);
   } catch {
     const m = text.match(/\{[\s\S]*\}/);
-    if (m) { try { return JSON.parse(m[0]); } catch { return { raw: text }; } }
+    if (m) {
+      try {
+        return JSON.parse(m[0]);
+      } catch {
+        return { raw: text };
+      }
+    }
     return { raw: text };
   }
 }
@@ -219,8 +272,7 @@ export const Route = createFileRoute("/api/chat-ia")({
                 { role: "system", content: SYSTEM_RESUMO },
                 {
                   role: "user",
-                  content:
-                    "Contexto do paciente em JSON (use só o que estiver presente):\n\n" + ctx,
+                  content: "Contexto do paciente em JSON (use só o que estiver presente):\n\n" + ctx,
                 },
               ],
               apiKey,
@@ -263,8 +315,7 @@ export const Route = createFileRoute("/api/chat-ia")({
                 {
                   role: "user",
                   content:
-                    "Dados da consulta em JSON (use apenas o que estiver presente):\n\n" +
-                    JSON.stringify(ctx, null, 2),
+                    "Dados da consulta em JSON (use apenas o que estiver presente):\n\n" + JSON.stringify(ctx, null, 2),
                 },
               ],
               apiKey,
@@ -278,17 +329,24 @@ export const Route = createFileRoute("/api/chat-ia")({
             if (!conteudo) {
               return Response.json({ alteracoes: [], cids_sugeridos: [] });
             }
-            const ctx = JSON.stringify({
-              campos: IC_FIELD_META,
-              info_complementar_atual: body.info_complementar_atual ?? {},
-              cids_atuais: body.cids_atuais ?? [],
-              cid_opcoes: body.cid_opcoes ?? [],
-              conteudo_atendimento: conteudo,
-            }, null, 2);
-            const text = await callGateway([
-              { role: "system", content: SYSTEM_EXTRAI_COMPLEMENTARES },
-              { role: "user", content: "Dados em JSON:\n\n" + ctx },
-            ], apiKey);
+            const ctx = JSON.stringify(
+              {
+                campos: IC_FIELD_META,
+                info_complementar_atual: body.info_complementar_atual ?? {},
+                cids_atuais: body.cids_atuais ?? [],
+                cid_opcoes: body.cid_opcoes ?? [],
+                conteudo_atendimento: conteudo,
+              },
+              null,
+              2,
+            );
+            const text = await callGateway(
+              [
+                { role: "system", content: SYSTEM_EXTRAI_COMPLEMENTARES },
+                { role: "user", content: "Dados em JSON:\n\n" + ctx },
+              ],
+              apiKey,
+            );
             const parsed = parseJsonLoose(text);
             const alteracoes = Array.isArray(parsed.alteracoes) ? parsed.alteracoes : [];
             const cidsSugeridos = Array.isArray(parsed.cids_sugeridos) ? parsed.cids_sugeridos : [];
@@ -306,10 +364,7 @@ export const Route = createFileRoute("/api/chat-ia")({
           const messages: ChatMessage[] = [
             { role: "system", content: systemContent },
             ...history.filter(
-              (m) =>
-                m &&
-                (m.role === "user" || m.role === "assistant") &&
-                typeof m.content === "string",
+              (m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string",
             ),
           ];
           const text = await callGateway(messages, apiKey);
