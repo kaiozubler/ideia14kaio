@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiDeepgramTokenRouteImport } from './routes/api/deepgram-token'
 import { Route as ApiDailyRoomRouteImport } from './routes/api/daily-room'
 import { Route as ApiChatIaRouteImport } from './routes/api/chat-ia'
+import { Route as ApiAssistenteIaRouteImport } from './routes/api/assistente-ia'
 import { Route as ApiSignatureSignRouteImport } from './routes/api/signature/sign'
 import { Route as ApiSignatureCredentialRouteImport } from './routes/api/signature/credential'
 import { Route as ApiSignatureAuthenticateRouteImport } from './routes/api/signature/authenticate'
@@ -37,6 +38,11 @@ const ApiDailyRoomRoute = ApiDailyRoomRouteImport.update({
 const ApiChatIaRoute = ApiChatIaRouteImport.update({
   id: '/api/chat-ia',
   path: '/api/chat-ia',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAssistenteIaRoute = ApiAssistenteIaRouteImport.update({
+  id: '/api/assistente-ia',
+  path: '/api/assistente-ia',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSignatureSignRoute = ApiSignatureSignRouteImport.update({
@@ -70,6 +76,7 @@ const ApiPublicHooksSyncInteracoesRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/assistente-ia': typeof ApiAssistenteIaRoute
   '/api/chat-ia': typeof ApiChatIaRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/assistente-ia': typeof ApiAssistenteIaRoute
   '/api/chat-ia': typeof ApiChatIaRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
@@ -93,6 +101,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/assistente-ia': typeof ApiAssistenteIaRoute
   '/api/chat-ia': typeof ApiChatIaRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/api/assistente-ia'
     | '/api/chat-ia'
     | '/api/daily-room'
     | '/api/deepgram-token'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/api/assistente-ia'
     | '/api/chat-ia'
     | '/api/daily-room'
     | '/api/deepgram-token'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/api/assistente-ia'
     | '/api/chat-ia'
     | '/api/daily-room'
     | '/api/deepgram-token'
@@ -140,6 +152,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiAssistenteIaRoute: typeof ApiAssistenteIaRoute
   ApiChatIaRoute: typeof ApiChatIaRoute
   ApiDailyRoomRoute: typeof ApiDailyRoomRoute
   ApiDeepgramTokenRoute: typeof ApiDeepgramTokenRoute
@@ -178,6 +191,13 @@ declare module '@tanstack/react-router' {
       path: '/api/chat-ia'
       fullPath: '/api/chat-ia'
       preLoaderRoute: typeof ApiChatIaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/assistente-ia': {
+      id: '/api/assistente-ia'
+      path: '/api/assistente-ia'
+      fullPath: '/api/assistente-ia'
+      preLoaderRoute: typeof ApiAssistenteIaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/signature/sign': {
@@ -220,6 +240,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiAssistenteIaRoute: ApiAssistenteIaRoute,
   ApiChatIaRoute: ApiChatIaRoute,
   ApiDailyRoomRoute: ApiDailyRoomRoute,
   ApiDeepgramTokenRoute: ApiDeepgramTokenRoute,

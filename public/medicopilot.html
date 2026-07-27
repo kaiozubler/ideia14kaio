@@ -6746,7 +6746,7 @@
                 const r=await fetch('/api/assistente-ia',{
                   method:'POST',
                   headers:{'Content-Type':'application/json'},
-                  body:JSON.stringify({mode:'assistente_global',messages:iaAssistHistory})
+                  body:JSON.stringify({mode:'assistente_global',messages:iaAssistHistory,user_id:(typeof currentUser!=='undefined'&&currentUser)?currentUser.id:null})
                 });
                 if(!r.ok)throw new Error(await r.text());
                 const d=await r.json();
