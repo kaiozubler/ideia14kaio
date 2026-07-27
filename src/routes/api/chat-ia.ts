@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
 type RequestBody = {
-  mode?: "chat" | "resumo" | "anamnese" | "copiloto";
+  mode?: "chat" | "resumo" | "anamnese" | "copiloto" | "extrair_complementares";
   messages?: ChatMessage[];
   resumo_prontuario?: string;
   paciente?: Record<string, unknown>;
@@ -17,6 +17,25 @@ type RequestBody = {
   trecho_transcricao?: string;
   resumo_acumulado?: string;
   transcricao_completa?: string;
+  info_complementar_atual?: Record<string, unknown> | null;
+  cids_atuais?: { code?: string; description?: string }[];
+  cid_opcoes?: { c?: string; d?: string }[];
+  conteudo_atendimento?: string;
+};
+
+const IC_FIELD_META: Record<string, { label: string; tipo: "texto" | "numero" | "select"; opcoes?: string[] }> = {
+  peso: { label: "Peso (kg)", tipo: "numero" },
+  altura: { label: "Altura (cm)", tipo: "numero" },
+  sangue: { label: "Tipo sanguíneo", tipo: "select", opcoes: ["A+","A-","B+","B-","AB+","AB-","O+","O-"] },
+  sedent: { label: "Sedentarismo", tipo: "select", opcoes: [...] },
+  tab: { label: "Tabagismo", tipo: "select", opcoes: ["Nunca fumou","Ex-tabagista","Tabagista ativo"] },
+  eti: { label: "Etilismo", tipo: "select", opcoes: [...] },
+  sono: { label: "Sono", tipo: "select", opcoes: [...] },
+  meds: { label: "Medicamentos em uso", tipo: "texto" },
+  alerg: { label: "Alergias", tipo: "texto" },
+  fam: { label: "Antecedentes familiares", tipo: "texto" },
+  outros: { label: "Outras observações relevantes", tipo: "texto" },
+};
 };
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -131,6 +150,21 @@ Retorne EXCLUSIVAMENTE um JSON válido (sem comentários, sem markdown, sem cerc
   "hipoteses_diagnosticas": [],
   "condutas_sugeridas": []
 }`;
+const SYSTEM_EXTRAI_COMPLEMENTARES = `Você é um assistente clínico responsável por revisar o conteúdo de UM
+atendimento (...) e identificar informações objetivas que deveriam atualizar o cadastro
+"Informações complementares" do paciente.
+REGRAS CRÍTICAS (siga rigorosamente): ...`;
+
+function parseJsonLoose(text: string): Record<string, unknown> {
+  try {
+    const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "");
+    return JSON.parse(cleaned);
+  } catch {
+    const m = text.match(/\{[\s\S]*\}/);
+    if (m) { try { return JSON.parse(m[0]); } catch { return { raw: text }; } }
+    return { raw: text };
+  }
+}
 
 async function callGateway(messages: ChatMessage[], apiKey: string) {
   const res = await fetch(GATEWAY_URL, {
@@ -236,26 +270,29 @@ export const Route = createFileRoute("/api/chat-ia")({
               apiKey,
             );
             // tenta extrair JSON da resposta (modelo pode envolver em ```json)
-            let parsed: Record<string, unknown> = {};
-            try {
-              const cleaned = text
-                .trim()
-                .replace(/^```(?:json)?\s*/i, "")
-                .replace(/```\s*$/i, "");
-              parsed = JSON.parse(cleaned);
-            } catch {
-              const m = text.match(/\{[\s\S]*\}/);
-              if (m) {
-                try {
-                  parsed = JSON.parse(m[0]);
-                } catch {
-                  parsed = { raw: text };
-                }
-              } else {
-                parsed = { raw: text };
-              }
+            return Response.json(parseJsonLoose(text));
+          }
+
+          if (mode === "extrair_complementares") {
+            const conteudo = (body.conteudo_atendimento || "").trim();
+            if (!conteudo) {
+              return Response.json({ alteracoes: [], cids_sugeridos: [] });
             }
-            return Response.json(parsed);
+            const ctx = JSON.stringify({
+              campos: IC_FIELD_META,
+              info_complementar_atual: body.info_complementar_atual ?? {},
+              cids_atuais: body.cids_atuais ?? [],
+              cid_opcoes: body.cid_opcoes ?? [],
+              conteudo_atendimento: conteudo,
+            }, null, 2);
+            const text = await callGateway([
+              { role: "system", content: SYSTEM_EXTRAI_COMPLEMENTARES },
+              { role: "user", content: "Dados em JSON:\n\n" + ctx },
+            ], apiKey);
+            const parsed = parseJsonLoose(text);
+            const alteracoes = Array.isArray(parsed.alteracoes) ? parsed.alteracoes : [];
+            const cidsSugeridos = Array.isArray(parsed.cids_sugeridos) ? parsed.cids_sugeridos : [];
+            return Response.json({ alteracoes, cids_sugeridos: cidsSugeridos });
           }
 
           // chat mode
