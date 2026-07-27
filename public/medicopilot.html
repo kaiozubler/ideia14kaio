@@ -6863,32 +6863,59 @@
         return first||'Doutor(a)';
       }
 
+      function iaAssistSyncBottomSpace(){
+        const bottom=document.querySelector('#ia-assist-modal .ia-assist-bottom');
+        const layer=document.getElementById('ia-assist-bubbles');
+        if(!bottom||!layer)return;
+        layer.style.paddingBottom=(bottom.offsetHeight+14)+'px';
+      }
+      window.addEventListener('resize',()=>{
+        const m=document.getElementById('ia-assist-modal');
+        if(m&&m.classList.contains('open'))iaAssistSyncBottomSpace();
+      });
+
       function openIaAssistModal(){
-              document.getElementById('ia-assist-modal').classList.add('open');
-              const layer=document.getElementById('ia-assist-bubbles');
-              if(layer)layer.innerHTML='';
-              iaAssistHistory=[];
-              spawnIaAssistBubble('ia','Olá, '+iaAssistUserFirstName()+'. Como posso te ajudar?');
-              setTimeout(()=>{const inp=document.getElementById('ia-assist-inp');if(inp)inp.focus();},50);
-            }
-                        }
-                        function iaAssistQuickPrompt(text){
-                          const inp=document.getElementById('ia-assist-inp');
-                          if(inp)inp.value=text;
-                          sendIaAssistMsg();
-                        }
-                        function spawnIaAssistBubble(type,text){
-                          const layer=document.getElementById('ia-assist-bubbles');if(!layer)return null;
-                          const html=fmtBubbleText(text);
-                          const id='ia-assist-bbl-'+Date.now()+'-'+Math.random().toString(36).slice(2,6);
-                          const el=document.createElement('div');
-                          el.className='bbl '+type;
-                          el.id=id;
-                          el.innerHTML=`<span class="bbl-text">${html}</span>`;
-                          layer.appendChild(el);
-                          layer.scrollTop=layer.scrollHeight;
-                          return id;
-                        }
+        document.getElementById('ia-assist-modal').classList.add('open');
+        const layer=document.getElementById('ia-assist-bubbles');
+        if(layer)layer.innerHTML='';
+        iaAssistHistory=[];
+        iaAssistSyncBottomSpace();
+        spawnIaAssistBubble('ia','Olá, '+iaAssistUserFirstName()+'. Como posso te ajudar?');
+        setTimeout(()=>{const inp=document.getElementById('ia-assist-inp');if(inp)inp.focus();},50);
+      }
+      function closeIaAssistModal(){
+        document.getElementById('ia-assist-modal').classList.remove('open');
+      }
+      function iaAssistQuickPrompt(text){
+        const inp=document.getElementById('ia-assist-inp');
+        if(inp)inp.value=text;
+        sendIaAssistMsg();
+      }
+      function spawnIaAssistBubble(type,text){
+        const layer=document.getElementById('ia-assist-bubbles');if(!layer)return null;
+        const html=fmtBubbleText(text);
+        const id='ia-assist-bbl-'+Date.now()+'-'+Math.random().toString(36).slice(2,6);
+        const el=document.createElement('div');
+        el.className='bbl '+type;
+        el.id=id;
+        el.innerHTML=`<span class="bbl-text">${html}</span>`;
+        layer.appendChild(el);
+        iaAssistSyncBottomSpace();
+        layer.scrollTop=layer.scrollHeight;
+        return id;
+      }
+      function showIaAssistTyping(){
+        const layer=document.getElementById('ia-assist-bubbles');if(!layer)return null;
+        const id='ia-assist-typing-'+Date.now();
+        const el=document.createElement('div');
+        el.className='bbl ia typing';
+        el.id=id;
+        el.innerHTML='<span class="tdot"></span><span class="tdot"></span><span class="tdot"></span>';
+        layer.appendChild(el);
+        iaAssistSyncBottomSpace();
+        layer.scrollTop=layer.scrollHeight;
+        return id;
+      }
                         function showIaAssistTyping(){
                           const layer=document.getElementById('ia-assist-bubbles');if(!layer)return null;
                           const id='ia-assist-typing-'+Date.now();
