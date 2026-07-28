@@ -15,6 +15,7 @@ import { Route as ApiDailyRoomRouteImport } from './routes/api/daily-room'
 import { Route as ApiChatIaRouteImport } from './routes/api/chat-ia'
 import { Route as ApiAssistenteIaRouteImport } from './routes/api/assistente-ia'
 import { Route as ApiSignatureSignRouteImport } from './routes/api/signature/sign'
+import { Route as ApiSignatureLocalCertificateRouteImport } from './routes/api/signature/local-certificate'
 import { Route as ApiSignatureCredentialRouteImport } from './routes/api/signature/credential'
 import { Route as ApiSignatureAuthenticateRouteImport } from './routes/api/signature/authenticate'
 import { Route as ApiPublicSignatureCallbackRouteImport } from './routes/api/public/signature/callback'
@@ -50,6 +51,12 @@ const ApiSignatureSignRoute = ApiSignatureSignRouteImport.update({
   path: '/api/signature/sign',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSignatureLocalCertificateRoute =
+  ApiSignatureLocalCertificateRouteImport.update({
+    id: '/api/signature/local-certificate',
+    path: '/api/signature/local-certificate',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiSignatureCredentialRoute = ApiSignatureCredentialRouteImport.update({
   id: '/api/signature/credential',
   path: '/api/signature/credential',
@@ -82,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
+  '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
@@ -94,6 +102,7 @@ export interface FileRoutesByTo {
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
+  '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
@@ -107,6 +116,7 @@ export interface FileRoutesById {
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
+  '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/api/deepgram-token'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
+    | '/api/signature/local-certificate'
     | '/api/signature/sign'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/signature/callback'
@@ -133,6 +144,7 @@ export interface FileRouteTypes {
     | '/api/deepgram-token'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
+    | '/api/signature/local-certificate'
     | '/api/signature/sign'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/signature/callback'
@@ -145,6 +157,7 @@ export interface FileRouteTypes {
     | '/api/deepgram-token'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
+    | '/api/signature/local-certificate'
     | '/api/signature/sign'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/signature/callback'
@@ -158,6 +171,7 @@ export interface RootRouteChildren {
   ApiDeepgramTokenRoute: typeof ApiDeepgramTokenRoute
   ApiSignatureAuthenticateRoute: typeof ApiSignatureAuthenticateRoute
   ApiSignatureCredentialRoute: typeof ApiSignatureCredentialRoute
+  ApiSignatureLocalCertificateRoute: typeof ApiSignatureLocalCertificateRoute
   ApiSignatureSignRoute: typeof ApiSignatureSignRoute
   ApiPublicHooksSyncInteracoesRoute: typeof ApiPublicHooksSyncInteracoesRoute
   ApiPublicSignatureCallbackRoute: typeof ApiPublicSignatureCallbackRoute
@@ -207,6 +221,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSignatureSignRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/signature/local-certificate': {
+      id: '/api/signature/local-certificate'
+      path: '/api/signature/local-certificate'
+      fullPath: '/api/signature/local-certificate'
+      preLoaderRoute: typeof ApiSignatureLocalCertificateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/signature/credential': {
       id: '/api/signature/credential'
       path: '/api/signature/credential'
@@ -246,6 +267,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDeepgramTokenRoute: ApiDeepgramTokenRoute,
   ApiSignatureAuthenticateRoute: ApiSignatureAuthenticateRoute,
   ApiSignatureCredentialRoute: ApiSignatureCredentialRoute,
+  ApiSignatureLocalCertificateRoute: ApiSignatureLocalCertificateRoute,
   ApiSignatureSignRoute: ApiSignatureSignRoute,
   ApiPublicHooksSyncInteracoesRoute: ApiPublicHooksSyncInteracoesRoute,
   ApiPublicSignatureCallbackRoute: ApiPublicSignatureCallbackRoute,
