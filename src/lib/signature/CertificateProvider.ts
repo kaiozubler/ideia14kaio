@@ -65,7 +65,9 @@ export interface CertificateProvider {
   /** Stable id persisted in doctor_certificates.provider */
   readonly id: string;
   /** Starts an authentication / enrollment flow. */
-  authenticate(input: AuthenticateInput & Record<string, unknown>): Promise<AuthenticateResult | Record<string, unknown>>;
+  authenticate(
+    input: AuthenticateInput | Record<string, unknown>,
+  ): Promise<AuthenticateResult | Record<string, unknown>>;
   /** Checks whether the stored certificate can still be used. */
   validateCertificate(certificate: StoredCertificate): Promise<ValidationResult>;
   /** Produces a signed PAdES PDF. */
