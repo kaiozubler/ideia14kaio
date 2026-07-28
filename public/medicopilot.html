@@ -9529,6 +9529,204 @@
                                       setTimeout(() => URL.revokeObjectURL(url), 4000);
                                     }
 
+                                    /* Renderiza qualquer documento (receita, atestado, laudo, solicitação de
+                                       exame, encaminhamento...) usando o mesmo modelo visual, tentando
+                                       assinar digitalmente (ICP-Brasil) e retornando o PDF final pronto
+                                       para download/upload. Não baixa nem salva nada sozinho — quem chama
+                                       decide o que fazer com o resultado. */
+                                    async function _renderDocumentoPdf({ docTitle, docMark, patientName, patientAge, patientCpf, bodyHtml, filenamePrefix, contentDescription }) {
+                                      // Dados da clínica (localStorage)
+                                      let clinic = {};
+                                      try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
+
+                                      // Dados do médico (usuário logado)
+                                      const u = currentUser || {};
+                                      const meta = u.user_metadata || {};
+                                      const doctorName  = meta.full_name || meta.name || (u.email || '').split('@')[0] || 'Médico responsável';
+                                      const doctorCrm   = meta.crm || meta.CRM || '—';
+                                      const doctorSpec  = meta.especialidade || meta.specialty || '';
+                                      const clinicName  = clinic.fantasia || clinic.razao || 'Clínica';
+                                      const cidadeUf    = [clinic.cidade, clinic.uf].filter(Boolean).join('/');
+                                      const addr = [
+                                        [clinic.logradouro, clinic.numero].filter(Boolean).join(', '),
+                                        clinic.complemento,
+                                        clinic.bairro,
+                                        cidadeUf,
+                                        clinic.cep ? 'CEP ' + clinic.cep : ''
+                                      ].filter(Boolean).join(' · ');
+
+                                      // Carrega o template
+                                      let html;
+                                      try {
+                                        const resp = await fetch('/receita-modelo.html', { cache: 'no-store' });
+                                        html = await resp.text();
+                                      } catch (e) { showToast && showToast('Falha ao carregar modelo do documento', 'error'); return null; }
+
+                                      // Converte logo / assinatura / QR para data URI em paralelo — nenhuma delas
+                                      // chega ao html2canvas como URL externa (evita o bug do CORS + alt text gigante).
+                                      const [logoDataUrl, sigDataUrl, qrDataUrl] = await Promise.all([
+                                        _rxImgToDataUrl(clinic.logo || ''),
+                                        _rxImgToDataUrl(clinic.assinatura_url || ''),
+                                        _rxImgToDataUrl(clinic.qr_url || ''),
+                                      ]);
+                                      const primaryColor = clinic.cor_primaria || '#0E6E5D';
+
+                                      const repl = {
+                                        '{{PRIMARY_COLOR}}' : primaryColor,
+                                        '{{CLINIC_NAME}}'   : _rxEsc(clinicName),
+                                        '{{CLINIC_ADDRESS}}': _rxEsc(addr || '—'),
+                                        '{{CLINIC_PHONE}}'  : _rxEsc(clinic.telefone || ''),
+                                        '{{CLINIC_EMAIL}}'  : _rxEsc(clinic.email || ''),
+                                        '{{LOGO_URL}}'      : logoDataUrl,
+                                        '{{DOCTOR_NAME}}'   : _rxEsc(doctorName),
+                                        '{{DOCTOR_SPECIALTY}}': _rxEsc(doctorSpec),
+                                        '{{DOCTOR_CRM}}'    : _rxEsc(doctorCrm),
+                                        '{{PATIENT_NAME}}'  : _rxEsc(patientName || '—'),
+                                        '{{PATIENT_AGE}}'   : _rxEsc(patientAge || '—'),
+                                        '{{PATIENT_CPF}}'   : _rxEsc(patientCpf || '—'),
+                                        '{{ISSUE_DATE}}'    : _rxEsc(new Date().toLocaleDateString('pt-BR')),
+                                        '{{DOC_TITLE}}'     : _rxEsc(docTitle || 'Documento Médico'),
+                                        '{{DOC_MARK}}'      : docMark || '',
+                                        '{{PRESCRIPTION_HTML}}': bodyHtml || '',
+                                        // Assinatura (placeholders ficam vazios se não configurados)
+                                        '{{SIGNATURE_DATETIME}}': _rxEsc(new Date().toLocaleString('pt-BR')),
+                                        '{{SIGNATURE_CERT_ID}}' : _rxEsc(clinic.cert_id || ''),
+                                      };
+                                      for (const [k, v] of Object.entries(repl)) {
+                                        html = html.split(k).join(v);
+                                      }
+
+                                      const scopeId = 'rx-scope-' + Date.now();
+                                      const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+                                      const bodyMatch  = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+                                      let rawCss    = styleMatch ? styleMatch[1] : '';
+                                      const rawBody = bodyMatch  ? bodyMatch[1]  : html;
+
+                                      rawCss = rawCss
+                                        .replace(/\*\s*\{\s*box-sizing:\s*border-box;\s*margin:\s*0;\s*padding:\s*0;\s*\}/,
+                                          `#${scopeId} * { box-sizing: border-box; margin: 0; padding: 0; }`)
+                                        .replace(/html,\s*body\s*\{([^}]*)\}/,
+                                          (_, decls) => `#${scopeId} { ${decls} }`);
+
+                                      const styleEl = document.createElement('style');
+                                      styleEl.setAttribute('data-rx-style', scopeId);
+                                      styleEl.textContent = rawCss;
+                                      document.head.appendChild(styleEl);
+
+                                    const clipper = document.createElement('div');
+                                    clipper.style.cssText = `
+                              position:fixed;
+                              left:0;
+                              top:0;
+                              width:210mm;
+                              overflow:hidden;
+                              z-index:-1;
+                              pointer-events:none;
+                              `;
+
+                                    const holder = document.createElement('div');
+                                    holder.id = scopeId;
+                                    holder.style.cssText = `
+                              position:relative;
+                              width:210mm;
+                              min-width:210mm;
+                              max-width:210mm;
+                              margin:0 auto;
+                              background:#fff;
+                              `;
+                                    holder.innerHTML = rawBody;
+                                    clipper.appendChild(holder);
+
+                                    const cleanup = () => {
+                                      try { clipper.remove(); } catch(_) {}
+                                      try { styleEl.remove(); } catch(_) {}
+                                    };
+
+                                      try {
+                                        // Remove elementos que não devem ir para o PDF
+                                        holder.querySelectorAll('.builder-note').forEach(n => n.remove());
+                                        if (!sigDataUrl) {
+                                          holder.querySelectorAll('.signature-area').forEach(n => n.remove());
+                                        }
+                                        if (!logoDataUrl) {
+                                          const ls = holder.querySelector('.logo-slot');
+                                          if (ls) ls.remove();
+                                        }
+
+                                        // Aguarda fontes e imagens carregarem (agora todas data URI, sem risco de CORS)
+                                        try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
+                                        const imgs = Array.from(holder.querySelectorAll('img'));
+                                        await Promise.all(imgs.map(img =>
+                                          img.complete ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; })
+                                        ));
+
+                                        const safeName = (patientName || 'paciente').replace(/[^\w\-]+/g, '_').toLowerCase();
+                                        const filename = `${filenamePrefix}_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+                                        const pdfBlob = await window.html2pdf().set({
+                                          margin: 0,
+                                          filename,
+                                          image: { type: 'jpeg', quality: 0.98 },
+                                          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
+                                          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                                          pagebreak: { mode: ['css', 'legacy'] }
+                                        }).from(holder.querySelector('.sheet') || holder).outputPdf('blob');
+
+                                        // Try to sign with ICP-Brasil. Fallback to unsigned download.
+                                        let finalBlob = pdfBlob;
+                                        let signedUrl = null;
+                                        try {
+                                          const { data: sess } = await sb.auth.getSession();
+                                          const token = sess?.session?.access_token;
+                                          if (token) {
+                                            const pdfBase64 = await new Promise((resolve, reject) => {
+                                              const r = new FileReader();
+                                              r.onload = () => resolve(String(r.result).split(',')[1] || '');
+                                              r.onerror = reject;
+                                              r.readAsDataURL(pdfBlob);
+                                            });
+                                            const resp = await fetch('/api/signature/sign', {
+                                              method: 'POST',
+                                              headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                                              body: JSON.stringify({
+                                                pdfBase64,
+                                                filename,
+                                                contentDescription: contentDescription || `Documento para ${patientName || 'paciente'}`,
+                                              }),
+                                            });
+                                            if (resp.ok) {
+                                              const j = await resp.json();
+                                              signedUrl = j.signedPdfUrl;
+                                              const dl = await fetch(signedUrl);
+                                              if (dl.ok) finalBlob = await dl.blob();
+                                            } else {
+                                              const j = await resp.json().catch(() => ({}));
+                                              if (j.error && j.error !== 'not_configured' && j.error !== 'credential_expired') {
+                                                console.warn('Assinatura ICP falhou:', j);
+                                              }
+                                            }
+                                          }
+                                        } catch (e) { console.warn('Assinatura opcional falhou, seguindo sem assinatura:', e); }
+
+                                        return { finalBlob, filename, signedUrl };
+                                      } catch (e) {
+                                        console.error('Falha ao gerar PDF do documento:', e);
+                                        showToast && showToast('Falha ao gerar PDF do documento', 'error');
+                                        return null;
+                                      } finally {
+                                        setTimeout(cleanup, 300);
+                                      }
+                                    }
+
+                                    /* Dispara o download de um blob no navegador */
+                                    function _baixarBlob(blob, filename) {
+                                      const url = URL.createObjectURL(blob);
+                                      const a = document.createElement('a');
+                                      a.href = url; a.download = filename; document.body.appendChild(a);
+                                      a.click(); a.remove();
+                                      setTimeout(() => URL.revokeObjectURL(url), 4000);
+                                    }
+
                                     async function openReceitaPDF({ items }) {
                                       if (!items || !items.length) { showToast && showToast('Nenhum medicamento para a receita', 'warn'); return; }
 
