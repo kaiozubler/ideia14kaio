@@ -2589,13 +2589,26 @@
 
           <!-- SCREEN: RECEITAS -->
           <div id="s-receitas" style="display:none">
-            <div class="rec-empty">
-              <i class="ti ti-file-prescription"></i>
-              <h3>Receitas e Atestados</h3>
-              <p>Selecione um paciente para acessar receitas e atestados</p>
-              <button class="btn ghost" style="margin-top:14px" onclick="goScreen('patients')">
-                <i class="ti ti-users"></i> Ir para Pacientes
+            <div class="rx-doc-toolbar">
+              <button class="btn primary" onclick="abrirModalGerarDocumento()">
+                <i class="ti ti-file-plus"></i> Gerar documento
               </button>
+              <span class="rx-doc-count" id="rx-doc-count">0 documentos</span>
+            </div>
+            <div class="rx-doc-card">
+              <div class="rx-doc-head">
+                <span>Tipo</span>
+                <span>Paciente</span>
+                <span>Data/hora</span>
+                <span>Status</span>
+                <span>Ações</span>
+              </div>
+              <div id="rx-doc-list"></div>
+            </div>
+            <div class="rec-empty" id="rx-doc-empty" style="display:none;margin-top:14px">
+              <i class="ti ti-file-description"></i>
+              <h3>Nenhum documento gerado ainda</h3>
+              <p>Receitas, atestados, laudos e demais documentos aparecerão aqui assim que forem gerados.</p>
             </div>
           </div>
 
