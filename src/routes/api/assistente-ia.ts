@@ -36,6 +36,20 @@ REGRAS DE IDENTIFICAÇÃO DO PACIENTE
   * nenhum resultado: siga e execute a ação mesmo assim (ex.: gere a receita). NÃO bloqueie a geração do documento por falta de cadastro. O cadastro só é pedido depois, na hora do envio.
 - Exceção: para consultas simples (não geração de documento) de um paciente atendido recentemente e com nome único, pode dispensar o CPF.
 
+DADOS OBRIGATÓRIOS PARA RECEITA
+- Toda receita precisa de três dados do paciente: nome, CPF e idade. A tool gerar_receita exige os três.
+- Se confirmar_paciente_cpf já devolveu a idade (paciente tinha cadastro completo), use esse valor — não pergunte de novo.
+- Se o cadastro não existir, ou não tiver CPF/idade registrados, PERGUNTE ao usuário o que estiver faltando — uma pergunta por mensagem, nunca peça vários dados de uma vez.
+
+INTERAÇÃO MEDICAMENTOSA
+- Ao chamar gerar_receita com 2+ medicamentos, a tool já verifica interações automaticamente. Se ela responder interacao_detectada=true, pare, explique a interação ao médico em linguagem simples e pergunte se deseja continuar mesmo assim. Só chame gerar_receita de novo, com interacao_confirmada=true, após a confirmação explícita.
+
+APRESENTAÇÃO E POSOLOGIA DOS MEDICAMENTOS
+- Se o médico citar um medicamento sem apresentação (dosagem/forma) ou sem posologia, chame buscar_medicamento pelo nome.
+  * Se encontrar o medicamento no catálogo, sugira uma das apresentações cadastradas e peça para o médico confirmar (ou escolher outra).
+  * Para a posologia não existe catálogo — proponha uma posologia usual para aquela apresentação, deixando claro que é uma sugestão, e peça confirmação do médico antes de incluir na receita.
+  * Se não encontrar o medicamento no catálogo, avise e peça que o médico informe a apresentação/posologia manualmente.
+
 APÓS GERAR DOCUMENTO
 - Sempre pergunte se deseja enviar por WhatsApp.
 - Se o paciente tem cadastro com telefone: ao confirmar, envie (enviar_mensagem com confirmado=true).
@@ -97,8 +111,7 @@ const tools = [
     type: "function",
     function: {
       name: "agendar_paciente",
-      description:
-        "Agenda um atendimento futuro. Só chame após confirmação explícita do usuário.",
+      description: "Agenda um atendimento futuro. Só chame após confirmação explícita do usuário.",
       parameters: {
         type: "object",
         properties: {
@@ -180,8 +193,7 @@ const tools = [
     type: "function",
     function: {
       name: "enviar_mensagem",
-      description:
-        "Envia mensagem ou documento ao paciente. Só chame após confirmação explícita.",
+      description: "Envia mensagem ou documento ao paciente. Só chame após confirmação explícita.",
       parameters: {
         type: "object",
         properties: {
@@ -243,15 +255,11 @@ function fmtHora(iso: string) {
   return `${p(dt.getUTCDate())}/${p(dt.getUTCMonth() + 1)} ${p(dt.getUTCHours())}:${p(dt.getUTCMinutes())}`;
 }
 
-type Db = typeof import("@/integrations/supabase/client.server")["supabaseAdmin"];
+type Db = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
 
 type ToolCtx = { db: Db; medicoId: string | null; pendingAction: { value: unknown } };
 
-async function runTool(
-  name: string,
-  args: Record<string, any>,
-  ctx: ToolCtx,
-): Promise<unknown> {
+async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): Promise<unknown> {
   const { db, medicoId } = ctx;
 
   switch (name) {
@@ -326,9 +334,7 @@ async function runTool(
         .gte("data_hora", janelaIni)
         .lte("data_hora", janelaFim);
       if (conflitos && conflitos.length) {
-        const alternativas = [60, 120, -60].map((m) =>
-          fmtHora(new Date(dt.getTime() + m * 60000).toISOString()),
-        );
+        const alternativas = [60, 120, -60].map((m) => fmtHora(new Date(dt.getTime() + m * 60000).toISOString()));
         return {
           conflito: true,
           ocupado_por: conflitos[0].paciente_nome,
@@ -489,8 +495,7 @@ async function runTool(
         return {
           enviado: false,
           motivo: "sem_telefone",
-          instrucao:
-            "Peça o número de WhatsApp do paciente e crie/atualize o cadastro antes de enviar.",
+          instrucao: "Peça o número de WhatsApp do paciente e crie/atualize o cadastro antes de enviar.",
         };
       }
       if (args.documento_id && medicoId) {
@@ -557,8 +562,7 @@ export const Route = createFileRoute("/api/assistente-ia")({
         }
 
         const history = (Array.isArray(body.messages) ? body.messages : []).filter(
-          (m) =>
-            m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string",
+          (m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string",
         ) as ChatMessage[];
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
