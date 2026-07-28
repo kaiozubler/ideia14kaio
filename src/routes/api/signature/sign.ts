@@ -42,6 +42,7 @@ export const Route = createFileRoute("/api/signature/sign")({
             pdfBase64?: string;
             contentDescription?: string;
             filename?: string;
+            certificatePassword?: string;
           };
           if (!body.pdfBase64) {
             return Response.json({ error: "pdf_required" }, { status: 400 });
@@ -55,6 +56,7 @@ export const Route = createFileRoute("/api/signature/sign")({
             pdfBuffer: b64ToBytes(body.pdfBase64),
             contentDescription: body.contentDescription,
             filename: body.filename,
+            certificatePassword: body.certificatePassword ?? null,
           });
           return Response.json({ ok: true, ...result });
         } catch (err) {

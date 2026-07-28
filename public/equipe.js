@@ -272,6 +272,7 @@
         <div>
           <label class="eq-label"><i class="ti ti-certificate"></i> Certificado ICP-Brasil</label>
           <div id="eq-p-cert-status" style="font-size:12px;color:#64748b;margin-bottom:8px">Verificando…</div>
+          <div id="eq-p-cert-details" style="margin-bottom:8px"></div>
           <button type="button" class="eq-btn eq-btn-ghost" id="eq-p-cert-connect"><i class="ti ti-shield-lock"></i> Conectar certificado</button>
         </div>
         <div class="eq-reset-row">
@@ -330,38 +331,176 @@
       // ICP-Brasil certificate connection (apenas o próprio usuário logado)
       const certBtn = document.getElementById("eq-p-cert-connect");
       const certStatus = document.getElementById("eq-p-cert-status");
+      const certDetails = document.getElementById("eq-p-cert-details");
       if (certBtn && certStatus) {
-        (async () => {
+        const authToken = async () => {
+          const { data } = await window.sb.auth.getSession();
+          return data?.session?.access_token || null;
+        };
+        const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("pt-BR") : "—");
+        const providerLabel = (id) =>
+          id === "local" ? "Certificado local (.pfx/.p12)" : "Certificado em nuvem (ICP)";
+        const typeLabel = (t) => (t === "pfx" ? "Arquivo A1 (.pfx/.p12)" : "Nuvem");
+
+        function renderCert(c) {
+          if (!c) {
+            certStatus.textContent = "Nenhum certificado vinculado.";
+            certDetails.innerHTML = "";
+            certBtn.innerHTML = '<i class="ti ti-shield-lock"></i> Conectar certificado';
+            return;
+          }
+          const info = c.info || {};
+          certStatus.innerHTML = c.expired
+            ? `<b style="color:#dc2626">Expirado</b> — reconecte o certificado.`
+            : `<b style="color:#059669">Conectado</b> · ${esc(info.subject || c.certificate_subject || c.provider_name || "")}`;
+          const row = (k, v) =>
+            v
+              ? `<div style="display:flex;gap:6px;font-size:12px;color:#475569"><span style="min-width:120px;color:#94a3b8">${k}</span><span style="word-break:break-all">${esc(String(v))}</span></div>`
+              : "";
+          certDetails.innerHTML = `
+            <div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;display:grid;gap:4px;background:#f8fafc">
+              ${row("Tipo", typeLabel(info.certificateType || c.certificate_type))}
+              ${row("Provedor", providerLabel(info.provider || c.provider))}
+              ${row("Titular", info.subject || c.certificate_subject)}
+              ${row("CPF/CNPJ", info.holderDocument)}
+              ${row("Número de série", info.serial || c.certificate_serial)}
+              ${row("Emissor", info.issuer || c.provider_name)}
+              ${row("Validade", `${fmtDate(info.validFrom)} até ${fmtDate(info.validUntil || info.expiresAt)}`)}
+              ${row("Fingerprint", info.fingerprint || c.certificate_fingerprint)}
+              <div style="display:flex;gap:8px;margin-top:6px">
+                <button type="button" class="eq-btn eq-btn-ghost" id="eq-p-cert-swap"><i class="ti ti-refresh"></i> Trocar certificado</button>
+                <button type="button" class="eq-btn eq-btn-ghost" id="eq-p-cert-del"><i class="ti ti-trash"></i> Excluir certificado</button>
+              </div>
+            </div>`;
+          certBtn.innerHTML = '<i class="ti ti-shield-lock"></i> Conectar certificado';
+          const swap = document.getElementById("eq-p-cert-swap");
+          const del = document.getElementById("eq-p-cert-del");
+          if (swap) swap.onclick = () => openTypeChooser();
+          if (del)
+            del.onclick = async () => {
+              if (!confirm("Excluir o certificado vinculado?")) return;
+              const token = await authToken();
+              if (!token) return;
+              await fetch("/api/signature/credential", {
+                method: "DELETE",
+                headers: { Authorization: "Bearer " + token },
+              });
+              loadCert();
+            };
+        }
+
+        async function loadCert() {
           try {
-            const { data } = await window.sb.auth.getSession();
-            const token = data?.session?.access_token;
+            const token = await authToken();
             if (!token) {
               certStatus.textContent = "Faça login para conectar o certificado.";
               return;
             }
             const res = await fetch("/api/signature/credential", { headers: { Authorization: "Bearer " + token } });
             const j = await res.json();
-            if (j.credential) {
-              const c = j.credential;
-              const exp = c.credential_expires_at ? new Date(c.credential_expires_at).toLocaleDateString("pt-BR") : "—";
-              certStatus.innerHTML = c.expired
-                ? `<b style="color:#dc2626">Expirado</b> — reconecte o certificado.`
-                : `<b style="color:#059669">Conectado</b> · ${esc(c.certificate_subject || c.provider_name || "")} · válido até ${exp}`;
-            } else {
-              certStatus.textContent = "Nenhum certificado vinculado.";
-            }
+            renderCert(j.credential || null);
           } catch (err) {
             certStatus.textContent = "Não foi possível verificar o status.";
           }
-        })();
-        certBtn.onclick = async () => {
+        }
+        loadCert();
+
+        function closeModal() {
+          const m = document.getElementById("eq-cert-modal");
+          if (m) m.remove();
+        }
+        function modalShell(title, inner) {
+          closeModal();
+          const wrap = document.createElement("div");
+          wrap.id = "eq-cert-modal";
+          wrap.style.cssText =
+            "position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:16px";
+          wrap.innerHTML = `<div style="background:#fff;border-radius:14px;max-width:420px;width:100%;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,.2)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <b style="font-size:15px">${title}</b>
+              <button type="button" id="eq-cert-x" style="border:0;background:transparent;font-size:18px;cursor:pointer">×</button>
+            </div>${inner}</div>`;
+          document.body.appendChild(wrap);
+          wrap.addEventListener("click", (e) => {
+            if (e.target === wrap) closeModal();
+          });
+          document.getElementById("eq-cert-x").onclick = closeModal;
+          return wrap;
+        }
+
+        function openTypeChooser() {
+          modalShell(
+            "Escolha o tipo de certificado",
+            `<div style="display:grid;gap:10px">
+               <button type="button" class="eq-btn eq-btn-ghost" id="eq-cert-cloud" style="justify-content:flex-start"><i class="ti ti-cloud-lock"></i> Certificado em Nuvem</button>
+               <button type="button" class="eq-btn eq-btn-ghost" id="eq-cert-local" style="justify-content:flex-start"><i class="ti ti-file-certificate"></i> Arquivo .PFX / .P12</button>
+             </div>`,
+          );
+          document.getElementById("eq-cert-cloud").onclick = () => {
+            closeModal();
+            connectCloud();
+          };
+          document.getElementById("eq-cert-local").onclick = () => {
+            closeModal();
+            openLocalUpload();
+          };
+        }
+
+        function openLocalUpload() {
+          modalShell(
+            "Certificado .PFX / .P12",
+            `<div style="display:grid;gap:10px">
+               <div><label class="eq-label">Arquivo (.pfx ou .p12)</label><input type="file" accept=".pfx,.p12" class="eq-input" id="eq-cert-file"></div>
+               <div><label class="eq-label">Senha do certificado</label><input type="password" class="eq-input" id="eq-cert-pass" autocomplete="off"></div>
+               <div><label class="eq-label">Nome de identificação (opcional)</label><input class="eq-input" id="eq-cert-label"></div>
+               <div id="eq-cert-msg" style="font-size:12px;color:#64748b"></div>
+               <button type="button" class="eq-btn eq-btn-primary" id="eq-cert-send"><i class="ti ti-upload"></i> Enviar certificado</button>
+             </div>`,
+          );
+          const msg = document.getElementById("eq-cert-msg");
+          document.getElementById("eq-cert-send").onclick = async () => {
+            const fileEl = document.getElementById("eq-cert-file");
+            const file = fileEl.files && fileEl.files[0];
+            const pass = document.getElementById("eq-cert-pass").value;
+            const label = document.getElementById("eq-cert-label").value;
+            if (!file) return (msg.textContent = "Selecione o arquivo do certificado.");
+            if (!/\.(pfx|p12)$/i.test(file.name)) return (msg.textContent = "Formato inválido. Use .pfx ou .p12.");
+            if (file.size > 5 * 1024 * 1024) return (msg.textContent = "Arquivo maior que 5 MB.");
+            if (!pass) return (msg.textContent = "Informe a senha do certificado.");
+            msg.textContent = "Validando certificado…";
+            try {
+              const token = await authToken();
+              const fileBase64 = await new Promise((res, rej) => {
+                const r = new FileReader();
+                r.onload = () => res(String(r.result).split(",")[1] || "");
+                r.onerror = rej;
+                r.readAsDataURL(file);
+              });
+              const resp = await fetch("/api/signature/local-certificate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+                body: JSON.stringify({ fileBase64, filename: file.name, mimeType: file.type, password: pass, label }),
+              });
+              const j = await resp.json();
+              if (!resp.ok) {
+                msg.innerHTML = `<b style="color:#dc2626">${esc(j.message || j.error || "Falha ao validar o certificado.")}</b>`;
+                return;
+              }
+              closeModal();
+              loadCert();
+            } catch (e) {
+              msg.innerHTML = `<b style="color:#dc2626">${esc(String(e))}</b>`;
+            }
+          };
+        }
+
+        async function connectCloud() {
           const cpf = prompt("Informe o CPF do titular do certificado (somente números):");
           if (!cpf) return;
           certBtn.disabled = true;
           certStatus.textContent = "Conectando ao provedor…";
           try {
-            const { data } = await window.sb.auth.getSession();
-            const token = data?.session?.access_token;
+            const token = await authToken();
             if (!token) {
               alert("Sessão expirada. Faça login novamente.");
               return;
@@ -399,7 +538,9 @@
           } finally {
             certBtn.disabled = false;
           }
-        };
+        }
+
+        certBtn.onclick = openTypeChooser;
       }
     }
   }

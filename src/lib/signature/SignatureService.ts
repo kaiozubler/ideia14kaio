@@ -1,43 +1,31 @@
 // Facade used by server routes / server functions.
-// Screens must NEVER import provider or repository directly — only this service.
+// Screens must NEVER import a provider or the repository directly — only this
+// service. Provider selection is centralized in CertificateProviderFactory.
+import { CertificateProviderFactory } from "./CertificateProviderFactory";
 import { CredentialRepository } from "./CredentialRepository";
 import { IntegraICPProvider } from "./IntegraICPProvider";
-import { generatePKCE } from "./PKCEService";
 import { SignatureErrors } from "./errors";
-import type {
-  AuthenticateInput,
-  AuthenticateResult,
-  SignatureProvider,
-} from "./types";
-
-// Swap here to plug in a different provider in the future.
-const provider: SignatureProvider = IntegraICPProvider;
+import type { StoredCertificate } from "./CertificateProvider";
+import type { AuthenticateInput, AuthenticateResult } from "./types";
 
 export const SignatureService = {
+  /** Cloud enrollment (unchanged behavior). */
   async authenticate(input: AuthenticateInput): Promise<AuthenticateResult> {
-    if (!input.cpf) throw SignatureErrors.InvalidPKCE("CPF requerido.");
-    const { codeVerifier, codeChallenge } = await generatePKCE();
-    const sessionId = await CredentialRepository.createPkceSession({
-      doctorId: input.doctorId,
-      codeVerifier,
-    });
+    const provider = await CertificateProviderFactory.getById("integra_icp");
+    return (await provider.authenticate(input)) as AuthenticateResult;
+  },
 
-    // Append session id so the callback can find the PKCE row.
-    const cb = new URL(input.callbackUrl);
-    cb.searchParams.set("session", sessionId);
-
-    const { requestId, clearances } = await provider.authenticate({
-      cpf: input.cpf,
-      codeChallenge,
-      callbackUrl: cb.toString(),
-    });
-
-    if (requestId) await CredentialRepository.attachRequestId(sessionId, requestId);
-
-    const redirectUrl =
-      clearances.length === 1 ? clearances[0].authorizationUrl || null : null;
-
-    return { requestId, sessionId, clearances, redirectUrl };
+  /** Local (.pfx/.p12) enrollment. */
+  async registerLocalCertificate(input: {
+    doctorId: string;
+    fileBase64: string;
+    filename: string;
+    mimeType?: string;
+    password: string;
+    label?: string;
+  }) {
+    const provider = await CertificateProviderFactory.getById("local");
+    return provider.authenticate(input as never);
   },
 
   async handleCallback(params: { credentialId: string; sessionId?: string; requestId?: string }) {
@@ -45,7 +33,7 @@ export const SignatureService = {
       sessionId: params.sessionId,
       requestId: params.requestId,
     });
-    const cred = await provider.fetchCredential({
+    const cred = await IntegraICPProvider.fetchCredential({
       credentialId: params.credentialId,
       codeVerifier,
     });
@@ -58,10 +46,21 @@ export const SignatureService = {
   async getCredential(doctorId: string) {
     const cert = await CredentialRepository.getActiveCertificate(doctorId);
     if (!cert) return null;
-    const expired =
-      cert.credential_expires_at &&
-      new Date(cert.credential_expires_at).getTime() < Date.now();
-    return { ...cert, expired };
+    const provider = await CertificateProviderFactory.get(cert as StoredCertificate);
+    const info = provider.getCertificateInformation(cert as StoredCertificate);
+    // Never expose secrets / raw material to the frontend.
+    const safe = { ...(cert as Record<string, unknown>) };
+    delete safe.code_verifier_encrypted;
+    delete safe.raw_metadata;
+    return { ...safe, expired: info.expired, info };
+  },
+
+  async removeCredential(doctorId: string) {
+    const cert = await CredentialRepository.getActiveCertificate(doctorId);
+    if (!cert) return { removed: false };
+    const provider = await CertificateProviderFactory.get(cert as StoredCertificate);
+    await provider.revokeAuthentication(cert as StoredCertificate);
+    return { removed: true };
   },
 
   async signDocument(req: {
@@ -70,37 +69,17 @@ export const SignatureService = {
     pdfBuffer: Uint8Array;
     contentDescription?: string;
     filename?: string;
+    certificatePassword?: string | null;
   }): Promise<{ signedPdfUrl: string; signaturePath: string; signatureTimestamp: string | null }> {
-    const active = await CredentialRepository.getActiveCertificateWithVerifier(req.doctorId);
-    if (!active) throw SignatureErrors.CredentialExpired("Nenhum certificado ativo.");
-    const { cert, codeVerifier } = active;
-    if (
-      cert.credential_expires_at &&
-      new Date(cert.credential_expires_at).getTime() < Date.now()
-    ) {
-      throw SignatureErrors.CredentialExpired();
-    }
-    if (!codeVerifier) {
-      throw SignatureErrors.InvalidPKCE(
-        "Verificador PKCE ausente para este certificado. Reconecte o certificado.",
-      );
-    }
-
-    const { embedCMSIntoPDF } = await import("./PadesEmbedder.server");
-    const signed = await embedCMSIntoPDF({
+    const cert = await CredentialRepository.getActiveCertificate(req.doctorId);
+    if (!cert) throw SignatureErrors.CredentialExpired("Nenhum certificado ativo.");
+    const provider = await CertificateProviderFactory.get(cert as StoredCertificate);
+    const signed = await provider.signDocument({
+      certificate: cert as StoredCertificate,
+      documentId: req.documentId,
       pdfBuffer: req.pdfBuffer,
-      reason: req.contentDescription ?? "Assinatura ICP-Brasil",
-      name: cert.certificate_subject ?? "Médico",
-      signer: async (digestBase64) => {
-        const result = await provider.sign({
-          credentialId: cert.credential_id,
-          codeVerifier,
-          documentId: req.documentId,
-          contentDigest: digestBase64,
-          contentDescription: req.contentDescription ?? "Receita",
-        });
-        return result.signedContent; // base64 CMS
-      },
+      contentDescription: req.contentDescription ?? "Assinatura ICP-Brasil",
+      secret: req.certificatePassword ?? null,
     });
 
     // Upload the signed PDF to Storage (private bucket, per-doctor folder).

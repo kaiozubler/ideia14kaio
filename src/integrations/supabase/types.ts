@@ -155,6 +155,7 @@ export type Database = {
           certificate_fingerprint: string | null
           certificate_serial: string | null
           certificate_subject: string | null
+          certificate_type: string
           certificate_valid_from: string | null
           certificate_valid_until: string | null
           code_verifier_encrypted: string | null
@@ -162,16 +163,22 @@ export type Database = {
           credential_expires_at: string | null
           credential_id: string
           doctor_id: string
+          holder_document: string | null
           id: string
+          issuer: string | null
+          label: string | null
           product_name: string | null
+          provider: string
           provider_name: string | null
           raw_metadata: Json | null
+          storage_path: string | null
           updated_at: string
         }
         Insert: {
           certificate_fingerprint?: string | null
           certificate_serial?: string | null
           certificate_subject?: string | null
+          certificate_type?: string
           certificate_valid_from?: string | null
           certificate_valid_until?: string | null
           code_verifier_encrypted?: string | null
@@ -179,16 +186,22 @@ export type Database = {
           credential_expires_at?: string | null
           credential_id: string
           doctor_id: string
+          holder_document?: string | null
           id?: string
+          issuer?: string | null
+          label?: string | null
           product_name?: string | null
+          provider?: string
           provider_name?: string | null
           raw_metadata?: Json | null
+          storage_path?: string | null
           updated_at?: string
         }
         Update: {
           certificate_fingerprint?: string | null
           certificate_serial?: string | null
           certificate_subject?: string | null
+          certificate_type?: string
           certificate_valid_from?: string | null
           certificate_valid_until?: string | null
           code_verifier_encrypted?: string | null
@@ -196,10 +209,15 @@ export type Database = {
           credential_expires_at?: string | null
           credential_id?: string
           doctor_id?: string
+          holder_document?: string | null
           id?: string
+          issuer?: string | null
+          label?: string | null
           product_name?: string | null
+          provider?: string
           provider_name?: string | null
           raw_metadata?: Json | null
+          storage_path?: string | null
           updated_at?: string
         }
         Relationships: []
