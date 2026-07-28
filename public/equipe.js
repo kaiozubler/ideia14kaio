@@ -272,6 +272,7 @@
         <div>
           <label class="eq-label"><i class="ti ti-certificate"></i> Certificado ICP-Brasil</label>
           <div id="eq-p-cert-status" style="font-size:12px;color:#64748b;margin-bottom:8px">Verificando…</div>
+          <div id="eq-p-cert-details" style="margin-bottom:8px"></div>
           <button type="button" class="eq-btn eq-btn-ghost" id="eq-p-cert-connect"><i class="ti ti-shield-lock"></i> Conectar certificado</button>
         </div>
         <div class="eq-reset-row">
