@@ -547,12 +547,30 @@
                                           .chart-val{font-size:11px;color:var(--n500);width:28px;flex-shrink:0}
 
                                           /* RECEITAS SCREEN */
-                                          .rec-empty{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12);padding:60px 20px;text-align:center}
-                                          .rec-empty .ti{font-size:36px;color:var(--g300);display:block;margin-bottom:12px}
-                                          .rec-empty h3{font-size:14px;font-weight:500;color:var(--n600);margin-bottom:5px}
-                                          .rec-empty p{font-size:12px;color:var(--n400)}
+                                    .rec-empty{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12);padding:60px 20px;text-align:center}
+                                    .rec-empty .ti{font-size:36px;color:var(--g300);display:block;margin-bottom:12px}
+                                    .rec-empty h3{font-size:14px;font-weight:500;color:var(--n600);margin-bottom:5px}
+                                    .rec-empty p{font-size:12px;color:var(--n400)}
 
-                                          .back-btn{display:inline-flex;align-items:center;gap:5px;color:var(--n400);font-size:12px;padding:5px 9px;border-radius:var(--r6);border:none;background:transparent;cursor:pointer;margin-bottom:14px;transition:all .12s}
+                                    .rx-doc-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+                                    .rx-doc-count{font-size:12px;color:var(--n400)}
+                                    .rx-doc-card{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12);overflow:hidden}
+                                    .rx-doc-head,.rx-doc-row{display:grid;grid-template-columns:170px 1fr 150px 120px 150px;gap:10px;align-items:center;padding:11px 16px}
+                                    .rx-doc-head{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--n400);border-bottom:0.5px solid var(--n150)}
+                                    .rx-doc-row{border-bottom:0.5px solid var(--n150);font-size:12.5px;color:var(--n700)}
+                                    .rx-doc-row:last-child{border-bottom:none}
+                                    .rx-doc-row:hover{background:var(--g50)}
+                                    .rx-doc-tipo{display:flex;align-items:center;gap:7px;font-weight:500}
+                                    .rx-doc-tipo .ti{font-size:15px;color:var(--g500)}
+                                    .rx-doc-pac{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+                                    .rx-doc-data{color:var(--n400);font-size:11.5px}
+                                    .rx-doc-status{display:inline-flex;align-items:center;justify-content:center;padding:3px 9px;border-radius:20px;font-size:10.5px;font-weight:600;width:fit-content}
+                                    .rx-st-nao_assinado{background:#fef3c7;color:#92400e}
+                                    .rx-st-assinado{background:#dcfce7;color:#166534}
+                                    .rx-st-enviado{background:#dbeafe;color:#1e40af}
+                                    .rx-doc-acts{display:flex;gap:4px}
+
+                                    .back-btn{display:inline-flex;align-items:center;gap:5px;color:var(--n400);font-size:12px;padding:5px 9px;border-radius:var(--r6);border:none;background:transparent;cursor:pointer;margin-bottom:14px;transition:all .12s}
                                           .back-btn:hover{background:var(--n100);color:var(--n600)}
                                           .back-btn .ti{font-size:14px}
 
@@ -3664,6 +3682,106 @@
         </div>
       </div>
 
+      <!-- GERAR DOCUMENTO -->
+      <div class="modal" id="m-gerar-documento" style="display:none">
+        <div class="mhd">
+          <span class="mhd-title"><i class="ti ti-file-plus"></i> Gerar documento</span
+          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody">
+          <div class="form-grid">
+            <div class="fld wide">
+              <label>Tipo de documento *</label>
+              <select id="gd-tipo">
+                <option value="receita">Receita</option>
+                <option value="atestado" selected>Atestado/Declaração</option>
+                <option value="laudo">Laudo</option>
+                <option value="solicitacao_exame">Solicitação de exame</option>
+                <option value="encaminhamento">Encaminhamento</option>
+              </select>
+            </div>
+            <div class="fld">
+              <label>Nome do paciente *</label
+              ><input type="text" id="gd-nome" placeholder="Nome completo do paciente" />
+            </div>
+            <div class="fld">
+              <label>CPF do paciente</label><input type="text" id="gd-cpf" placeholder="000.000.000-00" />
+            </div>
+            <div class="fld wide">
+              <label>Conteúdo / observações <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
+              <textarea
+                id="gd-texto"
+                class="cf-ta"
+                style="min-height:120px"
+                placeholder="Texto do documento (orientações, achados, motivo do encaminhamento etc.)"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="mfoot">
+          <button class="btn" onclick="closeModal()">Cancelar</button>
+          <button class="btn primary" id="gd-submit-btn" onclick="gerarDocumentoGenerico()">
+            <i class="ti ti-file-plus"></i> Gerar documento
+          </button>
+        </div>
+      </div>
+
+      <!-- VER DOCUMENTO -->
+      <div class="modal wide" id="m-ver-documento" style="display:none">
+        <div class="mhd">
+          <span class="mhd-title" id="vd-titulo">Documento</span
+          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody">
+          <div class="form-grid" style="margin-bottom:12px">
+            <div class="fld">
+              <label>Tipo</label>
+              <p class="ve-value" id="vd-tipo">—</p>
+            </div>
+            <div class="fld">
+              <label>Paciente</label>
+              <p class="ve-value" id="vd-paciente">—</p>
+            </div>
+            <div class="fld">
+              <label>Data/hora</label>
+              <p class="ve-value" id="vd-data">—</p>
+            </div>
+            <div class="fld">
+              <label>Status</label>
+              <p class="ve-value" id="vd-status">—</p>
+            </div>
+          </div>
+          <div id="vd-preview-wrap" style="display:none">
+            <iframe
+              id="vd-preview-pdf"
+              style="width:100%;height:60vh;border:0.5px solid var(--n200);border-radius:var(--r8)"
+            ></iframe>
+          </div>
+          <p id="vd-no-file" style="display:none;font-size:12px;color:var(--n400);font-style:italic"></p>
+        </div>
+        <div class="mfoot">
+          <button class="btn" onclick="closeModal()">Fechar</button>
+          <button class="btn primary" id="vd-baixar-btn" onclick="baixarDocumentoAtual()">
+            <i class="ti ti-download"></i> Baixar
+          </button>
+        </div>
+      </div>
+
+      <!-- CONFIRMAÇÃO DE AÇÃO (forçar assinatura / forçar envio) -->
+      <div class="modal" id="m-confirm-doc-action" style="display:none">
+        <div class="mhd">
+          <span class="mhd-title" id="cda-titulo">Confirmar ação</span
+          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody">
+          <p id="cda-mensagem" style="font-size:13px;color:var(--n600);line-height:1.5"></p>
+        </div>
+        <div class="mfoot">
+          <button class="btn" onclick="closeModal()">Cancelar</button>
+          <button class="btn primary" id="cda-confirm-btn" onclick="confirmarAcaoDocumento()">Confirmar</button>
+        </div>
+      </div>
+
       <!-- DOSSIÊ -->
       <div class="modal wide" id="m-dossie" style="display:none">
         <div class="mhd">
@@ -4472,7 +4590,8 @@
                                                   pt.onclick=null;
                                                   document.getElementById('breadcrumb').innerHTML='';
                                                   if(name==='atendimentos')renderKanban();
-                                                  if(name==='conversas')initConversas();
+                                      if(name==='receitas')loadReceitasScreen();
+                                      if(name==='conversas')initConversas();
                                                   if(name==='agenda')initAgenda();
                                                   if(name==='indicadores')setTimeout(renderChart,50);
                                                   if(name==='anamnese')renderAnamneseList();
@@ -9099,221 +9218,540 @@
                                                   }
                                                 }
 
-                                                async function openReceitaPDF({ items }) {
-                                                  if (!items || !items.length) { showToast && showToast('Nenhum medicamento para a receita', 'warn'); return; }
+                                                /* Renderiza qualquer documento (receita, atestado, laudo, solicitação de
+                                       exame, encaminhamento...) usando o mesmo modelo visual, tentando
+                                       assinar digitalmente (ICP-Brasil) e retornando o PDF final pronto
+                                       para download/upload. Não baixa nem salva nada sozinho — quem chama
+                                       decide o que fazer com o resultado. */
+                                    async function _renderDocumentoPdf({ docTitle, docMark, patientName, patientAge, patientCpf, bodyHtml, filenamePrefix, contentDescription }) {
+                                      // Dados da clínica (localStorage)
+                                      let clinic = {};
+                                      try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
 
-                                                  // Dados da clínica (localStorage)
-                                                  let clinic = {};
-                                                  try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
+                                      // Dados do médico (usuário logado)
+                                      const u = currentUser || {};
+                                      const meta = u.user_metadata || {};
+                                      const doctorName  = meta.full_name || meta.name || (u.email || '').split('@')[0] || 'Médico responsável';
+                                      const doctorCrm   = meta.crm || meta.CRM || '—';
+                                      const doctorSpec  = meta.especialidade || meta.specialty || '';
+                                      const clinicName  = clinic.fantasia || clinic.razao || 'Clínica';
+                                      const cidadeUf    = [clinic.cidade, clinic.uf].filter(Boolean).join('/');
+                                      const addr = [
+                                        [clinic.logradouro, clinic.numero].filter(Boolean).join(', '),
+                                        clinic.complemento,
+                                        clinic.bairro,
+                                        cidadeUf,
+                                        clinic.cep ? 'CEP ' + clinic.cep : ''
+                                      ].filter(Boolean).join(' · ');
 
-                                                  // Dados do médico (usuário logado)
-                                                  const u = currentUser || {};
-                                                  const meta = u.user_metadata || {};
-                                                  const doctorName  = meta.full_name || meta.name || (u.email || '').split('@')[0] || 'Médico responsável';
-                                                  const doctorCrm   = meta.crm || meta.CRM || '—';
-                                                  const doctorSpec  = meta.especialidade || meta.specialty || '';
-                                                  const clinicName  = clinic.fantasia || clinic.razao || 'Clínica';
-                                                  const cidadeUf    = [clinic.cidade, clinic.uf].filter(Boolean).join('/');
-                                                  const addr = [
-                                                    [clinic.logradouro, clinic.numero].filter(Boolean).join(', '),
-                                                    clinic.complemento,
-                                                    clinic.bairro,
-                                                    cidadeUf,
-                                                    clinic.cep ? 'CEP ' + clinic.cep : ''
-                                                  ].filter(Boolean).join(' · ');
+                                      // Carrega o template
+                                      let html;
+                                      try {
+                                        const resp = await fetch('/receita-modelo.html', { cache: 'no-store' });
+                                        html = await resp.text();
+                                      } catch (e) { showToast && showToast('Falha ao carregar modelo do documento', 'error'); return null; }
 
-                                                  // FIX: currentPatient usa .nasc (não .data_nascimento)
-                                                  const p = currentPatient || {};
-                                                  const patientAge = _rxIdade(p.nasc || p.data_nascimento || '');
+                                      // Converte logo / assinatura / QR para data URI em paralelo — nenhuma delas
+                                      // chega ao html2canvas como URL externa (evita o bug do CORS + alt text gigante).
+                                      const [logoDataUrl, sigDataUrl, qrDataUrl] = await Promise.all([
+                                        _rxImgToDataUrl(clinic.logo || ''),
+                                        _rxImgToDataUrl(clinic.assinatura_url || ''),
+                                        _rxImgToDataUrl(clinic.qr_url || ''),
+                                      ]);
+                                      const primaryColor = clinic.cor_primaria || '#0E6E5D';
 
-                                                  // HTML dos medicamentos
-                                                  const itemsHtml = items.map((it, i) => `
-                                                    <div class="rx-item">
-                                                      <div class="rx-index">${i + 1}</div>
-                                                      <div>
-                                                        <div class="med-name">${_rxEsc(it.nome)}${it.apresentacao ? ` <span class="dose">${_rxEsc(it.apresentacao)}</span>` : ''}</div>
-                                                        <div class="med-instructions">${_rxEsc([it.quantidade, it.posologia].filter(Boolean).join(' — ')) || '&nbsp;'}</div>
-                                                      </div>
-                                                    </div>`).join('');
+                                      const repl = {
+                                        '{{PRIMARY_COLOR}}' : primaryColor,
+                                        '{{CLINIC_NAME}}'   : _rxEsc(clinicName),
+                                        '{{CLINIC_ADDRESS}}': _rxEsc(addr || '—'),
+                                        '{{CLINIC_PHONE}}'  : _rxEsc(clinic.telefone || ''),
+                                        '{{CLINIC_EMAIL}}'  : _rxEsc(clinic.email || ''),
+                                        '{{LOGO_URL}}'      : logoDataUrl,
+                                        '{{DOCTOR_NAME}}'   : _rxEsc(doctorName),
+                                        '{{DOCTOR_SPECIALTY}}': _rxEsc(doctorSpec),
+                                        '{{DOCTOR_CRM}}'    : _rxEsc(doctorCrm),
+                                        '{{PATIENT_NAME}}'  : _rxEsc(patientName || '—'),
+                                        '{{PATIENT_AGE}}'   : _rxEsc(patientAge || '—'),
+                                        '{{PATIENT_CPF}}'   : _rxEsc(patientCpf || '—'),
+                                        '{{ISSUE_DATE}}'    : _rxEsc(new Date().toLocaleDateString('pt-BR')),
+                                        '{{DOC_TITLE}}'     : _rxEsc(docTitle || 'Documento Médico'),
+                                        '{{DOC_MARK}}'      : docMark || '',
+                                        '{{PRESCRIPTION_HTML}}': bodyHtml || '',
+                                        // Assinatura (placeholders ficam vazios se não configurados)
+                                        '{{SIGNATURE_DATETIME}}': _rxEsc(new Date().toLocaleString('pt-BR')),
+                                        '{{SIGNATURE_CERT_ID}}' : _rxEsc(clinic.cert_id || ''),
+                                      };
+                                      for (const [k, v] of Object.entries(repl)) {
+                                        html = html.split(k).join(v);
+                                      }
 
-                                                  // Carrega o template
-                                                  let html;
-                                                  try {
-                                                    const resp = await fetch('/receita-modelo.html', { cache: 'no-store' });
-                                                    html = await resp.text();
-                                                  } catch (e) { showToast && showToast('Falha ao carregar modelo de receita', 'error'); return; }
+                                      const scopeId = 'rx-scope-' + Date.now();
+                                      const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+                                      const bodyMatch  = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+                                      let rawCss    = styleMatch ? styleMatch[1] : '';
+                                      const rawBody = bodyMatch  ? bodyMatch[1]  : html;
 
-                                                  // Converte logo / assinatura / QR para data URI em paralelo — nenhuma delas
-                                                  // chega ao html2canvas como URL externa (evita o bug do CORS + alt text gigante).
-                                                  const [logoDataUrl, sigDataUrl, qrDataUrl] = await Promise.all([
-                                                    _rxImgToDataUrl(clinic.logo || ''),
-                                                    _rxImgToDataUrl(clinic.assinatura_url || ''),
-                                                    _rxImgToDataUrl(clinic.qr_url || ''),
-                                                  ]);
-                                                  const primaryColor = clinic.cor_primaria || '#0E6E5D';
+                                      rawCss = rawCss
+                                        .replace(/\*\s*\{\s*box-sizing:\s*border-box;\s*margin:\s*0;\s*padding:\s*0;\s*\}/,
+                                          `#${scopeId} * { box-sizing: border-box; margin: 0; padding: 0; }`)
+                                        .replace(/html,\s*body\s*\{([^}]*)\}/,
+                                          (_, decls) => `#${scopeId} { ${decls} }`);
 
-                                                  const repl = {
-                                                    '{{PRIMARY_COLOR}}' : primaryColor,
-                                                    '{{CLINIC_NAME}}'   : _rxEsc(clinicName),
-                                                    '{{CLINIC_ADDRESS}}': _rxEsc(addr || '—'),
-                                                    '{{CLINIC_PHONE}}'  : _rxEsc(clinic.telefone || ''),
-                                                    '{{CLINIC_EMAIL}}'  : _rxEsc(clinic.email || ''),
-                                                    '{{LOGO_URL}}'      : logoDataUrl,
-                                                    '{{DOCTOR_NAME}}'   : _rxEsc(doctorName),
-                                                    '{{DOCTOR_SPECIALTY}}': _rxEsc(doctorSpec),
-                                                    '{{DOCTOR_CRM}}'    : _rxEsc(doctorCrm),
-                                                    '{{PATIENT_NAME}}'  : _rxEsc(p.name || '—'),
-                                                    '{{PATIENT_AGE}}'   : _rxEsc(patientAge || '—'),
-                                                    '{{PATIENT_CPF}}'   : _rxEsc(p.cpf || '—'),
-                                                    '{{ISSUE_DATE}}'    : _rxEsc(new Date().toLocaleDateString('pt-BR')),
-                                                    '{{PRESCRIPTION_HTML}}': itemsHtml,
-                                                    // Assinatura (placeholders ficam vazios se não configurados)
-                                                    '{{SIGNATURE_DATETIME}}': _rxEsc(new Date().toLocaleString('pt-BR')),
-                                                    '{{SIGNATURE_CERT_ID}}' : _rxEsc(clinic.cert_id || ''),
-                                                  };
-                                                  for (const [k, v] of Object.entries(repl)) {
-                                                    html = html.split(k).join(v);
-                                                  }
+                                      const styleEl = document.createElement('style');
+                                      styleEl.setAttribute('data-rx-style', scopeId);
+                                      styleEl.textContent = rawCss;
+                                      document.head.appendChild(styleEl);
 
-                                                  const scopeId = 'rx-scope-' + Date.now();
-                                                  const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
-                                                  const bodyMatch  = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-                                                  let rawCss    = styleMatch ? styleMatch[1] : '';
-                                                  const rawBody = bodyMatch  ? bodyMatch[1]  : html;
+                                    const clipper = document.createElement('div');
+                                    clipper.style.cssText = `
+                              position:fixed;
+                              left:0;
+                              top:0;
+                              width:210mm;
+                              overflow:hidden;
+                              z-index:-1;
+                              pointer-events:none;
+                              `;
 
-                                                  rawCss = rawCss
-                                                    .replace(/\*\s*\{\s*box-sizing:\s*border-box;\s*margin:\s*0;\s*padding:\s*0;\s*\}/,
-                                                      `#${scopeId} * { box-sizing: border-box; margin: 0; padding: 0; }`)
-                                                    .replace(/html,\s*body\s*\{([^}]*)\}/,
-                                                      (_, decls) => `#${scopeId} { ${decls} }`);
+                                    const holder = document.createElement('div');
+                                    holder.id = scopeId;
+                                    holder.style.cssText = `
+                              position:relative;
+                              width:210mm;
+                              min-width:210mm;
+                              max-width:210mm;
+                              margin:0 auto;
+                              background:#fff;
+                              `;
+                                    holder.innerHTML = rawBody;
+                                    clipper.appendChild(holder);
 
-                                                  const styleEl = document.createElement('style');
-                                                  styleEl.setAttribute('data-rx-style', scopeId);
-                                                  styleEl.textContent = rawCss;
-                                                  document.head.appendChild(styleEl);
+                                    const cleanup = () => {
+                                      try { clipper.remove(); } catch(_) {}
+                                      try { styleEl.remove(); } catch(_) {}
+                                    };
 
-                                                const clipper = document.createElement('div');
-                                                clipper.style.cssText = `
-                                          position:fixed;
-                                          left:0;
-                                          top:0;
-                                          width:210mm;
-                                          overflow:hidden;
-                                          z-index:-1;
-                                          pointer-events:none;
-                                          `;
+                                      try {
+                                        // Remove elementos que não devem ir para o PDF
+                                        holder.querySelectorAll('.builder-note').forEach(n => n.remove());
+                                        if (!sigDataUrl) {
+                                          holder.querySelectorAll('.signature-area').forEach(n => n.remove());
+                                        }
+                                        if (!logoDataUrl) {
+                                          const ls = holder.querySelector('.logo-slot');
+                                          if (ls) ls.remove();
+                                        }
 
-                                                const holder = document.createElement('div');
-                                                holder.id = scopeId;
-                                                holder.style.cssText = `
-                                          position:relative;
-                                          width:210mm;
-                                          min-width:210mm;
-                                          max-width:210mm;
-                                          margin:0 auto;
-                                          background:#fff;
-                                          `;
-                                                holder.innerHTML = rawBody;
-                                                clipper.appendChild(holder);
+                                        // Aguarda fontes e imagens carregarem (agora todas data URI, sem risco de CORS)
+                                        try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
+                                        const imgs = Array.from(holder.querySelectorAll('img'));
+                                        await Promise.all(imgs.map(img =>
+                                          img.complete ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; })
+                                        ));
 
-                                                const cleanup = () => {
-                                                  try { clipper.remove(); } catch(_) {}
-                                                  try { styleEl.remove(); } catch(_) {}
-                                                };
+                                        const safeName = (patientName || 'paciente').replace(/[^\w\-]+/g, '_').toLowerCase();
+                                        const filename = `${filenamePrefix}_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
-                                                  try {
-                                                    // Remove elementos que não devem ir para o PDF
-                                                    holder.querySelectorAll('.builder-note').forEach(n => n.remove());
-                                                    if (!sigDataUrl) {
-                                                      holder.querySelectorAll('.signature-area').forEach(n => n.remove());
-                                                    }
-                                                    if (!logoDataUrl) {
-                                                      const ls = holder.querySelector('.logo-slot');
-                                                      if (ls) ls.remove();
-                                                    }
+                                        const pdfBlob = await window.html2pdf().set({
+                                          margin: 0,
+                                          filename,
+                                          image: { type: 'jpeg', quality: 0.98 },
+                                          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
+                                          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                                          pagebreak: { mode: ['css', 'legacy'] }
+                                        }).from(holder.querySelector('.sheet') || holder).outputPdf('blob');
 
-                                                    // Aguarda fontes e imagens carregarem (agora todas data URI, sem risco de CORS)
-                                                    try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
-                                                    const imgs = Array.from(holder.querySelectorAll('img'));
-                                                    await Promise.all(imgs.map(img =>
-                                                      img.complete ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; })
-                                                    ));
+                                        // Try to sign with ICP-Brasil. Fallback to unsigned download.
+                                        let finalBlob = pdfBlob;
+                                        let signedUrl = null;
+                                        try {
+                                          const { data: sess } = await sb.auth.getSession();
+                                          const token = sess?.session?.access_token;
+                                          if (token) {
+                                            const pdfBase64 = await new Promise((resolve, reject) => {
+                                              const r = new FileReader();
+                                              r.onload = () => resolve(String(r.result).split(',')[1] || '');
+                                              r.onerror = reject;
+                                              r.readAsDataURL(pdfBlob);
+                                            });
+                                            const resp = await fetch('/api/signature/sign', {
+                                              method: 'POST',
+                                              headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                                              body: JSON.stringify({
+                                                pdfBase64,
+                                                filename,
+                                                contentDescription: contentDescription || `Documento para ${patientName || 'paciente'}`,
+                                              }),
+                                            });
+                                            if (resp.ok) {
+                                              const j = await resp.json();
+                                              signedUrl = j.signedPdfUrl;
+                                              const dl = await fetch(signedUrl);
+                                              if (dl.ok) finalBlob = await dl.blob();
+                                            } else {
+                                              const j = await resp.json().catch(() => ({}));
+                                              if (j.error && j.error !== 'not_configured' && j.error !== 'credential_expired') {
+                                                console.warn('Assinatura ICP falhou:', j);
+                                              }
+                                            }
+                                          }
+                                        } catch (e) { console.warn('Assinatura opcional falhou, seguindo sem assinatura:', e); }
 
-                                                    const safeName = (p.name || 'paciente').replace(/[^\w\-]+/g, '_').toLowerCase();
-                                                    const filename = `receita_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`;
+                                        return { finalBlob, filename, signedUrl };
+                                      } catch (e) {
+                                        console.error('Falha ao gerar PDF do documento:', e);
+                                        showToast && showToast('Falha ao gerar PDF do documento', 'error');
+                                        return null;
+                                      } finally {
+                                        setTimeout(cleanup, 300);
+                                      }
+                                    }
 
-                                                    const pdfBlob = await window.html2pdf().set({
-                                                      margin: 0,
-                                                      filename,
-                                                      image: { type: 'jpeg', quality: 0.98 },
-                                                      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
-                                                      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                                                      pagebreak: { mode: ['css', 'legacy'] }
-                                                    }).from(holder.querySelector('.sheet') || holder).outputPdf('blob');
+                                    /* Dispara o download de um blob no navegador */
+                                    function _baixarBlob(blob, filename) {
+                                      const url = URL.createObjectURL(blob);
+                                      const a = document.createElement('a');
+                                      a.href = url; a.download = filename; document.body.appendChild(a);
+                                      a.click(); a.remove();
+                                      setTimeout(() => URL.revokeObjectURL(url), 4000);
+                                    }
 
-                                                    // Try to sign with ICP-Brasil. Fallback to unsigned download.
-                                                    let finalBlob = pdfBlob;
-                                                    let signedUrl = null;
-                                                    try {
-                                                      const { data: sess } = await window.sb.auth.getSession();
-                                                      const token = sess?.session?.access_token;
-                                                      if (token) {
-                                                        const pdfBase64 = await new Promise((resolve, reject) => {
-                                                          const r = new FileReader();
-                                                          r.onload = () => resolve(String(r.result).split(',')[1] || '');
-                                                          r.onerror = reject;
-                                                          r.readAsDataURL(pdfBlob);
-                                                        });
-                                                        const postSign = (certificatePassword) => fetch('/api/signature/sign', {
-                                                          method: 'POST',
-                                                          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-                                                          body: JSON.stringify({
-                                                            pdfBase64,
-                                                            filename,
-                                                            contentDescription: `Receita para ${p.name || 'paciente'}`,
-                                                            ...(certificatePassword ? { certificatePassword } : {}),
-                                                          }),
-                                                        });
-                                                        let resp = await postSign(null);
-                                                        if (resp.status === 428) {
-                                                          // Certificado local (.pfx/.p12): senha nunca é armazenada.
-                                                          const pwd = prompt('Informe a senha do seu certificado digital para assinar:');
-                                                          if (pwd) resp = await postSign(pwd);
-                                                        }
-                                                        if (resp.ok) {
-                                                          const j = await resp.json();
-                                                          signedUrl = j.signedPdfUrl;
-                                                          const dl = await fetch(signedUrl);
-                                                          if (dl.ok) finalBlob = await dl.blob();
-                                                        } else {
-                                                          const j = await resp.json().catch(() => ({}));
-                                                          if (j.error && j.error !== 'not_configured' && j.error !== 'credential_expired') {
-                                                            console.warn('Assinatura ICP falhou:', j);
-                                                          }
-                                                        }
-                                                      }
-                                                    } catch (e) { console.warn('Assinatura opcional falhou, salvando sem assinatura:', e); }
+                                    async function openReceitaPDF({ items }) {
+                                      if (!items || !items.length) { showToast && showToast('Nenhum medicamento para a receita', 'warn'); return; }
 
-                                                    const url = URL.createObjectURL(finalBlob);
-                                                    const a = document.createElement('a');
-                                                    a.href = url; a.download = filename; document.body.appendChild(a);
-                                                    a.click(); a.remove();
-                                                    setTimeout(() => URL.revokeObjectURL(url), 4000);
+                                      // FIX: currentPatient usa .nasc (não .data_nascimento)
+                                      const p = currentPatient || {};
+                                      const patientAge = _rxIdade(p.nasc || p.data_nascimento || '');
 
-                                                    showToast && showToast(
-                                                      signedUrl ? 'Receita assinada digitalmente ✓' : 'Receita gerada com sucesso',
-                                                      'success'
-                                                    );
-                                                  } catch (e) {
-                                                    console.error('Falha ao gerar PDF da receita:', e);
-                                                    showToast && showToast('Falha ao gerar PDF da receita', 'error');
-                                                  } finally {
-                                                    setTimeout(cleanup, 300);
-                                                  }
-                                                }
+                                      // HTML dos medicamentos
+                                      const itemsHtml = items.map((it, i) => `
+                                        <div class="rx-item">
+                                          <div class="rx-index">${i + 1}</div>
+                                          <div>
+                                            <div class="med-name">${_rxEsc(it.nome)}${it.apresentacao ? ` <span class="dose">${_rxEsc(it.apresentacao)}</span>` : ''}</div>
+                                            <div class="med-instructions">${_rxEsc([it.quantidade, it.posologia].filter(Boolean).join(' — ')) || '&nbsp;'}</div>
+                                          </div>
+                                        </div>`).join('');
 
-                                                /* Chamada a partir do fluxo Conduta > Documentos > botão PDF de Medicamentos */
-                                                function condGerarReceita() {
+                                      const result = await _renderDocumentoPdf({
+                                        docTitle: 'Receituário Médico',
+                                        docMark: '℞',
+                                        patientName: p.name || '',
+                                        patientAge,
+                                        patientCpf: p.cpf || '',
+                                        bodyHtml: itemsHtml,
+                                        filenamePrefix: 'receita',
+                                        contentDescription: `Receita para ${p.name || 'paciente'}`,
+                                      });
+                                      if (!result) return;
+
+                                      _baixarBlob(result.finalBlob, result.filename);
+                                      showToast && showToast(
+                                        result.signedUrl ? 'Receita assinada digitalmente ✓' : 'Receita gerada com sucesso',
+                                        'success'
+                                      );
+
+                                      await salvarDocumentoGerado({
+                                        tipo: 'receita',
+                                        pacienteNome: p.name || 'Paciente',
+                                        pacienteCpf: p.cpf || null,
+                                        pacienteId: p.id || null,
+                                        conteudo: { medicamentos: items },
+                                        blob: result.finalBlob,
+                                        filename: result.filename,
+                                        assinado: !!result.signedUrl,
+                                      });
+                                    }
+
+                                    /* ========== RECEITAS E ATESTADOS (listagem) ========== */
+                                    let documentosGerados = [];
+                                    let documentosLoaded = false;
+                                    let _docConfirmCallback = null;
+                                    let _docAtualId = null;
+
+                                    const DOC_TIPO_META = {
+                                      receita:            { label: 'Receita',                icon: 'ti-prescription' },
+                                      atestado:           { label: 'Atestado/Declaração',     icon: 'ti-certificate' },
+                                      declaracao:         { label: 'Atestado/Declaração',      icon: 'ti-certificate' },
+                                      laudo:              { label: 'Laudo',                   icon: 'ti-clipboard-text' },
+                                      solicitacao_exame:  { label: 'Solicitação de exame',     icon: 'ti-test-pipe' },
+                                      encaminhamento:     { label: 'Encaminhamento',           icon: 'ti-send' },
+                                    };
+                                    const DOC_STATUS_META = {
+                                      nao_assinado: { label: 'Não assinado', cls: 'rx-st-nao_assinado' },
+                                      assinado:     { label: 'Assinado',     cls: 'rx-st-assinado' },
+                                      enviado:      { label: 'Enviado',      cls: 'rx-st-enviado' },
+                                    };
+                                    /* Metadados usados para renderizar o PDF a partir do modal "Gerar documento" */
+                                    const DOC_TIPOS_GERADOS = [
+                                      { value: 'receita',           label: 'Receita',                docTitle: 'Receituário Médico',        docMark: '℞' },
+                                      { value: 'atestado',          label: 'Atestado/Declaração',     docTitle: 'Atestado Médico',           docMark: '' },
+                                      { value: 'laudo',             label: 'Laudo',                   docTitle: 'Laudo Médico',              docMark: '' },
+                                      { value: 'solicitacao_exame', label: 'Solicitação de exame',    docTitle: 'Solicitação de Exame',      docMark: '' },
+                                      { value: 'encaminhamento',    label: 'Encaminhamento',          docTitle: 'Encaminhamento Médico',     docMark: '' },
+                                    ];
+
+                                    function fmtDocDataHora(iso) {
+                                      if (!iso) return '—';
+                                      try {
+                                        return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                                      } catch (e) { return '—'; }
+                                    }
+
+                                    async function loadReceitasScreen(force) {
+                                      if (documentosLoaded && !force) { renderReceitasList(); return; }
+                                      const { data, error } = await sb.from('documentos_paciente').select('*').order('created_at', { ascending: false });
+                                      if (error) { showToast && showToast('Erro ao carregar documentos: ' + error.message, 'error'); return; }
+                                      documentosGerados = data || [];
+                                      documentosLoaded = true;
+                                      renderReceitasList();
+                                    }
+
+                                    function renderReceitasList() {
+                                      const list = document.getElementById('rx-doc-list');
+                                      const card = document.querySelector('.rx-doc-card');
+                                      const empty = document.getElementById('rx-doc-empty');
+                                      const ct = document.getElementById('rx-doc-count');
+                                      if (!list) return;
+                                      ct.textContent = documentosGerados.length + ' documento' + (documentosGerados.length !== 1 ? 's' : '');
+                                      if (!documentosGerados.length) {
+                                        if (card) card.style.display = 'none';
+                                        if (empty) empty.style.display = 'block';
+                                        list.innerHTML = '';
+                                        return;
+                                      }
+                                      if (card) card.style.display = '';
+                                      if (empty) empty.style.display = 'none';
+                                      list.innerHTML = documentosGerados.map(d => {
+                                        const tipoMeta = DOC_TIPO_META[d.tipo] || { label: d.tipo, icon: 'ti-file' };
+                                        const stMeta = DOC_STATUS_META[d.status] || DOC_STATUS_META.nao_assinado;
+                                        return `
+                                        <div class="rx-doc-row">
+                                          <span class="rx-doc-tipo"><i class="ti ${tipoMeta.icon}"></i> ${_rxEsc(tipoMeta.label)}</span>
+                                          <span class="rx-doc-pac" title="${_rxEsc(d.paciente_nome || '—')}">${_rxEsc(d.paciente_nome || '—')}</span>
+                                          <span class="rx-doc-data">${fmtDocDataHora(d.created_at)}</span>
+                                          <span class="rx-doc-status ${stMeta.cls}">${stMeta.label}</span>
+                                          <span class="rx-doc-acts">
+                                            <button class="ra-btn" title="Ver" onclick="verDocumento('${d.id}')"><i class="ti ti-eye"></i></button>
+                                            <button class="ra-btn" title="Baixar" onclick="baixarDocumento('${d.id}')"><i class="ti ti-download"></i></button>
+                                            <button class="ra-btn" title="Forçar assinatura digital" onclick="forcarAssinatura('${d.id}')"><i class="ti ti-signature"></i></button>
+                                            <button class="ra-btn" title="Forçar envio por WhatsApp" onclick="forcarEnvioWhatsapp('${d.id}')"><i class="ti ti-brand-whatsapp"></i></button>
+                                          </span>
+                                        </div>`;
+                                      }).join('');
+                                    }
+
+                                    async function verDocumento(id) {
+                                      const d = documentosGerados.find(x => x.id === id);
+                                      if (!d) return;
+                                      _docAtualId = id;
+                                      const tipoMeta = DOC_TIPO_META[d.tipo] || { label: d.tipo, icon: 'ti-file' };
+                                      document.getElementById('vd-titulo').textContent = tipoMeta.label + ' — ' + (d.paciente_nome || 'paciente');
+                                      document.getElementById('vd-tipo').textContent = tipoMeta.label;
+                                      document.getElementById('vd-paciente').textContent = d.paciente_nome || '—';
+                                      document.getElementById('vd-data').textContent = fmtDocDataHora(d.created_at);
+                                      document.getElementById('vd-status').textContent = (DOC_STATUS_META[d.status] || DOC_STATUS_META.nao_assinado).label;
+                                      const wrap = document.getElementById('vd-preview-wrap');
+                                      const pdf = document.getElementById('vd-preview-pdf');
+                                      const noFile = document.getElementById('vd-no-file');
+                                      const dlBtn = document.getElementById('vd-baixar-btn');
+                                      wrap.style.display = 'none'; pdf.src = ''; noFile.style.display = 'none';
+                                      if (dlBtn) dlBtn.style.display = d.arquivo_path ? '' : 'none';
+                                      if (d.arquivo_path) {
+                                        const { data, error } = await sb.storage.from('documentos-arquivos').createSignedUrl(d.arquivo_path, 300);
+                                        if (!error && data && data.signedUrl) {
+                                          wrap.style.display = 'block';
+                                          pdf.src = data.signedUrl;
+                                        } else {
+                                          noFile.textContent = 'Não foi possível carregar a pré-visualização do arquivo.';
+                                          noFile.style.display = 'block';
+                                        }
+                                      } else {
+                                        noFile.textContent = 'Este documento não possui arquivo anexado.';
+                                        noFile.style.display = 'block';
+                                      }
+                                      openModal('ver-documento');
+                                    }
+
+                                    async function baixarDocumento(id) {
+                                      const d = documentosGerados.find(x => x.id === id);
+                                      if (!d || !d.arquivo_path) { showToast && showToast('Este documento não possui arquivo anexado', 'error'); return; }
+                                      const { data, error } = await sb.storage.from('documentos-arquivos').createSignedUrl(d.arquivo_path, 60, { download: true });
+                                      if (error || !data) { showToast && showToast('Erro ao gerar link de download', 'error'); return; }
+                                      window.open(data.signedUrl, '_blank');
+                                    }
+                                    function baixarDocumentoAtual() { if (_docAtualId) baixarDocumento(_docAtualId); }
+
+                                    /* Confirmação genérica usada por forçar assinatura / forçar envio */
+                                    function pedirConfirmacaoDoc(titulo, mensagem, onConfirm) {
+                                      document.getElementById('cda-titulo').textContent = titulo;
+                                      document.getElementById('cda-mensagem').textContent = mensagem;
+                                      _docConfirmCallback = onConfirm;
+                                      openModal('confirm-doc-action');
+                                    }
+                                    function confirmarAcaoDocumento() {
+                                      const cb = _docConfirmCallback;
+                                      _docConfirmCallback = null;
+                                      closeModal();
+                                      if (cb) cb();
+                                    }
+
+                                    function forcarAssinatura(id) {
+                                      const d = documentosGerados.find(x => x.id === id);
+                                      if (!d) return;
+                                      if (d.status === 'assinado') { showToast && showToast('Este documento já está assinado', 'warn'); return; }
+                                      pedirConfirmacaoDoc(
+                                        'Forçar assinatura digital',
+                                        `Assinar digitalmente agora o documento de ${d.paciente_nome || 'paciente'}? Esta ação usa o certificado ICP-Brasil conectado na conta.`,
+                                        () => executarForcarAssinatura(id)
+                                      );
+                                    }
+                                    async function executarForcarAssinatura(id) {
+                                      const d = documentosGerados.find(x => x.id === id);
+                                      if (!d || !d.arquivo_path) { showToast && showToast('Documento sem arquivo para assinar', 'error'); return; }
+                                      try {
+                                        const { data: signedSrc, error: dlErr } = await sb.storage.from('documentos-arquivos').createSignedUrl(d.arquivo_path, 120);
+                                        if (dlErr || !signedSrc) throw new Error('Não foi possível carregar o arquivo original');
+                                        const fileResp = await fetch(signedSrc.signedUrl);
+                                        const pdfBlob = await fileResp.blob();
+                                        const pdfBase64 = await new Promise((resolve, reject) => {
+                                          const r = new FileReader();
+                                          r.onload = () => resolve(String(r.result).split(',')[1] || '');
+                                          r.onerror = reject;
+                                          r.readAsDataURL(pdfBlob);
+                                        });
+                                        const { data: sess } = await sb.auth.getSession();
+                                        const token = sess?.session?.access_token;
+                                        if (!token) throw new Error('Sessão expirada');
+                                        const filename = d.arquivo_nome || 'documento.pdf';
+                                        const resp = await fetch('/api/signature/sign', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                                          body: JSON.stringify({ pdfBase64, filename, contentDescription: `${(DOC_TIPO_META[d.tipo] || {}).label || 'Documento'} para ${d.paciente_nome || 'paciente'}` }),
+                                        });
+                                        const j = await resp.json().catch(() => ({}));
+                                        if (!resp.ok) {
+                                          const msgs = { credential_expired: 'Certificado ICP-Brasil expirado ou não conectado.', not_configured: 'Nenhum certificado ICP-Brasil conectado.' };
+                                          throw new Error(msgs[j.error] || j.message || 'Falha ao assinar o documento');
+                                        }
+                                        const signedResp = await fetch(j.signedPdfUrl);
+                                        const signedBlob = await signedResp.blob();
+                                        const newPath = currentUser.id + '/' + Date.now() + '_' + filename.replace(/[^\w.\-]+/g, '_');
+                                        const { error: upErr } = await sb.storage.from('documentos-arquivos').upload(newPath, signedBlob, { contentType: 'application/pdf', upsert: false });
+                                        if (upErr) throw upErr;
+                                        const { data: updated, error: updErr } = await sb.from('documentos_paciente').update({ status: 'assinado', arquivo_path: newPath }).eq('id', id).select('*').single();
+                                        if (updErr) throw updErr;
+                                        Object.assign(d, updated);
+                                        renderReceitasList();
+                                        showToast && showToast('Documento assinado digitalmente ✓', 'success');
+                                      } catch (e) {
+                                        showToast && showToast('Erro ao assinar: ' + (e.message || e), 'error');
+                                      }
+                                    }
+
+                                    function forcarEnvioWhatsapp(id) {
+                                      const d = documentosGerados.find(x => x.id === id);
+                                      if (!d) return;
+                                      pedirConfirmacaoDoc(
+                                        'Forçar envio por WhatsApp',
+                                        `Enviar agora o documento de ${d.paciente_nome || 'paciente'} por WhatsApp?`,
+                                        () => executarForcarEnvio(id)
+                                      );
+                                    }
+                                    async function executarForcarEnvio(id) {
+                                      const d = documentosGerados.find(x => x.id === id);
+                                      if (!d) return;
+                                      const { data: updated, error } = await sb.from('documentos_paciente')
+                                        .update({ status: 'enviado', canal_envio: 'whatsapp', enviado_em: new Date().toISOString() })
+                                        .eq('id', id).select('*').single();
+                                      if (error) { showToast && showToast('Erro ao enviar: ' + error.message, 'error'); return; }
+                                      Object.assign(d, updated);
+                                      renderReceitasList();
+                                      showToast && showToast('Documento enviado via WhatsApp', 'success');
+                                    }
+
+                                    /* Salva no histórico (upload do PDF + linha na tabela) qualquer documento
+                                       gerado — chamado tanto pela receita (medicamentos) quanto pelo modal
+                                       genérico "Gerar documento". */
+                                    async function salvarDocumentoGerado({ tipo, pacienteNome, pacienteCpf, pacienteId, conteudo, blob, filename, assinado }) {
+                                      if (!currentUser) return;
+                                      const path = currentUser.id + '/' + Date.now() + '_' + String(filename || 'documento.pdf').replace(/[^\w.\-]+/g, '_');
+                                      let arquivoPath = null;
+                                      const { error: upErr } = await sb.storage.from('documentos-arquivos').upload(path, blob, { contentType: 'application/pdf', upsert: false });
+                                      if (upErr) {
+                                        showToast && showToast('Documento gerado, mas houve erro ao salvar o arquivo: ' + upErr.message, 'error');
+                                      } else {
+                                        arquivoPath = path;
+                                      }
+                                      const payload = {
+                                        id_medico: currentUser.id,
+                                        paciente_id: pacienteId || null,
+                                        paciente_nome: pacienteNome || null,
+                                        paciente_cpf: pacienteCpf || null,
+                                        tipo,
+                                        conteudo: conteudo || {},
+                                        arquivo_path: arquivoPath,
+                                        arquivo_nome: filename || null,
+                                        status: assinado ? 'assinado' : 'nao_assinado',
+                                      };
+                                      const { data, error } = await sb.from('documentos_paciente').insert(payload).select('*').single();
+                                      if (error) { showToast && showToast('Erro ao salvar documento na listagem: ' + error.message, 'error'); return; }
+                                      documentosGerados.unshift(data);
+                                      documentosLoaded = true;
+                                      const scr = document.getElementById('s-receitas');
+                                      if (scr && scr.style.display !== 'none') renderReceitasList();
+                                    }
+
+                                    function abrirModalGerarDocumento() {
+                                      const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+                                      set('gd-nome', ''); set('gd-cpf', ''); set('gd-texto', '');
+                                      const tipoSel = document.getElementById('gd-tipo'); if (tipoSel) tipoSel.selectedIndex = 1;
+                                      openModal('gerar-documento');
+                                    }
+
+                                    async function gerarDocumentoGenerico() {
+                                      const tipoSel = document.getElementById('gd-tipo').value;
+                                      const nome = document.getElementById('gd-nome').value.trim();
+                                      const cpf = document.getElementById('gd-cpf').value.trim();
+                                      const texto = document.getElementById('gd-texto').value.trim();
+                                      if (!nome) { showToast && showToast('Informe o nome do paciente', 'warn'); return; }
+                                      const meta = DOC_TIPOS_GERADOS.find(t => t.value === tipoSel) || DOC_TIPOS_GERADOS[1];
+                                      const bodyHtml = `<div class="rx-item"><div>${texto ? _rxEsc(texto).replace(/\n/g, '<br>') : '<span style="color:#94a3b8">Sem observações adicionais.</span>'}</div></div>`;
+                                      const btn = document.getElementById('gd-submit-btn');
+                                      const origBtn = btn ? btn.innerHTML : '';
+                                      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Gerando...'; }
+                                      try {
+                                        const result = await _renderDocumentoPdf({
+                                          docTitle: meta.docTitle,
+                                          docMark: meta.docMark,
+                                          patientName: nome,
+                                          patientAge: '',
+                                          patientCpf: cpf,
+                                          bodyHtml,
+                                          filenamePrefix: tipoSel,
+                                          contentDescription: `${meta.label} para ${nome}`,
+                                        });
+                                        if (!result) return;
+                                        _baixarBlob(result.finalBlob, result.filename);
+                                        showToast && showToast(result.signedUrl ? `${meta.label} assinado digitalmente ✓` : `${meta.label} gerado com sucesso`, 'success');
+                                        await salvarDocumentoGerado({
+                                          tipo: tipoSel,
+                                          pacienteNome: nome,
+                                          pacienteCpf: cpf || null,
+                                          pacienteId: null,
+                                          conteudo: { texto },
+                                          blob: result.finalBlob,
+                                          filename: result.filename,
+                                          assinado: !!result.signedUrl,
+                                        });
+                                        closeModal();
+                                      } finally {
+                                        if (btn) { btn.disabled = false; btn.innerHTML = origBtn; }
+                                      }
+                                    }
+
+                                    /* Chamada a partir do fluxo Conduta > Documentos > botão PDF de Medicamentos */
+                                    function condGerarReceita() {
                                                   const meds = (condState && condState.medicamentos || []).filter(m => m.selecionado);
                                                   if (!meds.length) { showToast && showToast('Selecione ao menos um medicamento', 'warn'); return; }
                                                   const items = meds.map(m => ({
