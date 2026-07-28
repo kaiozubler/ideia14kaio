@@ -23,8 +23,11 @@ export interface EmbedParams {
   pdfBuffer: Uint8Array;
   reason: string;
   name: string;
-  /** Given a base64 SHA-256 of the bytes to sign, must return a base64 CMS. */
-  signer: (digestBase64: string) => Promise<string>;
+  /**
+   * Receives the exact bytes covered by the ByteRange plus their base64
+   * SHA-256 digest, and must return a base64 CMS/PKCS#7 signature.
+   */
+  signer: (input: { bytes: Uint8Array; digestBase64: string }) => Promise<string>;
 }
 
 export async function embedCMSIntoPDF(params: EmbedParams): Promise<{
@@ -52,8 +55,10 @@ export async function embedCMSIntoPDF(params: EmbedParams): Promise<{
       const copy = new Uint8Array(pdfBufferToSign.byteLength);
       copy.set(pdfBufferToSign);
       const digest = await sha256Base64(copy.buffer);
-      const cmsBase64 = await params.signer(digest);
-      return Buffer.from(cmsBase64, "base64");
+      const cmsBase64 = await params.signer({ bytes: copy, digestBase64: digest });
+      const out = Buffer.from(cmsBase64, "base64");
+      copy.fill(0); // clear buffer after use
+      return out;
     },
   };
 
