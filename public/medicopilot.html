@@ -552,8 +552,9 @@
                                     .rec-empty h3{font-size:14px;font-weight:500;color:var(--n600);margin-bottom:5px}
                                     .rec-empty p{font-size:12px;color:var(--n400)}
 
-                                    .rx-doc-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-                                    .rx-doc-count{font-size:12px;color:var(--n400)}
+                                    .rx-doc-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+                                    .rx-doc-toolbar-right{display:flex;align-items:center;gap:12px}
+                                    .rx-doc-count{font-size:12px;color:var(--n400);white-space:nowrap}
                                     .rx-doc-card{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12);overflow:hidden}
                                     .rx-doc-head,.rx-doc-row{display:grid;grid-template-columns:170px 1fr 150px 120px 150px;gap:10px;align-items:center;padding:11px 16px}
                                     .rx-doc-head{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--n400);border-bottom:0.5px solid var(--n150)}
@@ -2590,10 +2591,21 @@
           <!-- SCREEN: RECEITAS -->
           <div id="s-receitas" style="display:none">
             <div class="rx-doc-toolbar">
-              <button class="btn primary" onclick="abrirModalGerarDocumento()">
-                <i class="ti ti-file-plus"></i> Gerar documento
-              </button>
-              <span class="rx-doc-count" id="rx-doc-count">0 documentos</span>
+              <div class="ag-search">
+                <i class="ti ti-search"></i>
+                <input
+                  id="rx-doc-search"
+                  type="text"
+                  placeholder="Buscar por paciente..."
+                  oninput="renderReceitasList()"
+                />
+              </div>
+              <div class="rx-doc-toolbar-right">
+                <span class="rx-doc-count" id="rx-doc-count">0 documentos</span>
+                <button class="btn primary" onclick="abrirModalGerarDocumento()">
+                  <i class="ti ti-file-plus"></i> Gerar documento
+                </button>
+              </div>
             </div>
             <div class="rx-doc-card">
               <div class="rx-doc-head">
@@ -9824,16 +9836,26 @@
                                       const empty = document.getElementById('rx-doc-empty');
                                       const ct = document.getElementById('rx-doc-count');
                                       if (!list) return;
-                                      ct.textContent = documentosGerados.length + ' documento' + (documentosGerados.length !== 1 ? 's' : '');
-                                      if (!documentosGerados.length) {
+                                      const q = (document.getElementById('rx-doc-search')?.value || '').trim().toLowerCase();
+                                      const filtered = q
+                                        ? documentosGerados.filter(d => (d.paciente_nome || '').toLowerCase().includes(q))
+                                        : documentosGerados;
+                                      ct.textContent = filtered.length + ' documento' + (filtered.length !== 1 ? 's' : '');
+                                      if (!filtered.length) {
                                         if (card) card.style.display = 'none';
-                                        if (empty) empty.style.display = 'block';
+                                        if (empty) {
+                                          empty.style.display = 'block';
+                                          empty.querySelector('h3').textContent = q ? 'Nenhum documento encontrado' : 'Nenhum documento gerado ainda';
+                                          empty.querySelector('p').textContent = q
+                                            ? 'Tente buscar por outro nome de paciente.'
+                                            : 'Receitas, atestados, laudos e demais documentos aparecerão aqui assim que forem gerados.';
+                                        }
                                         list.innerHTML = '';
                                         return;
                                       }
                                       if (card) card.style.display = '';
                                       if (empty) empty.style.display = 'none';
-                                      list.innerHTML = documentosGerados.map(d => {
+                                      list.innerHTML = filtered.map(d => {
                                         const tipoMeta = DOC_TIPO_META[d.tipo] || { label: d.tipo, icon: 'ti-file' };
                                         const stMeta = DOC_STATUS_META[d.status] || DOC_STATUS_META.nao_assinado;
                                         return `
