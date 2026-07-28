@@ -538,7 +538,9 @@
           } finally {
             certBtn.disabled = false;
           }
-        };
+        }
+
+        certBtn.onclick = openTypeChooser;
       }
     }
   }
