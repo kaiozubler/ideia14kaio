@@ -147,6 +147,55 @@ export const CredentialRepository = {
     return data;
   },
 
+  /** Persists a local (.pfx/.p12) certificate — path + metadata only, never the password. */
+  async upsertLocalCertificate(params: {
+    doctorId: string;
+    credentialId: string;
+    storagePath: string;
+    label: string | null;
+    subject: string | null;
+    serial: string | null;
+    fingerprint: string | null;
+    issuer: string | null;
+    holderDocument: string | null;
+    validFrom: string | null;
+    validUntil: string | null;
+  }) {
+    const sb = await admin();
+    const { error } = await sb.from("doctor_certificates").upsert(
+      {
+        doctor_id: params.doctorId,
+        credential_id: params.credentialId,
+        provider: "local",
+        certificate_type: "pfx",
+        storage_path: params.storagePath,
+        label: params.label,
+        provider_name: "Certificado local",
+        product_name: "A1 (.pfx/.p12)",
+        certificate_subject: params.subject,
+        certificate_serial: params.serial,
+        certificate_fingerprint: params.fingerprint,
+        issuer: params.issuer,
+        holder_document: params.holderDocument,
+        certificate_valid_from: params.validFrom,
+        certificate_valid_until: params.validUntil,
+        credential_expires_at: null,
+        code_verifier_encrypted: null,
+        updated_at: new Date().toISOString(),
+      } as never,
+      { onConflict: "doctor_id,credential_id" },
+    );
+    if (error) throw error;
+  },
+
+  async deleteCertificate(doctorId: string, id?: string) {
+    const sb = await admin();
+    let q = sb.from("doctor_certificates").delete().eq("doctor_id", doctorId);
+    if (id) q = q.eq("id", id);
+    const { error } = await q;
+    if (error) throw error;
+  },
+
   async getActiveCertificateWithVerifier(doctorId: string) {
     const cert = await this.getActiveCertificate(doctorId);
     if (!cert) return null;
