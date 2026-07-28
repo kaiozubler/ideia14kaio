@@ -9264,15 +9264,22 @@
                                                           r.onerror = reject;
                                                           r.readAsDataURL(pdfBlob);
                                                         });
-                                                        const resp = await fetch('/api/signature/sign', {
+                                                        const postSign = (certificatePassword) => fetch('/api/signature/sign', {
                                                           method: 'POST',
                                                           headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
                                                           body: JSON.stringify({
                                                             pdfBase64,
                                                             filename,
                                                             contentDescription: `Receita para ${p.name || 'paciente'}`,
+                                                            ...(certificatePassword ? { certificatePassword } : {}),
                                                           }),
                                                         });
+                                                        let resp = await postSign(null);
+                                                        if (resp.status === 428) {
+                                                          // Certificado local (.pfx/.p12): senha nunca é armazenada.
+                                                          const pwd = prompt('Informe a senha do seu certificado digital para assinar:');
+                                                          if (pwd) resp = await postSign(pwd);
+                                                        }
                                                         if (resp.ok) {
                                                           const j = await resp.json();
                                                           signedUrl = j.signedPdfUrl;
