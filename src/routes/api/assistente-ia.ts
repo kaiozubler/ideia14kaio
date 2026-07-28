@@ -173,19 +173,49 @@ const tools = [
   {
     type: "function",
     function: {
-      name: "gerar_atestado",
-      description: "Gera um atestado médico ou declaração de comparecimento.",
+      name: "gerar_receita",
+      description:
+        "Gera uma receita médica com um ou mais medicamentos. Exige nome, CPF e idade do paciente. Se houver 2+ medicamentos, verifica interação automaticamente.",
       parameters: {
         type: "object",
         properties: {
           paciente_id: { type: "string" },
           paciente_nome: { type: "string" },
-          tipo: { type: "string", enum: ["atestado", "declaracao"] },
-          dias: { type: "number" },
-          cid: { type: "string" },
-          observacao: { type: "string" },
+          paciente_cpf: { type: "string" },
+          paciente_idade: { type: "number", description: "Idade do paciente em anos" },
+          interacao_confirmada: {
+            type: "boolean",
+            description:
+              "true somente depois que o médico confirmar que quer seguir mesmo havendo interação apontada anteriormente",
+          },
+          medicamentos: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                nome: { type: "string" },
+                apresentacao: { type: "string" },
+                quantidade: { type: "string" },
+                posologia: { type: "string" },
+              },
+              required: ["nome"],
+            },
+          },
         },
-        required: ["paciente_nome", "tipo"],
+        required: ["paciente_nome", "paciente_cpf", "paciente_idade", "medicamentos"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "buscar_medicamento",
+      description:
+        "Busca um medicamento no catálogo para sugerir apresentações existentes quando o médico não informou uma.",
+      parameters: {
+        type: "object",
+        properties: { nome: { type: "string" } },
+        required: ["nome"],
       },
     },
   },
@@ -249,6 +279,17 @@ function toIsoFromLocal(data: string, horario: string) {
   return new Date(Date.UTC(y, mo - 1, d, h, mi || 0) - TZ_OFFSET_MIN * 60000);
 }
 
+function calcIdade(nasc?: string | null): number | null {
+  if (!nasc) return null;
+  const d = new Date(nasc.length <= 10 ? `${nasc}T00:00:00` : nasc);
+  if (Number.isNaN(d.getTime())) return null;
+  const n = new Date();
+  let a = n.getFullYear() - d.getFullYear();
+  const mo = n.getMonth() - d.getMonth();
+  if (mo < 0 || (mo === 0 && n.getDate() < d.getDate())) a--;
+  return a >= 0 ? a : null;
+}
+
 function fmtHora(iso: string) {
   const dt = new Date(new Date(iso).getTime() + TZ_OFFSET_MIN * 60000);
   const p = (n: number) => String(n).padStart(2, "0");
@@ -286,7 +327,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
 
     case "confirmar_paciente_cpf": {
       const cpf = onlyDigits(args.cpf);
-      let q = db.from("pacientes").select("paciente_id,name,telefone,cpf").limit(50);
+      let q = db.from("pacientes").select("paciente_id,name,telefone,cpf,data_nascimento").limit(50);
       if (medicoId) q = q.eq("user_id", medicoId);
       if (args.nome) q = q.ilike("name", `%${String(args.nome).trim()}%`);
       const { data, error } = await q;
@@ -299,6 +340,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         nome: found.name,
         tem_telefone: !!found.telefone,
         telefone_mascarado: maskPhone(found.telefone),
+        idade: calcIdade(found.data_nascimento),
       };
     }
 
@@ -420,6 +462,39 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
     case "gerar_receita": {
       const medicamentos = Array.isArray(args.medicamentos) ? args.medicamentos : [];
       if (!medicamentos.length) return { erro: "Informe ao menos um medicamento." };
+      if (!String(args.paciente_cpf || "").trim()) {
+        return {
+          erro: "faltam_dados_paciente",
+          faltando: "cpf",
+          instrucao: "Peça o CPF do paciente antes de gerar a receita.",
+        };
+      }
+      if (args.paciente_idade === undefined || args.paciente_idade === null || args.paciente_idade === "") {
+        return {
+          erro: "faltam_dados_paciente",
+          faltando: "idade",
+          instrucao: "Peça a idade do paciente antes de gerar a receita.",
+        };
+      }
+
+      if (medicamentos.length >= 2 && !args.interacao_confirmada) {
+        const termos = medicamentos.map((m: any) => String(m?.nome || "").trim()).filter(Boolean);
+        const { data: interacoes } = await db.rpc("verificar_interacoes", { p_termos: termos });
+        if (interacoes && interacoes.length) {
+          return {
+            interacao_detectada: true,
+            interacoes: interacoes.map((i: any) => ({
+              farmaco_1: i.farmaco_1,
+              farmaco_2: i.farmaco_2,
+              acao: i.acao,
+              recomendacoes: i.recomendacoes,
+            })),
+            instrucao:
+              "Explique a interação ao médico em linguagem simples e peça confirmação explícita antes de gerar. Só chame gerar_receita de novo com interacao_confirmada=true.",
+          };
+        }
+      }
+
       let documentoId: string | null = null;
       if (medicoId) {
         const { data } = await db
@@ -429,7 +504,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
             paciente_id: args.paciente_id || null,
             paciente_nome: args.paciente_nome || null,
             tipo: "receita",
-            conteudo: { medicamentos },
+            conteudo: { medicamentos, paciente_cpf: args.paciente_cpf, paciente_idade: args.paciente_idade },
           })
           .select("id")
           .single();
@@ -440,9 +515,32 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         documento_id: documentoId,
         paciente_id: args.paciente_id || null,
         paciente_nome: args.paciente_nome || null,
+        paciente_cpf: args.paciente_cpf || null,
+        paciente_idade: args.paciente_idade ?? null,
         medicamentos,
       };
       return { gerado: true, documento_id: documentoId, medicamentos: medicamentos.length };
+    }
+
+    case "buscar_medicamento": {
+      const termo = String(args.nome || "").trim();
+      if (!termo) return { erro: "Informe o nome do medicamento." };
+      const { data, error } = await db
+        .from("medicamentos")
+        .select("nome_comercial,composicao,apresentacoes,fabricante")
+        .ilike("nome_comercial", `%${termo}%`)
+        .limit(5);
+      if (error) return { erro: error.message };
+      if (!data || !data.length) return { encontrado: false };
+      return {
+        encontrado: true,
+        opcoes: data.map((m) => ({
+          nome_comercial: m.nome_comercial,
+          composicao: m.composicao,
+          apresentacoes: m.apresentacoes || [],
+          fabricante: m.fabricante,
+        })),
+      };
     }
 
     case "gerar_atestado": {
