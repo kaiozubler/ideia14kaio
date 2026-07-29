@@ -3786,7 +3786,7 @@
           <div class="form-grid">
             <div class="fld wide">
               <label>Tipo de documento *</label>
-              <select id="gd-tipo">
+              <select id="gd-tipo" onchange="onGdTipoChange()">
                 <option value="receita">Receita</option>
                 <option value="atestado" selected>Atestado/Declaração</option>
                 <option value="laudo">Laudo</option>
@@ -3794,21 +3794,43 @@
                 <option value="encaminhamento">Encaminhamento</option>
               </select>
             </div>
-            <div class="fld">
-              <label>Nome do paciente *</label
-              ><input type="text" id="gd-nome" placeholder="Nome completo do paciente" />
-            </div>
-            <div class="fld">
-              <label>CPF do paciente</label><input type="text" id="gd-cpf" placeholder="000.000.000-00" />
-            </div>
             <div class="fld wide">
-              <label>Conteúdo / observações <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
+              <label>Nome do paciente *</label><input type="text" id="gd-nome" placeholder="Nome completo do paciente" />
+            </div>
+            <div class="fld"><label>CPF do paciente</label><input type="text" id="gd-cpf" placeholder="000.000.000-00" /></div>
+            <div class="fld">
+              <label
+                >Data de nascimento <span id="gd-idade" style="font-weight:400;color:var(--n300)"></span
+              ></label>
+              <input type="date" id="gd-nasc" oninput="onGdNascChange()" />
+            </div>
+            <div class="fld wide" id="gd-conteudo-wrap">
+              <label>Conteúdo / observações
+                <span style="font-weight:400;color:var(--n300)">(opcional)</span></label
+              >
               <textarea
                 id="gd-texto"
                 class="cf-ta"
                 style="min-height:120px"
                 placeholder="Texto do documento (orientações, achados, motivo do encaminhamento etc.)"
               ></textarea>
+            </div>
+            <div class="fld wide" id="gd-meds-wrap" style="display:none">
+              <label>Medicamentos</label>
+              <div
+                id="gd-meds-summary"
+                style="border:1px dashed var(--n200);border-radius:10px;padding:14px;font-size:12px;color:var(--n400);text-align:center"
+              >
+                Nenhum medicamento selecionado ainda.
+              </div>
+              <button
+                type="button"
+                class="btn ghost"
+                style="margin-top:8px;width:100%;justify-content:center"
+                onclick="abrirSelecaoMedicamentosDocumento()"
+              >
+                <i class="ti ti-pill"></i> Selecionar medicamentos
+              </button>
             </div>
           </div>
         </div>
@@ -9062,8 +9084,11 @@ async function sendIaAssistMsg(){
 
                                                             /* ========== EMITIR RECEITA ========== */
                                                             /* ── VARIÁVEIS DE ESTADO ──────────────────────────────────────────── */
-                                                            let rxSelected = [];
-                                                            let rxSearchTimer = null;
+let rxSelected = [];
+                                    /* Quando a receita é emitida a partir do modal "Gerar documento" (sem
+                                       paciente em atendimento aberto), guardamos aqui os dados digitados
+                                       manualmente para usar no lugar de currentPatient. */
+                                    let rxManualPatient = null;                                                            let rxSearchTimer = null;
                                                             let rxLastResults = [];
 
 
@@ -9902,11 +9927,13 @@ async function sendIaAssistMsg(){
                                                 }
 
                                                 async function openReceitaPDF({ items }) {
-                                                  if (!items || !items.length) { showToast && showToast('Nenhum medicamento para a receita', 'warn'); return; }
+                                      if (!items || !items.length) { showToast && showToast('Nenhum medicamento para a receita', 'warn'); return; }
 
-                                                  // FIX: currentPatient usa .nasc (não .data_nascimento)
-                                                  const p = currentPatient || {};
-                                                  const patientAge = _rxIdade(p.nasc || p.data_nascimento || '');
+                                      // FIX: currentPatient usa .nasc (não .data_nascimento)
+                                      // Se veio do modal "Gerar documento", usa os dados digitados manualmente.
+                                      const p = rxManualPatient || currentPatient || {};
+                                      rxManualPatient = null;
+                                      const patientAge = _rxIdade(p.nasc || p.data_nascimento || '');
 
                                                   // HTML dos medicamentos
                                                   const itemsHtml = items.map((it, i) => `
@@ -10235,34 +10262,83 @@ async function sendIaAssistMsg(){
                                                 }
 
                                                 function abrirModalGerarDocumento() {
-                                                  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
-                                                  set('gd-nome', ''); set('gd-cpf', ''); set('gd-texto', '');
-                                                  const tipoSel = document.getElementById('gd-tipo'); if (tipoSel) tipoSel.selectedIndex = 1;
-                                                  openModal('gerar-documento');
-                                                }
+                                      const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+                                      set('gd-nome', ''); set('gd-cpf', ''); set('gd-texto', ''); set('gd-nasc', '');
+                                      const idadeEl = document.getElementById('gd-idade'); if (idadeEl) idadeEl.textContent = '';
+                                      const tipoSel = document.getElementById('gd-tipo'); if (tipoSel) tipoSel.selectedIndex = 1;
+                                      onGdTipoChange();
+                                      openModal('gerar-documento');
+                                    }
 
-                                                async function gerarDocumentoGenerico() {
-                                                  const tipoSel = document.getElementById('gd-tipo').value;
-                                                  const nome = document.getElementById('gd-nome').value.trim();
-                                                  const cpf = document.getElementById('gd-cpf').value.trim();
-                                                  const texto = document.getElementById('gd-texto').value.trim();
-                                                  if (!nome) { showToast && showToast('Informe o nome do paciente', 'warn'); return; }
-                                                  const meta = DOC_TIPOS_GERADOS.find(t => t.value === tipoSel) || DOC_TIPOS_GERADOS[1];
-                                                  const bodyHtml = `<div class="rx-item"><div>${texto ? _rxEsc(texto).replace(/\n/g, '<br>') : '<span style="color:#94a3b8">Sem observações adicionais.</span>'}</div></div>`;
-                                                  const btn = document.getElementById('gd-submit-btn');
-                                                  const origBtn = btn ? btn.innerHTML : '';
-                                                  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Gerando...'; }
-                                                  try {
-                                                    const result = await _renderDocumentoPdf({
-                                                      docTitle: meta.docTitle,
-                                                      docMark: meta.docMark,
-                                                      patientName: nome,
-                                                      patientAge: '',
-                                                      patientCpf: cpf,
-                                                      bodyHtml,
-                                                      filenamePrefix: tipoSel,
-                                                      contentDescription: `${meta.label} para ${nome}`,
-                                                    });
+                                    /* Alterna entre o campo de texto livre (atestado/laudo/etc.) e o
+                                       seletor de medicamentos (receita), reaproveitando o mesmo modal e
+                                       fluxo de "Emitir receita" já usados em Paciente > Atendimento. */
+                                    function onGdTipoChange() {
+                                      const tipo = document.getElementById('gd-tipo').value;
+                                      const isReceita = tipo === 'receita';
+                                      const conteudoWrap = document.getElementById('gd-conteudo-wrap');
+                                      const medsWrap = document.getElementById('gd-meds-wrap');
+                                      if (conteudoWrap) conteudoWrap.style.display = isReceita ? 'none' : '';
+                                      if (medsWrap) medsWrap.style.display = isReceita ? '' : 'none';
+                                      const btn = document.getElementById('gd-submit-btn');
+                                      if (!btn) return;
+                                      if (isReceita) {
+                                        btn.innerHTML = '<i class="ti ti-pill"></i> Selecionar medicamentos';
+                                        btn.onclick = abrirSelecaoMedicamentosDocumento;
+                                      } else {
+                                        btn.innerHTML = '<i class="ti ti-file-plus"></i> Gerar documento';
+                                        btn.onclick = gerarDocumentoGenerico;
+                                      }
+                                    }
+
+                                    /* Mostra a idade calculada ao lado do rótulo assim que a data de
+                                       nascimento é preenchida no modal "Gerar documento". */
+                                    function onGdNascChange() {
+                                      const idadeEl = document.getElementById('gd-idade');
+                                      if (!idadeEl) return;
+                                      const nasc = document.getElementById('gd-nasc').value;
+                                      const idade = _rxIdade(nasc);
+                                      idadeEl.textContent = idade ? `(${idade})` : '';
+                                    }
+
+                                    /* Abre o modal "Emitir receita" — exatamente o mesmo usado em
+                                       Paciente > Atendimento > Gerar receita, com busca de medicamentos,
+                                       apresentações/modelos e posologia — usando os dados digitados no
+                                       modal "Gerar documento" no lugar do paciente em atendimento. */
+                                    function abrirSelecaoMedicamentosDocumento() {
+                                      const nome = document.getElementById('gd-nome').value.trim();
+                                      if (!nome) { showToast && showToast('Informe o nome do paciente', 'warn'); return; }
+                                      rxManualPatient = {
+                                        name: nome,
+                                        cpf: document.getElementById('gd-cpf').value.trim(),
+                                        nasc: document.getElementById('gd-nasc').value,
+                                      };
+                                      openReceita();
+                                    }
+
+                                    async function gerarDocumentoGenerico() {
+                                      const tipoSel = document.getElementById('gd-tipo').value;
+                                      const nome = document.getElementById('gd-nome').value.trim();
+                                      const cpf = document.getElementById('gd-cpf').value.trim();
+                                      const nasc = document.getElementById('gd-nasc').value;
+                                      const texto = document.getElementById('gd-texto').value.trim();
+                                      if (!nome) { showToast && showToast('Informe o nome do paciente', 'warn'); return; }
+                                      const meta = DOC_TIPOS_GERADOS.find(t => t.value === tipoSel) || DOC_TIPOS_GERADOS[1];
+                                      const bodyHtml = `<div class="rx-item"><div>${texto ? _rxEsc(texto).replace(/\n/g, '<br>') : '<span style="color:#94a3b8">Sem observações adicionais.</span>'}</div></div>`;
+                                      const btn = document.getElementById('gd-submit-btn');
+                                      const origBtn = btn ? btn.innerHTML : '';
+                                      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Gerando...'; }
+                                      try {
+                                        const result = await _renderDocumentoPdf({
+                                          docTitle: meta.docTitle,
+                                          docMark: meta.docMark,
+                                          patientName: nome,
+                                          patientAge: _rxIdade(nasc),
+                                          patientCpf: cpf,
+                                          bodyHtml,
+                                          filenamePrefix: tipoSel,
+                                          contentDescription: `${meta.label} para ${nome}`,
+                                        });
                                                     if (!result) return;
                                                     _baixarBlob(result.finalBlob, result.filename);
                                                     showToast && showToast(result.signedUrl ? `${meta.label} assinado digitalmente ✓` : `${meta.label} gerado com sucesso`, 'success');
