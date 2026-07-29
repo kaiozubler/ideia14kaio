@@ -563,8 +563,11 @@
                                                 .rec-empty p{font-size:12px;color:var(--n400)}
 
                                                 .rx-doc-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
-                                                .rx-doc-toolbar-right{display:flex;align-items:center;gap:12px}
-                                                .rx-doc-count{font-size:12px;color:var(--n400);white-space:nowrap}
+                                    .rx-doc-toolbar .ag-search{flex:none;width:200px;min-width:0}
+                                    .rx-doc-toolbar-right{display:flex;align-items:center;gap:12px}
+                                    .rx-doc-count{font-size:12px;color:var(--n400);white-space:nowrap}
+                                    .rx-doc-periodo{padding:8px 10px;border:1px solid var(--n150);border-radius:8px;font-size:12.5px;background:var(--n50);color:var(--n700)}
+                                    .rx-doc-periodo:focus{outline:none;border-color:var(--g500);background:var(--white)}
                                                 .rx-doc-card{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12);overflow:hidden}
                                                 .rx-doc-head,.rx-doc-row{display:grid;grid-template-columns:170px 1fr 150px 120px 150px;gap:10px;align-items:center;padding:11px 16px}
                                                 .rx-doc-head{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--n400);border-bottom:0.5px solid var(--n150)}
@@ -2621,8 +2624,18 @@
                   oninput="renderReceitasList()"
                 />
               </div>
-              <div class="rx-doc-toolbar-right">
+             <div class="rx-doc-toolbar-right">
                 <span class="rx-doc-count" id="rx-doc-count">0 documentos</span>
+                <select id="rx-doc-periodo" class="rx-doc-periodo" onchange="renderReceitasList()">
+                  <option value="">Todos os períodos</option>
+                  <option value="hoje">Hoje</option>
+                  <option value="semana">Essa semana</option>
+                  <option value="7dias">Últimos 7 dias</option>
+                  <option value="15dias">Últimos 15 dias</option>
+                  <option value="mes">Esse mês</option>
+                  <option value="mes_passado">Mês passado</option>
+                  <option value="ano">Esse ano</option>
+                </select>
                 <button class="btn primary" onclick="abrirModalGerarDocumento()">
                   <i class="ti ti-file-plus"></i> Gerar documento
                 </button>
@@ -9865,43 +9878,80 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                                                 ];
 
                                                 function fmtDocDataHora(iso) {
-                                                  if (!iso) return '—';
-                                                  try {
-                                                    return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-                                                  } catch (e) { return '—'; }
-                                                }
+                                      if (!iso) return '—';
+                                      try {
+                                        return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                                      } catch (e) { return '—'; }
+                                    }
+                                    function periodoRange(periodo) {
+                                      const now = new Date();
+                                      const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                                      switch (periodo) {
+                                        case 'hoje': return [startOfDay(now), now];
+                                        case 'semana': {
+                                          const day = now.getDay(); // 0 = domingo
+                                          const diffToMonday = (day === 0 ? 6 : day - 1);
+                                          const start = startOfDay(now); start.setDate(start.getDate() - diffToMonday);
+                                          return [start, now];
+                                        }
+                                        case '7dias': { const start = startOfDay(now); start.setDate(start.getDate() - 6); return [start, now]; }
+                                        case '15dias': { const start = startOfDay(now); start.setDate(start.getDate() - 14); return [start, now]; }
+                                        case 'mes': return [new Date(now.getFullYear(), now.getMonth(), 1), now];
+                                        case 'mes_passado': {
+                                          const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                                          const end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+                                          return [start, end];
+                                        }
+                                        case 'ano': return [new Date(now.getFullYear(), 0, 1), now];
+                                        default: return null;
+                                      }
+                                    }
+                                    function matchesPeriodo(iso, periodo) {
+                                      if (!periodo) return true;
+                                      const range = periodoRange(periodo);
+                                      if (!range || !iso) return true;
+                                      const d = new Date(iso);
+                                      return d >= range[0] && d <= range[1];
+                                    }
 
-                                                async function loadReceitasScreen(force) {
-                                                  if (documentosLoaded && !force) { renderReceitasList(); return; }
-                                                  const { data, error } = await sb.from('documentos_paciente').select('*').order('created_at', { ascending: false });
-                                                  if (error) { showToast && showToast('Erro ao carregar documentos: ' + error.message, 'error'); return; }
-                                                  documentosGerados = data || [];
-                                                  documentosLoaded = true;
-                                                  renderReceitasList();
-                                                }
+                                    async function loadReceitasScreen(force) {
+                                      if (documentosLoaded && !force) { renderReceitasList(); return; }
+                                      const { data, error } = await sb.from('documentos_paciente').select('*').order('created_at', { ascending: false });
+                                      if (error) { showToast && showToast('Erro ao carregar documentos: ' + error.message, 'error'); return; }
+                                      documentosGerados = data || [];
+                                      documentosLoaded = true;
+                                      renderReceitasList();
+                                    }
 
-                                                function renderReceitasList() {
-                                                  const list = document.getElementById('rx-doc-list');
-                                                  const card = document.querySelector('.rx-doc-card');
-                                                  const empty = document.getElementById('rx-doc-empty');
-                                                  const ct = document.getElementById('rx-doc-count');
-                                                  if (!list) return;
-                                                  const q = (document.getElementById('rx-doc-search')?.value || '').trim().toLowerCase();
-                                                  const filtered = q
-                                                    ? documentosGerados.filter(d => (d.paciente_nome || '').toLowerCase().includes(q))
-                                                    : documentosGerados;
-                                                  ct.textContent = filtered.length + ' documento' + (filtered.length !== 1 ? 's' : '');
-                                                  if (!filtered.length) {
-                                                    if (card) card.style.display = 'none';
-                                                    if (empty) {
-                                                      empty.style.display = 'block';
-                                                      empty.querySelector('h3').textContent = q ? 'Nenhum documento encontrado' : 'Nenhum documento gerado ainda';
-                                                      empty.querySelector('p').textContent = q
-                                                        ? 'Tente buscar por outro nome de paciente.'
-                                                        : 'Receitas, atestados, laudos e demais documentos aparecerão aqui assim que forem gerados.';
-                                                    }
-                                                    list.innerHTML = '';
-                                                    return;
+                                    function renderReceitasList() {
+                                      const list = document.getElementById('rx-doc-list');
+                                      const card = document.querySelector('.rx-doc-card');
+                                      const empty = document.getElementById('rx-doc-empty');
+                                      const ct = document.getElementById('rx-doc-count');
+                                      if (!list) return;
+                                      const q = (document.getElementById('rx-doc-search')?.value || '').trim().toLowerCase();
+                                      const periodo = document.getElementById('rx-doc-periodo')?.value || '';
+                                      const filtered = documentosGerados.filter(d =>
+                                        (!q || (d.paciente_nome || '').toLowerCase().includes(q)) &&
+                                        matchesPeriodo(d.created_at, periodo)
+                                      );
+                                      const hasFilter = !!(q || periodo);
+                                      ct.textContent = filtered.length + ' documento' + (filtered.length !== 1 ? 's' : '');
+                                      if (!filtered.length) {
+                                        if (card) card.style.display = 'none';
+                                        if (empty) {
+                                          empty.style.display = 'block';
+                                          empty.querySelector('h3').textContent = hasFilter ? 'Nenhum documento encontrado' : 'Nenhum documento gerado ainda';
+                                          empty.querySelector('p').textContent = hasFilter
+                                            ? 'Tente ajustar a busca ou o período selecionado.'
+                                            : 'Receitas, atestados, laudos e demais documentos aparecerão aqui assim que forem gerados.';
+                                        }
+                                        list.innerHTML = '';
+                                        return;
+                                      }
+                                      if (card) card.style.display = '';
+                                      if (empty) empty.style.display = 'none';
+                                      list.innerHTML = filtered.map(d => {
                                                   }
                                                   if (card) card.style.display = '';
                                                   if (empty) empty.style.display = 'none';
