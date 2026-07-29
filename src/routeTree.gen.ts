@@ -10,35 +10,20 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiDeepgramTokenRouteImport } from './routes/api/deepgram-token'
-import { Route as ApiDailyRoomRouteImport } from './routes/api/daily-room'
-import { Route as ApiChatIaRouteImport } from './routes/api/chat-ia'
 import { Route as ApiAssistenteIaRouteImport } from './routes/api/assistente-ia'
-import { Route as ApiSignatureSignRouteImport } from './routes/api/signature/sign'
-import { Route as ApiSignatureLocalCertificateRouteImport } from './routes/api/signature/local-certificate'
-import { Route as ApiSignatureCredentialRouteImport } from './routes/api/signature/credential'
+import { Route as ApiChatIaRouteImport } from './routes/api/chat-ia'
+import { Route as ApiDailyRoomRouteImport } from './routes/api/daily-room'
+import { Route as ApiDeepgramTokenRouteImport } from './routes/api/deepgram-token'
 import { Route as ApiSignatureAuthenticateRouteImport } from './routes/api/signature/authenticate'
-import { Route as ApiPublicSignatureCallbackRouteImport } from './routes/api/public/signature/callback'
+import { Route as ApiSignatureCredentialRouteImport } from './routes/api/signature/credential'
+import { Route as ApiSignatureLocalCertificateRouteImport } from './routes/api/signature/local-certificate'
+import { Route as ApiSignatureSignRouteImport } from './routes/api/signature/sign'
 import { Route as ApiPublicHooksSyncInteracoesRouteImport } from './routes/api/public/hooks/sync-interacoes'
+import { Route as ApiPublicSignatureCallbackRouteImport } from './routes/api/public/signature/callback'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiDeepgramTokenRoute = ApiDeepgramTokenRouteImport.update({
-  id: '/api/deepgram-token',
-  path: '/api/deepgram-token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiDailyRoomRoute = ApiDailyRoomRouteImport.update({
-  id: '/api/daily-room',
-  path: '/api/daily-room',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiChatIaRoute = ApiChatIaRouteImport.update({
-  id: '/api/chat-ia',
-  path: '/api/chat-ia',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAssistenteIaRoute = ApiAssistenteIaRouteImport.update({
@@ -46,20 +31,19 @@ const ApiAssistenteIaRoute = ApiAssistenteIaRouteImport.update({
   path: '/api/assistente-ia',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiSignatureSignRoute = ApiSignatureSignRouteImport.update({
-  id: '/api/signature/sign',
-  path: '/api/signature/sign',
+const ApiChatIaRoute = ApiChatIaRouteImport.update({
+  id: '/api/chat-ia',
+  path: '/api/chat-ia',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiSignatureLocalCertificateRoute =
-  ApiSignatureLocalCertificateRouteImport.update({
-    id: '/api/signature/local-certificate',
-    path: '/api/signature/local-certificate',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiSignatureCredentialRoute = ApiSignatureCredentialRouteImport.update({
-  id: '/api/signature/credential',
-  path: '/api/signature/credential',
+const ApiDailyRoomRoute = ApiDailyRoomRouteImport.update({
+  id: '/api/daily-room',
+  path: '/api/daily-room',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDeepgramTokenRoute = ApiDeepgramTokenRouteImport.update({
+  id: '/api/deepgram-token',
+  path: '/api/deepgram-token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSignatureAuthenticateRoute =
@@ -68,16 +52,32 @@ const ApiSignatureAuthenticateRoute =
     path: '/api/signature/authenticate',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicSignatureCallbackRoute =
-  ApiPublicSignatureCallbackRouteImport.update({
-    id: '/api/public/signature/callback',
-    path: '/api/public/signature/callback',
+const ApiSignatureCredentialRoute = ApiSignatureCredentialRouteImport.update({
+  id: '/api/signature/credential',
+  path: '/api/signature/credential',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSignatureLocalCertificateRoute =
+  ApiSignatureLocalCertificateRouteImport.update({
+    id: '/api/signature/local-certificate',
+    path: '/api/signature/local-certificate',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiSignatureSignRoute = ApiSignatureSignRouteImport.update({
+  id: '/api/signature/sign',
+  path: '/api/signature/sign',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksSyncInteracoesRoute =
   ApiPublicHooksSyncInteracoesRouteImport.update({
     id: '/api/public/hooks/sync-interacoes',
     path: '/api/public/hooks/sync-interacoes',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicSignatureCallbackRoute =
+  ApiPublicSignatureCallbackRouteImport.update({
+    id: '/api/public/signature/callback',
+    path: '/api/public/signature/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -186,18 +186,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/deepgram-token': {
-      id: '/api/deepgram-token'
-      path: '/api/deepgram-token'
-      fullPath: '/api/deepgram-token'
-      preLoaderRoute: typeof ApiDeepgramTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/daily-room': {
-      id: '/api/daily-room'
-      path: '/api/daily-room'
-      fullPath: '/api/daily-room'
-      preLoaderRoute: typeof ApiDailyRoomRouteImport
+    '/api/assistente-ia': {
+      id: '/api/assistente-ia'
+      path: '/api/assistente-ia'
+      fullPath: '/api/assistente-ia'
+      preLoaderRoute: typeof ApiAssistenteIaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/chat-ia': {
@@ -207,32 +200,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatIaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/assistente-ia': {
-      id: '/api/assistente-ia'
-      path: '/api/assistente-ia'
-      fullPath: '/api/assistente-ia'
-      preLoaderRoute: typeof ApiAssistenteIaRouteImport
+    '/api/daily-room': {
+      id: '/api/daily-room'
+      path: '/api/daily-room'
+      fullPath: '/api/daily-room'
+      preLoaderRoute: typeof ApiDailyRoomRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/signature/sign': {
-      id: '/api/signature/sign'
-      path: '/api/signature/sign'
-      fullPath: '/api/signature/sign'
-      preLoaderRoute: typeof ApiSignatureSignRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/signature/local-certificate': {
-      id: '/api/signature/local-certificate'
-      path: '/api/signature/local-certificate'
-      fullPath: '/api/signature/local-certificate'
-      preLoaderRoute: typeof ApiSignatureLocalCertificateRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/signature/credential': {
-      id: '/api/signature/credential'
-      path: '/api/signature/credential'
-      fullPath: '/api/signature/credential'
-      preLoaderRoute: typeof ApiSignatureCredentialRouteImport
+    '/api/deepgram-token': {
+      id: '/api/deepgram-token'
+      path: '/api/deepgram-token'
+      fullPath: '/api/deepgram-token'
+      preLoaderRoute: typeof ApiDeepgramTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/signature/authenticate': {
@@ -242,11 +221,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSignatureAuthenticateRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/signature/callback': {
-      id: '/api/public/signature/callback'
-      path: '/api/public/signature/callback'
-      fullPath: '/api/public/signature/callback'
-      preLoaderRoute: typeof ApiPublicSignatureCallbackRouteImport
+    '/api/signature/credential': {
+      id: '/api/signature/credential'
+      path: '/api/signature/credential'
+      fullPath: '/api/signature/credential'
+      preLoaderRoute: typeof ApiSignatureCredentialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/signature/local-certificate': {
+      id: '/api/signature/local-certificate'
+      path: '/api/signature/local-certificate'
+      fullPath: '/api/signature/local-certificate'
+      preLoaderRoute: typeof ApiSignatureLocalCertificateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/signature/sign': {
+      id: '/api/signature/sign'
+      path: '/api/signature/sign'
+      fullPath: '/api/signature/sign'
+      preLoaderRoute: typeof ApiSignatureSignRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/sync-interacoes': {
@@ -254,6 +247,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/hooks/sync-interacoes'
       fullPath: '/api/public/hooks/sync-interacoes'
       preLoaderRoute: typeof ApiPublicHooksSyncInteracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/signature/callback': {
+      id: '/api/public/signature/callback'
+      path: '/api/public/signature/callback'
+      fullPath: '/api/public/signature/callback'
+      preLoaderRoute: typeof ApiPublicSignatureCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
