@@ -2324,9 +2324,6 @@
                             </div>
                           </div>
                         </div>
-                        <button class="btn sm" onclick="transferFromAI()" title="Trazer resumo da IA ao final">
-                          <i class="ti ti-download"></i> Da IA
-                        </button>
                       </div>
                     </div>
                   </div>
@@ -5688,7 +5685,9 @@
                                                               clearAtendDraft();
                                                               stopAtendAutoSave();
                                                               updateAtendProgress();renderAtendimentos();renderTimeline();renderProntuario();showToast('Atendimento salvo com sucesso','success');
-                                                              openTabFromProgress();
+resetAI();
+aiChatHistory=[];
+showAtendList();
                                                             }
                                                             async function saveAtend(ev){
                                                               if(ev&&ev.stopPropagation)ev.stopPropagation();
@@ -6960,7 +6959,8 @@
                                                               const term=(m.nome||'').trim();
                                                               if(!term)continue;
                                                               // Tenta buscar como genérico primeiro
-                                                              const {data:gData}=await sb.rpc('buscar_genericos',{termo:term});
+                                                              const {data:gData,error:gErr}=await sb.rpc('buscar_genericos',{termo:term});
+if(gErr)console.warn('buscar_genericos falhou para',term,gErr);
                                                               if(gData&&gData.length){
                                                                 const g=gData[0];
                                                                 const uid='rx-ia-'+Date.now()+'-'+Math.random().toString(36).slice(2,6);
@@ -6977,7 +6977,8 @@
                                                                 continue;
                                                               }
                                                               // Tenta como comercial
-                                                              const {data:cData}=await sb.rpc('buscar_comerciais',{termo:term});
+                                                              const {data:cData,error:cErr}=await sb.rpc('buscar_comerciais',{termo:term});
+if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                                                               if(cData&&cData.length){
                                                                 const c=cData[0];
                                                                 const uid='rx-ia-'+Date.now()+'-'+Math.random().toString(36).slice(2,6);
@@ -7545,7 +7546,7 @@
                     }
                   }
 
-                        function iaAssistExecuteAction(action){
+                        function iaAssistExecuteAction(action){ return iaExecuteAction(action); }
                           if(!action||!action.type)return;
                           if(action.type==='gerar_receita'){
                             const id=iaAssistRegisterAttachment('receita',action);
