@@ -653,6 +653,57 @@ export type Database = {
           },
         ]
       }
+      paciente_protocolos: {
+        Row: {
+          ativo: boolean
+          cid_code: string | null
+          created_at: string
+          id: string
+          iniciado_em: string
+          paciente_id: string
+          protocolo_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          cid_code?: string | null
+          created_at?: string
+          id?: string
+          iniciado_em?: string
+          paciente_id: string
+          protocolo_id: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          ativo?: boolean
+          cid_code?: string | null
+          created_at?: string
+          id?: string
+          iniciado_em?: string
+          paciente_id?: string
+          protocolo_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paciente_protocolos_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["paciente_id"]
+          },
+          {
+            foreignKeyName: "paciente_protocolos_protocolo_id_fkey"
+            columns: ["protocolo_id"]
+            isOneToOne: false
+            referencedRelation: "protocolos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pacientes: {
         Row: {
           bairro: string | null
@@ -741,6 +792,201 @@ export type Database = {
           sus?: string | null
           telefone?: string | null
           uf?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      protocolo_acoes: {
+        Row: {
+          auto_restart: boolean
+          created_at: string
+          descricao: string | null
+          especialidade: string | null
+          frequency: number
+          id: string
+          nome: string
+          protocolo_id: string
+          recurrent: boolean
+          start_day: number
+          tipo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_restart?: boolean
+          created_at?: string
+          descricao?: string | null
+          especialidade?: string | null
+          frequency?: number
+          id?: string
+          nome: string
+          protocolo_id: string
+          recurrent?: boolean
+          start_day?: number
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          auto_restart?: boolean
+          created_at?: string
+          descricao?: string | null
+          especialidade?: string | null
+          frequency?: number
+          id?: string
+          nome?: string
+          protocolo_id?: string
+          recurrent?: boolean
+          start_day?: number
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "protocolo_acoes_protocolo_id_fkey"
+            columns: ["protocolo_id"]
+            isOneToOne: false
+            referencedRelation: "protocolos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      protocolo_cids: {
+        Row: {
+          cid_code: string
+          created_at: string
+          id: string
+          protocolo_id: string
+          user_id: string
+        }
+        Insert: {
+          cid_code: string
+          created_at?: string
+          id?: string
+          protocolo_id: string
+          user_id?: string
+        }
+        Update: {
+          cid_code?: string
+          created_at?: string
+          id?: string
+          protocolo_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "protocolo_cids_protocolo_id_fkey"
+            columns: ["protocolo_id"]
+            isOneToOne: false
+            referencedRelation: "protocolos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      protocolo_tarefas: {
+        Row: {
+          acao_id: string
+          created_at: string
+          due_date: string
+          id: string
+          notice_desc: string | null
+          notice_type: string | null
+          notified_at: string | null
+          ocorrencia: number
+          paciente_id: string
+          paciente_protocolo_id: string
+          protocolo_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          acao_id: string
+          created_at?: string
+          due_date: string
+          id?: string
+          notice_desc?: string | null
+          notice_type?: string | null
+          notified_at?: string | null
+          ocorrencia?: number
+          paciente_id: string
+          paciente_protocolo_id: string
+          protocolo_id: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          acao_id?: string
+          created_at?: string
+          due_date?: string
+          id?: string
+          notice_desc?: string | null
+          notice_type?: string | null
+          notified_at?: string | null
+          ocorrencia?: number
+          paciente_id?: string
+          paciente_protocolo_id?: string
+          protocolo_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "protocolo_tarefas_acao_id_fkey"
+            columns: ["acao_id"]
+            isOneToOne: false
+            referencedRelation: "protocolo_acoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "protocolo_tarefas_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["paciente_id"]
+          },
+          {
+            foreignKeyName: "protocolo_tarefas_paciente_protocolo_id_fkey"
+            columns: ["paciente_protocolo_id"]
+            isOneToOne: false
+            referencedRelation: "paciente_protocolos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "protocolo_tarefas_protocolo_id_fkey"
+            columns: ["protocolo_id"]
+            isOneToOne: false
+            referencedRelation: "protocolos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      protocolos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          titulo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          titulo: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          titulo?: string
           updated_at?: string
           user_id?: string
         }
@@ -911,6 +1157,10 @@ export type Database = {
         }[]
       }
       consolidar_interacoes_crfmg: { Args: never; Returns: number }
+      gerar_tarefas_protocolo: {
+        Args: { p_vinculo_id: string }
+        Returns: undefined
+      }
       grupo_busca_substancia: { Args: { nome_dcb: string }; Returns: string }
       listar_apresentacoes_comercial: {
         Args: { p_fabricante: string; p_nome_comercial: string }
@@ -935,8 +1185,37 @@ export type Database = {
         }[]
       }
       normaliza_substancia: { Args: { t: string }; Returns: string }
+      relatorio_protocolos: {
+        Args: never
+        Returns: {
+          action: string
+          action_type: string
+          age: number
+          cid: string
+          doctor: string
+          due: string
+          id: string
+          late: boolean
+          notice_desc: string
+          notice_type: string
+          paciente_id: string
+          patient: string
+          protocol: string
+          protocolo_id: string
+          specialty: string
+          status: string
+        }[]
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      sincronizar_protocolo: {
+        Args: { p_protocolo_id: string }
+        Returns: undefined
+      }
+      sincronizar_protocolos_paciente: {
+        Args: { p_paciente_id: string }
+        Returns: undefined
+      }
       unaccent: { Args: { "": string }; Returns: string }
       verificar_interacoes: {
         Args: { p_termos: string[] }
