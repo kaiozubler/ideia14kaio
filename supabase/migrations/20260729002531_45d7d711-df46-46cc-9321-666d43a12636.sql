@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.validar_paciente_do_medico() FROM PUBLIC, anon, authenticated;
