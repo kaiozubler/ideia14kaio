@@ -527,7 +527,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
       if (!termo) return { erro: "Informe o nome do medicamento." };
       const { data, error } = await db
         .from("medicamentos")
-        .select("nome_comercial,composicao,apresentacoes,fabricante")
+        .select("nome_comercial,apresentacao,fabricante")
         .ilike("nome_comercial", `%${termo}%`)
         .limit(5);
       if (error) return { erro: error.message };
@@ -536,8 +536,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         encontrado: true,
         opcoes: data.map((m) => ({
           nome_comercial: m.nome_comercial,
-          composicao: m.composicao,
-          apresentacoes: m.apresentacoes || [],
+          apresentacao: m.apresentacao,
           fabricante: m.fabricante,
         })),
       };
