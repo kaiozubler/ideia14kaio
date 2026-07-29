@@ -146,34 +146,6 @@ const tools = [
     type: "function",
     function: {
       name: "gerar_receita",
-      description: "Gera uma receita médica com um ou mais medicamentos.",
-      parameters: {
-        type: "object",
-        properties: {
-          paciente_id: { type: "string" },
-          paciente_nome: { type: "string" },
-          medicamentos: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                nome: { type: "string" },
-                apresentacao: { type: "string" },
-                quantidade: { type: "string" },
-                posologia: { type: "string" },
-              },
-              required: ["nome"],
-            },
-          },
-        },
-        required: ["paciente_nome", "medicamentos"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "gerar_receita",
       description:
         "Gera uma receita médica com um ou mais medicamentos. Exige nome, CPF e idade do paciente. Se houver 2+ medicamentos, verifica interação automaticamente.",
       parameters: {
