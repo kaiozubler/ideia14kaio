@@ -437,24 +437,45 @@
                               .ia-assist-btn{width:32px;height:32px;border-radius:0 999px 999px 0;border:none;background:linear-gradient(135deg,#34d399,#059669);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
                               .ia-assist-btn:hover{filter:brightness(1.07)}
                               .ia-assist-btn .ti{font-size:16px}
-                                    .ia-assist-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-start;justify-content:center;z-index:1200;padding:70px 16px 16px}
-                        .ia-assist-modal.open{display:flex}
-                        .ia-assist-box{background:var(--white);border-radius:var(--r12);width:420px;max-width:100%;height:600px;max-height:78vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 50px -12px rgba(0,0,0,.35)}
-                        .ia-assist-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:0.5px solid var(--n150);flex-shrink:0}
-                        .ia-assist-head-title{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--n700)}
-                        .ia-assist-head-title i{font-size:16px;color:#059669}
-                        .ia-assist-close{width:26px;height:26px;border-radius:50%;border:none;background:var(--n100);color:var(--n500);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
-                        .ia-assist-close:hover{background:var(--n150)}
-                        /* palco da IA — mesma estrutura visual do .ai-stage do copiloto */
-                        .ia-assist-stage{flex:1;min-height:0;position:relative;overflow:hidden;background:#fff}
-                        .ia-assist-bg-icon{position:absolute;opacity:.04;pointer-events:none;top:45%;left:50%;transform:translate(-50%,-50%);z-index:0}
-                        .ia-assist-bg-icon .ti{font-size:120px;color:var(--g600)}
-                        .ia-assist-body{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px;padding:14px 12px 104px;z-index:1}
-                        .ia-assist-bottom{position:absolute;left:0;right:0;bottom:0;padding:8px 12px 12px;display:flex;flex-direction:column;gap:8px;z-index:5;pointer-events:none}
-                        .ia-assist-bottom>*{pointer-events:auto}
-                        .ia-assist-chips{display:flex;flex-wrap:wrap;gap:4px;padding:5px 7px;border:0.5px solid rgba(255,255,255,.9);border-radius:12px;background:rgba(255,255,255,.7);backdrop-filter:blur(16px) saturate(180%);box-shadow:0 8px 22px -8px rgba(15,40,60,.22),0 2px 6px rgba(0,0,0,.06),inset 0 1px 0 rgba(255,255,255,.7)}
-                        .ia-assist-chip{border:none;background:transparent;color:var(--n700);border-radius:8px;padding:0 8px;height:26px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px}
-                        ..ia-assist-chip:hover{background:rgba(0,0,0,.06)}
+                                    .ia-assist-modal{position:fixed;inset:0;background:rgba(15,30,25,.45);backdrop-filter:blur(3px);display:none;align-items:flex-start;justify-content:center;z-index:1200;padding:70px 16px 16px}
+.ia-assist-modal.open{display:flex}
+.ia-assist-box{position:relative;background:rgba(255,255,255,.78);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border:1px solid rgba(255,255,255,.9);border-radius:28px;width:600px;max-width:100%;height:600px;max-height:80vh;display:flex;flex-direction:row;overflow:hidden;box-shadow:0 30px 70px -16px rgba(5,60,45,.35),0 2px 10px rgba(0,0,0,.06)}
+.ia-assist-blob{position:absolute;border-radius:50%;filter:blur(46px);opacity:.55;pointer-events:none;z-index:0}
+.ia-assist-blob.b1{width:220px;height:220px;top:-70px;left:-60px;background:radial-gradient(circle,#6ee7b7,#34d399)}
+.ia-assist-blob.b2{width:200px;height:200px;bottom:-80px;right:-50px;background:radial-gradient(circle,#c4b5fd,#a78bfa)}
+.ia-assist-blob.b3{width:150px;height:150px;bottom:40px;left:40px;background:radial-gradient(circle,#fde68a,#fbbf24)}
+.ia-assist-sidebar{position:relative;z-index:1;width:126px;flex-shrink:0;display:flex;flex-direction:column;background:rgba(255,255,255,.5);border-right:1px solid rgba(255,255,255,.7)}
+.ia-assist-newchat{margin:10px 8px 8px;height:28px;border-radius:9px;border:none;background:linear-gradient(135deg,#34d399,#059669);color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;box-shadow:0 4px 10px -3px rgba(5,150,105,.5);flex-shrink:0}
+.ia-assist-newchat:hover{filter:brightness(1.06)}
+.ia-assist-newchat .ti{font-size:13px}
+.ia-assist-topics{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:3px;padding:2px 6px 8px}
+.ia-assist-topic{display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.75);border:0.5px solid rgba(0,0,0,.04);border-radius:8px;padding:5px 6px;cursor:pointer;box-shadow:0 1px 2px rgba(15,40,30,.05)}
+.ia-assist-topic:hover{background:#fff}
+.ia-assist-topic.active{background:linear-gradient(135deg,#34d399,#059669);border-color:transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 4px 10px -2px rgba(5,150,105,.5)}
+.ia-assist-topic-title{flex:1;min-width:0;font-size:10.5px;line-height:1.25;color:var(--n700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ia-assist-topic.active .ia-assist-topic-title{color:#fff;font-weight:600}
+.ia-assist-topic-fav{flex-shrink:0;width:16px;height:16px;border:none;background:transparent;color:var(--n300);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.ia-assist-topic-fav .ti{font-size:11px}
+.ia-assist-topic-fav.is-fav{color:#f59e0b}
+.ia-assist-topic.active .ia-assist-topic-fav{color:rgba(255,255,255,.75)}
+.ia-assist-topic.active .ia-assist-topic-fav.is-fav{color:#fff}
+.ia-assist-topics-empty{padding:10px 6px;font-size:10px;color:var(--n400);text-align:center;line-height:1.4}
+.ia-assist-main{position:relative;z-index:1;flex:1;min-width:0;display:flex;flex-direction:column}
+.ia-assist-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:0.5px solid rgba(0,0,0,.06);flex-shrink:0}
+.ia-assist-head-title{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--n700)}
+.ia-assist-head-title i{font-size:16px;color:#059669}
+.ia-assist-close{width:26px;height:26px;border-radius:50%;border:none;background:rgba(0,0,0,.06);color:var(--n500);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.ia-assist-close:hover{background:rgba(0,0,0,.1)}
+/* palco da IA — mesma estrutura visual do .ai-stage do copiloto */
+.ia-assist-stage{flex:1;min-height:0;position:relative;overflow:hidden;background:transparent}
+.ia-assist-bg-icon{position:absolute;opacity:.04;pointer-events:none;top:45%;left:50%;transform:translate(-50%,-50%);z-index:0}
+.ia-assist-bg-icon .ti{font-size:120px;color:var(--g600)}
+.ia-assist-body{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px;padding:14px 12px 104px;z-index:1}
+.ia-assist-bottom{position:absolute;left:0;right:0;bottom:0;padding:8px 12px 12px;display:flex;flex-direction:column;gap:8px;z-index:5;pointer-events:none}
+.ia-assist-bottom>*{pointer-events:auto}
+.ia-assist-chips{display:flex;flex-wrap:wrap;gap:4px;padding:5px 7px;border:0.5px solid rgba(255,255,255,.9);border-radius:12px;background:rgba(255,255,255,.7);backdrop-filter:blur(16px) saturate(180%);box-shadow:0 8px 22px -8px rgba(15,40,60,.22),0 2px 6px rgba(0,0,0,.06),inset 0 1px 0 rgba(255,255,255,.7)}
+.ia-assist-chip{border:none;background:transparent;color:var(--n700);border-radius:8px;padding:0 8px;height:26px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px}
+.ia-assist-chip:hover{background:rgba(0,0,0,.06)}
 
                   /* anexo de documento gerado pela IA */
                   .ia-assist-attach{display:flex;align-items:center;gap:8px;margin:2px 0 4px;padding:8px 10px;border:0.5px solid var(--n200);border-radius:10px;background:var(--n50);cursor:pointer;max-width:82%}
@@ -3241,40 +3262,51 @@
     <!-- Modal Assistente IA (global, acessível de qualquer tela) -->
     <div class="ia-assist-modal" id="ia-assist-modal" onclick="if(event.target===this)closeIaAssistModal()">
       <div class="ia-assist-box">
-        <div class="ia-assist-head">
-          <div class="ia-assist-head-title"><i class="ti ti-sparkles"></i> Assistente IA</div>
-          <button class="ia-assist-close" onclick="closeIaAssistModal()"><i class="ti ti-x"></i></button>
+        <div class="ia-assist-blob b1"></div>
+        <div class="ia-assist-blob b2"></div>
+        <div class="ia-assist-blob b3"></div>
+        <div class="ia-assist-sidebar">
+          <button class="ia-assist-newchat" onclick="iaAssistStartNewChat()"><i class="ti ti-plus"></i> Nova</button>
+          <div class="ia-assist-topics" id="ia-assist-topics">
+            <div class="ia-assist-topics-empty">Suas conversas aparecem aqui</div>
+          </div>
         </div>
-        <div class="ia-assist-stage">
-          <div class="ia-assist-bg-icon"><i class="ti ti-sparkles"></i></div>
-          <div class="ia-assist-body" id="ia-assist-bubbles"></div>
-          <div class="ia-assist-bottom">
-            <div class="ia-assist-chips" id="ia-assist-chips">
-              <button class="ia-assist-chip" onclick="iaAssistQuickPrompt('Agendar um paciente')">
-                <i class="ti ti-calendar-plus"></i> Agendar paciente
-              </button>
-              <button class="ia-assist-chip" onclick="iaAssistQuickPrompt('Gerar uma receita')">
-                <i class="ti ti-prescription"></i> Gerar receita
-              </button>
-              <button class="ia-assist-chip" onclick="iaAssistQuickPrompt('Gerar um atestado')">
-                <i class="ti ti-file-certificate"></i> Atestado/declaração
-              </button>
-              <button class="ia-assist-chip" onclick="iaAssistQuickPrompt('Quantos pacientes eu já atendi hoje?')">
-                <i class="ti ti-chart-bar"></i> Pacientes hoje
-              </button>
-              <button class="ia-assist-chip" onclick="iaAssistQuickPrompt('Qual o horário do meu próximo paciente?')">
-                <i class="ti ti-clock"></i> Próximo paciente
-              </button>
-            </div>
-            <div class="ai-input-row">
-              <input
-                class="ai-inp"
-                id="ia-assist-inp"
-                type="text"
-                placeholder="Peça algo à IA ou tire uma dúvida..."
-                onkeydown="if(event.key==='Enter')sendIaAssistMsg()"
-              />
-              <button class="ai-sbtn" onclick="sendIaAssistMsg()"><i class="ti ti-send"></i></button>
+        <div class="ia-assist-main">
+          <div class="ia-assist-head">
+            <div class="ia-assist-head-title"><i class="ti ti-sparkles"></i> Assistente IA</div>
+            <button class="ia-assist-close" onclick="closeIaAssistModal()"><i class="ti ti-x"></i></button>
+          </div>
+          <div class="ia-assist-stage">
+            <div class="ia-assist-bg-icon"><i class="ti ti-sparkles"></i></div>
+            <div class="ia-assist-body" id="ia-assist-bubbles"></div>
+            <div class="ia-assist-bottom">
+              <div class="ia-assist-chips" id="ia-assist-chips">
+                <button class="ia-assist-chip" onclick="iaAssistQuickPrompt('Agendar um paciente')">
+                  <i class="ti ti-calendar-plus"></i> Agendar paciente
+                </button>
+                <button class="ia-assist-chip" onclick="iaAssistQuickPrompt('Gerar uma receita')">
+                  <i class="ti ti-prescription"></i> Gerar receita
+                </button>
+                <button class="ia-assist-chip" onclick="iaAssistQuickPrompt('Gerar um atestado')">
+                  <i class="ti ti-file-certificate"></i> Atestado/declaração
+                </button>
+                <button class="ia-assist-chip" onclick="iaAssistQuickPrompt('Quantos pacientes eu já atendi hoje?')">
+                  <i class="ti ti-chart-bar"></i> Pacientes hoje
+                </button>
+                <button class="ia-assist-chip" onclick="iaAssistQuickPrompt('Qual o horário do meu próximo paciente?')">
+                  <i class="ti ti-clock"></i> Próximo paciente
+                </button>
+              </div>
+              <div class="ai-input-row">
+                <input
+                  class="ai-inp"
+                  id="ia-assist-inp"
+                  type="text"
+                  placeholder="Peça algo à IA ou tire uma dúvida..."
+                  onkeydown="if(event.key==='Enter')sendIaAssistMsg()"
+                />
+                <button class="ai-sbtn" onclick="sendIaAssistMsg()"><i class="ti ti-send"></i></button>
+              </div>
             </div>
           </div>
         </div>
@@ -7203,133 +7235,200 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
 
                                                 /* ========== ASSISTENTE IA GLOBAL (topbar) ========== */
                                           let iaAssistHistory=[]; // [{role:'user'|'assistant',content:string}]
-                                          let iaAssistBusy=false;
-                                          let iaAssistStarted=false;
+let iaAssistBusy=false;
+let iaAssistConversaId=null; // null = conversa ainda não salva
+let iaAssistConversas=[]; // lista carregada na barra lateral
 
-                                          const IA_ASSIST_SUGGESTIONS=['Agende um paciente','Gere uma receita','Como utilizo o sistema','Ver meus resultados'];
-                                          let iaAssistSugIdx=0;
-                                          function startIaAssistSuggestions(){
-                                            const el=document.getElementById('ia-assist-search-text');if(!el)return;
-                                            setInterval(()=>{
-                                              el.classList.add('fade');
-                                              setTimeout(()=>{
-                                                iaAssistSugIdx=(iaAssistSugIdx+1)%IA_ASSIST_SUGGESTIONS.length;
-                                                el.textContent=IA_ASSIST_SUGGESTIONS[iaAssistSugIdx];
-                                                el.classList.remove('fade');
-                                              },250);
-                                            },3200);
-                                          }
-                                          document.addEventListener('DOMContentLoaded',startIaAssistSuggestions);
+const IA_ASSIST_SUGGESTIONS=['Agende um paciente','Gere uma receita','Como utilizo o sistema','Ver meus resultados'];
+let iaAssistSugIdx=0;
+function startIaAssistSuggestions(){
+  const el=document.getElementById('ia-assist-search-text');if(!el)return;
+  setInterval(()=>{
+    el.classList.add('fade');
+    setTimeout(()=>{
+      iaAssistSugIdx=(iaAssistSugIdx+1)%IA_ASSIST_SUGGESTIONS.length;
+      el.textContent=IA_ASSIST_SUGGESTIONS[iaAssistSugIdx];
+      el.classList.remove('fade');
+    },250);
+  },3200);
+}
+document.addEventListener('DOMContentLoaded',startIaAssistSuggestions);
 
-                                          function iaAssistUserFirstName(){
-                                const u=(typeof currentUser!=='undefined')?currentUser:null;
-                                const meta=(u&&u.user_metadata)||{};
-                                const full=meta.full_name||meta.name||meta.name_user||(u&&u.email)||'';
-                                const first=String(full).trim().split(' ')[0].split('@')[0];
-                                return first||'Doutor(a)';
-                              }
+function iaAssistUserFirstName(){
+  const u=(typeof currentUser!=='undefined')?currentUser:null;
+  const meta=(u&&u.user_metadata)||{};
+  const full=meta.full_name||meta.name||meta.name_user||(u&&u.email)||'';
+  const first=String(full).trim().split(' ')[0].split('@')[0];
+  return first||'Doutor(a)';
+}
+function iaAssistUserId(){
+  return (typeof currentUser!=='undefined'&&currentUser)?currentUser.id:null;
+}
 
-                              function iaAssistSyncBottomSpace(){
-                                const bottom=document.querySelector('#ia-assist-modal .ia-assist-bottom');
-                                const layer=document.getElementById('ia-assist-bubbles');
-                                if(!bottom||!layer)return;
-                                layer.style.paddingBottom=(bottom.offsetHeight+14)+'px';
-                              }
-                              window.addEventListener('resize',()=>{
-                                const m=document.getElementById('ia-assist-modal');
-                                if(m&&m.classList.contains('open'))iaAssistSyncBottomSpace();
-                              });
+function iaAssistSyncBottomSpace(){
+  const bottom=document.querySelector('#ia-assist-modal .ia-assist-bottom');
+  const layer=document.getElementById('ia-assist-bubbles');
+  if(!bottom||!layer)return;
+  layer.style.paddingBottom=(bottom.offsetHeight+14)+'px';
+}
+window.addEventListener('resize',()=>{
+  const m=document.getElementById('ia-assist-modal');
+  if(m&&m.classList.contains('open'))iaAssistSyncBottomSpace();
+});
 
-                              function openIaAssistModal(){
-                                document.getElementById('ia-assist-modal').classList.add('open');
-                                const layer=document.getElementById('ia-assist-bubbles');
-                                if(layer)layer.innerHTML='';
-                                iaAssistHistory=[];
-                                iaAssistSyncBottomSpace();
-                                spawnIaAssistBubble('ia','Olá, '+iaAssistUserFirstName()+'. Como posso te ajudar?');
-                                setTimeout(()=>{const inp=document.getElementById('ia-assist-inp');if(inp)inp.focus();},50);
-                              }
-                              function closeIaAssistModal(){
-                                document.getElementById('ia-assist-modal').classList.remove('open');
-                              }
-                              function iaAssistQuickPrompt(text){
-                                const inp=document.getElementById('ia-assist-inp');
-                                if(inp)inp.value=text;
-                                sendIaAssistMsg();
-                              }
-                              function spawnIaAssistBubble(type,text){
-                                const layer=document.getElementById('ia-assist-bubbles');if(!layer)return null;
-                                const html=fmtBubbleText(text);
-                                const id='ia-assist-bbl-'+Date.now()+'-'+Math.random().toString(36).slice(2,6);
-                                const el=document.createElement('div');
-                                el.className='bbl '+type;
-                                el.id=id;
-                                el.innerHTML=`<span class="bbl-text">${html}</span>`;
-                                layer.appendChild(el);
-                                iaAssistSyncBottomSpace();
-                                layer.scrollTop=layer.scrollHeight;
-                                return id;
-                              }
-                              function showIaAssistTyping(){
-                                const layer=document.getElementById('ia-assist-bubbles');if(!layer)return null;
-                                const id='ia-assist-typing-'+Date.now();
-                                const el=document.createElement('div');
-                                el.className='bbl ia typing';
-                                el.id=id;
-                                el.innerHTML='<span class="tdot"></span><span class="tdot"></span><span class="tdot"></span>';
-                                layer.appendChild(el);
-                                iaAssistSyncBottomSpace();
-                                layer.scrollTop=layer.scrollHeight;
-                                return id;
-                              }
-                                                function showIaAssistTyping(){
-                                                  const layer=document.getElementById('ia-assist-bubbles');if(!layer)return null;
-                                                  const id='ia-assist-typing-'+Date.now();
-                                                  const el=document.createElement('div');
-                                                  el.className='bbl ia typing';
-                                                  el.id=id;
-                                                  el.innerHTML='<span class="tdot"></span><span class="tdot"></span><span class="tdot"></span>';
-                                                  layer.appendChild(el);
-                                                  layer.scrollTop=layer.scrollHeight;
-                                                  return id;
-                                                }
-                                                function removeIaAssistTyping(id){
-                                                  if(!id)return;
-                                                  const el=document.getElementById(id);
-                                                  if(el&&el.parentNode)el.parentNode.removeChild(el);
-                                                }
+function openIaAssistModal(){
+  document.getElementById('ia-assist-modal').classList.add('open');
+  iaAssistStartNewChat();
+  iaAssistLoadTopics();
+  setTimeout(()=>{const inp=document.getElementById('ia-assist-inp');if(inp)inp.focus();},50);
+}
+function closeIaAssistModal(){
+  document.getElementById('ia-assist-modal').classList.remove('open');
+}
+function iaAssistStartNewChat(){
+  const layer=document.getElementById('ia-assist-bubbles');
+  if(layer)layer.innerHTML='';
+  iaAssistHistory=[];
+  iaAssistConversaId=null;
+  iaAssistRenderTopics(); // só atualiza o destaque (nenhum tópico ativo)
+  iaAssistSyncBottomSpace();
+  spawnIaAssistBubble('ia','Olá, '+iaAssistUserFirstName()+'. Como posso te ajudar?');
+  setTimeout(()=>{const inp=document.getElementById('ia-assist-inp');if(inp)inp.focus();},50);
+}
 
-                                                async function sendIaAssistMsg(){
-                                                  const inp=document.getElementById('ia-assist-inp');if(!inp||!inp.value.trim())return;
-                                                  if(iaAssistBusy)return;
-                                                  const userText=inp.value.trim();inp.value='';
-                                                  spawnIaAssistBubble('usr',userText);
-                                                  iaAssistHistory.push({role:'user',content:userText});
-                                                  iaAssistBusy=true;
-                                                  const btn=document.querySelector('#ia-assist-modal .ai-sbtn');
-                                                  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>';}
-                                                  const typingId=showIaAssistTyping();
-                                                  try{
-                                                    const r=await fetch('/api/assistente-ia',{
-                                                      method:'POST',
-                                                      headers:{'Content-Type':'application/json'},
-                                                      body:JSON.stringify({mode:'assistente_global',messages:iaAssistHistory,user_id:(typeof currentUser!=='undefined'&&currentUser)?currentUser.id:null})
-                                                    });
-                                                    if(!r.ok)throw new Error(await r.text());
-                                                    const d=await r.json();
-                                                    const reply=(d.reply||'').trim()||'(sem resposta)';
-                                                    iaAssistHistory.push({role:'assistant',content:reply});
-                                                    removeIaAssistTyping(typingId);
-                                                    spawnIaAssistBubble('ia',reply);
-                                                    if(d.action)iaAssistExecuteAction(d.action);
-                                                  }catch(e){
-                                                    removeIaAssistTyping(typingId);
-                                                    spawnIaAssistBubble('ia','⚠️ Erro ao consultar a IA: '+(e.message||e));
-                                                  }finally{
-                                                    iaAssistBusy=false;
-                                                    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-send"></i>';}
-                                                  }
-                                                }
+async function iaAssistLoadTopics(){
+  const uid=iaAssistUserId();if(!uid)return;
+  try{
+    const r=await fetch('/api/assistente-ia-conversas',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'listar',user_id:uid})
+    });
+    if(!r.ok)return;
+    const d=await r.json();
+    iaAssistConversas=d.conversas||[];
+    iaAssistRenderTopics();
+  }catch(e){console.warn('[ia-assist] falha ao listar conversas',e);}
+}
+
+function iaAssistRenderTopics(){
+  const box=document.getElementById('ia-assist-topics');if(!box)return;
+  if(!iaAssistConversas.length){
+    box.innerHTML='<div class="ia-assist-topics-empty">Suas conversas aparecem aqui</div>';
+    return;
+  }
+  box.innerHTML=iaAssistConversas.map(function(c){
+    const active=c.id===iaAssistConversaId;
+    const fav=!!c.favorito;
+    return '<div class="ia-assist-topic'+(active?' active':'')+'" onclick="iaAssistLoadConversa(\''+c.id+'\')">'
+      +'<span class="ia-assist-topic-title">'+iaEscHtml(c.titulo||'Conversa')+'</span>'
+      +'<button class="ia-assist-topic-fav'+(fav?' is-fav':'')+'" onclick="event.stopPropagation();iaAssistToggleFavorito(\''+c.id+'\','+(!fav)+')" title="'+(fav?'Remover dos favoritos':'Favoritar')+'"><i class="ti '+(fav?'ti-star-filled':'ti-star')+'"></i></button>'
+      +'</div>';
+  }).join('');
+}
+
+async function iaAssistLoadConversa(id){
+  const uid=iaAssistUserId();if(!uid)return;
+  try{
+    const r=await fetch('/api/assistente-ia-conversas',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'obter',user_id:uid,conversa_id:id})
+    });
+    if(!r.ok)throw new Error(await r.text());
+    const d=await r.json();
+    iaAssistConversaId=id;
+    iaAssistHistory=Array.isArray(d.mensagens)?d.mensagens:[];
+    const layer=document.getElementById('ia-assist-bubbles');
+    if(layer)layer.innerHTML='';
+    iaAssistHistory.forEach(function(m){spawnIaAssistBubble(m.role==='user'?'usr':'ia',m.content||'');});
+    iaAssistRenderTopics();
+    iaAssistSyncBottomSpace();
+  }catch(e){console.warn('[ia-assist] falha ao carregar conversa',e);}
+}
+
+async function iaAssistToggleFavorito(id,favorito){
+  const uid=iaAssistUserId();if(!uid)return;
+  const item=iaAssistConversas.find(function(c){return c.id===id;});
+  if(item)item.favorito=favorito; // otimista
+  iaAssistRenderTopics();
+  try{
+    await fetch('/api/assistente-ia-conversas',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'favoritar',user_id:uid,conversa_id:id,favorito})
+    });
+  }catch(e){console.warn('[ia-assist] falha ao favoritar',e);}
+}
+
+function iaAssistQuickPrompt(text){
+  const inp=document.getElementById('ia-assist-inp');
+  if(inp)inp.value=text;
+  sendIaAssistMsg();
+}
+function spawnIaAssistBubble(type,text){
+  const layer=document.getElementById('ia-assist-bubbles');if(!layer)return null;
+  const html=fmtBubbleText(text);
+  const id='ia-assist-bbl-'+Date.now()+'-'+Math.random().toString(36).slice(2,6);
+  const el=document.createElement('div');
+  el.className='bbl '+type;
+  el.id=id;
+  el.innerHTML=`<span class="bbl-text">${html}</span>`;
+  layer.appendChild(el);
+  iaAssistSyncBottomSpace();
+  layer.scrollTop=layer.scrollHeight;
+  return id;
+}
+function showIaAssistTyping(){
+  const layer=document.getElementById('ia-assist-bubbles');if(!layer)return null;
+  const id='ia-assist-typing-'+Date.now();
+  const el=document.createElement('div');
+  el.className='bbl ia typing';
+  el.id=id;
+  el.innerHTML='<span class="tdot"></span><span class="tdot"></span><span class="tdot"></span>';
+  layer.appendChild(el);
+  iaAssistSyncBottomSpace();
+  layer.scrollTop=layer.scrollHeight;
+  return id;
+}
+function removeIaAssistTyping(id){
+  if(!id)return;
+  const el=document.getElementById(id);
+  if(el&&el.parentNode)el.parentNode.removeChild(el);
+}
+
+async function sendIaAssistMsg(){
+  const inp=document.getElementById('ia-assist-inp');if(!inp||!inp.value.trim())return;
+  if(iaAssistBusy)return;
+  const userText=inp.value.trim();inp.value='';
+  spawnIaAssistBubble('usr',userText);
+  iaAssistHistory.push({role:'user',content:userText});
+  iaAssistBusy=true;
+  const btn=document.querySelector('#ia-assist-modal .ai-sbtn');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>';}
+  const typingId=showIaAssistTyping();
+  try{
+    const r=await fetch('/api/assistente-ia',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({mode:'assistente_global',messages:iaAssistHistory,user_id:iaAssistUserId(),conversa_id:iaAssistConversaId})
+    });
+    if(!r.ok)throw new Error(await r.text());
+    const d=await r.json();
+    const reply=(d.reply||'').trim()||'(sem resposta)';
+    iaAssistHistory.push({role:'assistant',content:reply});
+    removeIaAssistTyping(typingId);
+    spawnIaAssistBubble('ia',reply);
+    if(d.action)iaAssistExecuteAction(d.action);
+    if(d.conversa_id&&d.conversa_id!==iaAssistConversaId){
+      iaAssistConversaId=d.conversa_id;
+      iaAssistLoadTopics();
+    }
+  }catch(e){
+    removeIaAssistTyping(typingId);
+    spawnIaAssistBubble('ia','⚠️ Erro ao consultar a IA: '+(e.message||e));
+  }finally{
+    iaAssistBusy=false;
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-send"></i>';}
+  }
+}
 
                                                 // Cuida das ações que geram um documento (receita/atestado): mostra um
                         // anexo clicável na conversa, que abre a pré-visualização do documento.
