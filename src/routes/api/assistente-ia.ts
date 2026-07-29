@@ -17,6 +17,7 @@ type RequestBody = {
   mode?: string;
   messages?: { role: string; content: string }[];
   user_id?: string | null;
+  conversa_id?: string | null;
 };
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -617,8 +618,70 @@ async function callGateway(messages: ChatMessage[], apiKey: string) {
   return data.choices?.[0]?.message ?? ({ role: "assistant", content: "" } as ChatMessage);
 }
 
-export const Route = createFileRoute("/api/assistente-ia")({
-  server: {
+async function gerarTitulo(primeiraMsg: string, apiKey: string): Promise<string> {
+  try {
+    const res = await fetch(GATEWAY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": apiKey,
+        "X-Lovable-AIG-SDK": "raw",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          {
+            role: "system",
+            content:
+              "Gere um título curtíssimo (máximo 5 palavras, sem aspas, sem ponto final) para esta conversa com um assistente de clínica médica, em português do Brasil.",
+          },
+          { role: "user", content: primeiraMsg.slice(0, 500) },
+        ],
+      }),
+    });
+    if (!res.ok) return "Nova conversa";
+    const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    const titulo = (data.choices?.[0]?.message?.content || "").trim().replace(/^["“”']|["“”']$/g, "");
+    return titulo ? titulo.slice(0, 60) : "Nova conversa";
+  } catch {
+    return "Nova conversa";
+  }
+}
+
+async function salvarConversa(
+  db: Db,
+  medicoId: string | null,
+  conversaId: string | null,
+  history: ChatMessage[],
+  reply: string,
+  apiKey: string,
+): Promise<string | null> {
+  if (!medicoId || !history.length) return conversaId;
+  const mensagens = [...history, { role: "assistant", content: reply }];
+  try {
+    if (conversaId) {
+      await db
+        .from("ia_assist_conversas")
+        .update({ mensagens })
+        .eq("id", conversaId)
+        .eq("id_medico", medicoId);
+      return conversaId;
+    }
+    const primeiraMsg = history.find((m) => m.role === "user")?.content || reply;
+    const titulo = await gerarTitulo(String(primeiraMsg || ""), apiKey);
+    const { data } = await db
+      .from("ia_assist_conversas")
+      .insert({ id_medico: medicoId, titulo, mensagens })
+      .select("id")
+      .single();
+    return data?.id ?? null;
+  } catch {
+    // não deixa uma falha ao salvar quebrar a resposta ao usuário
+    return conversaId;
+  }
+}
+
+export const Route = createFileRoute("/api/assistente-ia")({  server: {
     handlers: {
       POST: async ({ request }) => {
         const apiKey = process.env.LOVABLE_API_KEY;
@@ -658,9 +721,12 @@ export const Route = createFileRoute("/api/assistente-ia")({
             messages.push(msg);
             const calls = msg.tool_calls ?? [];
             if (!calls.length) {
+              const reply = (msg.content || "").trim();
+              const conversaId = await salvarConversa(supabaseAdmin, body.user_id || null, body.conversa_id || null, history, reply, apiKey);
               return Response.json({
-                reply: (msg.content || "").trim(),
+                reply,
                 action: pendingAction.value,
+                conversa_id: conversaId,
               });
             }
             for (const call of calls) {
@@ -686,6 +752,7 @@ export const Route = createFileRoute("/api/assistente-ia")({
           return Response.json({
             reply: "Não consegui concluir essa solicitação agora. Pode reformular?",
             action: pendingAction.value,
+            conversa_id: body.conversa_id || null,
           });
         } catch (err) {
           if (err instanceof Response) return err;
