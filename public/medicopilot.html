@@ -7546,18 +7546,6 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                   }
 
                         function iaAssistExecuteAction(action){ return iaExecuteAction(action); }
-  if(!action||!action.type)return;
-  if(action.type==='gerar_receita'){
-    const id=iaAssistRegisterAttachment('receita',action);
-    iaAssistAppendAttachmentCard(id,'Receita — '+(action.paciente_nome||'paciente'),'Toque para visualizar');
-  }else if(action.type==='gerar_atestado'){
-    const id=iaAssistRegisterAttachment('atestado',action);
-    const label=action.tipo==='declaracao'?'Declaração':'Atestado';
-    iaAssistAppendAttachmentCard(id,label+' — '+(action.paciente_nome||'paciente'),'Toque para visualizar');
-  }else{
-    console.log('[ia-assist] ação recebida (sem tratamento visual no front):',action);
-  }
-}
 
                                                 /* ========== RESUMO PANEL ========== */
                                                 function openResumoPanel(){
