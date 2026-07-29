@@ -16,6 +16,8 @@
     <script src="https://unpkg.com/@daily-co/daily-js"></script>
     <link rel="stylesheet" href="equipe.css" />
     <script src="equipe.js" defer></script>
+    <link rel="stylesheet" href="protocolos.css" />
+    <script src="protocolos.js" defer></script>
     <style>
                                                       *{box-sizing:border-box;margin:0;padding:0}
                                                       :root{
@@ -1745,6 +1747,9 @@
           <div class="sb-item" id="nav-receitas" onclick="goScreen('receitas')">
             <i class="ti ti-file-description"></i><span class="sb-lbl">Receitas e Atestados</span>
           </div>
+          <div class="sb-item" id="nav-protocolos" onclick="goScreen('protocolos')">
+            <i class="ti ti-clipboard-heart"></i><span class="sb-lbl">Protocolos</span>
+          </div>
           <div class="sb-item" id="nav-indicadores" onclick="goScreen('indicadores')">
             <i class="ti ti-chart-line"></i><span class="sb-lbl">Indicadores</span>
           </div>
@@ -3111,6 +3116,9 @@
               </div>
             </div>
           </div>
+
+          <!-- SCREEN: PROTOCOLOS -->
+          <div id="s-protocolos" style="display:none"></div>
 
           <!-- SCREEN: MINHA EQUIPE -->
           <div id="s-equipe" style="display:none"></div>
@@ -4537,7 +4545,7 @@
                                                             /* ========== SUPABASE ========== */
                                                             const SUPABASE_URL='https://lgsywisgyvgorppuoehy.supabase.co';
                                                             const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxnc3l3aXNneXZnb3JwcHVvZWh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNzY1NjgsImV4cCI6MjA5Njc1MjU2OH0.1bHdi8zXHDg8oxNWbqr8pcAadAVBfDEktSd6SchYCPw';
-                                                            const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+                                                            const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);window.sb=sb;
                                                             let currentUser=null;
                                                             let authMode='signin'; // 'signin' | 'signup'
                                                             let gruposCache=[];
@@ -4739,6 +4747,7 @@
                                                               if(name==='copiloto')loadCopilotoCfg();
                                                               if(name==='clinica')loadClinica();
                                                               if(name==='equipe'&&typeof initEquipe==='function')initEquipe();
+                                                              if(name==='protocolos'&&typeof initProtocolos==='function')initProtocolos();
                                                               if(['secretaria','anamnese','copiloto'].includes(name)){
                                                                 const g=document.getElementById('grp-ia');if(g)g.classList.add('open');
                                                               }
