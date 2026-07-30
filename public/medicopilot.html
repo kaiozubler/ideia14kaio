@@ -4690,6 +4690,7 @@
                                                               renderPatients(patients);
                                                               seedKanbanIfEmpty();
                                                               renderKanban();
+                                                              loadAgendamentos().then(()=>{renderKanban();if(typeof renderAgenda==='function'&&document.getElementById('ag-body'))renderAgenda();});
                                                             }
 
                                                             async function bootstrap(){
@@ -4805,7 +4806,7 @@
                                                               pt.style.cursor='';
                                                               pt.onclick=null;
                                                               document.getElementById('breadcrumb').innerHTML='';
-                                                              if(name==='atendimentos')renderKanban();
+                                                              if(name==='atendimentos'){renderKanban();loadAgendamentos().then(renderKanban);}
                                                   if(name==='receitas')loadReceitasScreen();
                                                   if(name==='conversas')initConversas();
                                                               if(name==='agenda')initAgenda();
@@ -10707,6 +10708,21 @@ let rxSelected = [];
                                                                   if(!p||!p.name.toLowerCase().includes(q))return false;
                                                                 }
                                                                 return true;
+                                                              }).map(k=>{
+                                                                const p=patients.find(x=>x.id===k.patient_id);
+                                                                return p?{id:k.id,patient_id:p.id,name:p.name,init:p.init,tag:p.conv||'Particular',scheduled_at:k.scheduled_at,status:k.status}:null;
+                                                              }).filter(Boolean);
+                                                              // agendamentos vindos do banco entram na coluna "Agendados"
+                                                              (AGENDAMENTOS||[]).forEach(a=>{
+                                                                const st=(a.status||'agendado').toLowerCase();
+                                                                if(st!=='agendado'&&st!=='confirmado')return;
+                                                                const d=new Date(a.data_hora);
+                                                                if(d<s||d>e)return;
+                                                                const p=patients.find(x=>x.id===a.paciente_id);
+                                                                const name=(p&&p.name)||a.paciente_nome||'Paciente';
+                                                                if(q&&!name.toLowerCase().includes(q))return;
+                                                                const init=(p&&p.init)||name.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+                                                                items.push({id:a.id,patient_id:a.paciente_id||null,name,init,tag:a.motivo||(p&&p.conv)||'Agenda',scheduled_at:a.data_hora,status:'agendado'});
                                                               });
                                                               const cols={agendado:[],aguardando:[],atendido:[]};
                                                               items.forEach(k=>{if(cols[k.status])cols[k.status].push(k);});
@@ -10718,20 +10734,19 @@ let rxSelected = [];
                                                                 if(!body)return;
                                                                 if(!cols[st].length){body.innerHTML='<div class="kcol-empty">Nenhum atendimento</div>';return;}
                                                                 body.innerHTML=cols[st].map(k=>{
-                                                                  const p=patients.find(x=>x.id===k.patient_id);
-                                                                  if(!p)return '';
                                                                   const d=new Date(k.scheduled_at);
                                                                   const dateStr=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
                                                                   const timeStr=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-                                                                  return `<div class="kcard" onclick="openPatient('${p.id}')">
+                                                                  const click=k.patient_id?`onclick="openPatient('${k.patient_id}')"`:'';
+                                                                  return `<div class="kcard" ${click}>
                                                                     <div class="kcard-top">
-                                                                      <div class="kcard-av">${p.init}</div>
-                                                                      <div class="kcard-name">${p.name}</div>
+                                                                      <div class="kcard-av">${k.init||'?'}</div>
+                                                                      <div class="kcard-name">${k.name}</div>
                                                                     </div>
                                                                     <div class="kcard-meta">
                                                                       <i class="ti ti-calendar"></i><span>${dateStr}</span>
                                                                       <i class="ti ti-clock"></i><span>${timeStr}</span>
-                                                                      <span class="kcard-tag">${p.conv||'Particular'}</span>
+                                                                      <span class="kcard-tag">${k.tag||'Particular'}</span>
                                                                     </div>
                                                                   </div>`;
                                                                 }).join('');
