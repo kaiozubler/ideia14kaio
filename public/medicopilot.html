@@ -2081,8 +2081,7 @@
               <div class="sec-hd" style="margin-top:0;border-top:0;padding-top:0">Dados pessoais</div>
               <div class="form-grid">
                 <div class="fld wide"><label>Nome completo</label><input type="text" id="d-nome" /></div>
-                <div class="fld"><label>CPF</label><input type="text" id="d-cpf" /></div>
-                <div class="fld"><label>Data de nascimento</label><input type="date" id="d-nasc" /></div>
+<div class="fld"><label>CPF</label><input type="text" id="d-cpf" placeholder="000.000.000-00" maxlength="14" /></div>                <div class="fld"><label>Data de nascimento</label><input type="date" id="d-nasc" /></div>
                 <div class="fld">
                   <label>Sexo</label>
                   <select id="d-sexo">
@@ -3512,7 +3511,7 @@
             <div class="fld wide">
               <label>Nome completo *</label><input type="text" id="np-nome" placeholder="Nome completo do paciente" />
             </div>
-            <div class="fld"><label>CPF</label><input type="text" id="np-cpf" placeholder="000.000.000-00" /></div>
+            <div class="fld"><label>CPF</label><input type="<div class="fld"><label>CPF</label><input type="text" id="np-cpf" placeholder="000.000.000-00" maxlength="14" /></div>" id="np-cpf" placeholder="000.000.000-00" /></div>
             <div class="fld"><label>Data de nascimento</label><input type="date" id="np-dob" /></div>
             <div class="fld">
               <label>Telefone *</label><input type="text" id="np-tel" placeholder="(00) 00000-0000" />
@@ -3614,8 +3613,7 @@
             <div class="fld wide">
               <label>Nome completo *</label><input type="text" id="ip-nome" placeholder="Nome completo do paciente" />
             </div>
-            <div class="fld"><label>CPF</label><input type="text" id="ip-cpf" placeholder="000.000.000-00" /></div>
-            <div class="fld">
+<div class="fld"><label>CPF</label><input type="text" id="ip-cpf" placeholder="000.000.000-00" maxlength="14" /></div>            <div class="fld">
               <label>Telefone</label><input type="text" id="ip-tel" placeholder="(00) 00000-0000" />
             </div>
           </div>
@@ -3799,8 +3797,7 @@
             </div>
             <div class="fld">
               <label>CPF do paciente</label>
-              <input type="text" id="gd-cpf" placeholder="000.000.000-00" oninput="onGdCpfChange()" />
-            </div>
+<input type="text" id="gd-cpf" placeholder="000.000.000-00" maxlength="14" oninput="onGdCpfChange()" />            </div>
             <div class="fld">
               <label>Telefone <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
               <input type="text" id="gd-telefone" placeholder="(00) 00000-0000" />
@@ -4609,6 +4606,7 @@
                                                           if(event==='SIGNED_OUT'){location.reload();}
                                                         });
                                                         initCepAutofillFields(); // <-- adicionar aqui
+                                                        initCpfMaskFields();
                                                       }
 
                                                             let atendimentos=[];
@@ -4963,6 +4961,7 @@
                                                         document.getElementById('d-nome').value=currentPatient.name;
                                                         document.getElementById('d-tel').value=currentPatient.tel;
                                                         document.getElementById('d-email').value=currentPatient.email;
+                                                        document.getElementById('d-cpf').value=formatCPF(currentPatient.cpf);
                                                         document.getElementById('d-mae').value=currentPatient.mae;
                                                         document.getElementById('d-pai').value=currentPatient.pai;
                                                         document.getElementById('d-cep').value=currentPatient.cep||'';
@@ -5047,45 +5046,35 @@
                                                       function initCepAutofillFields(){
                                                         ['d-','np-','cli-'].forEach(attachCepAutofill);
                                                       }
-                                                      async function saveCadastro(){
-                                                        if(!currentPatient||!currentUser)return;
-                                                        const addr=readEnderecoFields('d-');
-                                                        const payload={
-                                                          name:document.getElementById('d-nome')?.value.trim()||currentPatient.name,
-                                                          telefone:document.getElementById('d-tel')?.value.trim()||null,
-                                                          email:document.getElementById('d-email')?.value.trim()||null,
-                                                          mae:document.getElementById('d-mae')?.value.trim()||null,
-                                                          pai:document.getElementById('d-pai')?.value.trim()||null,
-                                                          cep:addr.cep||null,
-                                                          logradouro:addr.logradouro||null,
-                                                          numero:addr.numero||null,
-                                                          complemento:addr.complemento||null,
-                                                          bairro:addr.bairro||null,
-                                                          cidade:addr.cidade||null,
-                                                          uf:addr.uf||null,
-                                                          endereco:buildEnderecoConcat(addr),
-                                                          data_nascimento:document.getElementById('d-nasc')?.value||null,
-                                                          sus:document.getElementById('d-sus')?.value.trim()||null,
-                                                          convenio:document.getElementById('d-conv')?.value||'Particular',
-                                                          sexo:document.getElementById('d-sexo')?.value||null,
-                                                          medico:document.getElementById('d-medico')?.value||null,
-                                                          grupo:document.getElementById('d-grupo')?.value||null,
-                                                          ocupacao:document.getElementById('d-ocup')?.value.trim()||null
-                                                        };
-                                                        const {data,error}=await sb.from('pacientes').update(payload).eq('paciente_id',currentPatient.id).select('*').single();
-                                                        if(error){showToast('Erro ao salvar paciente: '+error.message,'error');return;}
-                                                        const updated=mapPatientRow(data);
-                                                        Object.assign(currentPatient,updated);
-                                                        patients=patients.map(p=>p.id===updated.id?updated:p);
-                                                        if(updated.grupo&&!gruposCache.includes(updated.grupo))saveGrupos([...gruposCache,updated.grupo]);
-                                                        const mb=document.getElementById('pth-medico');
-                                                        if(currentPatient.medico&&medicoNames[currentPatient.medico]){mb.textContent=medicoNames[currentPatient.medico];mb.style.display='';}
-                                                        else mb.style.display='none';
-                                                        await addTimelineEvent({date:new Date().toLocaleDateString('pt-BR'),type:'cadastro',icon:'ti-user-edit',title:'Cadastro atualizado',sub:'Dados alterados'});
-                                                        renderPatients(patients);renderTimeline();
-                                                        showToast('Dados do paciente salvos com sucesso','success');
-                                                            }
-                                                            function backToPatients(){saveAtendState();goScreen('patients');}
+                                                      // Formata uma string de CPF (com ou sem pontuação) para o padrão
+                                                      // xxx.xxx.xxx-xx, aplicando a máscara progressivamente enquanto o
+                                                      // usuário digita (aceita CPF incompleto).
+                                                      function formatCPF(value){
+                                                        const digits=String(value||'').replace(/\D/g,'').slice(0,11);
+                                                        let out=digits.slice(0,3);
+                                                        if(digits.length>3)out+='.'+digits.slice(3,6);
+                                                        if(digits.length>6)out+='.'+digits.slice(6,9);
+                                                        if(digits.length>9)out+='-'+digits.slice(9,11);
+                                                        return out;
+                                                      }
+                                                      // Aplica a máscara de CPF a um campo de input, formatando o valor
+                                                      // conforme o usuário digita e preservando a posição do cursor.
+                                                      function attachCpfMask(id){
+                                                        const el=document.getElementById(id);
+                                                        if(!el||el.dataset.cpfMaskBound)return;
+                                                        el.dataset.cpfMaskBound='1';
+                                                        el.addEventListener('input',()=>{
+                                                          const digitsBeforeCursor=el.value.slice(0,el.selectionStart).replace(/\D/g,'').length;
+                                                          el.value=formatCPF(el.value);
+                                                          let pos=0,seen=0;
+                                                          while(pos<el.value.length&&seen<digitsBeforeCursor){if(/\d/.test(el.value[pos]))seen++;pos++;}
+                                                          el.setSelectionRange(pos,pos);
+                                                        });
+                                                      }
+                                                      function initCpfMaskFields(){
+                                                        ['d-cpf','np-cpf','ip-cpf','gd-cpf'].forEach(attachCpfMask);
+                                                      }
+                                                      function backToPatients(){saveAtendState();goScreen('patients');}
                                                             function showToast(msg,type){
                                                               const el=document.getElementById('toast');
                                                               if(!el)return;
@@ -5101,6 +5090,7 @@
                                                                 name:document.getElementById('d-nome')?.value.trim()||currentPatient.name,
                                                                 telefone:document.getElementById('d-tel')?.value.trim()||null,
                                                                 email:document.getElementById('d-email')?.value.trim()||null,
+                                                                cpf:document.getElementById('d-cpf')?.value.trim()||null,
                                                                 mae:document.getElementById('d-mae')?.value.trim()||null,
                                                                 pai:document.getElementById('d-pai')?.value.trim()||null,
                                                                 cep:addr.cep||null,
@@ -5559,7 +5549,7 @@
                                                               const setV=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
                                                               setV('d-nome',currentPatient.name);
                                                               setV('d-tel',currentPatient.tel);
-                                                              setV('d-cpf',currentPatient.cpf);
+                                                              setV('d-cpf',formatCPF(currentPatient.cpf));
                                                               setV('d-email',currentPatient.email);
                                                               setV('d-mae',currentPatient.mae);
                                                               setV('d-pai',currentPatient.pai);
@@ -5584,7 +5574,7 @@
                                                               _pendingSaveOpts=opts||{finalize:true};
                                                               const setVal=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
                                                               setVal('ip-nome',currentPatient&&currentPatient.name);
-                                                              setVal('ip-cpf',currentPatient&&currentPatient.cpf);
+                                                              setVal('ip-cpf',formatCPF(currentPatient&&currentPatient.cpf));
                                                               setVal('ip-tel',currentPatient&&currentPatient.tel);
                                                               openModal('identificar-paciente');
                                                             }
@@ -10705,7 +10695,7 @@ let rxSelected = [];
                                                               document.getElementById('print-name').textContent='';document.getElementById('print-sub1').textContent='';
                                                               document.getElementById('print-sub2').textContent='';document.getElementById('print-sub3').textContent='';
                                                               document.getElementById('d-nome').value='';document.getElementById('d-tel').value='';
-                                                              document.getElementById('d-email').value='';document.getElementById('d-mae').value='';
+                                                              document.getElementById('d-email').value='';document.getElementById('d-cpf').value='';document.getElementById('d-mae').value='';
                                                               document.getElementById('d-pai').value='';document.getElementById('d-end').value='';
                                                               document.getElementById('d-nasc').value='';document.getElementById('d-sus').value='';
                                                               const cv=document.getElementById('d-conv');if(cv)cv.value='Particular';
