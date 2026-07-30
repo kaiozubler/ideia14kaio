@@ -3797,8 +3797,15 @@
             <div class="fld wide">
               <label>Nome do paciente *</label><input type="text" id="gd-nome" placeholder="Nome completo do paciente" />
             </div>
-            <div class="fld"><label>CPF do paciente</label><input type="text" id="gd-cpf" placeholder="000.000.000-00" /></div>
             <div class="fld">
+              <label>CPF do paciente</label>
+              <input type="text" id="gd-cpf" placeholder="000.000.000-00" oninput="onGdCpfChange()" />
+            </div>
+            <div class="fld">
+              <label>Telefone <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
+              <input type="text" id="gd-telefone" placeholder="(00) 00000-0000" />
+            </div>
+            <div class="fld wide">
               <label
                 >Data de nascimento <span id="gd-idade" style="font-weight:400;color:var(--n300)"></span
               ></label>
@@ -10163,11 +10170,35 @@ let rxSelected = [];
 
                                                 function abrirModalGerarDocumento() {
                                       const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
-                                      set('gd-nome', ''); set('gd-cpf', ''); set('gd-texto', ''); set('gd-nasc', '');
+                                      set('gd-nome', ''); set('gd-cpf', ''); set('gd-texto', ''); set('gd-nasc', ''); set('gd-telefone', '');
                                       const idadeEl = document.getElementById('gd-idade'); if (idadeEl) idadeEl.textContent = '';
                                       const tipoSel = document.getElementById('gd-tipo'); if (tipoSel) tipoSel.selectedIndex = 1;
                                       onGdTipoChange();
                                       openModal('gerar-documento');
+                                    }
+
+                                    /* Busca o paciente pelo CPF (com debounce) e preenche Nome, Data de
+                                       nascimento e Telefone automaticamente quando encontrado. */
+                                    let gdCpfSearchTimer = null;
+                                    function onGdCpfChange() {
+                                      clearTimeout(gdCpfSearchTimer);
+                                      const digits = (document.getElementById('gd-cpf').value || '').replace(/\D/g, '');
+                                      if (digits.length < 11) return;
+                                      gdCpfSearchTimer = setTimeout(() => buscarPacientePorCpfDocumento(digits), 400);
+                                    }
+                                    async function buscarPacientePorCpfDocumento(digits) {
+                                      try {
+                                        const { data, error } = await sb.from('pacientes').select('name,nasc,telefone,cpf').not('cpf', 'is', null);
+                                        if (error || !data) return;
+                                        const pac = data.find(p => (p.cpf || '').replace(/\D/g, '') === digits);
+                                        if (!pac) return;
+                                        const set = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+                                        set('gd-nome', pac.name);
+                                        set('gd-nasc', pac.nasc);
+                                        set('gd-telefone', pac.telefone);
+                                        onGdNascChange();
+                                        showToast && showToast('Paciente encontrado — dados preenchidos automaticamente', 'success');
+                                      } catch (e) { console.warn('Falha ao buscar paciente por CPF:', e); }
                                     }
 
                                     /* Alterna entre o campo de texto livre (atestado/laudo/etc.) e o
@@ -10212,6 +10243,7 @@ let rxSelected = [];
                                         name: nome,
                                         cpf: document.getElementById('gd-cpf').value.trim(),
                                         nasc: document.getElementById('gd-nasc').value,
+                                        tel: document.getElementById('gd-telefone').value.trim(),
                                       };
                                       openReceita();
                                     }
