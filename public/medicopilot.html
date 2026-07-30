@@ -11053,10 +11053,10 @@ let rxSelected = [];
                                                             function agDateKey(d){const pad=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
                                                             function agWeek(){
                                                               const t=agToday();const day=t.getDay();
-                                                              const monday=new Date(t);monday.setDate(t.getDate()+(day===0?-6:1-day));
+                                                              const first=new Date(t);first.setDate(t.getDate()-day); // domingo
                                                               const todayKey=agDateKey(t);const w=[];
                                                               for(let i=0;i<7;i++){
-                                                                const dt=new Date(monday);dt.setDate(monday.getDate()+i);
+                                                                const dt=new Date(first);dt.setDate(first.getDate()+i);
                                                                 w.push({date:agDateKey(dt),dayName:['Dom','Seg','Ter','Qua','Qui','Sex','Sab'][dt.getDay()],dayNum:dt.getDate(),isToday:agDateKey(dt)===todayKey});
                                                               }
                                                               return w;
