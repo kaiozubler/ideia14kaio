@@ -7406,14 +7406,17 @@ if(d.action){
                     const cidadeUf=[clinic.cidade,clinic.uf].filter(Boolean).join('/');
                     const addr=[[clinic.logradouro,clinic.numero].filter(Boolean).join(', '),clinic.complemento,clinic.bairro,cidadeUf,clinic.cep?('CEP '+clinic.cep):''].filter(Boolean).join(' · ');
 
-                    // completa idade/CPF a partir do cadastro do paciente, quando existir
-                    let patientAge='—', patientCpf='—';
-                    if(att.paciente_id){
-                      try{
-                        const {data}=await sb.from('pacientes').select('nasc,cpf').eq('paciente_id',att.paciente_id).maybeSingle();
-                        if(data){ if(data.nasc)patientAge=_rxIdade(data.nasc); if(data.cpf)patientCpf=data.cpf; }
-                      }catch(e){}
-                    }
+                    // usa CPF/idade que a própria IA já coletou na conversa; só cai para
+// o cadastro do paciente se, por algum motivo, não vieram na ação
+let patientAge='—', patientCpf='—';
+if(att.paciente_idade!=null && att.paciente_idade!=='') patientAge=att.paciente_idade+' anos';
+if(att.paciente_cpf) patientCpf=att.paciente_cpf;
+if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
+  try{
+    const {data}=await sb.from('pacientes').select('nasc,cpf').eq('paciente_id',att.paciente_id).maybeSingle();
+    if(data){ if(patientAge==='—'&&data.nasc)patientAge=_rxIdade(data.nasc); if(patientCpf==='—'&&data.cpf)patientCpf=data.cpf; }
+  }catch(e){}
+}
 
                     let html;
                     try{
