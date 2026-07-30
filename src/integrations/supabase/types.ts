@@ -343,6 +343,36 @@ export type Database = {
           },
         ]
       }
+      ia_assist_conversas: {
+        Row: {
+          created_at: string
+          favorito: boolean
+          id: string
+          id_medico: string
+          mensagens: Json
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          favorito?: boolean
+          id?: string
+          id_medico: string
+          mensagens?: Json
+          titulo?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          favorito?: boolean
+          id?: string
+          id_medico?: string
+          mensagens?: Json
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       interacoes: {
         Row: {
           acao: string | null
