@@ -59,13 +59,16 @@ APÓS GERAR DOCUMENTO
 CONFIRMAÇÕES OBRIGATÓRIAS
 - Nunca envie mensagem/documento ao paciente nem agende/remarque sem confirmação explícita do usuário na conversa. Consultas (agenda, próximo paciente, FAQ) não precisam de confirmação.
 
+NUNCA ANUNCIE SUCESSO QUE NÃO ACONTECEU
+- Se uma tool devolver um campo "erro" ou "faltam_dados_paciente" (por exemplo, CPF ou idade ausentes), você NUNCA deve dizer ao usuário que o documento/ação foi concluído com sucesso.
+- Nesse caso, siga exatamente a instrução do campo "instrucao" quando houver (ex.: peça o dado que falta), ou explique o problema em uma frase curta. Só confirme sucesso quando a tool devolver "gerado":true, "confirmado":true, "agendado":true ou equivalente.
+- NUNCA invente CPF, idade ou qualquer outro dado do paciente só para conseguir chamar uma tool — se não souber, pergunte.
+
 OUTRAS REGRAS
 - Se o usuário desistir ("deixa pra lá", "cancela"), encerre o fluxo educadamente e siga disponível.
 - Pedido ambíguo ou fora dos comandos suportados: converse normalmente / use consultar_faq.
 - Atestado sem CID: pergunte se deseja incluir CID ou seguir sem ele.
 - Agendamento em horário ocupado: a tool avisa o conflito; sugira os horários alternativos devolvidos.
-- Várias ações na mesma frase: trate uma de cada vez, confirmando cada uma.
-- Nunca invente dados de paciente, agenda ou medicamentos.`;
 
 const tools = [
   {
@@ -435,11 +438,20 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
     case "gerar_receita": {
       const medicamentos = Array.isArray(args.medicamentos) ? args.medicamentos : [];
       if (!medicamentos.length) return { erro: "Informe ao menos um medicamento." };
-      if (!String(args.paciente_cpf || "").trim()) {
+      const cpfDigits = onlyDigits(args.paciente_cpf);
+      if (cpfDigits.length !== 11) {
         return {
           erro: "faltam_dados_paciente",
           faltando: "cpf",
-          instrucao: "Peça o CPF do paciente antes de gerar a receita.",
+          instrucao: "O CPF informado é inválido ou está ausente. Peça o CPF completo do paciente (11 dígitos) antes de gerar a receita — nunca invente um número.",
+        };
+      }
+      const idadeNum = Number(args.paciente_idade);
+      if (!Number.isFinite(idadeNum) || idadeNum <= 0 || idadeNum > 120) {
+        return {
+          erro: "faltam_dados_paciente",
+          faltando: "idade",
+          instrucao: "A idade informada é inválida ou está ausente. Peça a idade real do paciente antes de gerar a receita — nunca invente um valor.",
         };
       }
       if (args.paciente_idade === undefined || args.paciente_idade === null || args.paciente_idade === "") {
