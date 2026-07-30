@@ -10078,10 +10078,6 @@ let rxSelected = [];
                                       if (card) card.style.display = '';
                                       if (empty) empty.style.display = 'none';
                                       list.innerHTML = filtered.map(d => {
-                                                  }
-                                                  if (card) card.style.display = '';
-                                                  if (empty) empty.style.display = 'none';
-                                                  list.innerHTML = filtered.map(d => {
                                                     const tipoMeta = DOC_TIPO_META[d.tipo] || { label: d.tipo, icon: 'ti-file' };
                                                     const stMeta = DOC_STATUS_META[d.status] || DOC_STATUS_META.nao_assinado;
                                                     return `
