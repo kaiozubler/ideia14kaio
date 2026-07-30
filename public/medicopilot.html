@@ -10976,15 +10976,44 @@ let rxSelected = [];
                                                               {id:5,name:'Dr. Ferreira',color:'#7B1FA2',specialty:'Neurologia'}
                                                             ];
                                                             const AG_SPECS=['Cardiologia','Pediatria','Ortopedia','Dermatologia','Neurologia'];
-                                                            const AG_APTS=[
-                                                              {id:1,patient:'João Silva',specialty:'Cardiologia',doctor:'Dr. Silva',doctorId:1,date:'2024-01-15',time:'09:00',confirmation:'confirmed',presence:'recebido',status:'realizado',isReturn:true,isRescheduled:false,hasEntry:true},
-                                                              {id:2,patient:'Maria Santos',specialty:'Pediatria',doctor:'Dra. Santos',doctorId:2,date:'2024-01-15',time:'10:30',confirmation:'pending',presence:'nao_recebido',status:'agendado',isReturn:false,isRescheduled:false,hasEntry:false},
-                                                              {id:3,patient:'Carlos Oliveira',specialty:'Ortopedia',doctor:'Dr. Oliveira',doctorId:3,date:'2024-01-15',time:'14:00',confirmation:'unconfirmed',presence:'faltoso',status:'faltou',isReturn:true,isRescheduled:true,hasEntry:false},
-                                                              {id:4,patient:'Ana Costa',specialty:'Dermatologia',doctor:'Dra. Costa',doctorId:4,date:'2024-01-15',time:'15:30',confirmation:'confirmed',presence:'recebido',status:'realizado',isReturn:false,isRescheduled:false,hasEntry:true},
-                                                              {id:5,patient:'Pedro Gomes',specialty:'Cardiologia',doctor:'Dr. Silva',doctorId:1,date:'2024-01-15',time:'08:00',confirmation:'confirmed',presence:'nao_recebido',status:'agendado',isReturn:false,isRescheduled:false,hasEntry:false},
-                                                              {id:6,patient:'Lucia Martins',specialty:'Neurologia',doctor:'Dr. Ferreira',doctorId:5,date:'2024-01-15',time:'11:00',confirmation:'pending',presence:'nao_recebido',status:'agendado',isReturn:true,isRescheduled:false,hasEntry:false},
-                                                              {id:7,patient:'Roberto Costa',specialty:'Ortopedia',doctor:'Dr. Oliveira',doctorId:3,date:'2024-01-15',time:'13:00',confirmation:'unconfirmed',presence:'nao_recebido',status:'agendado',isReturn:false,isRescheduled:false,hasEntry:false}
-                                                            ];
+                                                            let AG_APTS=[];
+                                                            let AGENDAMENTOS=[];
+                                                            function agDoctorName(){
+                                                              const md=(currentUser&&(currentUser.user_metadata||{}))||{};
+                                                              return md.full_name||md.name||(currentUser&&currentUser.email)||'Meu consultório';
+                                                            }
+                                                            function agMapRow(r){
+                                                              const d=new Date(r.data_hora);
+                                                              const pad=n=>String(n).padStart(2,'0');
+                                                              const pac=(patients||[]).find(x=>x.id===r.paciente_id);
+                                                              const st=(r.status||'agendado').toLowerCase();
+                                                              return {
+                                                                id:r.id,
+                                                                paciente_id:r.paciente_id||null,
+                                                                patient:(pac&&pac.name)||r.paciente_nome||'Paciente',
+                                                                specialty:r.motivo||'',
+                                                                doctor:agDoctorName(),
+                                                                doctorId:1,
+                                                                date:d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),
+                                                                dateObj:d,
+                                                                time:pad(d.getHours())+':'+pad(d.getMinutes()),
+                                                                hourSlot:pad(d.getHours())+':00',
+                                                                confirmation:st==='confirmado'?'confirmed':(st==='agendado'?'pending':'unconfirmed'),
+                                                                presence:st==='atendido'?'recebido':(st==='faltou'?'faltoso':'nao_recebido'),
+                                                                status:st==='atendido'?'realizado':st,
+                                                                isReturn:false,isRescheduled:false,
+                                                                hasEntry:st==='atendido'
+                                                              };
+                                                            }
+                                                            async function loadAgendamentos(){
+                                                              try{
+                                                                const {data,error}=await sb.from('agendamentos').select('*').order('data_hora',{ascending:true});
+                                                                if(error)throw error;
+                                                                AGENDAMENTOS=data||[];
+                                                                AG_APTS=AGENDAMENTOS.map(agMapRow).sort((a,b)=>a.dateObj-b.dateObj);
+                                                              }catch(e){console.error('agendamentos',e);AGENDAMENTOS=[];AG_APTS=[];}
+                                                              return AG_APTS;
+                                                            }
                                                             const AG_STATE={view:'weekly',doctor:'all',spec:'all',status:'all',conf:'all',openMenu:null,inited:false};
                                                             const AG_MENU=[
                                                               {label:'Dar entrada',icon:'ti-login'},
@@ -10997,15 +11026,23 @@ let rxSelected = [];
                                                             function agDocColor(id){return (AG_DOCTORS.find(d=>d.id===id)||{}).color||'#999';}
                                                             function agConfLabel(c){return {confirmed:'Confirmado',pending:'Aguardando confirmação',unconfirmed:'Não confirmado'}[c]||c;}
                                                             function agIsOverdue(a){
-                                                              const [h,m]=a.time.split(':').map(Number);
-                                                              const t=new Date();t.setHours(h,m,0,0);
+                                                              const t=a.dateObj?new Date(a.dateObj):null;
+                                                              if(!t)return false;
                                                               return new Date()>t && !a.hasEntry && a.status==='agendado';
                                                             }
-                                                            function agHours(){const h=[];for(let i=8;i<18;i++)h.push(String(i).padStart(2,'0')+':00');return h;}
+                                                            function agHours(apts){
+                                                              let min=8,max=18;
+                                                              (apts||[]).forEach(a=>{const h=parseInt(a.hourSlot);if(h<min)min=h;if(h+1>max)max=h+1;});
+                                                              const h=[];for(let i=min;i<max;i++)h.push(String(i).padStart(2,'0')+':00');return h;}
+                                                            function agToday(){const t=new Date();t.setHours(0,0,0,0);return t;}
+                                                            function agDateKey(d){const pad=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
                                                             function agWeek(){
-                                                              const t=new Date(2024,0,15);const w=[];const d=t.getDay();const diff=t.getDate()-d+(d===0?-6:1);
-                                                              for(let i=0;i<7;i++){const dt=new Date(2024,0,1);dt.setDate(diff+i);
-                                                                w.push({date:dt.toISOString().split('T')[0],dayName:['Dom','Seg','Ter','Qua','Qui','Sex','Sab'][dt.getDay()],dayNum:dt.getDate()});
+                                                              const t=agToday();const day=t.getDay();
+                                                              const monday=new Date(t);monday.setDate(t.getDate()+(day===0?-6:1-day));
+                                                              const todayKey=agDateKey(t);const w=[];
+                                                              for(let i=0;i<7;i++){
+                                                                const dt=new Date(monday);dt.setDate(monday.getDate()+i);
+                                                                w.push({date:agDateKey(dt),dayName:['Dom','Seg','Ter','Qua','Qui','Sex','Sab'][dt.getDay()],dayNum:dt.getDate(),isToday:agDateKey(dt)===todayKey});
                                                               }
                                                               return w;
                                                             }
@@ -11022,6 +11059,7 @@ let rxSelected = [];
                                                                 AG_STATE.inited=true;
                                                               }
                                                               renderAgenda();
+                                                              loadAgendamentos().then(renderAgenda);
                                                             }
                                                             function setAgendaView(v){AG_STATE.view=v;document.querySelectorAll('.ag-views button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));renderAgenda();}
                                                             function agToggleAdv(e){e&&e.stopPropagation();const a=document.getElementById('ag-adv');const open=a.style.display==='none';a.style.display=open?'block':'none';document.getElementById('ag-fbtn').classList.toggle('active',open);}
@@ -11033,8 +11071,8 @@ let rxSelected = [];
                                                               const q=(document.getElementById('ag-search')?.value||'').toLowerCase();
                                                               const doc=document.getElementById('ag-doctor')?.value||'all';
                                                               return AG_APTS.filter(a=>{
-                                                                const mq=!q||a.patient.toLowerCase().includes(q)||a.specialty.toLowerCase().includes(q)||a.doctor.toLowerCase().includes(q);
-                                                                const md=doc==='all'||a.doctorId===parseInt(doc);
+                                                                const mq=!q||(a.patient||'').toLowerCase().includes(q)||(a.specialty||'').toLowerCase().includes(q)||(a.doctor||'').toLowerCase().includes(q);
+                                                                const md=doc==='all';
                                                                 const ms=AG_STATE.spec==='all'||a.specialty===AG_STATE.spec;
                                                                 const mt=AG_STATE.status==='all'||a.status===AG_STATE.status;
                                                                 const mc=AG_STATE.conf==='all'||a.confirmation===AG_STATE.conf;
@@ -11071,12 +11109,16 @@ let rxSelected = [];
                                                               return renderAgCards(body,apts);
                                                             }
                                                             function renderAgWeekly(body,apts){
-                                                              const week=agWeek();const hours=agHours();
-                                                              const byKey={};apts.forEach(a=>{const k=a.date+'-'+a.time;(byKey[k]=byKey[k]||[]).push(a);});
+                                                              const week=agWeek();
+                                                              const days=week.map(d=>d.date);
+                                                              apts=apts.filter(a=>days.includes(a.date)).sort((a,b)=>a.dateObj-b.dateObj);
+                                                              const hours=agHours(apts);
+                                                              if(!apts.length){body.innerHTML=`<div class="ag-empty"><i class="ti ti-calendar-off" style="font-size:32px"></i><p>Nenhum agendamento nesta semana</p></div>`;return;}
+                                                              const byKey={};apts.forEach(a=>{const k=a.date+'-'+a.hourSlot;(byKey[k]=byKey[k]||[]).push(a);});
                                                               const cols='80px '+week.map(()=>'1fr').join(' ');
                                                               let html=`<div class="ag-grid" style="grid-template-columns:${cols}">`;
                                                               html+=`<div class="ag-h"></div>`;
-                                                              week.forEach((d,i)=>{html+=`<div class="ag-h ${i===0?'today':''}">${i===0?'<span class="ag-badge">Hoje</span>':''}<div class="ag-day">${d.dayName}</div><div class="ag-dnum">${String(d.dayNum).padStart(2,'0')}</div></div>`;});
+                                                              week.forEach((d,i)=>{html+=`<div class="ag-h ${d.isToday?'today':''}">${d.isToday?'<span class="ag-badge">Hoje</span>':''}<div class="ag-day">${d.dayName}</div><div class="ag-dnum">${String(d.dayNum).padStart(2,'0')}</div></div>`;});
                                                               hours.forEach(h=>{
                                                                 html+=`<div class="ag-hourcell">${h}</div>`;
                                                                 week.forEach(d=>{const list=byKey[d.date+'-'+h]||[];html+=`<div class="ag-cell">${list.map(agCardHtml).join('')}</div>`;});
@@ -11084,9 +11126,12 @@ let rxSelected = [];
                                                               html+='</div>';body.innerHTML=html;
                                                             }
                                                             function renderAgDaily(body,apts){
-                                                              const hours=agHours();
-                                                              const byDT={};apts.forEach(a=>{(byDT[a.doctorId]=byDT[a.doctorId]||{});(byDT[a.doctorId][a.time]=byDT[a.doctorId][a.time]||[]).push(a);});
-                                                              const docs=Object.keys(byDT).map(id=>AG_DOCTORS.find(d=>d.id===parseInt(id))).filter(Boolean);
+                                                              const todayKey=agDateKey(agToday());
+                                                              apts=apts.filter(a=>a.date===todayKey).sort((a,b)=>a.dateObj-b.dateObj);
+                                                              if(!apts.length){body.innerHTML=`<div class="ag-empty"><i class="ti ti-calendar-off" style="font-size:32px"></i><p>Nenhum agendamento para hoje</p></div>`;return;}
+                                                              const hours=agHours(apts);
+                                                              const byDT={};apts.forEach(a=>{(byDT[a.doctorId]=byDT[a.doctorId]||{});(byDT[a.doctorId][a.hourSlot]=byDT[a.doctorId][a.hourSlot]||[]).push(a);});
+                                                              const docs=Object.keys(byDT).map(id=>AG_DOCTORS.find(d=>d.id===parseInt(id))||{id:parseInt(id),name:agDoctorName(),color:'#2E7D32',specialty:''});
                                                               if(!docs.length){body.innerHTML=`<div class="ag-empty"><p>Nenhum médico com agendamentos</p></div>`;return;}
                                                               const cols='80px '+docs.map(()=>'minmax(180px,1fr)').join(' ');
                                                               let html=`<div class="ag-grid" style="grid-template-columns:${cols}">`;
@@ -11099,6 +11144,9 @@ let rxSelected = [];
                                                               html+='</div>';body.innerHTML=html;
                                                             }
                                                             function renderAgCards(body,apts){
+                                                              const now=new Date();const pref=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+                                                              apts=apts.filter(a=>a.date.startsWith(pref)).sort((a,b)=>a.dateObj-b.dateObj);
+                                                              if(!apts.length){body.innerHTML=`<div class="ag-empty"><i class="ti ti-calendar-off" style="font-size:32px"></i><p>Nenhum agendamento neste mês</p></div>`;return;}
                                                               body.style.background='transparent';body.style.border='none';body.style.boxShadow='none';
                                                               const html=`<div class="ag-cards">`+apts.map(a=>{
                                                                 const ov=agIsOverdue(a);const col=agDocColor(a.doctorId);
