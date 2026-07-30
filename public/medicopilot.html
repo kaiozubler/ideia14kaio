@@ -7439,8 +7439,11 @@ async function sendIaAssistMsg(){
     iaAssistHistory.push({role:'assistant',content:reply});
     removeIaAssistTyping(typingId);
     spawnIaAssistBubble('ia',reply);
-    if(d.action)iaAssistExecuteAction(d.action);
-    if(d.conversa_id&&d.conversa_id!==iaAssistConversaId){
+if(d.action){
+  iaAssistExecuteAction(d.action);
+}else if(/receita|atestado|declara[cç][aã]o/i.test(reply)&&/(gerad[ao]|criad[ao]|pronto|sucesso)/i.test(reply)){
+  spawnIaAssistBubble('ia','⚠️ Não recebi a confirmação de que o documento foi realmente gerado. Confirme se já informou o CPF e a idade do paciente e tente novamente.');
+}    if(d.conversa_id&&d.conversa_id!==iaAssistConversaId){
       iaAssistConversaId=d.conversa_id;
       iaAssistLoadTopics();
     }
