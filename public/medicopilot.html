@@ -168,6 +168,45 @@
                                                       .kcard-meta .ti{font-size:12px}
                                                       .kcard-tag{font-size:10px;padding:1px 6px;border-radius:var(--r4);background:var(--n75);color:var(--n500);border:0.5px solid var(--n200)}
                                                       .kcol-empty{padding:24px 12px;text-align:center;color:var(--n400);font-size:11.5px}
+                                                     /* ==== Kanban 2.0: config de etapa + cards ricos + drag&drop ==== */
+                                                     .kcol-cfg{margin-left:6px;width:22px;height:22px;border-radius:var(--r4);border:0;background:transparent;color:var(--n400);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px}
+                                                     .kcol-cfg:hover{background:var(--n100);color:var(--n700)}
+                                                     .kcol.drag-over{outline:2px dashed var(--g400);outline-offset:-3px}
+                                                     .kcol.drag-block{outline:2px dashed #dc2626;outline-offset:-3px}
+                                                     .kcard.dragging{opacity:.45}
+                                                     .kcard-hd{display:flex;align-items:flex-start;gap:8px}
+                                                     .kcard-hd .kcard-av{margin-top:1px}
+                                                     .kcard-id{flex:1;min-width:0}
+                                                     .kcard-doc{font-size:10.5px;color:var(--n500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+                                                     .kcard-menu-btn{width:22px;height:22px;border:0;background:transparent;color:var(--n400);border-radius:var(--r4);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+                                                     .kcard-menu-btn:hover{background:var(--n100);color:var(--n700)}
+                                                     .kcard-rows{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:8px;font-size:11px;color:var(--n500)}
+                                                     .kcard-rows .ti{font-size:12px;margin-right:2px}
+                                                     .kcard-wait{font-variant-numeric:tabular-nums}
+                                                     .kcard-badges{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
+                                                     .kbadge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;border:0.5px solid transparent}
+                                                     .kbadge .dot{width:6px;height:6px;border-radius:50%}
+                                                     .kbadge.ok{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+                                                     .kbadge.ok .dot{background:#16a34a}
+                                                     .kbadge.warn{background:#fef3c7;color:#92400e;border-color:#fde68a}
+                                                     .kbadge.warn .dot{background:#d97706}
+                                                     .kbadge.bad{background:#fee2e2;color:#991b1b;border-color:#fecaca}
+                                                     .kbadge.bad .dot{background:#dc2626}
+                                                     .kbadge.neutral{background:var(--n75);color:var(--n500);border-color:var(--n200)}
+                                                     .kcard-money{margin-left:auto;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums}
+                                                     .kcard-money.paid{color:#16a34a}
+                                                     .kcard-money.due{color:#dc2626}
+                                                     .kcard-actions{display:flex;align-items:center;gap:6px;margin-top:10px}
+                                                     .kcard-cta{flex:1;height:28px;border-radius:var(--r6,6px);border:0.5px solid var(--g300);background:var(--g500,#0f766e);color:#fff;font-size:11.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px}
+                                                     .kcard-cta:hover{filter:brightness(1.06)}
+                                                     .kcard-cta.ghost{background:var(--white);color:var(--n700);border-color:var(--n200)}
+                                                     .kpop{position:fixed;z-index:9999;min-width:190px;background:var(--white);border:0.5px solid var(--n200);border-radius:var(--r8);box-shadow:0 12px 30px -8px rgba(15,42,80,.28);padding:5px;display:none}
+                                                     .kpop.open{display:block}
+                                                     .kpop button{width:100%;display:flex;align-items:center;gap:8px;padding:7px 9px;border:0;background:transparent;border-radius:var(--r6,6px);font-size:12px;color:var(--n700);cursor:pointer;text-align:left}
+                                                     .kpop button:hover{background:var(--n75)}
+                                                     .kmulti{border:0.5px solid var(--n200);border-radius:var(--r6,6px);padding:6px;max-height:118px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;background:var(--white)}
+                                                     .kmulti label{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--n700);font-weight:400;cursor:pointer;padding:2px 4px}
+                                                     .kcfg-sec{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--n400);margin:4px 0 2px}
 
                                                       /* PATIENT HEADER */
                                                       .pt-hdr-card{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12);padding:10px 14px;display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-shrink:0;min-height:64px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
