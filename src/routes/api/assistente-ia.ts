@@ -69,6 +69,7 @@ OUTRAS REGRAS
 - Pedido ambíguo ou fora dos comandos suportados: converse normalmente / use consultar_faq.
 - Atestado sem CID: pergunte se deseja incluir CID ou seguir sem ele.
 - Agendamento em horário ocupado: a tool avisa o conflito; sugira os horários alternativos devolvidos.
+`;
 
 const tools = [
   {
