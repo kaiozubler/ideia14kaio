@@ -168,6 +168,45 @@
                                                       .kcard-meta .ti{font-size:12px}
                                                       .kcard-tag{font-size:10px;padding:1px 6px;border-radius:var(--r4);background:var(--n75);color:var(--n500);border:0.5px solid var(--n200)}
                                                       .kcol-empty{padding:24px 12px;text-align:center;color:var(--n400);font-size:11.5px}
+                                                     /* ==== Kanban 2.0: config de etapa + cards ricos + drag&drop ==== */
+                                                     .kcol-cfg{margin-left:6px;width:22px;height:22px;border-radius:var(--r4);border:0;background:transparent;color:var(--n400);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px}
+                                                     .kcol-cfg:hover{background:var(--n100);color:var(--n700)}
+                                                     .kcol.drag-over{outline:2px dashed var(--g400);outline-offset:-3px}
+                                                     .kcol.drag-block{outline:2px dashed #dc2626;outline-offset:-3px}
+                                                     .kcard.dragging{opacity:.45}
+                                                     .kcard-hd{display:flex;align-items:flex-start;gap:8px}
+                                                     .kcard-hd .kcard-av{margin-top:1px}
+                                                     .kcard-id{flex:1;min-width:0}
+                                                     .kcard-doc{font-size:10.5px;color:var(--n500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+                                                     .kcard-menu-btn{width:22px;height:22px;border:0;background:transparent;color:var(--n400);border-radius:var(--r4);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+                                                     .kcard-menu-btn:hover{background:var(--n100);color:var(--n700)}
+                                                     .kcard-rows{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:8px;font-size:11px;color:var(--n500)}
+                                                     .kcard-rows .ti{font-size:12px;margin-right:2px}
+                                                     .kcard-wait{font-variant-numeric:tabular-nums}
+                                                     .kcard-badges{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
+                                                     .kbadge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;border:0.5px solid transparent}
+                                                     .kbadge .dot{width:6px;height:6px;border-radius:50%}
+                                                     .kbadge.ok{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+                                                     .kbadge.ok .dot{background:#16a34a}
+                                                     .kbadge.warn{background:#fef3c7;color:#92400e;border-color:#fde68a}
+                                                     .kbadge.warn .dot{background:#d97706}
+                                                     .kbadge.bad{background:#fee2e2;color:#991b1b;border-color:#fecaca}
+                                                     .kbadge.bad .dot{background:#dc2626}
+                                                     .kbadge.neutral{background:var(--n75);color:var(--n500);border-color:var(--n200)}
+                                                     .kcard-money{margin-left:auto;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums}
+                                                     .kcard-money.paid{color:#16a34a}
+                                                     .kcard-money.due{color:#dc2626}
+                                                     .kcard-actions{display:flex;align-items:center;gap:6px;margin-top:10px}
+                                                     .kcard-cta{flex:1;height:28px;border-radius:var(--r6,6px);border:0.5px solid var(--g300);background:var(--g500,#0f766e);color:#fff;font-size:11.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px}
+                                                     .kcard-cta:hover{filter:brightness(1.06)}
+                                                     .kcard-cta.ghost{background:var(--white);color:var(--n700);border-color:var(--n200)}
+                                                     .kpop{position:fixed;z-index:9999;min-width:190px;background:var(--white);border:0.5px solid var(--n200);border-radius:var(--r8);box-shadow:0 12px 30px -8px rgba(15,42,80,.28);padding:5px;display:none}
+                                                     .kpop.open{display:block}
+                                                     .kpop button{width:100%;display:flex;align-items:center;gap:8px;padding:7px 9px;border:0;background:transparent;border-radius:var(--r6,6px);font-size:12px;color:var(--n700);cursor:pointer;text-align:left}
+                                                     .kpop button:hover{background:var(--n75)}
+                                                     .kmulti{border:0.5px solid var(--n200);border-radius:var(--r6,6px);padding:6px;max-height:118px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;background:var(--white)}
+                                                     .kmulti label{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--n700);font-weight:400;cursor:pointer;padding:2px 4px}
+                                                     .kcfg-sec{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--n400);margin:4px 0 2px}
 
                                                       /* PATIENT HEADER */
                                                       .pt-hdr-card{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12);padding:10px 14px;display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-shrink:0;min-height:64px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
@@ -1900,22 +1939,31 @@
               <div class="kanban">
                 <div class="kcol">
                   <div class="kcol-hd">
-                    <span class="kcol-dot ag"></span><span class="kcol-title">Agendados</span
+                    <span class="kcol-dot ag" id="kdot-agendado"></span><span class="kcol-title" id="ktitle-agendado">Agendados</span
                     ><span class="kcol-ct" id="kct-agendado">0</span>
+                    <button class="kcol-cfg" title="Configurações da etapa" onclick="openKcolCfg('agendado')">
+                      <i class="ti ti-dots-vertical"></i>
+                    </button>
                   </div>
                   <div class="kcol-body" id="kcol-agendado"></div>
                 </div>
                 <div class="kcol">
                   <div class="kcol-hd">
-                    <span class="kcol-dot aw"></span><span class="kcol-title">Aguardando</span
+                    <span class="kcol-dot aw" id="kdot-aguardando"></span><span class="kcol-title" id="ktitle-aguardando">Aguardando</span
                     ><span class="kcol-ct" id="kct-aguardando">0</span>
+                    <button class="kcol-cfg" title="Configurações da etapa" onclick="openKcolCfg('aguardando')">
+                      <i class="ti ti-dots-vertical"></i>
+                    </button>
                   </div>
                   <div class="kcol-body" id="kcol-aguardando"></div>
                 </div>
                 <div class="kcol">
                   <div class="kcol-hd">
-                    <span class="kcol-dot at"></span><span class="kcol-title">Atendidos</span
+                    <span class="kcol-dot at" id="kdot-atendido"></span><span class="kcol-title" id="ktitle-atendido">Atendidos</span
                     ><span class="kcol-ct" id="kct-atendido">0</span>
+                    <button class="kcol-cfg" title="Configurações da etapa" onclick="openKcolCfg('atendido')">
+                      <i class="ti ti-dots-vertical"></i>
+                    </button>
                   </div>
                   <div class="kcol-body" id="kcol-atendido"></div>
                 </div>
@@ -3497,6 +3545,124 @@
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- CONFIGURAÇÕES DA ETAPA (KANBAN) -->
+      <div class="modal" id="m-kcol-cfg" style="display:none;width:560px">
+        <div class="mhd">
+          <span class="mhd-title">Configurações da etapa</span
+          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody">
+          <div class="form-grid">
+            <div class="fld"><label>Nome da etapa</label><input type="text" id="kcfg-name" /></div>
+            <div class="fld"><label>Cor</label><input type="color" id="kcfg-color" style="height:34px;padding:2px" /></div>
+            <div class="fld wide kcfg-sec">Gatilhos</div>
+            <div class="fld wide">
+              <label style="display:flex;align-items:center;gap:8px;font-weight:400">
+                <input type="checkbox" id="kcfg-trg-notify" /> Notificar usuários quando um paciente entrar nesta etapa
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:6px">
+                <input type="checkbox" id="kcfg-trg-confirm" /> Enviar confirmação ao paciente ao entrar nesta etapa
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:6px">
+                <input type="checkbox" id="kcfg-trg-charge" /> Alertar pendência financeira ao entrar nesta etapa
+              </label>
+            </div>
+            <div class="fld wide kcfg-sec">Atalho e destino</div>
+            <div class="fld">
+              <label>Atalho em destaque no card</label>
+              <select id="kcfg-shortcut">
+                <option value="entrada">Dar entrada</option>
+                <option value="atender">Atender</option>
+                <option value="cobrar">Cobrar</option>
+                <option value="reagendar">Reagendar</option>
+                <option value="confirmar">Confirmar agenda</option>
+                <option value="confirmado">Confirmado</option>
+                <option value="">Nenhum</option>
+              </select>
+            </div>
+            <div class="fld">
+              <label>Encaminhar card para a etapa</label>
+              <select id="kcfg-target"></select>
+            </div>
+            <div class="fld wide">
+              <label>Mover para etapa fará qual ação</label>
+              <select id="kcfg-onmove">
+                <option value="none">Nenhuma ação</option>
+                <option value="entrada">Registrar entrada do paciente</option>
+                <option value="atender">Iniciar atendimento</option>
+                <option value="cobrar">Abrir cobrança</option>
+                <option value="confirmar">Enviar confirmação ao paciente</option>
+              </select>
+            </div>
+            <div class="fld wide kcfg-sec">Permissões</div>
+            <div class="fld">
+              <label>Usuários que podem visualizar a etapa</label>
+              <div class="kmulti" id="kcfg-viewers"></div>
+            </div>
+            <div class="fld">
+              <label>Usuários que podem mover para esta etapa</label>
+              <div class="kmulti" id="kcfg-movers"></div>
+            </div>
+            <div class="fld wide">
+              <label>Etapas para as quais o card pode ser movido (regra de negócio)</label>
+              <div class="kmulti" id="kcfg-allowed"></div>
+            </div>
+          </div>
+        </div>
+        <div class="mfoot">
+          <button class="btn" onclick="closeModal()">Cancelar</button>
+          <button class="btn primary" onclick="saveKcolCfg()"><i class="ti ti-check"></i> Salvar etapa</button>
+        </div>
+      </div>
+
+      <!-- DAR ENTRADA -->
+      <div class="modal" id="m-dar-entrada" style="display:none;width:520px">
+        <div class="mhd">
+          <span class="mhd-title">Dar entrada — <span id="kde-patient">Paciente</span></span
+          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody">
+          <div class="form-grid">
+            <div class="fld"><label>Médico</label><select id="kde-medico"></select></div>
+            <div class="fld"><label>Especialidade</label><input type="text" id="kde-esp" placeholder="Ex: Cardiologia" /></div>
+            <div class="fld wide"><label>Descrição curta</label><input type="text" id="kde-desc" placeholder="Motivo da consulta" /></div>
+            <div class="fld"><label>Valor da consulta (R$)</label><input type="number" id="kde-valor" step="0.01" min="0" /></div>
+            <div class="fld">
+              <label>Plano ou convênio</label>
+              <select id="kde-conv">
+                <option>Particular</option>
+                <option>SUS</option>
+                <option>Unimed</option>
+                <option>Bradesco</option>
+                <option>Amil</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="mfoot">
+          <button class="btn" onclick="closeModal()">Cancelar</button>
+          <button class="btn primary" onclick="submitDarEntrada()"><i class="ti ti-login"></i> Enviar</button>
+        </div>
+      </div>
+
+      <!-- PENDÊNCIA FINANCEIRA -->
+      <div class="modal" id="m-pendencia-financeira" style="display:none;width:440px">
+        <div class="mhd">
+          <span class="mhd-title">Consulta não paga</span
+          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody">
+          <p style="font-size:12.5px;color:var(--n600);line-height:1.6">
+            Há valor em aberto de <strong id="kpf-valor" style="color:#dc2626">R$ 0,00</strong> para
+            <strong id="kpf-nome">o paciente</strong>. Como deseja prosseguir?
+          </p>
+        </div>
+        <div class="mfoot">
+          <button class="btn" onclick="pendenciaDarEntrada()">Dar entrada</button>
+          <button class="btn primary" onclick="pendenciaCobrar()"><i class="ti ti-cash"></i> Cobrar</button>
         </div>
       </div>
 
@@ -10638,7 +10804,7 @@ let rxSelected = [];
                                                                 return true;
                                                               }).map(k=>{
                                                                 const p=patients.find(x=>x.id===k.patient_id);
-                                                                return p?{id:k.id,patient_id:p.id,name:p.name,init:p.init,tag:p.conv||'Particular',scheduled_at:k.scheduled_at,status:k.status}:null;
+                                                                return p?{id:k.id,patient_id:p.id,name:p.name,init:p.init,tag:p.conv||'Particular',medico:p.medico||'',scheduled_at:k.scheduled_at,status:k.status}:null;
                                                               }).filter(Boolean);
                                                               // agendamentos vindos do banco entram na coluna "Agendados"
                                                               (AGENDAMENTOS||[]).forEach(a=>{
@@ -10650,7 +10816,7 @@ let rxSelected = [];
                                                                 const name=(p&&p.name)||a.paciente_nome||'Paciente';
                                                                 if(q&&!name.toLowerCase().includes(q))return;
                                                                 const init=(p&&p.init)||name.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
-                                                                items.push({id:a.id,patient_id:a.paciente_id||null,name,init,tag:a.motivo||(p&&p.conv)||'Agenda',scheduled_at:a.data_hora,status:'agendado'});
+                                                                items.push({id:a.id,patient_id:a.paciente_id||null,name,init,tag:a.motivo||(p&&p.conv)||'Agenda',medico:(p&&p.medico)||'',scheduled_at:a.data_hora,status:'agendado'});
                                                               });
                                                               const cols={agendado:[],aguardando:[],atendido:[]};
                                                               items.forEach(k=>{if(cols[k.status])cols[k.status].push(k);});
@@ -10660,25 +10826,311 @@ let rxSelected = [];
                                                                 const ct=document.getElementById('kct-'+st);
                                                                 if(ct)ct.textContent=cols[st].length;
                                                                 if(!body)return;
+                                                                if(!kStageVisible(st)){body.innerHTML='<div class="kcol-empty">Etapa restrita para o seu usuário</div>';return;}
                                                                 if(!cols[st].length){body.innerHTML='<div class="kcol-empty">Nenhum atendimento</div>';return;}
-                                                                body.innerHTML=cols[st].map(k=>{
-                                                                  const d=new Date(k.scheduled_at);
-                                                                  const dateStr=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
-                                                                  const timeStr=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-                                                                  const click=k.patient_id?`onclick="openPatient('${k.patient_id}')"`:'';
-                                                                  return `<div class="kcard" ${click}>
-                                                                    <div class="kcard-top">
-                                                                      <div class="kcard-av">${k.init||'?'}</div>
-                                                                      <div class="kcard-name">${k.name}</div>
-                                                                    </div>
-                                                                    <div class="kcard-meta">
-                                                                      <i class="ti ti-calendar"></i><span>${dateStr}</span>
-                                                                      <i class="ti ti-clock"></i><span>${timeStr}</span>
-                                                                      <span class="kcard-tag">${k.tag||'Particular'}</span>
-                                                                    </div>
-                                                                  </div>`;
-                                                                }).join('');
+                                                                body.innerHTML=cols[st].map(k=>kCardHtml(k,st)).join('');
                                                               });
+                                                              kApplyStageHeaders();
+                                                              kBindDnD();
+                                                            }
+
+                                                            /* ---------- Kanban: etapas, configurações e ações ---------- */
+                                                            const KSTAGES=[
+                                                              {key:'agendado',label:'Agendados',color:'#2563eb',shortcut:'entrada'},
+                                                              {key:'aguardando',label:'Aguardando',color:'#d97706',shortcut:'atender'},
+                                                              {key:'atendido',label:'Atendidos',color:'#16a34a',shortcut:'cobrar'}
+                                                            ];
+                                                            const KACTIONS={
+                                                              reagendar:{label:'Reagendar',icon:'ti-calendar-event'},
+                                                              confirmar:{label:'Confirmar agenda',icon:'ti-send'},
+                                                              entrada:{label:'Dar entrada',icon:'ti-login'},
+                                                              atender:{label:'Atender',icon:'ti-stethoscope'},
+                                                              cobrar:{label:'Cobrar',icon:'ti-cash'},
+                                                              confirmado:{label:'Confirmado',icon:'ti-check'}
+                                                            };
+                                                            function kDefaultCfg(st){
+                                                              const base=KSTAGES.find(x=>x.key===st)||KSTAGES[0];
+                                                              return {name:base.label,color:base.color,shortcut:base.shortcut,target:'',onmove:'none',
+                                                                triggers:{notify:false,confirm:false,charge:false},viewers:[],movers:[],
+                                                                allowed:KSTAGES.map(x=>x.key).filter(x=>x!==st)};
+                                                            }
+                                                            function loadKcolsCfg(){
+                                                              let saved={};try{saved=JSON.parse(localStorage.getItem('kanbanColsCfg')||'{}')||{};}catch(e){saved={};}
+                                                              const out={};
+                                                              KSTAGES.forEach(s=>{out[s.key]=Object.assign(kDefaultCfg(s.key),saved[s.key]||{});});
+                                                              return out;
+                                                            }
+                                                            function saveKcolsCfg(cfg){localStorage.setItem('kanbanColsCfg',JSON.stringify(cfg));}
+                                                            function kCfg(st){return loadKcolsCfg()[st]||kDefaultCfg(st);}
+                                                            function kUsers(){
+                                                              let list=[];
+                                                              try{
+                                                                if(Array.isArray(window.EQUIPE_USERS))list=window.EQUIPE_USERS;
+                                                                else list=JSON.parse(localStorage.getItem('equipeUsuarios')||'[]');
+                                                              }catch(e){list=[];}
+                                                              list=(list||[]).map(u=>({id:String(u.id||u.user_id||u.email||u.nome||u.name||''),name:u.nome||u.name||u.email||'Usuário'})).filter(u=>u.id);
+                                                              const me=(window.currentUser&&(currentUser.name||currentUser.email))||'Você';
+                                                              const meId=(window.currentUser&&(currentUser.id||currentUser.email))||'me';
+                                                              if(!list.some(u=>u.id===String(meId)))list.unshift({id:String(meId),name:me});
+                                                              return list;
+                                                            }
+                                                            function kMeId(){return String((window.currentUser&&(currentUser.id||currentUser.email))||'me');}
+                                                            function kStageVisible(st){const c=kCfg(st);return !c.viewers.length||c.viewers.includes(kMeId());}
+                                                            function kCanMoveTo(from,to){
+                                                              if(from===to)return true;
+                                                              const cf=kCfg(from),ct=kCfg(to);
+                                                              if(cf.allowed.length&&!cf.allowed.includes(to))return false;
+                                                              if(ct.movers.length&&!ct.movers.includes(kMeId()))return false;
+                                                              return true;
+                                                            }
+                                                            function kApplyStageHeaders(){
+                                                              const cfg=loadKcolsCfg();
+                                                              KSTAGES.forEach(s=>{
+                                                                const t=document.getElementById('ktitle-'+s.key);if(t)t.textContent=cfg[s.key].name;
+                                                                const d=document.getElementById('kdot-'+s.key);if(d)d.style.background=cfg[s.key].color;
+                                                              });
+                                                            }
+                                                            /* meta do card (entrada na etapa, financeiro, confirmação) */
+                                                            function loadKMeta(){try{return JSON.parse(localStorage.getItem('kanbanMeta')||'{}')||{};}catch(e){return {};}}
+                                                            function saveKMeta(m){localStorage.setItem('kanbanMeta',JSON.stringify(m));}
+                                                            function kMeta(id){
+                                                              const all=loadKMeta();
+                                                              return Object.assign({enteredAt:null,medico:'',esp:'',desc:'',valor:0,pago:false,conv:'',confirm:'none'},all[id]||{});
+                                                            }
+                                                            function kSetMeta(id,patch){const all=loadKMeta();all[id]=Object.assign(kMeta(id),patch);saveKMeta(all);}
+                                                            function kWait(from){
+                                                              if(!from)return '—';
+                                                              const ms=Date.now()-new Date(from).getTime();
+                                                              if(ms<0)return '—';
+                                                              const min=Math.floor(ms/60000);
+                                                              return min<60?min+' min':Math.floor(min/60)+'h '+(min%60)+'min';
+                                                            }
+                                                            function kMoney(v){return 'R$ '+(Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+                                                            function kCardHtml(k,st){
+                                                              const c=kCfg(st);const m=kMeta(k.id);
+                                                              const d=new Date(k.scheduled_at);
+                                                              const timeStr=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+                                                              const dateStr=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+                                                              const enteredStr=m.enteredAt?new Date(m.enteredAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'—';
+                                                              const stCls=m.confirm==='confirmed'?'ok':(m.confirm==='sent'?'warn':'bad');
+                                                              const stTxt=m.confirm==='confirmed'?'Confirmado':(m.confirm==='sent'?'Confirmação enviada':'Sem confirmação');
+                                                              const money=Number(m.valor)||0;
+                                                              const moneyHtml=money>0?`<span class="kcard-money ${m.pago?'paid':'due'}">${kMoney(money)}${m.pago?' · pago':' · em aberto'}</span>`:'';
+                                                              const act=KACTIONS[c.shortcut];
+                                                              const cta=act?`<button class="kcard-cta" onclick="event.stopPropagation();kAction('${c.shortcut}','${k.id}','${st}')"><i class="ti ${act.icon}"></i> ${act.label}</button>`:'';
+                                                              const medico=m.medico||k.medico||'Médico não definido';
+                                                              const esp=m.esp||k.tag||'—';
+                                                              return `<div class="kcard" draggable="true" data-kid="${k.id}" data-kstage="${st}" data-kpid="${k.patient_id||''}" onclick="kOpenCard('${k.patient_id||''}')">
+                                                                <div class="kcard-hd">
+                                                                  <div class="kcard-av">${k.init||'?'}</div>
+                                                                  <div class="kcard-id">
+                                                                    <div class="kcard-name">${k.name}</div>
+                                                                    <div class="kcard-doc">${medico} · ${esp}</div>
+                                                                  </div>
+                                                                  <button class="kcard-menu-btn" onclick="event.stopPropagation();kOpenCardMenu(event,'${k.id}','${st}')"><i class="ti ti-dots-vertical"></i></button>
+                                                                </div>
+                                                                <div class="kcard-rows">
+                                                                  <span><i class="ti ti-clock"></i>${timeStr} · ${dateStr}</span>
+                                                                  <span><i class="ti ti-login"></i>${enteredStr}</span>
+                                                                  <span class="kcard-wait"><i class="ti ti-hourglass"></i>${kWait(m.enteredAt||k.scheduled_at)}</span>
+                                                                </div>
+                                                                <div class="kcard-badges">
+                                                                  <span class="kbadge ${stCls}"><span class="dot"></span>${stTxt}</span>
+                                                                  ${moneyHtml}
+                                                                </div>
+                                                                <div class="kcard-actions">${cta}</div>
+                                                              </div>`;
+                                                            }
+                                                            function kOpenCard(pid){if(pid&&typeof openPatient==='function')openPatient(pid);}
+                                                            /* popover de menu do card */
+                                                            function kPop(){
+                                                              let el=document.getElementById('k-pop');
+                                                              if(!el){el=document.createElement('div');el.id='k-pop';el.className='kpop';document.body.appendChild(el);
+                                                                document.addEventListener('click',ev=>{if(!el.contains(ev.target))el.classList.remove('open');});}
+                                                              return el;
+                                                            }
+                                                            function kOpenCardMenu(ev,id,st){
+                                                              const el=kPop();
+                                                              el.innerHTML=Object.keys(KACTIONS).map(a=>`<button onclick="kAction('${a}','${id}','${st}')"><i class="ti ${KACTIONS[a].icon}"></i> ${KACTIONS[a].label}</button>`).join('');
+                                                              el.style.left=Math.min(ev.clientX,window.innerWidth-210)+'px';
+                                                              el.style.top=(ev.clientY+6)+'px';
+                                                              el.classList.add('open');
+                                                            }
+                                                            let _kCurrent={id:null,stage:null,pendingMove:null};
+                                                            function kAction(action,id,st){
+                                                              kPop().classList.remove('open');
+                                                              _kCurrent={id,stage:st,pendingMove:null};
+                                                              const m=kMeta(id);
+                                                              if(action==='entrada'){openDarEntrada(id,st);return;}
+                                                              if(action==='atender'){kAtender(id,st);return;}
+                                                              if(action==='cobrar'){kCobrar(id);return;}
+                                                              if(action==='confirmar'){kSetMeta(id,{confirm:'sent'});showToast('Confirmação enviada ao paciente','success');renderKanban();return;}
+                                                              if(action==='confirmado'){kSetMeta(id,{confirm:'confirmed'});showToast('Agendamento confirmado','success');renderKanban();return;}
+                                                              if(action==='reagendar'){
+                                                                const v=prompt('Nova data e hora (dd/mm/aaaa hh:mm):');
+                                                                if(!v)return;
+                                                                const mt=v.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
+                                                                if(!mt){showToast('Formato inválido','error');return;}
+                                                                const nd=new Date(+mt[3],+mt[2]-1,+mt[1],+mt[4],+mt[5]);
+                                                                const arr=loadKanban();const it=arr.find(x=>x.id===id);
+                                                                if(it){it.scheduled_at=nd.toISOString();saveKanban(arr);}
+                                                                kSetMeta(id,{confirm:'none'});
+                                                                showToast('Atendimento reagendado','success');renderKanban();return;
+                                                              }
+                                                            }
+                                                            function kCobrar(id){
+                                                              const m=kMeta(id);
+                                                              if(!m.valor){showToast('Nenhum valor lançado para este atendimento','error');return;}
+                                                              if(m.pago){showToast('Consulta já está paga','success');return;}
+                                                              kSetMeta(id,{pago:true});
+                                                              showToast('Cobrança registrada como paga','success');renderKanban();
+                                                            }
+                                                            function kAtender(id,st){
+                                                              const card=document.querySelector(`.kcard[data-kid="${id}"]`);
+                                                              const pid=card&&card.getAttribute('data-kpid');
+                                                              kMoveCard(id,'aguardando',true);
+                                                              if(pid&&typeof openPatient==='function'){openPatient(pid);setTimeout(()=>{if(typeof openTab==='function')openTab('atendimentos',null);},120);}
+                                                              else showToast('Vincule o paciente para iniciar o atendimento','error');
+                                                            }
+                                                            function openDarEntrada(id,st){
+                                                              _kCurrent={id,stage:st,pendingMove:null};
+                                                              const card=document.querySelector(`.kcard[data-kid="${id}"]`);
+                                                              const name=card?card.querySelector('.kcard-name').textContent:'Paciente';
+                                                              const m=kMeta(id);
+                                                              document.getElementById('kde-patient').textContent=name;
+                                                              const sel=document.getElementById('kde-medico');
+                                                              sel.innerHTML='<option value="">— Selecionar —</option>'+kUsers().map(u=>`<option>${u.name}</option>`).join('');
+                                                              sel.value=m.medico||'';
+                                                              document.getElementById('kde-esp').value=m.esp||'';
+                                                              document.getElementById('kde-desc').value=m.desc||'';
+                                                              document.getElementById('kde-valor').value=m.valor||'';
+                                                              document.getElementById('kde-conv').value=m.conv||'Particular';
+                                                              openModal('dar-entrada');
+                                                            }
+                                                            function submitDarEntrada(){
+                                                              const id=_kCurrent.id;if(!id)return;
+                                                              const valor=parseFloat(document.getElementById('kde-valor').value||'0')||0;
+                                                              kSetMeta(id,{
+                                                                medico:document.getElementById('kde-medico').value,
+                                                                esp:document.getElementById('kde-esp').value,
+                                                                desc:document.getElementById('kde-desc').value,
+                                                                valor,conv:document.getElementById('kde-conv').value
+                                                              });
+                                                              const m=kMeta(id);
+                                                              if(valor>0&&!m.pago){
+                                                                const card=document.querySelector(`.kcard[data-kid="${id}"]`);
+                                                                document.getElementById('kpf-valor').textContent=kMoney(valor);
+                                                                document.getElementById('kpf-nome').textContent=card?card.querySelector('.kcard-name').textContent:'o paciente';
+                                                                openModal('pendencia-financeira');
+                                                                return;
+                                                              }
+                                                              closeModal();kConfirmarEntrada(id);
+                                                            }
+                                                            function kConfirmarEntrada(id){
+                                                              kSetMeta(id,{enteredAt:new Date().toISOString()});
+                                                              kMoveCard(id,'aguardando',true);
+                                                              showToast('Entrada registrada','success');
+                                                            }
+                                                            function pendenciaDarEntrada(){const id=_kCurrent.id;closeModal();if(id)kConfirmarEntrada(id);}
+                                                            function pendenciaCobrar(){const id=_kCurrent.id;closeModal();if(id)kCobrar(id);}
+                                                            /* movimentação de cards */
+                                                            function kMoveCard(id,to,silent){
+                                                              const arr=loadKanban();const it=arr.find(x=>x.id===id);
+                                                              if(it){
+                                                                if(!silent&&!kCanMoveTo(it.status,to)){showToast('Você não tem permissão para mover para esta etapa','error');return false;}
+                                                                it.status=to;saveKanban(arr);
+                                                              }else{
+                                                                // card originado de agendamentos: cria espelho local
+                                                                const card=document.querySelector(`.kcard[data-kid="${id}"]`);
+                                                                const pid=card&&card.getAttribute('data-kpid');
+                                                                if(!pid){if(!silent)showToast('Vincule o paciente antes de mover o card','error');return false;}
+                                                                arr.push({id,patient_id:pid,scheduled_at:new Date().toISOString(),status:to});saveKanban(arr);
+                                                              }
+                                                              kSetMeta(id,{enteredAt:new Date().toISOString()});
+                                                              kRunStageTriggers(id,to);
+                                                              renderKanban();
+                                                              return true;
+                                                            }
+                                                            function kRunStageTriggers(id,to){
+                                                              const c=kCfg(to);
+                                                              if(c.triggers&&c.triggers.notify)showToast('Usuários notificados: paciente entrou em "'+c.name+'"','success');
+                                                              if(c.triggers&&c.triggers.confirm){kSetMeta(id,{confirm:'sent'});}
+                                                              const m=kMeta(id);
+                                                              if(c.triggers&&c.triggers.charge&&m.valor>0&&!m.pago)showToast('Pendência financeira: '+kMoney(m.valor),'error');
+                                                              if(c.onmove==='entrada')kSetMeta(id,{enteredAt:new Date().toISOString()});
+                                                              if(c.onmove==='atender'){const card=document.querySelector(`.kcard[data-kid="${id}"]`);const pid=card&&card.getAttribute('data-kpid');if(pid&&typeof openPatient==='function')openPatient(pid);}
+                                                              if(c.onmove==='cobrar')setTimeout(()=>kCobrar(id),150);
+                                                              if(c.onmove==='confirmar')kSetMeta(id,{confirm:'sent'});
+                                                            }
+                                                            let _kDragId=null,_kDragFrom=null,_kDnDBound=false;
+                                                            function kBindDnD(){
+                                                              document.querySelectorAll('.kcard[draggable="true"]').forEach(card=>{
+                                                                card.ondragstart=ev=>{_kDragId=card.getAttribute('data-kid');_kDragFrom=card.getAttribute('data-kstage');card.classList.add('dragging');ev.dataTransfer.effectAllowed='move';try{ev.dataTransfer.setData('text/plain',_kDragId);}catch(e){}};
+                                                                card.ondragend=()=>{card.classList.remove('dragging');document.querySelectorAll('.kcol').forEach(c=>c.classList.remove('drag-over','drag-block'));};
+                                                              });
+                                                              if(_kDnDBound)return;_kDnDBound=true;
+                                                              KSTAGES.forEach(s=>{
+                                                                const body=document.getElementById('kcol-'+s.key);if(!body)return;
+                                                                const col=body.closest('.kcol');
+                                                                body.addEventListener('dragover',ev=>{
+                                                                  if(!_kDragId)return;ev.preventDefault();
+                                                                  const ok=kCanMoveTo(_kDragFrom,s.key);
+                                                                  col.classList.toggle('drag-over',ok);col.classList.toggle('drag-block',!ok);
+                                                                  ev.dataTransfer.dropEffect=ok?'move':'none';
+                                                                });
+                                                                body.addEventListener('dragleave',()=>col.classList.remove('drag-over','drag-block'));
+                                                                body.addEventListener('drop',ev=>{
+                                                                  ev.preventDefault();col.classList.remove('drag-over','drag-block');
+                                                                  const id=_kDragId;const from=_kDragFrom;_kDragId=null;_kDragFrom=null;
+                                                                  if(!id||from===s.key)return;
+                                                                  if(!kCanMoveTo(from,s.key)){showToast('Regra da etapa "'+kCfg(s.key).name+'" impede este movimento','error');return;}
+                                                                  if(kCfg(s.key).onmove==='atender'){kAtender(id,from);return;}
+                                                                  if(s.key==='aguardando'&&kCfg(from).shortcut==='entrada'&&!kMeta(id).enteredAt){openDarEntrada(id,from);return;}
+                                                                  kMoveCard(id,s.key,true);
+                                                                });
+                                                              });
+                                                            }
+                                                            /* modal de configuração da etapa */
+                                                            let _kCfgStage=null;
+                                                            function openKcolCfg(st){
+                                                              _kCfgStage=st;const c=kCfg(st);
+                                                              document.getElementById('kcfg-name').value=c.name;
+                                                              document.getElementById('kcfg-color').value=c.color;
+                                                              document.getElementById('kcfg-shortcut').value=c.shortcut||'';
+                                                              document.getElementById('kcfg-onmove').value=c.onmove||'none';
+                                                              document.getElementById('kcfg-trg-notify').checked=!!(c.triggers&&c.triggers.notify);
+                                                              document.getElementById('kcfg-trg-confirm').checked=!!(c.triggers&&c.triggers.confirm);
+                                                              document.getElementById('kcfg-trg-charge').checked=!!(c.triggers&&c.triggers.charge);
+                                                              const cfg=loadKcolsCfg();
+                                                              document.getElementById('kcfg-target').innerHTML='<option value="">— Nenhuma —</option>'+
+                                                                KSTAGES.map(s=>`<option value="${s.key}" ${c.target===s.key?'selected':''}>${cfg[s.key].name}</option>`).join('');
+                                                              const users=kUsers();
+                                                              document.getElementById('kcfg-viewers').innerHTML=users.map(u=>`<label><input type="checkbox" value="${u.id}" ${c.viewers.includes(u.id)?'checked':''}> ${u.name}</label>`).join('')||'<span style="font-size:11px;color:var(--n400)">Nenhum usuário cadastrado</span>';
+                                                              document.getElementById('kcfg-movers').innerHTML=users.map(u=>`<label><input type="checkbox" value="${u.id}" ${c.movers.includes(u.id)?'checked':''}> ${u.name}</label>`).join('')||'<span style="font-size:11px;color:var(--n400)">Nenhum usuário cadastrado</span>';
+                                                              document.getElementById('kcfg-allowed').innerHTML=KSTAGES.filter(s=>s.key!==st).map(s=>`<label><input type="checkbox" value="${s.key}" ${c.allowed.includes(s.key)?'checked':''}> ${cfg[s.key].name}</label>`).join('');
+                                                              openModal('kcol-cfg');
+                                                            }
+                                                            function _kChecked(id){return Array.from(document.querySelectorAll('#'+id+' input[type=checkbox]:checked')).map(i=>i.value);}
+                                                            function saveKcolCfg(){
+                                                              if(!_kCfgStage)return;
+                                                              const cfg=loadKcolsCfg();
+                                                              cfg[_kCfgStage]={
+                                                                name:document.getElementById('kcfg-name').value.trim()||kDefaultCfg(_kCfgStage).name,
+                                                                color:document.getElementById('kcfg-color').value,
+                                                                shortcut:document.getElementById('kcfg-shortcut').value,
+                                                                target:document.getElementById('kcfg-target').value,
+                                                                onmove:document.getElementById('kcfg-onmove').value,
+                                                                triggers:{
+                                                                  notify:document.getElementById('kcfg-trg-notify').checked,
+                                                                  confirm:document.getElementById('kcfg-trg-confirm').checked,
+                                                                  charge:document.getElementById('kcfg-trg-charge').checked
+                                                                },
+                                                                viewers:_kChecked('kcfg-viewers'),
+                                                                movers:_kChecked('kcfg-movers'),
+                                                                allowed:_kChecked('kcfg-allowed')
+                                                              };
+                                                              saveKcolsCfg(cfg);closeModal();renderKanban();
+                                                              showToast('Etapa atualizada','success');
                                                             }
                                                             function iniciarNovoAtendimento(){
                                                               currentPatient={id:null,name:'',init:'',dob:'',tel:'',conv:'Particular',sus:'—',cpf:'',end:'',email:'',mae:'',pai:'',nasc:'',sexo:'Feminino',medico:'',ocup:'',dadosClinicos:''};
