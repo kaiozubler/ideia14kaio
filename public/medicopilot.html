@@ -1708,6 +1708,66 @@
                                                       .vc-contact-ico{width:28px;height:28px;border-radius:9px;background:linear-gradient(135deg,#34d399,#059669);display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;font-size:13px}
                                                       .vc-btn-secondary{width:100%;padding:11px;border-radius:999px;border:1px solid var(--n200);background:rgba(255,255,255,.7);color:#475569;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;margin-top:8px}
                                                       .vc-device-row{display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.8);border-radius:14px;padding:9px 12px;font-size:11.5px;color:#475569;margin-bottom:8px}
+
+                                                      /* ================================================================
+                                                         LIQUID GLASS MODAL — componente reutilizável "AgendamentoModal"
+                                                         Modal translúcido (glass) para criação rápida de agendamentos.
+                                                         Prefixo de classes: lgm- (Liquid Glass Modal). Reutilizar este
+                                                         mesmo padrão visual em outros modais do sistema.
+                                                         ================================================================ */
+                                                      .ag-new-btn{display:flex;align-items:center;gap:7px;padding:9px 16px;border:none;border-radius:999px;background:linear-gradient(135deg,#34d399,#059669);color:#fff;font-size:13px;font-weight:600;box-shadow:0 6px 16px rgba(5,150,105,.28);white-space:nowrap;transition:transform .12s,box-shadow .12s}
+                                                      .ag-new-btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(5,150,105,.34)}
+                                                      .ag-new-btn:active{transform:translateY(0)}
+                                                      .ag-new-btn .ti{font-size:15px}
+
+                                                      .lgm-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:1500;align-items:center;justify-content:center;padding:20px}
+                                                      .lgm-overlay.open{display:flex}
+                                                      .lgm-card{position:relative;width:660px;max-width:100%;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;border-radius:28px;background:linear-gradient(135deg,rgba(238,248,241,.92) 0%,rgba(243,241,251,.92) 45%,rgba(253,246,236,.92) 100%);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border:1px solid rgba(255,255,255,.85);box-shadow:0 32px 80px rgba(30,41,59,.28),0 8px 24px rgba(30,41,59,.12)}
+                                                      .lgm-blob{position:absolute;border-radius:50%;filter:blur(46px);opacity:.55;pointer-events:none;z-index:0}
+                                                      .lgm-head,.lgm-body,.lgm-foot{position:relative;z-index:1}
+                                                      .lgm-head{display:flex;align-items:flex-start;gap:14px;padding:22px 26px 18px;border-bottom:1px solid rgba(255,255,255,.6)}
+                                                      .lgm-icon{width:46px;height:46px;flex-shrink:0;border-radius:16px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#34d399,#059669);color:#fff;font-size:20px;box-shadow:0 6px 14px rgba(5,150,105,.3)}
+                                                      .lgm-title{font-size:17px;font-weight:700;color:#1e293b;letter-spacing:-.01em;margin:0}
+                                                      .lgm-subtitle{font-size:12px;color:#64748b;margin-top:2px}
+                                                      .lgm-close{margin-left:auto;width:32px;height:32px;border-radius:50%;border:none;background:rgba(255,255,255,.6);color:#64748b;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px}
+                                                      .lgm-close:hover{background:rgba(255,255,255,.9);color:#334155}
+                                                      .lgm-body{padding:20px 26px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+                                                      .lgm-status{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;padding:9px 14px;border-radius:14px;background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.85);color:#64748b}
+                                                      .lgm-status .ti{font-size:15px}
+                                                      .lgm-status.linked{color:#059669;background:rgba(52,211,153,.14)}
+                                                      .lgm-status.new{color:#b45309;background:rgba(251,191,36,.16)}
+                                                      .lgm-section-lbl{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:-6px}
+                                                      .lgm-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+                                                      .lgm-row.cols-3{grid-template-columns:1.2fr 1fr 1fr}
+                                                      .lgm-fld{display:flex;flex-direction:column;gap:6px;position:relative}
+                                                      .lgm-fld label{font-size:11.5px;font-weight:600;color:#475569}
+                                                      .lgm-fld label .req{color:#e11d48;margin-left:2px}
+                                                      .lgm-input{width:100%;padding:10px 13px;border-radius:14px;border:1px solid rgba(203,213,225,.7);background:rgba(255,255,255,.7);font-size:13px;color:#1e293b;font-family:inherit;outline:none;transition:border-color .15s,background .15s}
+                                                      .lgm-input:focus{border-color:#34d399;background:rgba(255,255,255,.95)}
+                                                      textarea.lgm-input{resize:vertical;min-height:64px;font-family:inherit}
+                                                      select.lgm-input{cursor:pointer}
+                                                      .lgm-results{position:absolute;top:calc(100% + 6px);left:0;right:0;background:rgba(255,255,255,.97);backdrop-filter:blur(12px);border:1px solid rgba(226,232,240,.9);border-radius:16px;box-shadow:0 16px 36px rgba(30,41,59,.18);z-index:40;overflow:hidden;max-height:220px;overflow-y:auto}
+                                                      .lgm-results table{width:100%;border-collapse:collapse;font-size:12.5px}
+                                                      .lgm-results thead th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#94a3b8;padding:8px 12px;background:rgba(248,250,252,.9);position:sticky;top:0}
+                                                      .lgm-results tbody tr{cursor:pointer;border-top:1px solid rgba(226,232,240,.6);transition:background .1s}
+                                                      .lgm-results tbody tr:hover{background:rgba(52,211,153,.12)}
+                                                      .lgm-results td{padding:8px 12px;color:#334155}
+                                                      .lgm-results td.name{font-weight:600;color:#1e293b}
+                                                      .lgm-results .empty{padding:14px;text-align:center;color:#94a3b8;font-size:12px}
+                                                      .lgm-chip-group{display:flex;flex-wrap:wrap;gap:7px}
+                                                      .lgm-chip{padding:7px 14px;border-radius:999px;border:1px solid rgba(203,213,225,.8);background:rgba(255,255,255,.65);color:#475569;font-size:12px;font-weight:600;transition:all .12s}
+                                                      .lgm-chip:hover{background:rgba(255,255,255,.9)}
+                                                      .lgm-chip.active{border-color:transparent;color:#fff}
+                                                      .lgm-chip.active.emerald{background:linear-gradient(135deg,#34d399,#059669)}
+                                                      .lgm-chip.active.violet{background:linear-gradient(135deg,#a78bfa,#7c3aed)}
+                                                      .lgm-foot{display:flex;justify-content:flex-end;gap:10px;padding:16px 26px;border-top:1px solid rgba(255,255,255,.6);background:rgba(255,255,255,.3)}
+                                                      .lgm-btn{padding:10px 20px;border-radius:999px;border:none;font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px;cursor:pointer}
+                                                      .lgm-btn.ghost{background:rgba(255,255,255,.7);color:#475569;border:1px solid rgba(203,213,225,.8)}
+                                                      .lgm-btn.ghost:hover{background:rgba(255,255,255,.95)}
+                                                      .lgm-btn.primary{background:linear-gradient(135deg,#34d399,#059669);color:#fff;box-shadow:0 6px 16px rgba(5,150,105,.28)}
+                                                      .lgm-btn.primary:hover{box-shadow:0 8px 20px rgba(5,150,105,.34)}
+                                                      .lgm-btn.primary:disabled{opacity:.6;cursor:not-allowed;box-shadow:none}
+                                                      @media (max-width:640px){.lgm-row,.lgm-row.cols-3{grid-template-columns:1fr}}
     </style>
   </head>
   <body>
@@ -2739,6 +2799,9 @@
                     oninput="renderAgenda()"
                   />
                 </div>
+                <button class="ag-new-btn" onclick="openNovoAgendamentoModal()">
+                  <i class="ti ti-plus"></i> Novo agendamento
+                </button>
                 <div class="ag-views">
                   <button data-view="daily" onclick="setAgendaView('daily')">Diário</button>
                   <button data-view="weekly" class="active" onclick="setAgendaView('weekly')">Semanal</button>
@@ -4667,6 +4730,108 @@
       </div>
     </div>
 
+    <!-- ================================================================
+         COMPONENTE REUTILIZÁVEL: "AgendamentoModal" (Liquid Glass)
+         Modal de criação rápida de agendamento — usado na Agenda e em
+         qualquer outro ponto do sistema que precise agendar um paciente
+         (ex.: dentro de uma conversa, do prontuário, do kanban etc.).
+         Basta chamar openNovoAgendamentoModal() de qualquer tela.
+         ================================================================ -->
+    <div class="lgm-overlay" id="lgm-overlay" onclick="if(event.target===this)closeNovoAgendamentoModal()">
+      <div class="lgm-card" id="lgm-card">
+        <div class="lgm-blob" style="width:220px;height:220px;background:#a7f3d0;top:-60px;left:-60px"></div>
+        <div class="lgm-blob" style="width:200px;height:200px;background:#c4b5fd;bottom:-50px;right:-30px"></div>
+        <div class="lgm-blob" style="width:160px;height:160px;background:#fde0aa;bottom:40px;left:30%"></div>
+
+        <div class="lgm-head">
+          <div class="lgm-icon"><i class="ti ti-calendar-plus"></i></div>
+          <div>
+            <p class="lgm-title">Novo agendamento</p>
+            <p class="lgm-subtitle">Busque o paciente pelo nome ou CPF, ou cadastre um novo em segundos.</p>
+          </div>
+          <button class="lgm-close" onclick="closeNovoAgendamentoModal()"><i class="ti ti-x"></i></button>
+        </div>
+
+        <div class="lgm-body">
+          <div class="lgm-status" id="lgm-status">
+            <i class="ti ti-user-search"></i>
+            <span>Digite o nome ou CPF para localizar um paciente já cadastrado.</span>
+          </div>
+
+          <div class="lgm-section-lbl">Paciente</div>
+          <div class="lgm-row">
+            <div class="lgm-fld" style="grid-column:span 2">
+              <label>Nome do paciente<span class="req">*</span></label>
+              <input type="text" class="lgm-input" id="lgm-nome" placeholder="Digite o nome do paciente..." oninput="agmOnNomeInput()" autocomplete="off" />
+              <div class="lgm-results" id="lgm-results" style="display:none"></div>
+            </div>
+          </div>
+          <div class="lgm-row">
+            <div class="lgm-fld">
+              <label>CPF</label>
+              <input type="text" class="lgm-input" id="lgm-cpf" placeholder="000.000.000-00" maxlength="14" oninput="agmOnCpfInput()" autocomplete="off" />
+            </div>
+            <div class="lgm-fld">
+              <label>Telefone</label>
+              <input type="text" class="lgm-input" id="lgm-tel" placeholder="(00) 00000-0000" autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="lgm-section-lbl">Consulta</div>
+          <div class="lgm-row">
+            <div class="lgm-fld">
+              <label>Médico<span class="req">*</span></label>
+              <select class="lgm-input" id="lgm-medico" onchange="agmOnMedicoChange()"></select>
+            </div>
+            <div class="lgm-fld">
+              <label>Especialidade</label>
+              <select class="lgm-input" id="lgm-especialidade"></select>
+            </div>
+          </div>
+          <div class="lgm-row cols-3">
+            <div class="lgm-fld">
+              <label>Dia<span class="req">*</span></label>
+              <input type="date" class="lgm-input" id="lgm-dia" />
+            </div>
+            <div class="lgm-fld">
+              <label>Hora<span class="req">*</span></label>
+              <input type="time" class="lgm-input" id="lgm-hora" />
+            </div>
+            <div class="lgm-fld">
+              <label>Duração</label>
+              <div class="lgm-chip-group" id="lgm-duracao-group">
+                <button type="button" class="lgm-chip emerald" data-val="15" onclick="agmSetDuracao(15)">15min</button>
+                <button type="button" class="lgm-chip emerald active" data-val="30" onclick="agmSetDuracao(30)">30min</button>
+                <button type="button" class="lgm-chip emerald" data-val="45" onclick="agmSetDuracao(45)">45min</button>
+                <button type="button" class="lgm-chip emerald" data-val="60" onclick="agmSetDuracao(60)">1h</button>
+              </div>
+            </div>
+          </div>
+          <div class="lgm-fld">
+            <label>Tipo</label>
+            <div class="lgm-chip-group" id="lgm-tipo-group">
+              <button type="button" class="lgm-chip violet active" data-val="Consulta" onclick="agmSetTipo('Consulta')">Consulta</button>
+              <button type="button" class="lgm-chip violet" data-val="Retorno" onclick="agmSetTipo('Retorno')">Retorno</button>
+              <button type="button" class="lgm-chip violet" data-val="Exame" onclick="agmSetTipo('Exame')">Exame</button>
+              <button type="button" class="lgm-chip violet" data-val="Procedimento" onclick="agmSetTipo('Procedimento')">Procedimento</button>
+            </div>
+          </div>
+
+          <div class="lgm-fld">
+            <label>Observação</label>
+            <textarea class="lgm-input" id="lgm-obs" placeholder="Alguma observação sobre este agendamento (opcional)"></textarea>
+          </div>
+        </div>
+
+        <div class="lgm-foot">
+          <button class="lgm-btn ghost" onclick="closeNovoAgendamentoModal()">Cancelar</button>
+          <button class="lgm-btn primary" id="lgm-submit-btn" onclick="agmSubmit()">
+            <i class="ti ti-check"></i> Confirmar agendamento
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script>
                                                             /* ========== DATA ========== */
                                                             const medicoNames={
@@ -5238,7 +5403,8 @@
                                                         });
                                                       }
                                                       function initCpfMaskFields(){
-                                                        ['d-cpf','np-cpf','ip-cpf','gd-cpf'].forEach(attachCpfMask);
+                                                        ['d-cpf','np-cpf','ip-cpf','gd-cpf','lgm-cpf'].forEach(attachCpfMask);
+                                                      }
                                                       }
                                                       function backToPatients(){saveAtendState();goScreen('patients');}
                                                             function showToast(msg,type){
@@ -11561,8 +11727,210 @@ let rxSelected = [];
                                                               body.innerHTML=html;
                                                               // restore frame styles when leaving cards view next time via renderAgenda
                                                             }
+
                                                             /* ================================================================
-                                                               VIDEOCHAMADA — Daily.co em modo "call object" (sem Prebuilt/iframe)
+                                                               COMPONENTE "AgendamentoModal" (Liquid Glass)
+                                                               Modal reutilizável de novo agendamento. Busca paciente por nome
+                                                               (na tabela) ou por CPF (auto-preenchimento), permite avançar
+                                                               criando um paciente novo apenas com o nome quando não há
+                                                               seleção, e grava o agendamento em `agendamentos`.
+                                                               ================================================================ */
+                                                            const AGM_STATE={selectedPatientId:null,duracao:30,tipo:'Consulta',searchTimer:null};
+
+                                                            function agmFindDoctorByPatientText(txt){
+                                                              if(!txt)return null;
+                                                              const t=txt.toLowerCase();
+                                                              return AG_DOCTORS.find(d=>t.includes(d.name.toLowerCase())||d.name.toLowerCase().includes(t))||null;
+                                                            }
+
+                                                            function agmPopulateSelects(){
+                                                              const ds=document.getElementById('lgm-medico');
+                                                              if(ds&&!ds.dataset.filled){
+                                                                ds.innerHTML='<option value="">Selecionar médico</option>'+AG_DOCTORS.map(d=>`<option value="${d.id}">${d.name} — ${d.specialty}</option>`).join('');
+                                                                ds.dataset.filled='1';
+                                                              }
+                                                              const es=document.getElementById('lgm-especialidade');
+                                                              if(es&&!es.dataset.filled){
+                                                                es.innerHTML='<option value="">Selecionar especialidade</option>'+AG_SPECS.map(s=>`<option value="${s}">${s}</option>`).join('');
+                                                                es.dataset.filled='1';
+                                                              }
+                                                            }
+
+                                                            function agmResetForm(){
+                                                              AGM_STATE.selectedPatientId=null;AGM_STATE.duracao=30;AGM_STATE.tipo='Consulta';
+                                                              ['lgm-nome','lgm-cpf','lgm-tel','lgm-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+                                                              const medico=document.getElementById('lgm-medico');if(medico)medico.value='';
+                                                              const spec=document.getElementById('lgm-especialidade');if(spec)spec.value='';
+                                                              document.querySelectorAll('#lgm-duracao-group .lgm-chip').forEach(b=>b.classList.toggle('active',b.dataset.val==='30'));
+                                                              document.querySelectorAll('#lgm-tipo-group .lgm-chip').forEach(b=>b.classList.toggle('active',b.dataset.val==='Consulta'));
+                                                              const now=new Date();
+                                                              const pad=n=>String(n).padStart(2,'0');
+                                                              const dia=document.getElementById('lgm-dia');if(dia)dia.value=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate());
+                                                              const nextHour=new Date(now);nextHour.setMinutes(0,0,0);nextHour.setHours(nextHour.getHours()+1);
+                                                              const hora=document.getElementById('lgm-hora');if(hora)hora.value=pad(nextHour.getHours())+':00';
+                                                              agmHideResults();
+                                                              agmUpdateStatus();
+                                                            }
+
+                                                            function openNovoAgendamentoModal(preset){
+                                                              agmPopulateSelects();
+                                                              agmResetForm();
+                                                              if(preset){
+                                                                if(preset.dia)document.getElementById('lgm-dia').value=preset.dia;
+                                                                if(preset.hora)document.getElementById('lgm-hora').value=preset.hora;
+                                                                if(preset.medicoId)document.getElementById('lgm-medico').value=preset.medicoId;
+                                                              }
+                                                              document.getElementById('lgm-overlay').classList.add('open');
+                                                              setTimeout(()=>document.getElementById('lgm-nome')?.focus(),50);
+                                                            }
+                                                            function closeNovoAgendamentoModal(){
+                                                              document.getElementById('lgm-overlay').classList.remove('open');
+                                                              agmHideResults();
+                                                            }
+
+                                                            function agmUpdateStatus(){
+                                                              const el=document.getElementById('lgm-status');if(!el)return;
+                                                              if(AGM_STATE.selectedPatientId){
+                                                                el.className='lgm-status linked';
+                                                                el.innerHTML='<i class="ti ti-user-check"></i><span>Paciente vinculado — dados carregados do cadastro.</span>';
+                                                              }else{
+                                                                const nome=(document.getElementById('lgm-nome').value||'').trim();
+                                                                if(nome){
+                                                                  el.className='lgm-status new';
+                                                                  el.innerHTML='<i class="ti ti-user-plus"></i><span>Nenhum paciente selecionado — será criado um novo cadastro com este nome.</span>';
+                                                                }else{
+                                                                  el.className='lgm-status';
+                                                                  el.innerHTML='<i class="ti ti-user-search"></i><span>Digite o nome ou CPF para localizar um paciente já cadastrado.</span>';
+                                                                }
+                                                              }
+                                                            }
+
+                                                            function agmHideResults(){
+                                                              const r=document.getElementById('lgm-results');if(r){r.style.display='none';r.innerHTML='';}
+                                                            }
+
+                                                            let AGM_SEARCH_RESULTS=[];
+                                                            function agmOnNomeInput(){
+                                                              AGM_STATE.selectedPatientId=null;
+                                                              agmUpdateStatus();
+                                                              clearTimeout(AGM_STATE.searchTimer);
+                                                              const q=(document.getElementById('lgm-nome').value||'').trim();
+                                                              if(q.length<2){agmHideResults();return;}
+                                                              AGM_STATE.searchTimer=setTimeout(()=>agmRenderResults(agmSearchPatients(q)),250);
+                                                            }
+                                                            function agmSearchPatients(q){
+                                                              const ql=q.toLowerCase();
+                                                              return (patients||[]).filter(p=>(p.name||'').toLowerCase().includes(ql)).slice(0,8);
+                                                            }
+                                                            function agmRenderResults(list){
+                                                              AGM_SEARCH_RESULTS=list;
+                                                              const r=document.getElementById('lgm-results');if(!r)return;
+                                                              if(!list.length){
+                                                                r.innerHTML='<div class="empty">Nenhum paciente encontrado — continue digitando para cadastrar um novo.</div>';
+                                                                r.style.display='block';return;
+                                                              }
+                                                              r.innerHTML=`<table><thead><tr><th>Nome</th><th>CPF</th><th>Telefone</th><th>Médico</th></tr></thead><tbody>${
+                                                                list.map((p,i)=>`<tr onclick="agmSelectPatient(${i})"><td class="name">${p.name}</td><td>${p.cpf?formatCPF(p.cpf):'—'}</td><td>${p.tel&&p.tel!=='—'?p.tel:'—'}</td><td>${p.medico||'—'}</td></tr>`).join('')
+                                                              }</tbody></table>`;
+                                                              r.style.display='block';
+                                                            }
+                                                            function agmSelectPatient(i){
+                                                              const p=AGM_SEARCH_RESULTS[i];if(!p)return;
+                                                              AGM_STATE.selectedPatientId=p.id;
+                                                              document.getElementById('lgm-nome').value=p.name||'';
+                                                              document.getElementById('lgm-cpf').value=p.cpf?formatCPF(p.cpf):'';
+                                                              document.getElementById('lgm-tel').value=(p.tel&&p.tel!=='—')?p.tel:'';
+                                                              const doc=agmFindDoctorByPatientText(p.medico);
+                                                              if(doc){
+                                                                document.getElementById('lgm-medico').value=doc.id;
+                                                                document.getElementById('lgm-especialidade').value=doc.specialty;
+                                                              }
+                                                              agmHideResults();
+                                                              agmUpdateStatus();
+                                                            }
+
+                                                            function agmOnCpfInput(){
+                                                              const digits=(document.getElementById('lgm-cpf').value||'').replace(/\D/g,'');
+                                                              if(digits.length<11)return;
+                                                              const match=(patients||[]).find(p=>(p.cpf||'').replace(/\D/g,'')===digits);
+                                                              if(!match)return;
+                                                              AGM_STATE.selectedPatientId=match.id;
+                                                              document.getElementById('lgm-nome').value=match.name||'';
+                                                              document.getElementById('lgm-tel').value=(match.tel&&match.tel!=='—')?match.tel:'';
+                                                              const doc=agmFindDoctorByPatientText(match.medico);
+                                                              if(doc){
+                                                                document.getElementById('lgm-medico').value=doc.id;
+                                                                document.getElementById('lgm-especialidade').value=doc.specialty;
+                                                              }
+                                                              agmHideResults();
+                                                              agmUpdateStatus();
+                                                              showToast&&showToast('Paciente encontrado — dados preenchidos automaticamente','success');
+                                                            }
+
+                                                            function agmOnMedicoChange(){
+                                                              const id=parseInt(document.getElementById('lgm-medico').value);
+                                                              const doc=AG_DOCTORS.find(d=>d.id===id);
+                                                              if(doc)document.getElementById('lgm-especialidade').value=doc.specialty;
+                                                            }
+
+                                                            function agmSetDuracao(v){
+                                                              AGM_STATE.duracao=v;
+                                                              document.querySelectorAll('#lgm-duracao-group .lgm-chip').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.val)===v));
+                                                            }
+                                                            function agmSetTipo(v){
+                                                              AGM_STATE.tipo=v;
+                                                              document.querySelectorAll('#lgm-tipo-group .lgm-chip').forEach(b=>b.classList.toggle('active',b.dataset.val===v));
+                                                            }
+
+                                                            async function agmSubmit(){
+                                                              const nome=(document.getElementById('lgm-nome').value||'').trim();
+                                                              const dia=document.getElementById('lgm-dia').value;
+                                                              const hora=document.getElementById('lgm-hora').value;
+                                                              const medicoId=parseInt(document.getElementById('lgm-medico').value);
+                                                              if(!nome){showToast&&showToast('Informe o nome do paciente','error');return;}
+                                                              if(!dia||!hora){showToast&&showToast('Informe o dia e a hora do agendamento','error');return;}
+                                                              if(!medicoId){showToast&&showToast('Selecione o médico','error');return;}
+                                                              const doc=AG_DOCTORS.find(d=>d.id===medicoId);
+                                                              const especialidade=document.getElementById('lgm-especialidade').value||(doc&&doc.specialty)||'';
+                                                              const cpfDigits=(document.getElementById('lgm-cpf').value||'').replace(/\D/g,'');
+                                                              const telefone=(document.getElementById('lgm-tel').value||'').trim();
+                                                              const obs=(document.getElementById('lgm-obs').value||'').trim();
+                                                              const btn=document.getElementById('lgm-submit-btn');
+                                                              btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2"></i> Salvando...';
+                                                              try{
+                                                                let pacienteId=AGM_STATE.selectedPatientId;
+                                                                if(!pacienteId){
+                                                                  const payload={name:nome,cpf:cpfDigits||null,telefone:telefone||null,medico:doc?doc.name:null};
+                                                                  const{data,error}=await sb.from('pacientes').insert(payload).select('*').single();
+                                                                  if(error)throw error;
+                                                                  pacienteId=data.paciente_id;
+                                                                }
+                                                                const dataHora=new Date(dia+'T'+hora+':00').toISOString();
+                                                                const agPayload={
+                                                                  paciente_id:pacienteId,paciente_nome:nome,id_medico:(currentUser&&currentUser.id)||null,
+                                                                  data_hora:dataHora,duracao_min:AGM_STATE.duracao,status:'agendado',
+                                                                  motivo:AGM_STATE.tipo+(especialidade?' — '+especialidade:''),origem:'secretaria',
+                                                                  tipo:AGM_STATE.tipo,especialidade:especialidade,medico_nome:doc?doc.name:null,
+                                                                  telefone:telefone||null,cpf:cpfDigits||null,observacoes:obs||null
+                                                                };
+                                                                const{error:agErr}=await sb.from('agendamentos').insert(agPayload);
+                                                                if(agErr)throw agErr;
+                                                                showToast&&showToast('Agendamento criado com sucesso','success');
+                                                                closeNovoAgendamentoModal();
+                                                                await loadPatients();
+                                                              }catch(e){
+                                                                console.error('Erro ao criar agendamento:',e);
+                                                                showToast&&showToast('Não foi possível salvar o agendamento','error');
+                                                              }finally{
+                                                                btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Confirmar agendamento';
+                                                              }
+                                                            }
+                                                            document.addEventListener('click',e=>{
+                                                              if(!e.target.closest('#lgm-nome')&&!e.target.closest('#lgm-results'))agmHideResults();
+                                                            });
+
+                                                            /* ================================================================
+                                                               VIDEOCHAMADA
                                                                Estados: lobby (pré-entrada) → call (ativa) → ended | error
                                                                ================================================================ */
                                                             window.__vcRoom=null;
