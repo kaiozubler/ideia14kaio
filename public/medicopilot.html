@@ -10804,7 +10804,7 @@ let rxSelected = [];
                                                                 return true;
                                                               }).map(k=>{
                                                                 const p=patients.find(x=>x.id===k.patient_id);
-                                                                return p?{id:k.id,patient_id:p.id,name:p.name,init:p.init,tag:p.conv||'Particular',scheduled_at:k.scheduled_at,status:k.status}:null;
+                                                                return p?{id:k.id,patient_id:p.id,name:p.name,init:p.init,tag:p.conv||'Particular',medico:p.medico||'',scheduled_at:k.scheduled_at,status:k.status}:null;
                                                               }).filter(Boolean);
                                                               // agendamentos vindos do banco entram na coluna "Agendados"
                                                               (AGENDAMENTOS||[]).forEach(a=>{
@@ -10816,7 +10816,7 @@ let rxSelected = [];
                                                                 const name=(p&&p.name)||a.paciente_nome||'Paciente';
                                                                 if(q&&!name.toLowerCase().includes(q))return;
                                                                 const init=(p&&p.init)||name.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
-                                                                items.push({id:a.id,patient_id:a.paciente_id||null,name,init,tag:a.motivo||(p&&p.conv)||'Agenda',scheduled_at:a.data_hora,status:'agendado'});
+                                                                items.push({id:a.id,patient_id:a.paciente_id||null,name,init,tag:a.motivo||(p&&p.conv)||'Agenda',medico:(p&&p.medico)||'',scheduled_at:a.data_hora,status:'agendado'});
                                                               });
                                                               const cols={agendado:[],aguardando:[],atendido:[]};
                                                               items.forEach(k=>{if(cols[k.status])cols[k.status].push(k);});
