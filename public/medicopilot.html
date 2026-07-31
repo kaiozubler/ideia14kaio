@@ -3548,6 +3548,124 @@
         </div>
       </div>
 
+      <!-- CONFIGURAÇÕES DA ETAPA (KANBAN) -->
+      <div class="modal" id="m-kcol-cfg" style="display:none;width:560px">
+        <div class="mhd">
+          <span class="mhd-title">Configurações da etapa</span
+          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody">
+          <div class="form-grid">
+            <div class="fld"><label>Nome da etapa</label><input type="text" id="kcfg-name" /></div>
+            <div class="fld"><label>Cor</label><input type="color" id="kcfg-color" style="height:34px;padding:2px" /></div>
+            <div class="fld wide kcfg-sec">Gatilhos</div>
+            <div class="fld wide">
+              <label style="display:flex;align-items:center;gap:8px;font-weight:400">
+                <input type="checkbox" id="kcfg-trg-notify" /> Notificar usuários quando um paciente entrar nesta etapa
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:6px">
+                <input type="checkbox" id="kcfg-trg-confirm" /> Enviar confirmação ao paciente ao entrar nesta etapa
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:6px">
+                <input type="checkbox" id="kcfg-trg-charge" /> Alertar pendência financeira ao entrar nesta etapa
+              </label>
+            </div>
+            <div class="fld wide kcfg-sec">Atalho e destino</div>
+            <div class="fld">
+              <label>Atalho em destaque no card</label>
+              <select id="kcfg-shortcut">
+                <option value="entrada">Dar entrada</option>
+                <option value="atender">Atender</option>
+                <option value="cobrar">Cobrar</option>
+                <option value="reagendar">Reagendar</option>
+                <option value="confirmar">Confirmar agenda</option>
+                <option value="confirmado">Confirmado</option>
+                <option value="">Nenhum</option>
+              </select>
+            </div>
+            <div class="fld">
+              <label>Encaminhar card para a etapa</label>
+              <select id="kcfg-target"></select>
+            </div>
+            <div class="fld wide">
+              <label>Mover para etapa fará qual ação</label>
+              <select id="kcfg-onmove">
+                <option value="none">Nenhuma ação</option>
+                <option value="entrada">Registrar entrada do paciente</option>
+                <option value="atender">Iniciar atendimento</option>
+                <option value="cobrar">Abrir cobrança</option>
+                <option value="confirmar">Enviar confirmação ao paciente</option>
+              </select>
+            </div>
+            <div class="fld wide kcfg-sec">Permissões</div>
+            <div class="fld">
+              <label>Usuários que podem visualizar a etapa</label>
+              <div class="kmulti" id="kcfg-viewers"></div>
+            </div>
+            <div class="fld">
+              <label>Usuários que podem mover para esta etapa</label>
+              <div class="kmulti" id="kcfg-movers"></div>
+            </div>
+            <div class="fld wide">
+              <label>Etapas para as quais o card pode ser movido (regra de negócio)</label>
+              <div class="kmulti" id="kcfg-allowed"></div>
+            </div>
+          </div>
+        </div>
+        <div class="mfoot">
+          <button class="btn" onclick="closeModal()">Cancelar</button>
+          <button class="btn primary" onclick="saveKcolCfg()"><i class="ti ti-check"></i> Salvar etapa</button>
+        </div>
+      </div>
+
+      <!-- DAR ENTRADA -->
+      <div class="modal" id="m-dar-entrada" style="display:none;width:520px">
+        <div class="mhd">
+          <span class="mhd-title">Dar entrada — <span id="kde-patient">Paciente</span></span
+          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody">
+          <div class="form-grid">
+            <div class="fld"><label>Médico</label><select id="kde-medico"></select></div>
+            <div class="fld"><label>Especialidade</label><input type="text" id="kde-esp" placeholder="Ex: Cardiologia" /></div>
+            <div class="fld wide"><label>Descrição curta</label><input type="text" id="kde-desc" placeholder="Motivo da consulta" /></div>
+            <div class="fld"><label>Valor da consulta (R$)</label><input type="number" id="kde-valor" step="0.01" min="0" /></div>
+            <div class="fld">
+              <label>Plano ou convênio</label>
+              <select id="kde-conv">
+                <option>Particular</option>
+                <option>SUS</option>
+                <option>Unimed</option>
+                <option>Bradesco</option>
+                <option>Amil</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="mfoot">
+          <button class="btn" onclick="closeModal()">Cancelar</button>
+          <button class="btn primary" onclick="submitDarEntrada()"><i class="ti ti-login"></i> Enviar</button>
+        </div>
+      </div>
+
+      <!-- PENDÊNCIA FINANCEIRA -->
+      <div class="modal" id="m-pendencia-financeira" style="display:none;width:440px">
+        <div class="mhd">
+          <span class="mhd-title">Consulta não paga</span
+          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody">
+          <p style="font-size:12.5px;color:var(--n600);line-height:1.6">
+            Há valor em aberto de <strong id="kpf-valor" style="color:#dc2626">R$ 0,00</strong> para
+            <strong id="kpf-nome">o paciente</strong>. Como deseja prosseguir?
+          </p>
+        </div>
+        <div class="mfoot">
+          <button class="btn" onclick="pendenciaDarEntrada()">Dar entrada</button>
+          <button class="btn primary" onclick="pendenciaCobrar()"><i class="ti ti-cash"></i> Cobrar</button>
+        </div>
+      </div>
+
       <!-- NOVO PACIENTE -->
       <div class="modal" id="m-new-patient" style="display:none">
         <div class="mhd">
