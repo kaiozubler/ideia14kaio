@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{{CLINIC_NAME}} — Encaminhamento Médico</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /*
+       * ATENÇÃO — TEMPLATE OTIMIZADO PARA html2canvas / html2pdf.js
+       * html2canvas NÃO resolve CSS custom properties (var(--x)).
+       * {{PRIMARY_COLOR}} é usado DIRETAMENTE em cada propriedade de cor.
+       * Quebras de página usam page-break-before:always.
+       */
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      html, body {
+        background: #f3f4f2;
+        color: #16201d;
+        font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .sheet {
+        width: 210mm;
+        min-height: 297mm;
+        background: #ffffff;
+        margin: 0;
+        padding: 14mm 16mm 12mm;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .letterhead { margin-bottom: 0; }
+
+      .brand-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 10px;
+      }
+
+      .brand-left { display: flex; align-items: center; gap: 12px; }
+
+      .logo-slot {
+        width: 120px;
+        height: 48px;
+        flex-shrink: 0;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+      }
+
+      .logo-slot img {
+        max-height: 48px;
+        max-width: 120px;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        display: block;
+        color: transparent;
+        font-size: 0;
+        text-indent: -9999px;
+      }
+
+      .brand-name {
+        font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
+        font-weight: 600;
+        font-size: 18px;
+        color: #16201d;
+        margin: 0 0 2px;
+        line-height: 1.2;
+      }
+
+      .brand-meta { font-size: 10.5px; color: #5b6660; line-height: 1.5; }
+
+      .doctor-block {
+        text-align: right;
+        font-size: 11px;
+        color: #5b6660;
+        line-height: 1.5;
+      }
+
+      .doctor-block strong {
+        display: block;
+        font-size: 13px;
+        color: #16201d;
+        font-weight: 600;
+      }
+
+      .accent-rule {
+        height: 3px;
+        border-radius: 2px;
+        background: linear-gradient(90deg, {{PRIMARY_COLOR}} 0%, rgba(255,255,255,0) 100%);
+        margin: 10px 0 14px;
+      }
+
+      .patient-strip {
+        display: flex;
+        gap: 0;
+        background: #f6f7f5;
+        border: 1px solid #e1e4e1;
+        border-radius: 10px;
+        padding: 10px 16px;
+        margin-bottom: 16px;
+      }
+
+      .patient-field { flex: 1; min-width: 0; padding-right: 12px; }
+
+      .patient-field + .patient-field {
+        border-left: 1px solid #e1e4e1;
+        padding-left: 12px;
+        padding-right: 0;
+      }
+
+      .eyebrow {
+        display: block;
+        font-size: 9px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #5b6660;
+        font-weight: 700;
+        margin-bottom: 2px;
+      }
+
+      .patient-field .val {
+        font-size: 12.5px;
+        font-weight: 600;
+        color: #16201d;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .rx-heading {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 16px;
+      }
+
+      .rx-mark {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: {{PRIMARY_COLOR}};
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Fraunces', Georgia, serif;
+        font-style: italic;
+        font-weight: 600;
+        font-size: 15px;
+        flex-shrink: 0;
+      }
+
+      .rx-heading h2 {
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #5b6660;
+        font-weight: 700;
+      }
+
+      .rx-content { flex: 1; }
+
+      /* ===== DESTINO DO ENCAMINHAMENTO ===== */
+      .referral-banner {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border: 1px solid {{PRIMARY_COLOR}};
+        border-radius: 10px;
+        padding: 12px 16px;
+        margin-bottom: 18px;
+        background: #ffffff;
+      }
+
+      .referral-to {
+        flex: 1;
+      }
+
+      .referral-to .val {
+        font-size: 14px;
+        font-weight: 700;
+        color: #16201d;
+      }
+
+      /* Selo de urgência — cor controlada via {{URGENCY_COLOR}} (ex.: #b3261e p/ urgente, {{PRIMARY_COLOR}} p/ eletivo) */
+      .urgency-tag {
+        flex-shrink: 0;
+        border-radius: 999px;
+        background: {{URGENCY_COLOR}};
+        color: #ffffff;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 6px 12px;
+      }
+
+      /* ===== SEÇÕES DE TEXTO ===== */
+      .section {
+        margin-bottom: 16px;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .section-title {
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: {{PRIMARY_COLOR}};
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+
+      .section-body {
+        font-size: 13px;
+        line-height: 1.8;
+        color: #16201d;
+        text-align: justify;
+      }
+
+      .detail-grid {
+        display: flex;
+        gap: 0;
+        border: 1px solid #e1e4e1;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-bottom: 18px;
+      }
+
+      .detail-cell { flex: 1; padding: 10px 16px; background: #f6f7f5; }
+      .detail-cell + .detail-cell { border-left: 1px solid #e1e4e1; }
+
+      .detail-cell .val {
+        font-size: 12.5px;
+        font-weight: 600;
+        color: #16201d;
+      }
+
+      /* Bloco de CID — remover via JS quando não houver hipótese diagnóstica codificada */
+      .cid-box {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border: 1px dashed #c8cdc9;
+        border-radius: 10px;
+        padding: 10px 16px;
+        margin-bottom: 18px;
+        background: #f6f7f5;
+      }
+
+      .cid-tag {
+        flex-shrink: 0;
+        border-radius: 8px;
+        background: {{PRIMARY_COLOR}};
+        color: #ffffff;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        padding: 6px 10px;
+      }
+
+      .cid-desc { font-size: 12.5px; color: #16201d; }
+
+      .page-break {
+        break-before: page;
+        page-break-before: always;
+        -webkit-column-break-before: always;
+      }
+
+      .doc-footer {
+        margin-top: 20px;
+        padding-top: 8px;
+        border-top: 1px solid #e1e4e1;
+        display: flex;
+        justify-content: space-between;
+        font-size: 9px;
+        color: #5b6660;
+      }
+
+      .signature-area {
+        margin-top: 18px;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .signature-card {
+        border: 1px solid #e1e4e1;
+        border-radius: 12px;
+        background: #eef6f1;
+        padding: 14px 18px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .seal {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 2px solid #b08d3f;
+        color: #b08d3f;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 18px;
+      }
+
+      .sig-main { flex: 1; min-width: 0; }
+
+      .sig-status {
+        font-size: 12px;
+        font-weight: 700;
+        color: #16201d;
+        margin-bottom: 2px;
+      }
+
+      .sig-meta { font-size: 10.5px; color: #5b6660; line-height: 1.5; }
+      .sig-meta b { color: #16201d; font-weight: 600; }
+
+      .sig-graphic { text-align: center; flex-shrink: 0; }
+
+      .sig-graphic-slot {
+        height: 42px;
+        width: 150px;
+        border-bottom: 1px solid #16201d;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        overflow: hidden;
+        margin: 0 auto 3px;
+      }
+
+      .sig-graphic-slot img {
+        max-height: 42px;
+        max-width: 150px;
+        object-fit: contain;
+        display: block;
+        color: transparent;
+      }
+
+      .sig-name-line {
+        font-size: 10.5px;
+        font-weight: 600;
+        color: #16201d;
+        text-align: center;
+      }
+
+      .qr-field {
+        text-align: center;
+        flex-shrink: 0;
+        padding-left: 16px;
+        border-left: 1px solid #e1e4e1;
+      }
+
+      .qr-field .eyebrow { text-align: center; margin-bottom: 5px; }
+
+      .qr-box {
+        width: 68px;
+        height: 68px;
+        border: 1px solid #e1e4e1;
+        border-radius: 7px;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        margin: 0 auto;
+        position: relative;
+      }
+
+      .qr-box::before {
+        content: 'QR';
+        position: absolute;
+        font-size: 9px;
+        color: #e1e4e1;
+        font-weight: 700;
+        letter-spacing: 1px;
+      }
+
+      .qr-box img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+        position: relative;
+        background: #fff;
+        color: transparent;
+      }
+
+      .qr-caption {
+        display: block;
+        margin-top: 4px;
+        font-size: 8.5px;
+        color: #5b6660;
+        max-width: 80px;
+        line-height: 1.3;
+        text-align: center;
+      }
+
+      .builder-note {
+        background: #fff7ed;
+        border: 1px solid #fdba74;
+        color: #9a3412;
+        font-size: 11.5px;
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-family: Arial, sans-serif;
+        line-height: 1.5;
+        margin-bottom: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="builder-note">
+      <strong>Aviso de montagem</strong> (removido pelo JS antes de gerar o PDF).<br />
+      Substitua todos os <code>{{PLACEHOLDER}}</code> antes de renderizar.<br />
+      <code>{{URGENCY_COLOR}}</code>: use um tom de alerta (ex. <code>#b3261e</code>) quando {{URGENCY_LABEL}} = "Urgente", ou {{PRIMARY_COLOR}} quando for "Eletivo".<br />
+      Remova o bloco <code>.cid-box</code> quando não houver hipótese diagnóstica codificada a informar.
+    </div>
+
+    <div class="sheet">
+      <!-- CABEÇALHO -->
+      <div class="letterhead">
+        <div class="brand-row">
+          <div class="brand-left">
+            <div class="logo-slot">
+              <img src="{{LOGO_URL}}" alt="{{CLINIC_NAME}}" />
+            </div>
+            <div>
+              <p class="brand-name">{{CLINIC_NAME}}</p>
+              <p class="brand-meta">{{CLINIC_ADDRESS}}<br />{{CLINIC_PHONE}} · {{CLINIC_EMAIL}}</p>
+            </div>
+          </div>
+          <div class="doctor-block">
+            <strong>{{DOCTOR_NAME}}</strong>
+            {{DOCTOR_SPECIALTY}}<br />
+            CRM {{DOCTOR_CRM}}
+          </div>
+        </div>
+        <div class="accent-rule"></div>
+
+        <div class="patient-strip">
+          <div class="patient-field">
+            <span class="eyebrow">Paciente</span>
+            <span class="val">{{PATIENT_NAME}}</span>
+          </div>
+          <div class="patient-field">
+            <span class="eyebrow">Idade</span>
+            <span class="val">{{PATIENT_AGE}}</span>
+          </div>
+          <div class="patient-field">
+            <span class="eyebrow">CPF</span>
+            <span class="val">{{PATIENT_CPF}}</span>
+          </div>
+          <div class="patient-field">
+            <span class="eyebrow">Data</span>
+            <span class="val">{{ISSUE_DATE}}</span>
+          </div>
+        </div>
+
+        <div class="rx-heading">
+          <div class="rx-mark">{{DOC_MARK}}</div>
+          <h2>{{DOC_TITLE}}</h2>
+        </div>
+      </div>
+
+      <!-- CORPO DO ENCAMINHAMENTO -->
+      <div class="rx-content">
+        <div class="referral-banner">
+          <div class="referral-to">
+            <span class="eyebrow">Encaminhado(a) para</span>
+            <span class="val">{{SPECIALTY}} — {{REFERRAL_TARGET}}</span>
+          </div>
+          <div class="urgency-tag">{{URGENCY_LABEL}}</div>
+        </div>
+
+        <div class="detail-grid">
+          <div class="detail-cell">
+            <span class="eyebrow">Motivo do encaminhamento</span>
+            <span class="val">{{REFERRAL_REASON_SHORT}}</span>
+          </div>
+          <div class="detail-cell">
+            <span class="eyebrow">Validade</span>
+            <span class="val">{{VALIDITY_DAYS}} dias</span>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">História clínica / motivo</div>
+          <p class="section-body">{{CLINICAL_HISTORY}}</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Hipótese diagnóstica</div>
+          <div class="cid-box">
+            <div class="cid-tag">CID {{CID_CODE}}</div>
+            <div class="cid-desc">{{CID_DESCRIPTION}}</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Exames / achados relevantes</div>
+          <p class="section-body">{{RELEVANT_EXAMS}}</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Observações adicionais</div>
+          <p class="section-body">{{ADDITIONAL_NOTES}}</p>
+        </div>
+      </div>
+
+      <!-- ASSINATURA DIGITAL (removida pelo JS se não configurada) -->
+      <div class="signature-area">
+        <div class="signature-card">
+          <div class="seal">✓</div>
+          <div class="sig-main">
+            <div class="sig-status">Documento assinado digitalmente</div>
+            <div class="sig-meta">
+              Assinado por <b>{{DOCTOR_NAME}}</b> (CRM {{DOCTOR_CRM}}) em <b>{{SIGNATURE_DATETIME}}</b><br />
+              Certificado: {{SIGNATURE_CERT_ID}} · Verificar em: {{VERIFICATION_URL}}
+            </div>
+          </div>
+          <div class="sig-graphic">
+            <div class="sig-graphic-slot">
+              <img src="{{SIGNATURE_IMAGE_URL}}" alt="Assinatura" />
+            </div>
+            <div class="sig-name-line">{{DOCTOR_NAME}}</div>
+          </div>
+          <div class="qr-field">
+            <span class="eyebrow">Verificação</span>
+            <div class="qr-box">
+              <img src="{{QR_CODE_URL}}" alt="QR verificação" />
+            </div>
+            <span class="qr-caption">Escaneie para autenticar</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RODAPÉ -->
+      <div class="doc-footer">
+        <span>{{CLINIC_NAME}} · {{CLINIC_PHONE}}</span>
+        <span>Documento gerado eletronicamente</span>
+      </div>
+    </div>
+  </body>
+</html>
