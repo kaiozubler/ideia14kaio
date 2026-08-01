@@ -25,6 +25,7 @@ import { Route as ApiSignatureLocalCertificateRouteImport } from './routes/api/s
 import { Route as ApiSignatureSignRouteImport } from './routes/api/signature/sign'
 import { Route as ApiPublicHooksSyncInteracoesRouteImport } from './routes/api/public/hooks/sync-interacoes'
 import { Route as ApiPublicSignatureCallbackRouteImport } from './routes/api/public/signature/callback'
+import { Route as ApiPublicWebhooksBryRouteImport } from './routes/api/public/webhooks/bry'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -111,6 +112,11 @@ const ApiPublicSignatureCallbackRoute =
     path: '/api/public/signature/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicWebhooksBryRoute = ApiPublicWebhooksBryRouteImport.update({
+  id: '/api/public/webhooks/bry',
+  path: '/api/public/webhooks/bry',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -129,6 +135,7 @@ export interface FileRoutesByFullPath {
   '/api/signature/sign': typeof ApiSignatureSignRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
+  '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -147,6 +154,7 @@ export interface FileRoutesByTo {
   '/api/signature/sign': typeof ApiSignatureSignRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
+  '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -166,6 +174,7 @@ export interface FileRoutesById {
   '/api/signature/sign': typeof ApiSignatureSignRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
+  '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -186,6 +195,7 @@ export interface FileRouteTypes {
     | '/api/signature/sign'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/signature/callback'
+    | '/api/public/webhooks/bry'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -204,6 +214,7 @@ export interface FileRouteTypes {
     | '/api/signature/sign'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/signature/callback'
+    | '/api/public/webhooks/bry'
   id:
     | '__root__'
     | '/'
@@ -222,6 +233,7 @@ export interface FileRouteTypes {
     | '/api/signature/sign'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/signature/callback'
+    | '/api/public/webhooks/bry'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -241,6 +253,7 @@ export interface RootRouteChildren {
   ApiSignatureSignRoute: typeof ApiSignatureSignRoute
   ApiPublicHooksSyncInteracoesRoute: typeof ApiPublicHooksSyncInteracoesRoute
   ApiPublicSignatureCallbackRoute: typeof ApiPublicSignatureCallbackRoute
+  ApiPublicWebhooksBryRoute: typeof ApiPublicWebhooksBryRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -357,6 +370,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSignatureCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/webhooks/bry': {
+      id: '/api/public/webhooks/bry'
+      path: '/api/public/webhooks/bry'
+      fullPath: '/api/public/webhooks/bry'
+      preLoaderRoute: typeof ApiPublicWebhooksBryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -377,6 +397,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSignatureSignRoute: ApiSignatureSignRoute,
   ApiPublicHooksSyncInteracoesRoute: ApiPublicHooksSyncInteracoesRoute,
   ApiPublicSignatureCallbackRoute: ApiPublicSignatureCallbackRoute,
+  ApiPublicWebhooksBryRoute: ApiPublicWebhooksBryRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
