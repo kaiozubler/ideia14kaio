@@ -2490,7 +2490,7 @@
                             <i class="ti ti-dots"></i> Ações <i class="ti ti-chevron-up" style="font-size:10px"></i>
                           </button>
                           <div class="dropdown-menu" id="actions-menu">
-                            <div class="dm-item green" onclick="closeDropdown();openReceita()">
+                            <div class="dm-item green" onclick="closeDropdown();rxIsAvulsa=false;openReceita()">
                               <i class="ti ti-prescription"></i> Emitir receita
                             </div>
                             <div class="dm-item green" onclick="closeDropdown()">
@@ -4082,8 +4082,9 @@
                 <option value="encaminhamento">Encaminhamento</option>
               </select>
             </div>
-            <div class="fld wide">
-              <label>Nome do paciente *</label><input type="text" id="gd-nome" placeholder="Nome completo do paciente" />
+            <div class="fld wide" style="position:relative">
+              <label>Nome do paciente *</label><input type="text" id="gd-nome" placeholder="Nome completo do paciente" autocomplete="off" oninput="onGdNomeChange()" onblur="setTimeout(hideGdNomeSuggest,150)" />
+              <div id="gd-nome-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:#fff;border:0.5px solid var(--n200);border-radius:var(--r8);box-shadow:0 8px 20px rgba(0,0,0,.08);max-height:220px;overflow-y:auto;margin-top:2px"></div>
             </div>
             <div class="fld">
               <label>CPF do paciente</label>
@@ -6579,21 +6580,27 @@ showAtendList();
                                     };
                                                               let _cicPendingOpts=null;
                                     let _cicCidsSugeridos=[];
-                                                              async function avaliarInfoComplementarIA(){
+                                                              async function avaliarInfoComplementarIA(opts){
                                       if(!currentPatient)return null;
                                       try{
                                         const partes=[];
-                                        const pa=document.getElementById('pront-area');
-                                        const pront=(atendEmAndamento.pront||(pa?pa.value:'')||'').trim();
-                                        if(pront)partes.push('## Anotações do atendimento\n'+pront);
-                                        if(Array.isArray(transcriptLog)&&transcriptLog.length)partes.push('## Transcrição da consulta\n'+transcriptLog.join('\n'));
-                                        const notaPessoal=(document.getElementById('nota-personal-ta')?.value||'').trim();
-                                        if(notaPessoal)partes.push('## Nota pessoal do médico\n'+notaPessoal);
-                                       if(window.__lastAnamnese)partes.push('## Anamnese gerada\n'+window.__lastAnamnese);
-            if(Array.isArray(aiChatHistory)&&aiChatHistory.length){
-              const chatTxt=aiChatHistory.map(m=>(m.role==='user'?'Médico: ':'IA: ')+(m.content||'')).join('\n');
-              if(chatTxt.trim())partes.push('## Conversa do médico com a IA durante o atendimento\n'+chatTxt);
-            }
+                                        if(opts&&opts.conteudoExtra){
+                                          // Origem: receita avulsa (fora de atendimento) — avalia só o
+                                          // conteúdo da própria receita, sem tocar em pront-area/atendEmAndamento.
+                                          partes.push('## Receita emitida\n'+opts.conteudoExtra);
+                                        }else{
+                                          const pa=document.getElementById('pront-area');
+                                          const pront=(atendEmAndamento.pront||(pa?pa.value:'')||'').trim();
+                                          if(pront)partes.push('## Anotações do atendimento\n'+pront);
+                                          if(Array.isArray(transcriptLog)&&transcriptLog.length)partes.push('## Transcrição da consulta\n'+transcriptLog.join('\n'));
+                                          const notaPessoal=(document.getElementById('nota-personal-ta')?.value||'').trim();
+                                          if(notaPessoal)partes.push('## Nota pessoal do médico\n'+notaPessoal);
+                                          if(window.__lastAnamnese)partes.push('## Anamnese gerada\n'+window.__lastAnamnese);
+                                          if(Array.isArray(aiChatHistory)&&aiChatHistory.length){
+                                            const chatTxt=aiChatHistory.map(m=>(m.role==='user'?'Médico: ':'IA: ')+(m.content||'')).join('\n');
+                                            if(chatTxt.trim())partes.push('## Conversa do médico com a IA durante o atendimento\n'+chatTxt);
+                                          }
+                                        }
             const conteudo=partes.join('\n\n').trim();
             if(!conteudo)return null;
                                         const infoAtual=loadInfoComp();
@@ -6659,7 +6666,8 @@ showAtendList();
                                         async function cancelarConfirmaInfoComp(){
                                       const opts=_cicPendingOpts;_cicPendingOpts=null;_cicCidsSugeridos=[];
                                       closeModal();
-                                      if(opts)await saveAtendInternal(opts);
+                                      if(opts&&!opts.avulsa)await saveAtendInternal(opts);
+                                      if(opts&&opts.avulsa&&('restorePatient' in opts))currentPatient=opts.restorePatient;
                                     }
                                         async function confirmarAplicarInfoComp(){
                                       const opts=_cicPendingOpts;
@@ -6691,7 +6699,8 @@ showAtendList();
                                       }finally{
                                         _cicPendingOpts=null;_cicCidsSugeridos=[];
                                         closeModal();
-                                        await saveAtendInternal(opts);
+                                        if(opts&&!opts.avulsa)await saveAtendInternal(opts);
+                                        if(opts&&opts.avulsa&&('restorePatient' in opts))currentPatient=opts.restorePatient;
                                       }
                                     }
                                                             function reprocessHistory(){
@@ -9406,6 +9415,11 @@ let rxSelected = [];
                                        paciente em atendimento aberto), guardamos aqui os dados digitados
                                        manualmente para usar no lugar de currentPatient. */
                                     let rxManualPatient = null;                                                            let rxSearchTimer = null;
+                                    /* Contexto de onde o modal "Emitir receita" foi aberto:
+                                       false = dentro de um atendimento em andamento (comportamento original);
+                                       true  = receita avulsa (tela Receitas e Atestados > Gerar documento),
+                                       usado por rxEmitir() para decidir o que fazer ao confirmar. */
+                                    let rxIsAvulsa = false;
                                                             let rxLastResults = [];
 
 
@@ -9783,23 +9797,117 @@ let rxSelected = [];
                                                             function rxEmitir() {
                                                               if (!rxSelected.length) { showToast && showToast('Adicione ao menos um medicamento', 'warn'); return; }
 
-                                                              // Adiciona ao prontuário
                                                               const linhas = rxSelected.map((it, i) =>
                                                                 `${i + 1}. ${it.nome_comercial}${it.apresentacao ? ' — ' + it.apresentacao : ''}${it.quantidade ? ' — ' + it.quantidade : ''}${it.posologia ? '\n   ' + it.posologia : ''}`
                                                               ).join('\n');
-                                                              const ta = document.getElementById('pront-area');
-                                                              if (ta) { ta.value = (ta.value ? ta.value + '\n\n' : '') + 'RECEITA:\n' + linhas; if (typeof markAtendDirty === 'function') markAtendDirty(); }
-
-                                                              // Gera PDF
                                                               const items = rxSelected.map(it => ({
                                                                 nome: it.nome_comercial,
                                                                 apresentacao: it.apresentacao || it.composicao || '',
                                                                 quantidade: it.quantidade || '',
                                                                 posologia: it.posologia || ''
                                                               }));
+
+                                                              if (rxIsAvulsa) {
+                                                                // Receita avulsa (fora de um atendimento): NUNCA toca em
+                                                                // pront-area/atendEmAndamento, então não cria rascunho de
+                                                                // atendimento nem mexe em um atendimento em andamento.
+                                                                const avulsaPatient = rxManualPatient; // capturado antes do PDF zerar rxManualPatient
+                                                                openReceitaPDF({ items });
+                                                                closeModal();
+                                                                registrarReceitaAvulsaNoPaciente(items, linhas, avulsaPatient);
+                                                                return;
+                                                              }
+
+                                                              // Fluxo original: dentro de um atendimento em andamento,
+                                                              // a receita continua sendo adicionada às anotações do atendimento.
+                                                              const ta = document.getElementById('pront-area');
+                                                              if (ta) { ta.value = (ta.value ? ta.value + '\n\n' : '') + 'RECEITA:\n' + linhas; if (typeof markAtendDirty === 'function') markAtendDirty(); }
                                                               openReceitaPDF({ items });
                                                               closeModal();
                                                               showToast && showToast('Receita adicionada ao prontuário', 'success');
+                                                            }
+
+                                                            /* Registra, no cadastro do paciente, uma receita emitida FORA de um
+                                                               atendimento (tela Receitas e Atestados): grava a timeline, um
+                                                               registro finalizado no prontuário (sem passar pelo fluxo de
+                                                               rascunho/autosave do atendimento) e, quando aplicável, atualiza
+                                                               "Informações complementares" (ex.: medicamento de uso contínuo),
+                                                               reaproveitando a mesma avaliação por IA usada ao finalizar um
+                                                               atendimento comum. */
+                                                            async function registrarReceitaAvulsaNoPaciente(items, linhas, patient) {
+                                                              // Só gravamos automaticamente quando a receita foi vinculada a um
+                                                              // paciente já cadastrado (via CPF ou seleção pelo nome). Paciente
+                                                              // digitado à mão, sem cadastro, não tem onde linkar isso.
+                                                              if (!patient || !patient.id || !currentUser) return;
+                                                              try {
+                                                                const now = new Date();
+                                                                const dateStr = now.toLocaleDateString('pt-BR');
+                                                                const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                                                                const resumo = 'RECEITA:\n' + linhas;
+
+                                                                // 1) Registro no prontuário — já finalizado (started_at = ended_at =
+                                                                //    agora), sem passar por atendEmAndamento/saveAtendInternal, então
+                                                                //    não cria rascunho nem interfere em nenhum atendimento aberto.
+                                                                const payload = {
+                                                                  paciente_id: patient.id,
+                                                                  id_medico: currentUser.id,
+                                                                  started_at: now.toISOString(),
+                                                                  ended_at: now.toISOString(),
+                                                                  title: 'Receita — ' + dateStr,
+                                                                  acao: 'Receita',
+                                                                  resumo: resumo.substring(0, 200) + (resumo.length > 200 ? '...' : ''),
+                                                                  notas: resumo
+                                                                };
+                                                                const { data, error } = await sb.from('consulta').insert(payload).select('*').single();
+                                                                if (error) {
+                                                                  console.warn('Falha ao registrar receita avulsa no prontuário', error);
+                                                                } else if (currentPatient && currentPatient.id === patient.id && typeof mapConsultaRow === 'function') {
+                                                                  // Se por acaso é o mesmo paciente que já está aberto na tela,
+                                                                  // atualiza a lista/prontuário visíveis também.
+                                                                  atendimentos = atendimentos.filter(a => a.id !== data.id);
+                                                                  atendimentos.unshift(mapConsultaRow(data));
+                                                                  if (typeof renderProntuario === 'function' && document.getElementById('prontuario-main-area')) renderProntuario();
+                                                                  if (typeof renderAtendimentos === 'function') renderAtendimentos();
+                                                                }
+
+                                                                // 2) Timeline do paciente — gravado direto no banco (não depende de
+                                                                //    qual ficha está aberta na tela no momento).
+                                                                const tlSub = (items[0] && items[0].nome) ? items[0].nome + (items.length > 1 ? ' + ' + (items.length - 1) : '') : '';
+                                                                const { error: tlErr } = await sb.from('timeline_events').insert({
+                                                                  paciente_id: patient.id, user_id: currentUser.id, event_date: dateStr,
+                                                                  type: 'receita', icon: 'ti-prescription', title: 'Receita emitida — ' + timeStr, sub: tlSub
+                                                                });
+                                                                if (tlErr) console.warn('Falha ao salvar timeline da receita avulsa', tlErr);
+                                                                else if (currentPatient && currentPatient.id === patient.id) {
+                                                                  timelineEvents.unshift({ date: dateStr, type: 'receita', icon: 'ti-prescription', title: 'Receita emitida — ' + timeStr, sub: tlSub });
+                                                                  if (typeof renderTimeline === 'function') renderTimeline();
+                                                                }
+
+                                                                showToast && showToast('Receita registrada no cadastro do paciente', 'success');
+
+                                                                // 3) Atualiza "Informações complementares" quando a receita indicar
+                                                                //    medicamento de uso contínuo — mesma IA usada ao finalizar
+                                                                //    atendimento. Como essa avaliação/aplicação é sempre feita em
+                                                                //    cima de currentPatient, apontamos temporariamente currentPatient
+                                                                //    para o paciente da receita (mesmo que não seja o que está
+                                                                //    aberto na tela) e devolvemos ao valor original assim que o
+                                                                //    médico confirmar ou descartar a sugestão.
+                                                                if (typeof avaliarInfoComplementarIA === 'function') {
+                                                                  const { data: pacRow, error: pacErr } = await sb.from('pacientes').select('*').eq('paciente_id', patient.id).single();
+                                                                  if (!pacErr && pacRow) {
+                                                                    const patientPrev = currentPatient;
+                                                                    currentPatient = mapPatientRow(pacRow);
+                                                                    const proposta = await avaliarInfoComplementarIA({ conteudoExtra: resumo });
+                                                                    if (proposta && typeof abrirModalConfirmaInfoComp === 'function') {
+                                                                      abrirModalConfirmaInfoComp(proposta, { avulsa: true, restorePatient: patientPrev });
+                                                                    } else {
+                                                                      currentPatient = patientPrev;
+                                                                    }
+                                                                  }
+                                                                }
+                                                              } catch (e) {
+                                                                console.warn('Falha ao registrar receita avulsa no cadastro do paciente', e);
+                                                              }
                                                             }
 
 
@@ -10583,14 +10691,22 @@ let rxSelected = [];
                                       set('gd-nome', ''); set('gd-cpf', ''); set('gd-texto', ''); set('gd-nasc', ''); set('gd-telefone', '');
                                       const idadeEl = document.getElementById('gd-idade'); if (idadeEl) idadeEl.textContent = '';
                                       const tipoSel = document.getElementById('gd-tipo'); if (tipoSel) tipoSel.selectedIndex = 1;
+                                      gdMatchedPaciente = null;
+                                      hideGdNomeSuggest();
                                       onGdTipoChange();
                                       openModal('gerar-documento');
                                     }
+
+                                    /* Paciente já cadastrado identificado via busca por CPF ou por nome no
+                                       modal "Gerar documento" — quando preenchido, a receita/documento fica
+                                       vinculado a esse cadastro (paciente_id) em vez de ficar como texto solto. */
+                                    let gdMatchedPaciente = null;
 
                                     /* Busca o paciente pelo CPF (com debounce) e preenche Nome, Data de
                                        nascimento e Telefone automaticamente quando encontrado. */
                                     let gdCpfSearchTimer = null;
                                     function onGdCpfChange() {
+                                      gdMatchedPaciente = null;
                                       clearTimeout(gdCpfSearchTimer);
                                       const digits = (document.getElementById('gd-cpf').value || '').replace(/\D/g, '');
                                       if (digits.length < 11) return;
@@ -10598,17 +10714,79 @@ let rxSelected = [];
                                     }
                                     async function buscarPacientePorCpfDocumento(digits) {
                                       try {
-                                        const { data, error } = await sb.from('pacientes').select('name,nasc,telefone,cpf').not('cpf', 'is', null);
-                                        if (error || !data) return;
+                                        const { data, error } = await sb.from('pacientes').select('paciente_id,name,data_nascimento,telefone,cpf').not('cpf', 'is', null);
+                                        if (error) { console.warn('Falha ao buscar paciente por CPF:', error); return; }
+                                        if (!data) return;
                                         const pac = data.find(p => (p.cpf || '').replace(/\D/g, '') === digits);
                                         if (!pac) return;
                                         const set = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
                                         set('gd-nome', pac.name);
-                                        set('gd-nasc', pac.nasc);
+                                        set('gd-nasc', pac.data_nascimento);
                                         set('gd-telefone', pac.telefone);
                                         onGdNascChange();
+                                        hideGdNomeSuggest();
+                                        gdMatchedPaciente = { id: pac.paciente_id, name: pac.name, cpf: pac.cpf, nasc: pac.data_nascimento, tel: pac.telefone };
                                         showToast && showToast('Paciente encontrado — dados preenchidos automaticamente', 'success');
                                       } catch (e) { console.warn('Falha ao buscar paciente por CPF:', e); }
+                                    }
+
+                                    /* Busca por nome (com debounce) listando até 5 pacientes cadastrados
+                                       que combinem com o que foi digitado, para o médico vincular a receita/
+                                       documento ao cadastro correto em vez de digitar tudo à mão. */
+                                    let gdNomeSearchTimer = null;
+                                    function onGdNomeChange() {
+                                      gdMatchedPaciente = null;
+                                      clearTimeout(gdNomeSearchTimer);
+                                      const term = (document.getElementById('gd-nome').value || '').trim();
+                                      if (term.length < 2) { hideGdNomeSuggest(); return; }
+                                      gdNomeSearchTimer = setTimeout(() => buscarPacientesPorNomeDocumento(term), 300);
+                                    }
+                                    async function buscarPacientesPorNomeDocumento(term) {
+                                      const box = document.getElementById('gd-nome-suggest');
+                                      if (!box) return;
+                                      try {
+                                        const { data, error } = await sb.from('pacientes')
+                                          .select('paciente_id,name,data_nascimento,telefone,cpf')
+                                          .ilike('name', '%' + term + '%')
+                                          .order('name', { ascending: true })
+                                          .limit(5);
+                                        if (error) { console.warn('Falha ao buscar pacientes por nome:', error); hideGdNomeSuggest(); return; }
+                                        renderGdNomeSuggest(data || []);
+                                      } catch (e) { console.warn('Falha ao buscar pacientes por nome:', e); hideGdNomeSuggest(); }
+                                    }
+                                    function renderGdNomeSuggest(list) {
+                                      const box = document.getElementById('gd-nome-suggest');
+                                      if (!box) return;
+                                      if (!list.length) { hideGdNomeSuggest(); return; }
+                                      box.innerHTML = list.map(p => {
+                                        const cpfFmt = p.cpf ? formatCPF(p.cpf) : '';
+                                        return `<div class="rx-opt" onmousedown="selecionarGdPaciente('${p.paciente_id}')"
+                                          style="padding:9px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer" onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background=''">
+                                          <div style="font-weight:600;font-size:12.5px;color:#0f172a">${_rxEsc(p.name || '(sem nome)')}</div>
+                                          ${cpfFmt ? `<div style="font-size:11px;color:#94a3b8;margin-top:1px">${_rxEsc(cpfFmt)}</div>` : ''}
+                                        </div>`;
+                                      }).join('');
+                                      box.dataset.results = JSON.stringify(list);
+                                      box.style.display = 'block';
+                                    }
+                                    function hideGdNomeSuggest() {
+                                      const box = document.getElementById('gd-nome-suggest');
+                                      if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+                                    }
+                                    function selecionarGdPaciente(pacienteId) {
+                                      const box = document.getElementById('gd-nome-suggest');
+                                      let list = [];
+                                      try { list = JSON.parse(box?.dataset.results || '[]'); } catch (e) {}
+                                      const pac = list.find(p => String(p.paciente_id) === String(pacienteId));
+                                      if (!pac) return;
+                                      const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+                                      set('gd-nome', pac.name);
+                                      set('gd-cpf', pac.cpf ? formatCPF(pac.cpf) : '');
+                                      set('gd-nasc', pac.data_nascimento);
+                                      set('gd-telefone', pac.telefone);
+                                      onGdNascChange();
+                                      hideGdNomeSuggest();
+                                      gdMatchedPaciente = { id: pac.paciente_id, name: pac.name, cpf: pac.cpf, nasc: pac.data_nascimento, tel: pac.telefone };
                                     }
 
                                     /* Alterna entre o campo de texto livre (atestado/laudo/etc.) e o
@@ -10650,11 +10828,13 @@ let rxSelected = [];
                                       const nome = document.getElementById('gd-nome').value.trim();
                                       if (!nome) { showToast && showToast('Informe o nome do paciente', 'warn'); return; }
                                       rxManualPatient = {
+                                        id: (gdMatchedPaciente && gdMatchedPaciente.name === nome) ? gdMatchedPaciente.id : null,
                                         name: nome,
                                         cpf: document.getElementById('gd-cpf').value.trim(),
                                         nasc: document.getElementById('gd-nasc').value,
                                         tel: document.getElementById('gd-telefone').value.trim(),
                                       };
+                                      rxIsAvulsa = true;
                                       openReceita();
                                     }
 
