@@ -8655,6 +8655,23 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                                                         cfRenderConduta();
                                                       }
                                                       // ─────────────────────────────────────────────────────────────────────────
+                                                           // ── Tag de tipo de receita (Portaria SVS/MS 344/1998) ────────────────────
+                                                      function medListaTagHtml(listaRaw) {
+                                                        if (!listaRaw) return '';
+                                                        const cores = {
+                                                          A1: ['#fef3c7','#92400e'], A2: ['#fef3c7','#92400e'], A3: ['#fef3c7','#92400e'],
+                                                          B1: ['#dbeafe','#1e40af'], B2: ['#dbeafe','#1e40af'],
+                                                          C1: ['#fee2e2','#991b1b'], C2: ['#fce7f3','#9d174d'], C3: ['#ede9fe','#5b21b6'],
+                                                          C4: ['#ccfbf1','#115e59'], C5: ['#ffedd5','#9a3412'],
+                                                          D1: ['#e2e8f0','#334155'], D2: ['#e2e8f0','#334155'],
+                                                          E:  ['#f1f5f9','#475569'], F1: ['#f1f5f9','#475569'], F2: ['#f1f5f9','#475569'], F3: ['#f1f5f9','#475569']
+                                                        };
+                                                        return listaRaw.split(',').map(s => s.trim()).filter(Boolean).map(lista => {
+                                                          const [bg, fg] = cores[lista] || ['#f1f5f9','#475569'];
+                                                          return `<span style="display:inline-block;font-size:9.5px;font-weight:700;color:${fg};background:${bg};padding:1px 6px;border-radius:4px;letter-spacing:.02em;white-space:nowrap;line-height:1.4">${lista}</span>`;
+                                                        }).join(' ');
+                                                      }
+
                                                            // ── Busca de medicamentos dentro do modal de conduta ─────────────────────
                                                       let cfMedSearchTimer = null;
                                                       let cfMedLastResults = [];
@@ -8686,7 +8703,8 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                                                             id_substancia: g.id_substancia,
                                                             nome_comercial: g.nome_exibicao,
                                                             composicao: g.grupo_busca,
-                                                            qtd_fabricantes: Number(g.qtd_fabricantes || 0)
+                                                            qtd_fabricantes: Number(g.qtd_fabricantes || 0),
+                                                            lista_portaria344: g.lista_portaria344 || null
                                                           }));
                                                           const coms = (comRes.data || []).map(c => ({
                                                             key: 'R|' + (c.nome_comercial || '') + '|' + (c.fabricante || ''),
@@ -8694,7 +8712,8 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                                                             nome_comercial: c.nome_comercial,
                                                             fabricante: c.fabricante,
                                                             composicao: c.composicao || '',
-                                                            qtd_apresentacoes: Number(c.qtd_apresentacoes || 0)
+                                                            qtd_apresentacoes: Number(c.qtd_apresentacoes || 0),
+                                                            lista_portaria344: c.lista_portaria344 || null
                                                           }));
                                                           const list = [...gens, ...coms].slice(0, 80);
                                                           cfMedLastResults = list;
@@ -8705,6 +8724,7 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                                                           box.innerHTML = list.map(m => {
                                                             const genBadge = m.is_generico
                                                               ? '<span style="font-size:9.5px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 6px;border-radius:4px">GENÉRICO</span>' : '';
+                                                            const listaTag = medListaTagHtml(m.lista_portaria344);
                                                             const fabLine = (!m.is_generico && m.fabricante)
                                                               ? `<span style="font-size:10.5px;color:#94a3b8">· ${m.fabricante}</span>` : '';
                                                             const compos = m.composicao
@@ -8718,6 +8738,7 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                                                               onmouseleave="this.style.background=''">
                                                               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                                                                 <span style="font-weight:600;font-size:13px;color:#0f172a">${m.nome_comercial}</span>
+                                                                ${listaTag}
                                                                 ${genBadge}${fabLine}
                                                               </div>
                                                               ${compos}
@@ -9372,7 +9393,8 @@ let rxSelected = [];
                                                                 id_substancia: g.id_substancia,
                                                                 nome_comercial: g.nome_exibicao,
                                                                 composicao: g.grupo_busca,
-                                                                qtd_fabricantes: Number(g.qtd_fabricantes || 0)
+                                                                qtd_fabricantes: Number(g.qtd_fabricantes || 0),
+                                                                lista_portaria344: g.lista_portaria344 || null
                                                               }));
 
                                                               const coms = (comRes.data || []).map(c => ({
@@ -9381,7 +9403,8 @@ let rxSelected = [];
                                                                 nome_comercial: c.nome_comercial,
                                                                 fabricante: c.fabricante,
                                                                 composicao: '',
-                                                                qtd_apresentacoes: Number(c.qtd_apresentacoes || 0)
+                                                                qtd_apresentacoes: Number(c.qtd_apresentacoes || 0),
+                                                                lista_portaria344: c.lista_portaria344 || null
                                                               }));
 
                                                               const list = [...gens, ...coms].slice(0, 80);
@@ -9396,6 +9419,7 @@ let rxSelected = [];
                                                                 const genBadge = m.is_generico
                                                                   ? '<span style="font-size:9.5px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 6px;border-radius:4px;letter-spacing:.04em">GENÉRICO</span>'
                                                                   : '';
+                                                                const listaTag = medListaTagHtml(m.lista_portaria344);
                                                                 const fabLine = (!m.is_generico && m.fabricante)
                                                                   ? `<span style="font-size:10.5px;color:#94a3b8">· ${m.fabricante}</span>` : '';
                                                                 const info = m.is_generico
@@ -9408,6 +9432,7 @@ let rxSelected = [];
                                                                   onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background=''">
                                                                   <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                                                                     <span style="font-weight:600;font-size:13px;color:#0f172a">${m.nome_comercial}</span>
+                                                                    ${listaTag}
                                                                     ${genBadge}${fabLine}
                                                                   </div>
                                                                   ${compos}
