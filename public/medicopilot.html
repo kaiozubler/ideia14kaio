@@ -1768,6 +1768,50 @@
                                                       .lgm-btn.primary:hover{box-shadow:0 8px 20px rgba(5,150,105,.34)}
                                                       .lgm-btn.primary:disabled{opacity:.6;cursor:not-allowed;box-shadow:none}
                                                       @media (max-width:640px){.lgm-row,.lgm-row.cols-3{grid-template-columns:1fr}}
+
+                                                      /* ===== Liquid Glass — modal de configuração da etapa (kanban) ===== */
+                                                      #m-kcol-cfg{width:600px;max-height:88vh;border-radius:28px;border:1px solid rgba(255,255,255,.7);background:linear-gradient(165deg,rgba(255,255,255,.94) 0%,rgba(250,250,249,.86) 100%);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 30px 70px -24px rgba(26,25,23,.38),0 0 0 1px rgba(255,255,255,.5) inset;position:relative;overflow:hidden}
+                                                      #m-kcol-cfg::before{content:'';position:absolute;top:-70px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(52,211,153,.32),transparent 70%);filter:blur(6px);border-radius:50%;pointer-events:none;z-index:0}
+                                                      #m-kcol-cfg::after{content:'';position:absolute;bottom:-80px;left:-50px;width:190px;height:190px;background:radial-gradient(circle,rgba(167,139,250,.26),transparent 70%);filter:blur(6px);border-radius:50%;pointer-events:none;z-index:0}
+                                                      #m-kcol-cfg .mhd,#m-kcol-cfg .mbody,#m-kcol-cfg .mfoot{position:relative;z-index:1}
+                                                      #m-kcol-cfg .mhd{padding:18px 22px;border-bottom:1px solid rgba(0,0,0,.06);display:flex;align-items:center;gap:12px;background:transparent}
+                                                      #m-kcol-cfg .lg-hicon{width:40px;height:40px;flex-shrink:0;border-radius:14px;background:linear-gradient(135deg,#34d399,#059669);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;box-shadow:0 6px 16px -4px rgba(5,150,105,.5)}
+                                                      #m-kcol-cfg .lg-htext{display:flex;flex-direction:column;gap:1px}
+                                                      #m-kcol-cfg .mhd-title{font-size:14.5px;font-weight:700;color:#2a2926}
+                                                      #m-kcol-cfg .lg-hsub{font-size:11px;color:#8e8d87}
+                                                      #m-kcol-cfg .mclose{width:28px;height:28px;border-radius:10px;border:none;background:rgba(0,0,0,.05);color:#686762;display:flex;align-items:center;justify-content:center;margin-left:auto;transition:background .14s}
+                                                      #m-kcol-cfg .mclose:hover{background:rgba(0,0,0,.1)}
+                                                      #m-kcol-cfg .mbody{padding:6px 22px 18px}
+                                                      #m-kcol-cfg .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+                                                      #m-kcol-cfg .fld label{font-size:11px;font-weight:600;color:#686762;margin-bottom:5px;display:block}
+                                                      #m-kcol-cfg .fld .lg-hint{font-size:10.5px;color:#a3a29c;margin-top:4px;display:block;line-height:1.4}
+                                                      #m-kcol-cfg input[type=text],#m-kcol-cfg input[type=number],#m-kcol-cfg select{width:100%;padding:9px 12px;border-radius:14px;border:1px solid rgba(0,0,0,.08);background:rgba(255,255,255,.72);font-size:12.5px;color:#2a2926;transition:all .15s;box-sizing:border-box}
+                                                      #m-kcol-cfg input[type=text]:focus,#m-kcol-cfg input[type=number]:focus,#m-kcol-cfg select:focus{outline:none;border-color:#34d399;box-shadow:0 0 0 3px rgba(52,211,153,.22);background:#fff}
+                                                      #m-kcol-cfg input[type=color]{width:100%;height:38px;border-radius:14px;border:1px solid rgba(0,0,0,.08);padding:3px;background:rgba(255,255,255,.72);box-sizing:border-box}
+                                                      #m-kcol-cfg .kcfg-sec{grid-column:1/-1;display:flex;align-items:center;gap:7px;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin:6px 0 2px;padding-top:16px;border-top:1px solid rgba(0,0,0,.06);color:#059669}
+                                                      #m-kcol-cfg .kcfg-sec:first-of-type{border-top:none;padding-top:0;margin-top:0}
+                                                      #m-kcol-cfg .kcfg-sec::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+                                                      #m-kcol-cfg .kcfg-sec.sec-triggers{color:#7c3aed}
+                                                      #m-kcol-cfg .kcfg-sec.sec-auto{color:#d97706}
+                                                      #m-kcol-cfg .kcfg-sec.sec-perm{color:#0284c7}
+                                                      #m-kcol-cfg .lg-toggle{display:flex;align-items:flex-start;gap:11px;cursor:pointer;padding:9px 10px;border-radius:16px;transition:background .15s;position:relative}
+                                                      #m-kcol-cfg .lg-toggle:hover{background:rgba(124,58,237,.06)}
+                                                      #m-kcol-cfg .lg-toggle input{position:absolute;opacity:0;width:0;height:0}
+                                                      #m-kcol-cfg .lg-toggle-track{flex-shrink:0;width:36px;height:21px;border-radius:999px;background:#e3e2de;position:relative;transition:background .18s;margin-top:1px}
+                                                      #m-kcol-cfg .lg-toggle-thumb{position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.28);transition:transform .18s}
+                                                      #m-kcol-cfg .lg-toggle input:checked+.lg-toggle-track{background:linear-gradient(135deg,#a78bfa,#7c3aed)}
+                                                      #m-kcol-cfg .lg-toggle input:checked+.lg-toggle-track .lg-toggle-thumb{transform:translateX(15px)}
+                                                      #m-kcol-cfg .lg-toggle-text strong{display:block;font-size:12px;font-weight:600;color:#2a2926}
+                                                      #m-kcol-cfg .lg-toggle-text small{display:block;font-size:10.5px;color:#8e8d87;margin-top:2px;line-height:1.4}
+                                                      #m-kcol-cfg .kmulti{border:1px solid rgba(0,0,0,.07);background:rgba(255,255,255,.55);border-radius:16px;padding:8px;max-height:120px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:6px}
+                                                      #m-kcol-cfg .kmulti label{display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.75);border:1px solid #e3e2de;font-size:11.5px;color:#46453f;cursor:pointer;transition:all .15s}
+                                                      #m-kcol-cfg .kmulti label:hover{background:#fff}
+                                                      #m-kcol-cfg .kmulti label:has(input:checked){background:linear-gradient(135deg,#38bdf8,#0284c7);border-color:transparent;color:#fff}
+                                                      #m-kcol-cfg .mfoot{padding:14px 22px;border-top:1px solid rgba(0,0,0,.06);background:transparent;display:flex;justify-content:flex-end;gap:10px}
+                                                      #m-kcol-cfg .mfoot .btn{border-radius:999px;padding:8px 18px;font-weight:600;font-size:12px;border:1px solid #e3e2de;background:rgba(255,255,255,.7);color:#46453f}
+                                                      #m-kcol-cfg .mfoot .btn:hover{background:#fff}
+                                                      #m-kcol-cfg .mfoot .btn.primary{background:linear-gradient(135deg,#34d399,#059669);border:none;color:#fff;box-shadow:0 8px 20px -6px rgba(5,150,105,.5)}
+                                                      #m-kcol-cfg .mfoot .btn.primary:hover{box-shadow:0 10px 24px -6px rgba(5,150,105,.6)}
     </style>
   </head>
   <body>
@@ -3612,28 +3656,41 @@
       </div>
 
       <!-- CONFIGURAÇÕES DA ETAPA (KANBAN) -->
-      <div class="modal" id="m-kcol-cfg" style="display:none;width:560px">
+      <div class="modal" id="m-kcol-cfg" style="display:none">
         <div class="mhd">
-          <span class="mhd-title">Configurações da etapa</span
-          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+          <div class="lg-hicon"><i class="ti ti-adjustments"></i></div>
+          <div class="lg-htext">
+            <span class="mhd-title">Configurações da etapa</span>
+            <span class="lg-hsub">Identidade, gatilhos e permissões desta coluna do kanban</span>
+          </div>
+          <button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
         </div>
         <div class="mbody">
           <div class="form-grid">
+            <div class="fld kcfg-sec">Identidade</div>
             <div class="fld"><label>Nome da etapa</label><input type="text" id="kcfg-name" /></div>
-            <div class="fld"><label>Cor</label><input type="color" id="kcfg-color" style="height:34px;padding:2px" /></div>
-            <div class="fld wide kcfg-sec">Gatilhos</div>
-            <div class="fld wide">
-              <label style="display:flex;align-items:center;gap:8px;font-weight:400">
-                <input type="checkbox" id="kcfg-trg-notify" /> Notificar usuários quando um paciente entrar nesta etapa
+            <div class="fld"><label>Cor</label><input type="color" id="kcfg-color" /></div>
+
+            <div class="fld wide kcfg-sec sec-triggers">Gatilhos automáticos</div>
+            <div class="fld wide" style="display:flex;flex-direction:column;gap:2px">
+              <label class="lg-toggle">
+                <input type="checkbox" id="kcfg-trg-notify" />
+                <span class="lg-toggle-track"><span class="lg-toggle-thumb"></span></span>
+                <span class="lg-toggle-text"><strong>Notificar usuários</strong><small>Avisa a equipe quando um paciente entrar nesta etapa</small></span>
               </label>
-              <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:6px">
-                <input type="checkbox" id="kcfg-trg-confirm" /> Enviar confirmação ao paciente ao entrar nesta etapa
+              <label class="lg-toggle">
+                <input type="checkbox" id="kcfg-trg-confirm" />
+                <span class="lg-toggle-track"><span class="lg-toggle-thumb"></span></span>
+                <span class="lg-toggle-text"><strong>Enviar confirmação ao paciente</strong><small>Dispara pedido de confirmação assim que o card entrar aqui</small></span>
               </label>
-              <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:6px">
-                <input type="checkbox" id="kcfg-trg-charge" /> Alertar pendência financeira ao entrar nesta etapa
+              <label class="lg-toggle">
+                <input type="checkbox" id="kcfg-trg-charge" />
+                <span class="lg-toggle-track"><span class="lg-toggle-thumb"></span></span>
+                <span class="lg-toggle-text"><strong>Alertar pendência financeira</strong><small>Mostra aviso se houver valor em aberto para o paciente</small></span>
               </label>
             </div>
-            <div class="fld wide kcfg-sec">Atalho e destino</div>
+
+            <div class="fld wide kcfg-sec sec-auto">Atalho e automação</div>
             <div class="fld">
               <label>Atalho em destaque no card</label>
               <select id="kcfg-shortcut">
@@ -3645,12 +3702,9 @@
                 <option value="confirmado">Confirmado</option>
                 <option value="">Nenhum</option>
               </select>
+              <span class="lg-hint">Botão de ação rápida exibido no card enquanto ele estiver nesta etapa</span>
             </div>
             <div class="fld">
-              <label>Encaminhar card para a etapa</label>
-              <select id="kcfg-target"></select>
-            </div>
-            <div class="fld wide">
               <label>Mover para etapa fará qual ação</label>
               <select id="kcfg-onmove">
                 <option value="none">Nenhuma ação</option>
@@ -3659,8 +3713,15 @@
                 <option value="cobrar">Abrir cobrança</option>
                 <option value="confirmar">Enviar confirmação ao paciente</option>
               </select>
+              <span class="lg-hint">Executada automaticamente assim que um card chega nesta etapa</span>
             </div>
-            <div class="fld wide kcfg-sec">Permissões</div>
+            <div class="fld wide">
+              <label>Encaminhar automaticamente para a etapa</label>
+              <select id="kcfg-target"></select>
+              <span class="lg-hint">Se definido, o card é movido sozinho para essa etapa logo após entrar aqui (útil para etapas de trânsito, ex: "Confirmação enviada" → "Aguardando")</span>
+            </div>
+
+            <div class="fld wide kcfg-sec sec-perm">Permissões</div>
             <div class="fld">
               <label>Usuários que podem visualizar a etapa</label>
               <div class="kmulti" id="kcfg-viewers"></div>
@@ -11139,9 +11200,22 @@ let rxSelected = [];
                                                                 document.addEventListener('click',ev=>{if(!el.contains(ev.target))el.classList.remove('open');});}
                                                               return el;
                                                             }
+                                                            function kRelevantActions(id,st){
+                                                              const m=kMeta(id);
+                                                              return Object.keys(KACTIONS).filter(a=>{
+                                                                if(a==='entrada')return st==='agendado'&&!m.enteredAt;
+                                                                if(a==='atender')return st==='aguardando';
+                                                                if(a==='cobrar')return st==='atendido'&&Number(m.valor)>0&&!m.pago;
+                                                                if(a==='reagendar')return st==='agendado';
+                                                                if(a==='confirmar')return st==='agendado'&&m.confirm==='none';
+                                                                if(a==='confirmado')return st==='agendado'&&m.confirm==='sent';
+                                                                return true;
+                                                              });
+                                                            }
                                                             function kOpenCardMenu(ev,id,st){
                                                               const el=kPop();
-                                                              el.innerHTML=Object.keys(KACTIONS).map(a=>`<button onclick="kAction('${a}','${id}','${st}')"><i class="ti ${KACTIONS[a].icon}"></i> ${KACTIONS[a].label}</button>`).join('');
+                                                              const relevant=kRelevantActions(id,st);
+                                                              el.innerHTML=relevant.length?relevant.map(a=>`<button onclick="kAction('${a}','${id}','${st}')"><i class="ti ${KACTIONS[a].icon}"></i> ${KACTIONS[a].label}</button>`).join(''):'<span style="display:block;padding:8px 12px;font-size:11px;color:var(--n400)">Nenhuma ação disponível nesta etapa</span>';
                                                               el.style.left=Math.min(ev.clientX,window.innerWidth-210)+'px';
                                                               el.style.top=(ev.clientY+6)+'px';
                                                               el.classList.add('open');
@@ -11224,7 +11298,7 @@ let rxSelected = [];
                                                             function pendenciaDarEntrada(){const id=_kCurrent.id;closeModal();if(id)kConfirmarEntrada(id);}
                                                             function pendenciaCobrar(){const id=_kCurrent.id;closeModal();if(id)kCobrar(id);}
                                                             /* movimentação de cards */
-                                                            function kMoveCard(id,to,silent){
+                                                            function kMoveCard(id,to,silent,_visited){
                                                               const arr=loadKanban();const it=arr.find(x=>x.id===id);
                                                               if(it){
                                                                 if(!silent&&!kCanMoveTo(it.status,to)){showToast('Você não tem permissão para mover para esta etapa','error');return false;}
@@ -11237,11 +11311,13 @@ let rxSelected = [];
                                                                 arr.push({id,patient_id:pid,scheduled_at:new Date().toISOString(),status:to});saveKanban(arr);
                                                               }
                                                               kSetMeta(id,{enteredAt:new Date().toISOString()});
-                                                              kRunStageTriggers(id,to);
+                                                              kRunStageTriggers(id,to,_visited);
                                                               renderKanban();
                                                               return true;
                                                             }
-                                                            function kRunStageTriggers(id,to){
+                                                            function kRunStageTriggers(id,to,_visited){
+                                                              _visited=_visited?new Set(_visited):new Set();
+                                                              _visited.add(to);
                                                               const c=kCfg(to);
                                                               if(c.triggers&&c.triggers.notify)showToast('Usuários notificados: paciente entrou em "'+c.name+'"','success');
                                                               if(c.triggers&&c.triggers.confirm){kSetMeta(id,{confirm:'sent'});}
@@ -11251,6 +11327,14 @@ let rxSelected = [];
                                                               if(c.onmove==='atender'){const card=document.querySelector(`.kcard[data-kid="${id}"]`);const pid=card&&card.getAttribute('data-kpid');if(pid&&typeof openPatient==='function')openPatient(pid);}
                                                               if(c.onmove==='cobrar')setTimeout(()=>kCobrar(id),150);
                                                               if(c.onmove==='confirmar')kSetMeta(id,{confirm:'sent'});
+                                                              /* "Encaminhar automaticamente para a etapa" configurado no modal da coluna:
+                                                                 antes esse campo era salvo mas nunca lido em lugar nenhum. Agora, se
+                                                                 configurado, o card avança sozinho para a etapa alvo (respeitando as
+                                                                 regras de permissão) logo após entrar aqui. O Set _visited evita loops
+                                                                 infinitos caso o usuário encadeie etapas que apontam umas para as outras. */
+                                                              if(c.target&&!_visited.has(c.target)&&kCanMoveTo(to,c.target)){
+                                                                setTimeout(()=>kMoveCard(id,c.target,true,_visited),200);
+                                                              }
                                                             }
                                                             let _kDragId=null,_kDragFrom=null,_kDnDBound=false;
                                                             function kBindDnD(){
