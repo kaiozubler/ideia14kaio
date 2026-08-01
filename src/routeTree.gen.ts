@@ -15,6 +15,7 @@ import { Route as ApiAssistenteIaConversasRouteImport } from './routes/api/assis
 import { Route as ApiChatIaRouteImport } from './routes/api/chat-ia'
 import { Route as ApiDailyRoomRouteImport } from './routes/api/daily-room'
 import { Route as ApiDeepgramTokenRouteImport } from './routes/api/deepgram-token'
+import { Route as ApiBryCancelEnvelopeRouteImport } from './routes/api/bry/cancel-envelope'
 import { Route as ApiBryCreateEnvelopeRouteImport } from './routes/api/bry/create-envelope'
 import { Route as ApiBryDownloadDocumentRouteImport } from './routes/api/bry/download-document'
 import { Route as ApiBryGetEnvelopeRouteImport } from './routes/api/bry/get-envelope'
@@ -54,6 +55,11 @@ const ApiDailyRoomRoute = ApiDailyRoomRouteImport.update({
 const ApiDeepgramTokenRoute = ApiDeepgramTokenRouteImport.update({
   id: '/api/deepgram-token',
   path: '/api/deepgram-token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBryCancelEnvelopeRoute = ApiBryCancelEnvelopeRouteImport.update({
+  id: '/api/bry/cancel-envelope',
+  path: '/api/bry/cancel-envelope',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBryCreateEnvelopeRoute = ApiBryCreateEnvelopeRouteImport.update({
@@ -113,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/api/chat-ia': typeof ApiChatIaRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
+  '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/api/chat-ia': typeof ApiChatIaRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
+  '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/api/chat-ia': typeof ApiChatIaRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
+  '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/api/chat-ia'
     | '/api/daily-room'
     | '/api/deepgram-token'
+    | '/api/bry/cancel-envelope'
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
     | '/api/bry/get-envelope'
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
     | '/api/chat-ia'
     | '/api/daily-room'
     | '/api/deepgram-token'
+    | '/api/bry/cancel-envelope'
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
     | '/api/bry/get-envelope'
@@ -201,6 +212,7 @@ export interface FileRouteTypes {
     | '/api/chat-ia'
     | '/api/daily-room'
     | '/api/deepgram-token'
+    | '/api/bry/cancel-envelope'
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
     | '/api/bry/get-envelope'
@@ -219,6 +231,7 @@ export interface RootRouteChildren {
   ApiChatIaRoute: typeof ApiChatIaRoute
   ApiDailyRoomRoute: typeof ApiDailyRoomRoute
   ApiDeepgramTokenRoute: typeof ApiDeepgramTokenRoute
+  ApiBryCancelEnvelopeRoute: typeof ApiBryCancelEnvelopeRoute
   ApiBryCreateEnvelopeRoute: typeof ApiBryCreateEnvelopeRoute
   ApiBryDownloadDocumentRoute: typeof ApiBryDownloadDocumentRoute
   ApiBryGetEnvelopeRoute: typeof ApiBryGetEnvelopeRoute
@@ -272,6 +285,13 @@ declare module '@tanstack/react-router' {
       path: '/api/deepgram-token'
       fullPath: '/api/deepgram-token'
       preLoaderRoute: typeof ApiDeepgramTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bry/cancel-envelope': {
+      id: '/api/bry/cancel-envelope'
+      path: '/api/bry/cancel-envelope'
+      fullPath: '/api/bry/cancel-envelope'
+      preLoaderRoute: typeof ApiBryCancelEnvelopeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/bry/create-envelope': {
@@ -347,6 +367,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatIaRoute: ApiChatIaRoute,
   ApiDailyRoomRoute: ApiDailyRoomRoute,
   ApiDeepgramTokenRoute: ApiDeepgramTokenRoute,
+  ApiBryCancelEnvelopeRoute: ApiBryCancelEnvelopeRoute,
   ApiBryCreateEnvelopeRoute: ApiBryCreateEnvelopeRoute,
   ApiBryDownloadDocumentRoute: ApiBryDownloadDocumentRoute,
   ApiBryGetEnvelopeRoute: ApiBryGetEnvelopeRoute,
