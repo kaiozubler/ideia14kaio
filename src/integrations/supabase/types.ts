@@ -16,42 +16,60 @@ export type Database = {
     Tables: {
       agendamentos: {
         Row: {
+          cpf: string | null
           created_at: string
           data_hora: string
           duracao_min: number
+          especialidade: string | null
           id: string
           id_medico: string
+          medico_nome: string | null
           motivo: string | null
+          observacoes: string | null
           origem: string | null
           paciente_id: string | null
           paciente_nome: string | null
           status: string
+          telefone: string | null
+          tipo: string | null
           updated_at: string
         }
         Insert: {
+          cpf?: string | null
           created_at?: string
           data_hora: string
           duracao_min?: number
+          especialidade?: string | null
           id?: string
           id_medico: string
+          medico_nome?: string | null
           motivo?: string | null
+          observacoes?: string | null
           origem?: string | null
           paciente_id?: string | null
           paciente_nome?: string | null
           status?: string
+          telefone?: string | null
+          tipo?: string | null
           updated_at?: string
         }
         Update: {
+          cpf?: string | null
           created_at?: string
           data_hora?: string
           duracao_min?: number
+          especialidade?: string | null
           id?: string
           id_medico?: string
+          medico_nome?: string | null
           motivo?: string | null
+          observacoes?: string | null
           origem?: string | null
           paciente_id?: string | null
           paciente_nome?: string | null
           status?: string
+          telefone?: string | null
+          tipo?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1172,6 +1190,7 @@ export type Database = {
       buscar_comerciais: {
         Args: { termo: string }
         Returns: {
+          composicao: string
           fabricante: string
           nome_comercial: string
           qtd_apresentacoes: number
@@ -1193,25 +1212,21 @@ export type Database = {
       }
       grupo_busca_substancia: { Args: { nome_dcb: string }; Returns: string }
       listar_apresentacoes_comercial: {
-        Args: { p_fabricante: string; p_nome_comercial: string }
+        Args: { p_fabricante?: string; p_nome_comercial: string }
         Returns: {
           apresentacao: string
-          registro_anvisa: string
         }[]
       }
       listar_apresentacoes_generico: {
         Args: { p_fabricante?: string; p_id_substancia: string }
         Returns: {
           apresentacao: string
-          fabricante: string
-          registro_anvisa: string
         }[]
       }
       listar_fabricantes_generico: {
         Args: { p_id_substancia: string }
         Returns: {
           fabricante: string
-          qtd_apresentacoes: number
         }[]
       }
       normaliza_substancia: { Args: { t: string }; Returns: string }
