@@ -2310,9 +2310,9 @@
                       </div>
                     </div>
                     <div style="display:flex;gap:6px;flex-shrink:0">
-                      <button class="btn sm ghost" title="Ver receita"><i class="ti ti-file-prescription"></i></button>
-                      <button class="btn sm ghost" title="Ver atestado"><i class="ti ti-certificate"></i></button>
-                      <button class="btn sm" title="Imprimir"><i class="ti ti-printer"></i></button>
+                      <button class="btn sm ghost" title="Ver receita" onclick="verDocumentoAtendimento('receita')"><i class="ti ti-file-prescription"></i></button>
+                      <button class="btn sm ghost" title="Ver atestado" onclick="verDocumentoAtendimento('atestado')"><i class="ti ti-certificate"></i></button>
+                      <button class="btn sm" title="Imprimir" onclick="imprimirDocumentoAtendimento()"><i class="ti ti-printer"></i></button>
                     </div>
                   </div>
                   <div class="notes-block" id="adv-anamnese-block" style="display:none;margin-top:10px">
@@ -4037,15 +4037,107 @@
               ></label>
               <input type="date" id="gd-nasc" oninput="onGdNascChange()" />
             </div>
+            <!-- Atestado / Declaração de comparecimento -->
+            <div class="fld wide" id="gd-atestado-wrap" style="display:none">
+              <div class="form-grid" style="grid-template-columns:repeat(2,1fr)">
+                <div class="fld">
+                  <label>Tipo</label>
+                  <select id="gd-at-tipo">
+                    <option value="atestado">Atestado médico (afastamento)</option>
+                    <option value="declaracao">Declaração de comparecimento</option>
+                  </select>
+                </div>
+                <div class="fld">
+                  <label>Dias de afastamento</label>
+                  <input type="number" id="gd-at-dias" min="0" placeholder="0" />
+                </div>
+                <div class="fld">
+                  <label>Horário de entrada <span style="font-weight:400;color:var(--n300)">(comparecimento)</span></label>
+                  <input type="time" id="gd-at-time-in" />
+                </div>
+                <div class="fld">
+                  <label>Horário de saída <span style="font-weight:400;color:var(--n300)">(comparecimento)</span></label>
+                  <input type="time" id="gd-at-time-out" />
+                </div>
+                <div class="fld">
+                  <label>CID <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
+                  <input type="text" id="gd-at-cid-code" placeholder="Ex: J11" />
+                </div>
+                <div class="fld">
+                  <label>Descrição do CID</label>
+                  <input type="text" id="gd-at-cid-desc" placeholder="Ex: Influenza, vírus não identificado" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Encaminhamento médico -->
+            <div class="fld wide" id="gd-encaminhamento-wrap" style="display:none">
+              <div class="form-grid" style="grid-template-columns:repeat(2,1fr)">
+                <div class="fld">
+                  <label>Especialidade / destino</label>
+                  <input type="text" id="gd-enc-especialidade" placeholder="Ex: Cardiologia" />
+                </div>
+                <div class="fld">
+                  <label>Urgência</label>
+                  <select id="gd-enc-urgencia">
+                    <option value="Eletivo">Eletivo</option>
+                    <option value="Urgente">Urgente</option>
+                  </select>
+                </div>
+                <div class="fld wide">
+                  <label>Motivo do encaminhamento</label>
+                  <textarea id="gd-enc-motivo" class="cf-ta" style="min-height:70px" placeholder="Motivo clínico do encaminhamento"></textarea>
+                </div>
+                <div class="fld">
+                  <label>CID <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
+                  <input type="text" id="gd-enc-cid-code" placeholder="Ex: I10" />
+                </div>
+                <div class="fld">
+                  <label>Descrição do CID</label>
+                  <input type="text" id="gd-enc-cid-desc" placeholder="Ex: Hipertensão essencial" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Laudo médico -->
+            <div class="fld wide" id="gd-laudo-wrap" style="display:none">
+              <div class="form-grid" style="grid-template-columns:repeat(2,1fr)">
+                <div class="fld wide">
+                  <label>Título do exame/laudo</label>
+                  <input type="text" id="gd-laudo-titulo" placeholder="Ex: Laudo de Ultrassonografia Abdominal" />
+                </div>
+                <div class="fld wide">
+                  <label>Técnica utilizada</label>
+                  <textarea id="gd-laudo-tecnica" class="cf-ta" style="min-height:60px"></textarea>
+                </div>
+                <div class="fld wide">
+                  <label>Achados</label>
+                  <textarea id="gd-laudo-achados" class="cf-ta" style="min-height:90px"></textarea>
+                </div>
+                <div class="fld wide">
+                  <label>Conclusão / impressão diagnóstica</label>
+                  <textarea id="gd-laudo-conclusao" class="cf-ta" style="min-height:70px"></textarea>
+                </div>
+                <div class="fld">
+                  <label>CID <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
+                  <input type="text" id="gd-laudo-cid-code" placeholder="Ex: N20" />
+                </div>
+                <div class="fld">
+                  <label>Descrição do CID</label>
+                  <input type="text" id="gd-laudo-cid-desc" placeholder="Ex: Cálculo do rim" />
+                </div>
+              </div>
+            </div>
+
             <div class="fld wide" id="gd-conteudo-wrap">
-              <label>Conteúdo / observações
+              <label>Observações adicionais
                 <span style="font-weight:400;color:var(--n300)">(opcional)</span></label
               >
               <textarea
                 id="gd-texto"
                 class="cf-ta"
-                style="min-height:120px"
-                placeholder="Texto do documento (orientações, achados, motivo do encaminhamento etc.)"
+                style="min-height:90px"
+                placeholder="Observações complementares para o documento"
               ></textarea>
             </div>
             <div class="fld wide" id="gd-meds-wrap" style="display:none">
@@ -4100,6 +4192,7 @@
               <p class="ve-value" id="vd-status">—</p>
             </div>
           </div>
+          <div class="form-grid" id="vd-detalhes-wrap" style="margin-bottom:12px;display:none"></div>
           <div id="vd-preview-wrap" style="display:none">
             <iframe
               id="vd-preview-pdf"
@@ -4941,6 +5034,7 @@
                                                       }
 
                                                             let atendimentos=[];
+                                                            let _atendDetailAtual=null; // atendimento aberto em Paciente > Atendimentos (usado pelos botões Ver receita/Ver atestado/Imprimir)
                                                             let exames=[];
                                                             let timelineEvents=[];
                                                             let prontAllCollapsed=false;
@@ -5713,6 +5807,7 @@
                                                             function openAtend(id){
                                                               const a=atendimentos.find(x=>String(x.id)===String(id));
                                                               if(!a){console.warn('Atendimento não encontrado',id);return;}
+                                                              _atendDetailAtual=a;
                                                               document.getElementById('atend-list-view').style.display='none';
                                                               document.getElementById('atend-detail-view').style.display='flex';
                                                               document.getElementById('atend-novo-view').style.display='none';
@@ -8066,13 +8161,14 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                                                               {key:'orientacoes',label:'Orientações Médicas',icon:'ti-heart',grad:'linear-gradient(135deg,#f472b6,#db2777)'},
                                                               {key:'exames',label:'Solicitação de Exames',icon:'ti-test-pipe',grad:'linear-gradient(135deg,#38bdf8,#0284c7)'},
                                                               {key:'atestado',label:'Atestado',icon:'ti-award',grad:'linear-gradient(135deg,#fb923c,#ea580c)'},
+                                                              {key:'encaminhamento',label:'Encaminhamento',icon:'ti-send',grad:'linear-gradient(135deg,#22d3ee,#0e7490)'},
                                                               {key:'laudo',label:'Laudo',icon:'ti-eye',grad:'linear-gradient(135deg,#a78bfa,#7c3aed)'}
                                                             ];
                                                             let condState=null;
                                                             function cfDefaultState(){
                                                               return{
                                                                 sugSel:[],  // array para multiselect
-                                                                ativados:{conduta:true,medicamentos:true,orientacoes:true,exames:true,atestado:true,laudo:true},
+                                                                ativados:{conduta:true,medicamentos:true,orientacoes:true,exames:true,atestado:true,encaminhamento:true,laudo:true},
                                                                 vistos:{},
                                                                 removidos:{},
                                                                 canal:'whatsapp',
@@ -8081,8 +8177,9 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                                                                 medicamentos:[],
                                                                 orientacoes:'',
                                                                 exames:[],
-                                                                atestado:{tipo:'Repouso',dias:2,texto:''},
-                                                                laudo:'',
+                                                                atestado:{tipo:'atestado',dias:2,texto:'',cidCode:'',cidDesc:''},
+                                                                encaminhamento:{especialidade:'',urgencia:'Eletivo',motivo:'',cidCode:'',cidDesc:''},
+                                                                laudo:{titulo:'',tecnica:'',achados:'',conclusao:'',cidCode:'',cidDesc:''},
                                                                 anamnese:''
                                                               };
                                                             }
@@ -8299,8 +8396,9 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                                                               "medicamentos":[{"principio_ativo":"","nome_sugerido":"","apresentacao":"","posologia":"","quantidade":""}],
                                                               "orientacoes":"",
                                                               "exames":[{"nome":"","instrucoes":""}],
-                                                              "atestado":{"tipo":"Repouso","dias":0,"texto":""},
-                                                              "laudo":""
+                                                              "atestado":{"tipo":"atestado","dias":0,"texto":"","cid_code":"","cid_descricao":""},
+                                                              "encaminhamento":{"especialidade":"","urgencia":"Eletivo","motivo":"","cid_code":"","cid_descricao":""},
+                                                              "laudo":{"titulo":"","tecnica":"","achados":"","conclusao":"","cid_code":"","cid_descricao":""}
                                                             }
                                                             Regras:
                                                             - Baseie tudo APENAS na anamnese e na conduta escolhida. Não invente dados do paciente.
@@ -8308,8 +8406,9 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                                                             - "conduta_recomendada.texto": recomendação clara em 2-4 frases.
                                                             - "medicamentos": só incluir quando houver base clínica. "principio_ativo" em minúsculo. "apresentacao" ex: "50mg comprimido". "posologia" ex: "1 cp a cada 8h por 5 dias".
                                                             - "exames": só se necessários; caso contrário, array vazio.
-                                                            - "atestado": preencha apenas se justificado; caso não seja necessário use {"tipo":"","dias":0,"texto":""}.
-                                                            - "laudo": texto de laudo médico formal referente ao caso; deixe vazio se não aplicável.`;
+                                                            - "atestado": preencha apenas se justificado ("tipo" é "atestado" ou "declaracao"); "cid_code"/"cid_descricao" apenas quando houver diagnóstico definido — nunca invente CID. Caso não seja necessário use {"tipo":"","dias":0,"texto":"","cid_code":"","cid_descricao":""}.
+                                                            - "encaminhamento": preencha apenas se o caso exigir avaliação de especialista; "urgencia" é "Eletivo" ou "Urgente". Caso não seja necessário use {"especialidade":"","urgencia":"","motivo":"","cid_code":"","cid_descricao":""}.
+                                                            - "laudo": preencha apenas se aplicável ao caso (ex.: resultado de avaliação/procedimento realizado agora). Caso não seja necessário use {"titulo":"","tecnica":"","achados":"","conclusao":"","cid_code":"","cid_descricao":""}.`;
                                                               const usr='ANAMNESE:\n\n'+anam+'\n\nCONDUTA ESCOLHIDA PELO MÉDICO:\n'+conduta+'\n\nRetorne o JSON agora.';
                                                               return await cfCallIaJson(sys,usr);
                                                             }
@@ -8334,10 +8433,36 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                                                               condState.orientacoes=(d.orientacoes||'').toString();
                                                               condState.exames=(Array.isArray(d.exames)?d.exames:[]).map((e,i)=>({id:i+1,nome:(e.nome||'').trim(),instrucoes:(e.instrucoes||'').trim(),selecionado:true}));
                                                               const at=d.atestado||{};
-                                                              condState.atestado={tipo:(at.tipo||'').trim(),dias:parseInt(at.dias)||0,texto:(at.texto||'').trim()};
+                                                              condState.atestado={
+                                                                tipo:(at.tipo||'').trim(),
+                                                                dias:parseInt(at.dias)||0,
+                                                                texto:(at.texto||'').trim(),
+                                                                cidCode:(at.cid_code||'').trim(),
+                                                                cidDesc:(at.cid_descricao||'').trim(),
+                                                              };
                                                               if(!condState.atestado.tipo&&!condState.atestado.texto)condState.ativados.atestado=false;
-                                                              condState.laudo=(d.laudo||'').toString();
-                                                              if(!condState.laudo)condState.ativados.laudo=false;
+
+                                                              const enc=d.encaminhamento||{};
+                                                              condState.encaminhamento={
+                                                                especialidade:(enc.especialidade||'').trim(),
+                                                                urgencia:(enc.urgencia||'Eletivo').trim()||'Eletivo',
+                                                                motivo:(enc.motivo||'').trim(),
+                                                                cidCode:(enc.cid_code||'').trim(),
+                                                                cidDesc:(enc.cid_descricao||'').trim(),
+                                                              };
+                                                              if(!condState.encaminhamento.especialidade&&!condState.encaminhamento.motivo)condState.ativados.encaminhamento=false;
+
+                                                              const ld=d.laudo||{};
+                                                              condState.laudo={
+                                                                titulo:(ld.titulo||'').trim(),
+                                                                tecnica:(ld.tecnica||'').trim(),
+                                                                achados:(ld.achados||'').trim(),
+                                                                conclusao:(ld.conclusao||'').trim(),
+                                                                cidCode:(ld.cid_code||'').trim(),
+                                                                cidDesc:(ld.cid_descricao||'').trim(),
+                                                              };
+                                                              if(!condState.laudo.titulo&&!condState.laudo.achados&&!condState.laudo.conclusao)condState.ativados.laudo=false;
+
                                                               if(!condState.exames.length)condState.ativados.exames=false;
                                                               if(!condState.medicamentos.length)condState.ativados.medicamentos=false;
                                                               if(!condState.orientacoes)condState.ativados.orientacoes=false;
@@ -8601,16 +8726,51 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                                                             placeholder="Instruções adicionais">${escH(e.instrucoes)}</textarea>
                                                         </div>`).join('');
                                                               if(key==='atestado'){
-                                                                const at=s.atestado||{tipo:'Repouso',dias:0,texto:''};
-                                                                const opts=['Repouso','Somente presença','Afastamento do trabalho'];
-                                                                if(at.tipo&&!opts.includes(at.tipo))opts.unshift(at.tipo);
+                                                                const at=s.atestado||{tipo:'atestado',dias:0,texto:'',cidCode:'',cidDesc:''};
                                                                 return `<div style="background:rgba(255,255,255,.55);border-radius:14px;padding:14px 16px;border:1px solid rgba(226,232,240,.8)">
-                                                                  <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><span style="font-size:12px;color:#64748b;width:130px">Tipo:</span><select class="cf-inp" style="width:auto" onchange="condState.atestado.tipo=this.value">${opts.map(o=>`<option ${o===at.tipo?'selected':''}>${o}</option>`).join('')}</select></div>
+                                                                  <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><span style="font-size:12px;color:#64748b;width:130px">Tipo:</span><select class="cf-inp" style="width:auto" onchange="condState.atestado.tipo=this.value"><option value="atestado" ${at.tipo!=='declaracao'?'selected':''}>Atestado (afastamento)</option><option value="declaracao" ${at.tipo==='declaracao'?'selected':''}>Declaração de comparecimento</option></select></div>
                                                                   <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><span style="font-size:12px;color:#64748b;width:130px">Dias de repouso:</span><input type="number" class="cf-inp" style="width:100px" value="${at.dias||0}" oninput="condState.atestado.dias=parseInt(this.value)||0"></div>
-                                                                  <textarea class="cf-ta" oninput="condState.atestado.texto=this.value">${(at.texto||'').replace(/</g,'&lt;')}</textarea>
+                                                                  <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+                                                                    <span style="font-size:12px;color:#64748b;width:130px">CID:</span>
+                                                                    <input class="cf-inp" style="width:100px" placeholder="Ex: J11" value="${escH(at.cidCode||'')}" oninput="condState.atestado.cidCode=this.value">
+                                                                    <input class="cf-inp" style="flex:1" placeholder="Descrição do CID" value="${escH(at.cidDesc||'')}" oninput="condState.atestado.cidDesc=this.value">
+                                                                  </div>
+                                                                  <textarea class="cf-ta" placeholder="Observações adicionais" oninput="condState.atestado.texto=this.value">${escH(at.texto||'')}</textarea>
                                                                 </div>`;
                                                               }
-                                                              if(key==='laudo')return `<textarea class="cf-ta" style="min-height:200px;font-family:var(--mono);font-size:11px" oninput="condState.laudo=this.value">${(s.laudo||'').replace(/</g,'&lt;')}</textarea>`;
+                                                              if(key==='encaminhamento'){
+                                                                const enc=s.encaminhamento||{especialidade:'',urgencia:'Eletivo',motivo:'',cidCode:'',cidDesc:''};
+                                                                return `<div style="background:rgba(255,255,255,.55);border-radius:14px;padding:14px 16px;border:1px solid rgba(226,232,240,.8)">
+                                                                  <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+                                                                    <span style="font-size:12px;color:#64748b;width:130px">Especialidade:</span>
+                                                                    <input class="cf-inp" style="flex:1" placeholder="Ex: Cardiologia" value="${escH(enc.especialidade||'')}" oninput="condState.encaminhamento.especialidade=this.value">
+                                                                  </div>
+                                                                  <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+                                                                    <span style="font-size:12px;color:#64748b;width:130px">Urgência:</span>
+                                                                    <select class="cf-inp" style="width:auto" onchange="condState.encaminhamento.urgencia=this.value"><option ${enc.urgencia!=='Urgente'?'selected':''}>Eletivo</option><option ${enc.urgencia==='Urgente'?'selected':''}>Urgente</option></select>
+                                                                  </div>
+                                                                  <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+                                                                    <span style="font-size:12px;color:#64748b;width:130px">CID:</span>
+                                                                    <input class="cf-inp" style="width:100px" placeholder="Ex: I10" value="${escH(enc.cidCode||'')}" oninput="condState.encaminhamento.cidCode=this.value">
+                                                                    <input class="cf-inp" style="flex:1" placeholder="Descrição do CID" value="${escH(enc.cidDesc||'')}" oninput="condState.encaminhamento.cidDesc=this.value">
+                                                                  </div>
+                                                                  <textarea class="cf-ta" placeholder="Motivo do encaminhamento" oninput="condState.encaminhamento.motivo=this.value">${escH(enc.motivo||'')}</textarea>
+                                                                </div>`;
+                                                              }
+                                                              if(key==='laudo'){
+                                                                const ld=s.laudo||{titulo:'',tecnica:'',achados:'',conclusao:'',cidCode:'',cidDesc:''};
+                                                                return `<div style="background:rgba(255,255,255,.55);border-radius:14px;padding:14px 16px;border:1px solid rgba(226,232,240,.8)">
+                                                                  <input class="cf-inp" style="width:100%;margin-bottom:10px;font-weight:600" placeholder="Título do exame/laudo" value="${escH(ld.titulo||'')}" oninput="condState.laudo.titulo=this.value">
+                                                                  <textarea class="cf-ta" style="min-height:60px;margin-bottom:8px" placeholder="Técnica utilizada" oninput="condState.laudo.tecnica=this.value">${escH(ld.tecnica||'')}</textarea>
+                                                                  <textarea class="cf-ta" style="min-height:80px;margin-bottom:8px" placeholder="Achados" oninput="condState.laudo.achados=this.value">${escH(ld.achados||'')}</textarea>
+                                                                  <textarea class="cf-ta" style="min-height:60px;margin-bottom:10px" placeholder="Conclusão / impressão diagnóstica" oninput="condState.laudo.conclusao=this.value">${escH(ld.conclusao||'')}</textarea>
+                                                                  <div style="display:flex;gap:10px;align-items:center">
+                                                                    <span style="font-size:12px;color:#64748b;width:130px">CID:</span>
+                                                                    <input class="cf-inp" style="width:100px" placeholder="Ex: N20" value="${escH(ld.cidCode||'')}" oninput="condState.laudo.cidCode=this.value">
+                                                                    <input class="cf-inp" style="flex:1" placeholder="Descrição do CID" value="${escH(ld.cidDesc||'')}" oninput="condState.laudo.cidDesc=this.value">
+                                                                  </div>
+                                                                </div>`;
+                                                              }
                                                               return '';
                                                             }
                                                                   // ── Helpers de edição em-estado (não escrevem no banco) ──────────────────
@@ -8868,12 +9028,18 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                                                                 ?`<p style="color:#94a3b8;text-align:center;padding:32px 0;font-size:13px">Nenhum campo foi revisado.</p>`
                                                                 :docs.map(c=>{
                                                                   const off=!!condState.removidos[c.key];
-                                                                  const isMed=c.key==='medicamentos';
+                                                                  const CF_PDF_HANDLERS = {
+                                                                    medicamentos:    { fn: 'condGerarReceita()',        title: 'Gerar receita em PDF',        label: 'Receita PDF' },
+                                                                    atestado:        { fn: 'condGerarAtestado(event)',  title: 'Gerar atestado/declaração em PDF', label: 'Atestado PDF' },
+                                                                    encaminhamento:  { fn: 'condGerarEncaminhamento(event)', title: 'Gerar encaminhamento em PDF', label: 'Encaminhamento PDF' },
+                                                                    laudo:           { fn: 'condGerarLaudo(event)',     title: 'Gerar laudo em PDF',          label: 'Laudo PDF' },
+                                                                  };
+                                                                  const handler = CF_PDF_HANDLERS[c.key];
                                                                   return `<div class="cf-doc${off?' off':''}">
                                                                     <span class="cf-nav-badge" style="width:30px;height:30px;background:${off?'linear-gradient(135deg,#94a3b8,#64748b)':c.grad}"><i class="ti ${c.icon}"></i></span>
                                                                     <span class="cf-doc-name" style="${off?'color:#94a3b8':''}">${c.label}</span>
                                                                     <button class="cf-doc-fmt docx"><i class="ti ti-file-text"></i> DOCX</button>
-                                                                    <button class="cf-doc-fmt pdf"${isMed?' onclick="condGerarReceita()" title="Gerar receita em PDF"':''}><i class="ti ti-file-type-pdf"></i> ${isMed?'Receita PDF':'PDF'}</button>
+                                                                    <button class="cf-doc-fmt pdf"${handler?` onclick="${handler.fn}" title="${handler.title}"`:''}><i class="ti ti-file-type-pdf"></i> ${handler?handler.label:'PDF'}</button>
                                                                     <button class="cf-close" style="padding:4px" onclick="cfToggleRemovido('${c.key}')"><i class="ti ${off?'ti-plus':'ti-ban'}" style="color:${off?'#059669':'#f43f5e'}"></i></button>
                                                                   </div>`;
                                                                 }).join('');
@@ -9765,210 +9931,86 @@ let rxSelected = [];
                                                               }
                                                             }
 
-                                                            /* Renderiza qualquer documento (receita, atestado, laudo, solicitação de
-                                                   exame, encaminhamento...) usando o mesmo modelo visual, tentando
-                                                   assinar digitalmente (ICP-Brasil) e retornando o PDF final pronto
-                                                   para download/upload. Não baixa nem salva nada sozinho — quem chama
-                                                   decide o que fazer com o resultado. */
-                                                async function _renderDocumentoPdf({ docTitle, docMark, patientName, patientAge, patientCpf, bodyHtml, filenamePrefix, contentDescription }) {
-                                                  // Dados da clínica (localStorage)
-                                                  let clinic = {};
-                                                  try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
+                                                /* Monta os placeholders extras + seletores a esconder para cada tipo
+                                                   de documento estruturado (atestado, encaminhamento, laudo). Usado
+                                                   tanto pelo modal "Gerar documento" quanto pelo fluxo de Conduta,
+                                                   para nunca duplicar essa lógica. "d" é um objeto plano com os
+                                                   campos coletados do formulário/estado (nada de DOM aqui). */
+                                                function _buildDocExtraRepl(tipo, d) {
+                                                  d = d || {};
+                                                  const esc = _rxEsc;
+                                                  const nl2br = s => esc(s || '').replace(/\n/g, '<br>');
+                                                  const extraRepl = {};
+                                                  const hideSelectors = [];
 
-                                                  // Dados do médico (usuário logado)
-                                                  const u = currentUser || {};
-                                                  const meta = u.user_metadata || {};
-                                                  const doctorName  = meta.full_name || meta.name || (u.email || '').split('@')[0] || 'Médico responsável';
-                                                  const doctorCrm   = meta.crm || meta.CRM || '—';
-                                                  const doctorSpec  = meta.especialidade || meta.specialty || '';
-                                                  const clinicName  = clinic.fantasia || clinic.razao || 'Clínica';
-                                                  const cidadeUf    = [clinic.cidade, clinic.uf].filter(Boolean).join('/');
-                                                  const addr = [
-                                                    [clinic.logradouro, clinic.numero].filter(Boolean).join(', '),
-                                                    clinic.complemento,
-                                                    clinic.bairro,
-                                                    cidadeUf,
-                                                    clinic.cep ? 'CEP ' + clinic.cep : ''
-                                                  ].filter(Boolean).join(' · ');
-
-                                                  // Carrega o template
-                                                  let html;
-                                                  try {
-                                                    const resp = await fetch('/receita-modelo.html', { cache: 'no-store' });
-                                                    html = await resp.text();
-                                                  } catch (e) { showToast && showToast('Falha ao carregar modelo do documento', 'error'); return null; }
-
-                                                  // Converte logo / assinatura / QR para data URI em paralelo — nenhuma delas
-                                                  // chega ao html2canvas como URL externa (evita o bug do CORS + alt text gigante).
-                                                  const [logoDataUrl, sigDataUrl, qrDataUrl] = await Promise.all([
-                                                    _rxImgToDataUrl(clinic.logo || ''),
-                                                    _rxImgToDataUrl(clinic.assinatura_url || ''),
-                                                    _rxImgToDataUrl(clinic.qr_url || ''),
-                                                  ]);
-                                                  const primaryColor = clinic.cor_primaria || '#0E6E5D';
-
-                                                  const repl = {
-                                                    '{{PRIMARY_COLOR}}' : primaryColor,
-                                                    '{{CLINIC_NAME}}'   : _rxEsc(clinicName),
-                                                    '{{CLINIC_ADDRESS}}': _rxEsc(addr || '—'),
-                                                    '{{CLINIC_PHONE}}'  : _rxEsc(clinic.telefone || ''),
-                                                    '{{CLINIC_EMAIL}}'  : _rxEsc(clinic.email || ''),
-                                                    '{{LOGO_URL}}'      : logoDataUrl,
-                                                    '{{DOCTOR_NAME}}'   : _rxEsc(doctorName),
-                                                    '{{DOCTOR_SPECIALTY}}': _rxEsc(doctorSpec),
-                                                    '{{DOCTOR_CRM}}'    : _rxEsc(doctorCrm),
-                                                    '{{PATIENT_NAME}}'  : _rxEsc(patientName || '—'),
-                                                    '{{PATIENT_AGE}}'   : _rxEsc(patientAge || '—'),
-                                                    '{{PATIENT_CPF}}'   : _rxEsc(patientCpf || '—'),
-                                                    '{{ISSUE_DATE}}'    : _rxEsc(new Date().toLocaleDateString('pt-BR')),
-                                                    '{{DOC_TITLE}}'     : _rxEsc(docTitle || 'Documento Médico'),
-                                                    '{{DOC_MARK}}'      : docMark || '',
-                                                    '{{PRESCRIPTION_HTML}}': bodyHtml || '',
-                                                    // Assinatura (placeholders ficam vazios se não configurados)
-                                                    '{{SIGNATURE_DATETIME}}': _rxEsc(new Date().toLocaleString('pt-BR')),
-                                                    '{{SIGNATURE_CERT_ID}}' : _rxEsc(clinic.cert_id || ''),
-                                                  };
-                                                  for (const [k, v] of Object.entries(repl)) {
-                                                    html = html.split(k).join(v);
+                                                  if (tipo === 'atestado' || tipo === 'declaracao') {
+                                                    const isDeclaracao = (d.subtipo || tipo) === 'declaracao';
+                                                    extraRepl['{{ATTENDANCE_REASON}}'] = isDeclaracao
+                                                      ? 'para os devidos fins de comprovação de comparecimento'
+                                                      : 'necessitando de afastamento de suas atividades habituais';
+                                                    extraRepl['{{TIME_IN}}']         = esc(d.timeIn || '—');
+                                                    extraRepl['{{TIME_OUT}}']        = esc(d.timeOut || '—');
+                                                    extraRepl['{{REST_DAYS}}']       = esc(d.dias ? String(d.dias) : '0');
+                                                    extraRepl['{{REST_START_DATE}}'] = esc(d.dataInicio || new Date().toLocaleDateString('pt-BR'));
+                                                    extraRepl['{{ACTIVITY_TYPE}}']   = esc(d.atividade || 'atividades habituais');
+                                                    extraRepl['{{CID_CODE}}']        = esc(d.cidCode || '');
+                                                    extraRepl['{{CID_DESCRIPTION}}'] = esc(d.cidDesc || '');
+                                                    extraRepl['{{ADDITIONAL_NOTES}}']= nl2br(d.observacao);
+                                                    if (!d.cidCode) hideSelectors.push('.cid-box');
+                                                    if (isDeclaracao || !d.dias) hideSelectors.push('.detail-grid');
+                                                  } else if (tipo === 'encaminhamento') {
+                                                    extraRepl['{{SPECIALTY}}']              = esc(d.especialidade || '—');
+                                                    extraRepl['{{REFERRAL_TARGET}}']        = esc(d.destino || 'especialista');
+                                                    extraRepl['{{URGENCY_LABEL}}']          = esc(d.urgencia || 'Eletivo');
+                                                    extraRepl['{{URGENCY_COLOR}}']          = (d.urgencia === 'Urgente') ? '#b3261e' : (d.primaryColor || '#0E6E5D');
+                                                    extraRepl['{{REFERRAL_REASON_SHORT}}']  = esc((d.motivo || '—').slice(0, 90));
+                                                    extraRepl['{{VALIDITY_DAYS}}']          = esc(d.validade ? String(d.validade) : '90');
+                                                    extraRepl['{{CLINICAL_HISTORY}}']       = nl2br(d.motivo);
+                                                    extraRepl['{{CID_CODE}}']               = esc(d.cidCode || '');
+                                                    extraRepl['{{CID_DESCRIPTION}}']        = esc(d.cidDesc || '');
+                                                    extraRepl['{{RELEVANT_EXAMS}}']         = nl2br(d.exames) || '—';
+                                                    extraRepl['{{ADDITIONAL_NOTES}}']       = nl2br(d.observacao) || '—';
+                                                    if (!d.cidCode) hideSelectors.push('.cid-box');
+                                                  } else if (tipo === 'laudo' || tipo === 'solicitacao_exame') {
+                                                    extraRepl['{{EXAM_TITLE}}']        = esc(d.titulo || (tipo === 'solicitacao_exame' ? 'Solicitação de Exame' : 'Laudo Médico'));
+                                                    extraRepl['{{EXAM_DATE}}']         = esc(d.dataExame || new Date().toLocaleDateString('pt-BR'));
+                                                    extraRepl['{{REQUESTING_DOCTOR}}'] = esc(d.solicitante || '—');
+                                                    extraRepl['{{CLINICAL_HISTORY}}']  = nl2br(d.historia) || '—';
+                                                    extraRepl['{{EXAM_TECHNIQUE}}']    = nl2br(d.tecnica) || '—';
+                                                    extraRepl['{{FINDINGS}}']          = nl2br(d.achados) || '—';
+                                                    extraRepl['{{CID_CODE}}']          = esc(d.cidCode || '');
+                                                    extraRepl['{{CID_DESCRIPTION}}']   = esc(d.cidDesc || '');
+                                                    extraRepl['{{CONCLUSION}}']        = nl2br(d.conclusao) || '—';
+                                                    extraRepl['{{ADDITIONAL_NOTES}}']  = nl2br(d.observacao);
+                                                    if (!d.cidCode) hideSelectors.push('.cid-box');
                                                   }
+                                                  return { extraRepl, hideSelectors };
+                                                }
 
-                                                  const scopeId = 'rx-scope-' + Date.now();
-                                                  const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
-                                                  const bodyMatch  = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-                                                  let rawCss    = styleMatch ? styleMatch[1] : '';
-                                                  const rawBody = bodyMatch  ? bodyMatch[1]  : html;
-
-                                                  rawCss = rawCss
-                                                    .replace(/\*\s*\{\s*box-sizing:\s*border-box;\s*margin:\s*0;\s*padding:\s*0;\s*\}/,
-                                                      `#${scopeId} * { box-sizing: border-box; margin: 0; padding: 0; }`)
-                                                    .replace(/html,\s*body\s*\{([^}]*)\}/,
-                                                      (_, decls) => `#${scopeId} { ${decls} }`);
-
-                                                  const styleEl = document.createElement('style');
-                                                  styleEl.setAttribute('data-rx-style', scopeId);
-                                                  styleEl.textContent = rawCss;
-                                                  document.head.appendChild(styleEl);
-
-                                                const clipper = document.createElement('div');
-                                                clipper.style.cssText = `
-                                          position:fixed;
-                                          left:0;
-                                          top:0;
-                                          width:210mm;
-                                          overflow:hidden;
-                                          z-index:-1;
-                                          pointer-events:none;
-                                          `;
-
-                                                const holder = document.createElement('div');
-                                                holder.id = scopeId;
-                                                holder.style.cssText = `
-                                          position:relative;
-                                          width:210mm;
-                                          min-width:210mm;
-                                          max-width:210mm;
-                                          margin:0 auto;
-                                          background:#fff;
-                                          `;
-                                                holder.innerHTML = rawBody;
-                                                clipper.appendChild(holder);
-
-                                                const cleanup = () => {
-                                                  try { clipper.remove(); } catch(_) {}
-                                                  try { styleEl.remove(); } catch(_) {}
+                                                /* Mapa tipo de documento -> arquivo de modelo real (público, com
+                                                   placeholders {{...}}). Cada tipo tem seu próprio HTML — não usamos
+                                                   mais o modelo de receita para tudo. */
+                                                const DOC_TEMPLATE_URLS = {
+                                                  receita:            '/receita-modelo.html',
+                                                  atestado:           '/atestado-modelo.html',
+                                                  declaracao:         '/atestado-modelo.html',
+                                                  encaminhamento:     '/encaminhamento-modelo.html',
+                                                  laudo:              '/laudo-modelo.html',
+                                                  solicitacao_exame:  '/laudo-modelo.html',
                                                 };
-
-                                                  try {
-                                                    // Remove elementos que não devem ir para o PDF
-                                                    holder.querySelectorAll('.builder-note').forEach(n => n.remove());
-                                                    if (!sigDataUrl) {
-                                                      holder.querySelectorAll('.signature-area').forEach(n => n.remove());
-                                                    }
-                                                    if (!logoDataUrl) {
-                                                      const ls = holder.querySelector('.logo-slot');
-                                                      if (ls) ls.remove();
-                                                    }
-
-                                                    // Aguarda fontes e imagens carregarem (agora todas data URI, sem risco de CORS)
-                                                    try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
-                                                    const imgs = Array.from(holder.querySelectorAll('img'));
-                                                    await Promise.all(imgs.map(img =>
-                                                      img.complete ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; })
-                                                    ));
-
-                                                    const safeName = (patientName || 'paciente').replace(/[^\w\-]+/g, '_').toLowerCase();
-                                                    const filename = `${filenamePrefix}_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`;
-
-                                                    const pdfBlob = await window.html2pdf().set({
-                                                      margin: 0,
-                                                      filename,
-                                                      image: { type: 'jpeg', quality: 0.98 },
-                                                      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
-                                                      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                                                      pagebreak: { mode: ['css', 'legacy'] }
-                                                    }).from(holder.querySelector('.sheet') || holder).outputPdf('blob');
-
-                                                    // Try to sign with ICP-Brasil. Fallback to unsigned download.
-                                                    let finalBlob = pdfBlob;
-                                                    let signedUrl = null;
-                                                    try {
-                                                      const { data: sess } = await sb.auth.getSession();
-                                                      const token = sess?.session?.access_token;
-                                                      if (token) {
-                                                        const pdfBase64 = await new Promise((resolve, reject) => {
-                                                          const r = new FileReader();
-                                                          r.onload = () => resolve(String(r.result).split(',')[1] || '');
-                                                          r.onerror = reject;
-                                                          r.readAsDataURL(pdfBlob);
-                                                        });
-                                                        const resp = await fetch('/api/signature/sign', {
-                                                          method: 'POST',
-                                                          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-                                                          body: JSON.stringify({
-                                                            pdfBase64,
-                                                            filename,
-                                                            contentDescription: contentDescription || `Documento para ${patientName || 'paciente'}`,
-                                                          }),
-                                                        });
-                                                        if (resp.ok) {
-                                                          const j = await resp.json();
-                                                          signedUrl = j.signedPdfUrl;
-                                                          const dl = await fetch(signedUrl);
-                                                          if (dl.ok) finalBlob = await dl.blob();
-                                                        } else {
-                                                          const j = await resp.json().catch(() => ({}));
-                                                          if (j.error && j.error !== 'not_configured' && j.error !== 'credential_expired') {
-                                                            console.warn('Assinatura ICP falhou:', j);
-                                                          }
-                                                        }
-                                                      }
-                                                    } catch (e) { console.warn('Assinatura opcional falhou, seguindo sem assinatura:', e); }
-
-                                                    return { finalBlob, filename, signedUrl };
-                                                  } catch (e) {
-                                                    console.error('Falha ao gerar PDF do documento:', e);
-                                                    showToast && showToast('Falha ao gerar PDF do documento', 'error');
-                                                    return null;
-                                                  } finally {
-                                                    setTimeout(cleanup, 300);
-                                                  }
-                                                }
-
-                                                /* Dispara o download de um blob no navegador */
-                                                function _baixarBlob(blob, filename) {
-                                                  const url = URL.createObjectURL(blob);
-                                                  const a = document.createElement('a');
-                                                  a.href = url; a.download = filename; document.body.appendChild(a);
-                                                  a.click(); a.remove();
-                                                  setTimeout(() => URL.revokeObjectURL(url), 4000);
-                                                }
 
                                                 /* Renderiza qualquer documento (receita, atestado, laudo, solicitação de
-                                                   exame, encaminhamento...) usando o mesmo modelo visual, tentando
-                                                   assinar digitalmente (ICP-Brasil) e retornando o PDF final pronto
-                                                   para download/upload. Não baixa nem salva nada sozinho — quem chama
-                                                   decide o que fazer com o resultado. */
-                                                async function _renderDocumentoPdf({ docTitle, docMark, patientName, patientAge, patientCpf, bodyHtml, filenamePrefix, contentDescription }) {
+                                                   exame, encaminhamento...) usando o modelo visual correspondente ao
+                                                   tipo (docType), tentando assinar digitalmente (ICP-Brasil) e
+                                                   retornando o PDF final pronto para download/upload. Não baixa nem
+                                                   salva nada sozinho — quem chama decide o que fazer com o resultado.
+                                                   - docType: chave de DOC_TEMPLATE_URLS (default 'receita')
+                                                   - extraRepl: placeholders extras específicos do modelo (ex.: CID,
+                                                     dias de afastamento, especialidade, achados, conclusão...) —
+                                                     mesclados por cima dos campos fixos (clínica/médico/paciente).
+                                                   - hideSelectors: seletores CSS de blocos a remover do documento
+                                                     quando não se aplicam (ex.: '.cid-box' quando não há CID). */
+                                                async function _renderDocumentoPdf({ docType, docTitle, docMark, patientName, patientAge, patientCpf, bodyHtml, extraRepl, hideSelectors, filenamePrefix, contentDescription }) {
                                                   // Dados da clínica (localStorage)
                                                   let clinic = {};
                                                   try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
@@ -9989,10 +10031,11 @@ let rxSelected = [];
                                                     clinic.cep ? 'CEP ' + clinic.cep : ''
                                                   ].filter(Boolean).join(' · ');
 
-                                                  // Carrega o template
+                                                  // Carrega o template correspondente ao tipo de documento
+                                                  const templateUrl = DOC_TEMPLATE_URLS[docType] || DOC_TEMPLATE_URLS.receita;
                                                   let html;
                                                   try {
-                                                    const resp = await fetch('/receita-modelo.html', { cache: 'no-store' });
+                                                    const resp = await fetch(templateUrl, { cache: 'no-store' });
                                                     html = await resp.text();
                                                   } catch (e) { showToast && showToast('Falha ao carregar modelo do documento', 'error'); return null; }
 
@@ -10025,10 +10068,19 @@ let rxSelected = [];
                                                     // Assinatura (placeholders ficam vazios se não configurados)
                                                     '{{SIGNATURE_DATETIME}}': _rxEsc(new Date().toLocaleString('pt-BR')),
                                                     '{{SIGNATURE_CERT_ID}}' : _rxEsc(clinic.cert_id || ''),
+                                                    '{{VERIFICATION_URL}}' : _rxEsc(clinic.verification_url || ''),
+                                                    '{{QR_CODE_URL}}'      : qrDataUrl,
+                                                    '{{SIGNATURE_IMAGE_URL}}': sigDataUrl,
+                                                    // Placeholders extras específicos de cada modelo (atestado, encaminhamento, laudo...).
+                                                    // Sempre inclui um valor (mesmo vazio) para nunca sobrar {{TOKEN}} literal no PDF.
+                                                    ...(extraRepl || {}),
                                                   };
                                                   for (const [k, v] of Object.entries(repl)) {
-                                                    html = html.split(k).join(v);
+                                                    html = html.split(k).join(v == null ? '' : v);
                                                   }
+                                                  // Qualquer {{TOKEN}} que tenha sobrado (placeholder não coberto) vira string vazia,
+                                                  // em vez de aparecer literalmente no documento final.
+                                                  html = html.replace(/\{\{[A-Z0-9_]+\}\}/g, '');
 
                                                   const scopeId = 'rx-scope-' + Date.now();
                                                   const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
@@ -10086,6 +10138,12 @@ let rxSelected = [];
                                                       const ls = holder.querySelector('.logo-slot');
                                                       if (ls) ls.remove();
                                                     }
+                                                    // Remove blocos que não se aplicam a este documento específico
+                                                    // (ex.: '.cid-box' quando não há CID, '.detail-grid' de afastamento
+                                                    // quando for só comparecimento etc.) — evita caixas vazias no PDF.
+                                                    (hideSelectors || []).forEach(sel => {
+                                                      holder.querySelectorAll(sel).forEach(n => n.remove());
+                                                    });
 
                                                     // Aguarda fontes e imagens carregarem (agora todas data URI, sem risco de CORS)
                                                     try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
@@ -10181,6 +10239,7 @@ let rxSelected = [];
                                                     </div>`).join('');
 
                                                   const result = await _renderDocumentoPdf({
+                                                    docType: 'receita',
                                                     docTitle: 'Receituário Médico',
                                                     docMark: '℞',
                                                     patientName: p.name || '',
@@ -10331,16 +10390,60 @@ let rxSelected = [];
                                                   }).join('');
                                                 }
 
-                                                async function verDocumento(id) {
-                                                  const d = documentosGerados.find(x => x.id === id);
+                                                /* Monta os campos estruturados (CID, dias de afastamento,
+                                                   especialidade/urgência, achados/conclusão etc.) salvos em
+                                                   documentos_paciente.conteudo, exibidos no modal "Ver documento" —
+                                                   os mesmos dados que preenchem os placeholders dos modelos HTML
+                                                   (atestado/encaminhamento/laudo). */
+                                                function _renderDocDetalhes(d) {
+                                                  const c = d.conteudo || {};
+                                                  const esc = _rxEsc;
+                                                  const rows = [];
+                                                  const add = (label, val) => {
+                                                    if (val === undefined || val === null || val === '') return;
+                                                    rows.push(`<div class="fld"><label>${esc(label)}</label><p class="ve-value">${esc(String(val))}</p></div>`);
+                                                  };
+                                                  if (d.tipo === 'atestado' || d.tipo === 'declaracao') {
+                                                    add('Tipo', c.subtipo === 'declaracao' ? 'Declaração de comparecimento' : 'Atestado médico (afastamento)');
+                                                    if (c.dias) add('Dias de afastamento', c.dias);
+                                                    if (c.timeIn || c.timeOut) add('Horário de comparecimento', [c.timeIn, c.timeOut].filter(Boolean).join(' às '));
+                                                    if (c.cidCode) add('CID', c.cidCode + (c.cidDesc ? ' — ' + c.cidDesc : ''));
+                                                    add('Observações', c.observacao);
+                                                  } else if (d.tipo === 'encaminhamento') {
+                                                    add('Especialidade', c.especialidade);
+                                                    add('Urgência', c.urgencia);
+                                                    add('Motivo', c.motivo);
+                                                    if (c.cidCode) add('CID', c.cidCode + (c.cidDesc ? ' — ' + c.cidDesc : ''));
+                                                    add('Observações', c.observacao);
+                                                  } else if (d.tipo === 'laudo' || d.tipo === 'solicitacao_exame') {
+                                                    add('Título', c.titulo);
+                                                    add('Técnica', c.tecnica);
+                                                    add('Achados', c.achados);
+                                                    add('Conclusão', c.conclusao);
+                                                    if (c.cidCode) add('CID', c.cidCode + (c.cidDesc ? ' — ' + c.cidDesc : ''));
+                                                    add('Observações', c.observacao);
+                                                  }
+                                                  return rows.join('');
+                                                }
+
+                                                /* Abre o modal "Ver documento" a partir de um registro já carregado
+                                                   (de documentosGerados ou buscado direto do banco). Compartilhado
+                                                   entre a tela de Documentos e os botões de ação na aba Atendimento. */
+                                                async function _abrirPreviewDocumento(d) {
                                                   if (!d) return;
-                                                  _docAtualId = id;
+                                                  _docAtualId = d.id;
                                                   const tipoMeta = DOC_TIPO_META[d.tipo] || { label: d.tipo, icon: 'ti-file' };
                                                   document.getElementById('vd-titulo').textContent = tipoMeta.label + ' — ' + (d.paciente_nome || 'paciente');
                                                   document.getElementById('vd-tipo').textContent = tipoMeta.label;
                                                   document.getElementById('vd-paciente').textContent = d.paciente_nome || '—';
                                                   document.getElementById('vd-data').textContent = fmtDocDataHora(d.created_at);
                                                   document.getElementById('vd-status').textContent = (DOC_STATUS_META[d.status] || DOC_STATUS_META.nao_assinado).label;
+                                                  const detWrap = document.getElementById('vd-detalhes-wrap');
+                                                  if (detWrap) {
+                                                    const detHtml = _renderDocDetalhes(d);
+                                                    detWrap.innerHTML = detHtml;
+                                                    detWrap.style.display = detHtml ? '' : 'none';
+                                                  }
                                                   const wrap = document.getElementById('vd-preview-wrap');
                                                   const pdf = document.getElementById('vd-preview-pdf');
                                                   const noFile = document.getElementById('vd-no-file');
@@ -10361,6 +10464,60 @@ let rxSelected = [];
                                                     noFile.style.display = 'block';
                                                   }
                                                   openModal('ver-documento');
+                                                }
+
+                                                async function verDocumento(id) {
+                                                  const d = documentosGerados.find(x => x.id === id);
+                                                  if (!d) return;
+                                                  await _abrirPreviewDocumento(d);
+                                                }
+
+                                                /* Busca em documentos_paciente o documento do tipo pedido (receita,
+                                                   atestado/declaração...) mais próximo da data do atendimento aberto
+                                                   em Paciente > Atendimentos, e abre o preview/PDF. Usado pelos botões
+                                                   de ação "Ver receita" / "Ver atestado" na aba Atendimento — hoje não
+                                                   existe vínculo direto atendimento->documento no banco, então a busca
+                                                   é feita por paciente + tipo + proximidade de data/hora. */
+                                                async function verDocumentoAtendimento(tipos) {
+                                                  const pacienteId = currentPatient && currentPatient.id;
+                                                  if (!pacienteId) { showToast && showToast('Nenhum paciente em atendimento', 'warn'); return; }
+                                                  const lista = Array.isArray(tipos) ? tipos : [tipos];
+                                                  const { data, error } = await sb.from('documentos_paciente')
+                                                    .select('*')
+                                                    .eq('paciente_id', pacienteId)
+                                                    .in('tipo', lista)
+                                                    .order('created_at', { ascending: false });
+                                                  if (error) { showToast && showToast('Erro ao buscar documento: ' + error.message, 'error'); return; }
+                                                  if (!data || !data.length) { showToast && showToast('Nenhum documento desse tipo encontrado para este paciente', 'warn'); return; }
+                                                  // Sem atendimento_id no banco: usa o mais próximo da data/hora do atendimento aberto
+                                                  let alvo = data[0];
+                                                  if (_atendDetailAtual && _atendDetailAtual.startedAt) {
+                                                    const refTime = new Date(_atendDetailAtual.startedAt).getTime();
+                                                    alvo = data.reduce((best, d) => {
+                                                      const diff = Math.abs(new Date(d.created_at).getTime() - refTime);
+                                                      const bestDiff = Math.abs(new Date(best.created_at).getTime() - refTime);
+                                                      return diff < bestDiff ? d : best;
+                                                    }, data[0]);
+                                                  }
+                                                  await _abrirPreviewDocumento(alvo);
+                                                }
+
+                                                /* Abre o PDF do documento mais recente (de qualquer tipo) do
+                                                   atendimento atual em uma aba nova já disparando a impressão. */
+                                                async function imprimirDocumentoAtendimento() {
+                                                  const pacienteId = currentPatient && currentPatient.id;
+                                                  if (!pacienteId) { showToast && showToast('Nenhum paciente em atendimento', 'warn'); return; }
+                                                  const { data, error } = await sb.from('documentos_paciente')
+                                                    .select('*')
+                                                    .eq('paciente_id', pacienteId)
+                                                    .not('arquivo_path', 'is', null)
+                                                    .order('created_at', { ascending: false })
+                                                    .limit(1);
+                                                  if (error || !data || !data.length) { showToast && showToast('Nenhum documento com arquivo encontrado para este paciente', 'warn'); return; }
+                                                  const { data: signed, error: sErr } = await sb.storage.from('documentos-arquivos').createSignedUrl(data[0].arquivo_path, 300);
+                                                  if (sErr || !signed) { showToast && showToast('Erro ao gerar link para impressão', 'error'); return; }
+                                                  const w = window.open(signed.signedUrl, '_blank');
+                                                  if (w) { w.addEventListener('load', () => { try { w.print(); } catch (e) {} }); }
                                                 }
 
                                                 async function baixarDocumento(id) {
@@ -10495,6 +10652,11 @@ let rxSelected = [];
                                                 function abrirModalGerarDocumento() {
                                       const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
                                       set('gd-nome', ''); set('gd-cpf', ''); set('gd-texto', ''); set('gd-nasc', ''); set('gd-telefone', '');
+                                      ['gd-at-dias','gd-at-time-in','gd-at-time-out','gd-at-cid-code','gd-at-cid-desc',
+                                       'gd-enc-especialidade','gd-enc-motivo','gd-enc-cid-code','gd-enc-cid-desc',
+                                       'gd-laudo-titulo','gd-laudo-tecnica','gd-laudo-achados','gd-laudo-conclusao','gd-laudo-cid-code','gd-laudo-cid-desc']
+                                        .forEach(id => set(id, ''));
+                                      set('gd-at-tipo', 'atestado'); set('gd-enc-urgencia', 'Eletivo');
                                       const idadeEl = document.getElementById('gd-idade'); if (idadeEl) idadeEl.textContent = '';
                                       const tipoSel = document.getElementById('gd-tipo'); if (tipoSel) tipoSel.selectedIndex = 1;
                                       onGdTipoChange();
@@ -10531,8 +10693,15 @@ let rxSelected = [];
                                     function onGdTipoChange() {
                                       const tipo = document.getElementById('gd-tipo').value;
                                       const isReceita = tipo === 'receita';
-                                      const conteudoWrap = document.getElementById('gd-conteudo-wrap');
                                       const medsWrap = document.getElementById('gd-meds-wrap');
+                                      const wraps = {
+                                        atestado: document.getElementById('gd-atestado-wrap'),
+                                        encaminhamento: document.getElementById('gd-encaminhamento-wrap'),
+                                        laudo: document.getElementById('gd-laudo-wrap'),
+                                        solicitacao_exame: document.getElementById('gd-laudo-wrap'),
+                                      };
+                                      Object.entries(wraps).forEach(([k, el]) => { if (el) el.style.display = (tipo === k) ? '' : 'none'; });
+                                      const conteudoWrap = document.getElementById('gd-conteudo-wrap');
                                       if (conteudoWrap) conteudoWrap.style.display = isReceita ? 'none' : '';
                                       if (medsWrap) medsWrap.style.display = isReceita ? '' : 'none';
                                       const btn = document.getElementById('gd-submit-btn');
@@ -10572,26 +10741,70 @@ let rxSelected = [];
                                       openReceita();
                                     }
 
+                                    /* Coleta os campos estruturados do formulário conforme o tipo escolhido
+                                       (CID, dias de afastamento, especialidade, achados, conclusão etc.). */
+                                    function _gdColetarDadosTipo(tipoSel) {
+                                      const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+                                      if (tipoSel === 'atestado') {
+                                        return {
+                                          subtipo: val('gd-at-tipo') || 'atestado',
+                                          dias: parseInt(val('gd-at-dias')) || 0,
+                                          timeIn: val('gd-at-time-in'),
+                                          timeOut: val('gd-at-time-out'),
+                                          cidCode: val('gd-at-cid-code'),
+                                          cidDesc: val('gd-at-cid-desc'),
+                                          observacao: val('gd-texto'),
+                                        };
+                                      }
+                                      if (tipoSel === 'encaminhamento') {
+                                        return {
+                                          especialidade: val('gd-enc-especialidade'),
+                                          urgencia: val('gd-enc-urgencia') || 'Eletivo',
+                                          motivo: val('gd-enc-motivo'),
+                                          cidCode: val('gd-enc-cid-code'),
+                                          cidDesc: val('gd-enc-cid-desc'),
+                                          observacao: val('gd-texto'),
+                                        };
+                                      }
+                                      if (tipoSel === 'laudo' || tipoSel === 'solicitacao_exame') {
+                                        return {
+                                          titulo: val('gd-laudo-titulo'),
+                                          tecnica: val('gd-laudo-tecnica'),
+                                          achados: val('gd-laudo-achados'),
+                                          conclusao: val('gd-laudo-conclusao'),
+                                          cidCode: val('gd-laudo-cid-code'),
+                                          cidDesc: val('gd-laudo-cid-desc'),
+                                          observacao: val('gd-texto'),
+                                        };
+                                      }
+                                      return { observacao: val('gd-texto') };
+                                    }
+
                                     async function gerarDocumentoGenerico() {
                                       const tipoSel = document.getElementById('gd-tipo').value;
                                       const nome = document.getElementById('gd-nome').value.trim();
                                       const cpf = document.getElementById('gd-cpf').value.trim();
                                       const nasc = document.getElementById('gd-nasc').value;
-                                      const texto = document.getElementById('gd-texto').value.trim();
                                       if (!nome) { showToast && showToast('Informe o nome do paciente', 'warn'); return; }
                                       const meta = DOC_TIPOS_GERADOS.find(t => t.value === tipoSel) || DOC_TIPOS_GERADOS[1];
-                                      const bodyHtml = `<div class="rx-item"><div>${texto ? _rxEsc(texto).replace(/\n/g, '<br>') : '<span style="color:#94a3b8">Sem observações adicionais.</span>'}</div></div>`;
+                                      const dados = _gdColetarDadosTipo(tipoSel);
+                                      // Atestado x Declaração de comparecimento usam o mesmo template, mas com título diferente
+                                      const docTitle = (tipoSel === 'atestado' && dados.subtipo === 'declaracao')
+                                        ? 'Declaração de Comparecimento' : meta.docTitle;
+                                      const { extraRepl, hideSelectors } = _buildDocExtraRepl(tipoSel, dados);
                                       const btn = document.getElementById('gd-submit-btn');
                                       const origBtn = btn ? btn.innerHTML : '';
                                       if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Gerando...'; }
                                       try {
                                         const result = await _renderDocumentoPdf({
-                                          docTitle: meta.docTitle,
+                                          docType: tipoSel,
+                                          docTitle,
                                           docMark: meta.docMark,
                                           patientName: nome,
                                           patientAge: _rxIdade(nasc),
                                           patientCpf: cpf,
-                                          bodyHtml,
+                                          extraRepl,
+                                          hideSelectors,
                                           filenamePrefix: tipoSel,
                                           contentDescription: `${meta.label} para ${nome}`,
                                         });
@@ -10603,7 +10816,7 @@ let rxSelected = [];
                                                       pacienteNome: nome,
                                                       pacienteCpf: cpf || null,
                                                       pacienteId: null,
-                                                      conteudo: { texto },
+                                                      conteudo: dados,
                                                       blob: result.finalBlob,
                                                       filename: result.filename,
                                                       assinado: !!result.signedUrl,
@@ -10625,6 +10838,69 @@ let rxSelected = [];
                                                                 posologia: m.instrucoes || ''
                                                               }));
                                                               openReceitaPDF({ items });
+                                                            }
+
+                                                            /* Gera (baixa + assina + salva em documentos_paciente) o PDF de um
+                                                               campo estruturado da Conduta (atestado/encaminhamento/laudo),
+                                                               usando o mesmo motor _renderDocumentoPdf da receita. */
+                                                            async function _condGerarDocumentoEstruturado(tipo, docTitle, docMark, dados, btnEl) {
+                                                              const p = currentPatient || {};
+                                                              if (!p.name) { showToast && showToast('Nenhum paciente em atendimento', 'warn'); return; }
+                                                              const { extraRepl, hideSelectors } = _buildDocExtraRepl(tipo, dados);
+                                                              const origHtml = btnEl ? btnEl.innerHTML : '';
+                                                              if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>'; }
+                                                              try {
+                                                                const result = await _renderDocumentoPdf({
+                                                                  docType: tipo,
+                                                                  docTitle,
+                                                                  docMark,
+                                                                  patientName: p.name || '',
+                                                                  patientAge: _rxIdade(p.nasc || p.data_nascimento || ''),
+                                                                  patientCpf: p.cpf || '',
+                                                                  extraRepl,
+                                                                  hideSelectors,
+                                                                  filenamePrefix: tipo,
+                                                                  contentDescription: `${docTitle} para ${p.name || 'paciente'}`,
+                                                                });
+                                                                if (!result) return;
+                                                                _baixarBlob(result.finalBlob, result.filename);
+                                                                showToast && showToast(result.signedUrl ? `${docTitle} assinado digitalmente ✓` : `${docTitle} gerado com sucesso`, 'success');
+                                                                await salvarDocumentoGerado({
+                                                                  tipo,
+                                                                  pacienteNome: p.name || 'Paciente',
+                                                                  pacienteCpf: p.cpf || null,
+                                                                  pacienteId: p.id || null,
+                                                                  conteudo: dados,
+                                                                  blob: result.finalBlob,
+                                                                  filename: result.filename,
+                                                                  assinado: !!result.signedUrl,
+                                                                });
+                                                              } finally {
+                                                                if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = origHtml; }
+                                                              }
+                                                            }
+
+                                                            function condGerarAtestado(ev) {
+                                                              const at = (condState && condState.atestado) || {};
+                                                              const isDeclaracao = at.tipo === 'declaracao';
+                                                              const docTitle = isDeclaracao ? 'Declaração de Comparecimento' : 'Atestado Médico';
+                                                              _condGerarDocumentoEstruturado('atestado', docTitle, '', {
+                                                                subtipo: at.tipo, dias: at.dias, cidCode: at.cidCode, cidDesc: at.cidDesc, observacao: at.texto,
+                                                              }, ev && ev.currentTarget);
+                                                            }
+
+                                                            function condGerarEncaminhamento(ev) {
+                                                              const enc = (condState && condState.encaminhamento) || {};
+                                                              _condGerarDocumentoEstruturado('encaminhamento', 'Encaminhamento Médico', '', {
+                                                                especialidade: enc.especialidade, urgencia: enc.urgencia, motivo: enc.motivo, cidCode: enc.cidCode, cidDesc: enc.cidDesc,
+                                                              }, ev && ev.currentTarget);
+                                                            }
+
+                                                            function condGerarLaudo(ev) {
+                                                              const ld = (condState && condState.laudo) || {};
+                                                              _condGerarDocumentoEstruturado('laudo', 'Laudo Médico', '', {
+                                                                titulo: ld.titulo, tecnica: ld.tecnica, achados: ld.achados, conclusao: ld.conclusao, cidCode: ld.cidCode, cidDesc: ld.cidDesc,
+                                                              }, ev && ev.currentTarget);
                                                             }
                                                             async function saveNewPatient(){
                                                               const val=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
