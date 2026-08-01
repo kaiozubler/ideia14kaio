@@ -4780,8 +4780,17 @@
             </div>
           </div>
         </div>
-        <div class="mfoot" style="justify-content:space-between;align-items:center">
-          <span id="rx-footer-info" style="font-size:11.5px;color:#94a3b8"></span>
+        <div class="mfoot" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <button class="btn" onclick="rxOpenModelos()" style="font-size:12px;padding:6px 10px">
+              <i class="ti ti-bookmark"></i> Modelos
+            </button>
+            <label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#475569;cursor:pointer;user-select:none">
+              <input type="checkbox" id="rx-salvar-modelo-toggle" onchange="rxToggleSalvarModelo(this.checked)" style="cursor:pointer" />
+              Salvar modelo
+            </label>
+            <span id="rx-footer-info" style="font-size:11.5px;color:#94a3b8"></span>
+          </div>
           <div style="display:flex;gap:8px">
             <button class="btn" onclick="closeModal()">Cancelar</button>
             <button class="btn primary" onclick="rxEmitir()">
@@ -4789,6 +4798,39 @@
             </button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- MODELOS DE RECEITA: lista de modelos salvos -->
+    <div class="modal" id="m-rx-modelos" style="display:none;width:360px">
+      <div class="mhd">
+        <span class="mhd-title"><i class="ti ti-bookmark"></i> Modelos de receita</span>
+        <button class="mclose" onclick="openModal('receita')"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="mbody" style="padding:14px 16px;max-height:60vh;overflow-y:auto">
+        <div id="rx-modelos-lista"></div>
+      </div>
+    </div>
+
+    <!-- MODELOS DE RECEITA: nome do modelo ao salvar -->
+    <div class="modal" id="m-rx-modelo-nome" style="display:none;width:340px">
+      <div class="mhd">
+        <span class="mhd-title"><i class="ti ti-device-floppy"></i> Salvar como modelo</span>
+        <button class="mclose" onclick="openModal('receita')"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="mbody" style="padding:16px 18px">
+        <div style="font-size:10.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Nome do modelo</div>
+        <input
+          type="text"
+          id="rx-modelo-nome-input"
+          placeholder="Ex: Hipertensão leve..."
+          autocomplete="off"
+          style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none"
+        />
+      </div>
+      <div class="mfoot" style="justify-content:flex-end;gap:8px">
+        <button class="btn" onclick="openModal('receita')">Cancelar</button>
+        <button class="btn primary" onclick="rxConfirmarNomeModelo()">Salvar e emitir</button>
       </div>
     </div>
 
@@ -9427,6 +9469,9 @@ let rxSelected = [];
 
                                                             async function openReceita() {
                                                               rxSelected = [];
+                                                              rxSalvarModeloAtivo = false;
+                                                              const rxModeloChk = document.getElementById('rx-salvar-modelo-toggle');
+                                                              if (rxModeloChk) rxModeloChk.checked = false;
                                                               openModal('receita');
                                                               const inp = document.getElementById('rx-search');
                                                               if (inp) { inp.value = ''; inp.style.borderColor = '#e2e8f0'; }
@@ -9794,7 +9839,139 @@ let rxSelected = [];
                                                               rxCheckInteracoes();
                                                             }
 
+                                                            /* ── Modelos de receita (tabela receita_modelos no Supabase,
+                                                               um por médico, sincroniza entre dispositivos) ─────────────── */
+                                                            let rxModelosCache = [];
+                                                            let rxSalvarModeloAtivo = false;
+
+                                                            function rxToggleSalvarModelo(checked) {
+                                                              rxSalvarModeloAtivo = !!checked;
+                                                            }
+
+                                                            async function rxSalvarModeloAtual(nome) {
+                                                              const medicamentos = rxSelected.map(it => {
+                                                                const clone = { ...it };
+                                                                delete clone.uid;
+                                                                return clone;
+                                                              });
+                                                              try {
+                                                                const { error } = await sb.from('receita_modelos').insert({
+                                                                  user_id: currentUser && currentUser.id,
+                                                                  nome: nome,
+                                                                  medicamentos: medicamentos
+                                                                });
+                                                                if (error) throw error;
+                                                              } catch (e) {
+                                                                console.warn('Falha ao salvar modelo de receita', e);
+                                                                showToast && showToast('Falha ao salvar o modelo', 'error');
+                                                              }
+                                                            }
+
+                                                            async function rxOpenModelos() {
+                                                              openModal('rx-modelos');
+                                                              await rxCarregarModelos();
+                                                            }
+
+                                                            async function rxCarregarModelos() {
+                                                              const el = document.getElementById('rx-modelos-lista');
+                                                              if (el) el.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:12px;padding:20px 10px"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Carregando...</div>';
+                                                              try {
+                                                                const { data, error } = await sb.from('receita_modelos').select('*').order('created_at', { ascending: false });
+                                                                if (error) throw error;
+                                                                rxModelosCache = data || [];
+                                                              } catch (e) {
+                                                                console.warn('Falha ao carregar modelos de receita', e);
+                                                                rxModelosCache = [];
+                                                              }
+                                                              rxRenderModelosLista();
+                                                            }
+
+                                                            function rxRenderModelosLista() {
+                                                              const el = document.getElementById('rx-modelos-lista');
+                                                              if (!el) return;
+                                                              if (!rxModelosCache.length) {
+                                                                el.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:12px;padding:20px 10px"><i class="ti ti-bookmark" style="font-size:22px;display:block;margin-bottom:6px;opacity:.4"></i>Nenhum modelo salvo ainda.<br><span style="font-size:11px">Marque "Salvar modelo" ao emitir uma receita.</span></div>';
+                                                                return;
+                                                              }
+                                                              el.innerHTML = rxModelosCache.map(m => `
+                                                                <div style="display:flex;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid #f3f4f6;cursor:pointer" onclick="rxAplicarModelo('${m.id}')">
+                                                                  <div style="flex:1;min-width:0">
+                                                                    <div style="font-size:12.5px;font-weight:600;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${rxEscape(m.nome)}</div>
+                                                                    <div style="font-size:11px;color:#94a3b8">${(m.medicamentos || []).length} medicamento${(m.medicamentos || []).length > 1 ? 's' : ''}</div>
+                                                                  </div>
+                                                                  <button title="Renomear" style="padding:4px;border:none;background:none;cursor:pointer" onclick="event.stopPropagation();rxRenomearModelo('${m.id}')">
+                                                                    <i class="ti ti-pencil" style="font-size:13px;color:#64748b"></i>
+                                                                  </button>
+                                                                  <button title="Excluir" style="padding:4px;border:none;background:none;cursor:pointer" onclick="event.stopPropagation();rxRemoverModelo('${m.id}')">
+                                                                    <i class="ti ti-trash" style="font-size:13px;color:#dc2626"></i>
+                                                                  </button>
+                                                                </div>`).join('');
+                                                            }
+
+                                                            function rxAplicarModelo(id) {
+                                                              const modelo = rxModelosCache.find(m => m.id === id);
+                                                              if (!modelo) return;
+                                                              rxSelected = (modelo.medicamentos || []).map(it => ({
+                                                                ...JSON.parse(JSON.stringify(it)),
+                                                                uid: Math.random().toString(36).slice(2, 10)
+                                                              }));
+                                                              rxRenderSelected();
+                                                              openModal('receita');
+                                                              showToast && showToast('Modelo "' + modelo.nome + '" aplicado', 'success');
+                                                            }
+
+                                                            async function rxRenomearModelo(id) {
+                                                              const modelo = rxModelosCache.find(m => m.id === id);
+                                                              if (!modelo) return;
+                                                              const novo = prompt('Novo nome do modelo:', modelo.nome);
+                                                              if (novo === null) return;
+                                                              const nome = novo.trim();
+                                                              if (!nome) return;
+                                                              try {
+                                                                const { error } = await sb.from('receita_modelos').update({ nome }).eq('id', id);
+                                                                if (error) throw error;
+                                                                modelo.nome = nome;
+                                                                rxRenderModelosLista();
+                                                              } catch (e) {
+                                                                console.warn('Falha ao renomear modelo de receita', e);
+                                                                showToast && showToast('Falha ao renomear o modelo', 'error');
+                                                              }
+                                                            }
+
+                                                            async function rxRemoverModelo(id) {
+                                                              const modelo = rxModelosCache.find(m => m.id === id);
+                                                              if (!modelo) return;
+                                                              if (!confirm('Excluir o modelo "' + modelo.nome + '"?')) return;
+                                                              try {
+                                                                const { error } = await sb.from('receita_modelos').delete().eq('id', id);
+                                                                if (error) throw error;
+                                                                rxModelosCache = rxModelosCache.filter(m => m.id !== id);
+                                                                rxRenderModelosLista();
+                                                              } catch (e) {
+                                                                console.warn('Falha ao excluir modelo de receita', e);
+                                                                showToast && showToast('Falha ao excluir o modelo', 'error');
+                                                              }
+                                                            }
+
+                                                            async function rxConfirmarNomeModelo() {
+                                                              const input = document.getElementById('rx-modelo-nome-input');
+                                                              const nome = ((input && input.value) || '').trim();
+                                                              if (!nome) { showToast && showToast('Digite um nome para o modelo', 'warn'); return; }
+                                                              await rxSalvarModeloAtual(nome);
+                                                              if (input) input.value = '';
+                                                              rxEmitirConfirmado();
+                                                            }
+
                                                             function rxEmitir() {
+                                                              if (!rxSelected.length) { showToast && showToast('Adicione ao menos um medicamento', 'warn'); return; }
+                                                              if (rxSalvarModeloAtivo) {
+                                                                openModal('rx-modelo-nome');
+                                                                return;
+                                                              }
+                                                              rxEmitirConfirmado();
+                                                            }
+
+                                                            function rxEmitirConfirmado() {
                                                               if (!rxSelected.length) { showToast && showToast('Adicione ao menos um medicamento', 'warn'); return; }
 
                                                               const linhas = rxSelected.map((it, i) =>
