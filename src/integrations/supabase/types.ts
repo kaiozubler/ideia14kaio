@@ -112,6 +112,75 @@ export type Database = {
         }
         Relationships: []
       }
+      assinaturas_digitais: {
+        Row: {
+          arquivo_assinado: string | null
+          bry_envelope_id: string | null
+          consulta_id: string | null
+          created_at: string
+          documento_id: string | null
+          download_url: string | null
+          erro: string | null
+          id: string
+          paciente_email: string | null
+          paciente_nome: string | null
+          sign_url: string | null
+          status: string
+          tipo_documento: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          arquivo_assinado?: string | null
+          bry_envelope_id?: string | null
+          consulta_id?: string | null
+          created_at?: string
+          documento_id?: string | null
+          download_url?: string | null
+          erro?: string | null
+          id?: string
+          paciente_email?: string | null
+          paciente_nome?: string | null
+          sign_url?: string | null
+          status?: string
+          tipo_documento: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          arquivo_assinado?: string | null
+          bry_envelope_id?: string | null
+          consulta_id?: string | null
+          created_at?: string
+          documento_id?: string | null
+          download_url?: string | null
+          erro?: string | null
+          id?: string
+          paciente_email?: string | null
+          paciente_nome?: string | null
+          sign_url?: string | null
+          status?: string
+          tipo_documento?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assinaturas_digitais_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "consulta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assinaturas_digitais_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "documentos_paciente"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consulta: {
         Row: {
           acao: string | null
