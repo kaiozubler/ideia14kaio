@@ -8693,7 +8693,7 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                                                             is_generico: false,
                                                             nome_comercial: c.nome_comercial,
                                                             fabricante: c.fabricante,
-                                                            composicao: '',
+                                                            composicao: c.composicao || '',
                                                             qtd_apresentacoes: Number(c.qtd_apresentacoes || 0)
                                                           }));
                                                           const list = [...gens, ...coms].slice(0, 80);
