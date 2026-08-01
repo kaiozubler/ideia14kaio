@@ -16,6 +16,7 @@ import { Route as ApiChatIaRouteImport } from './routes/api/chat-ia'
 import { Route as ApiDailyRoomRouteImport } from './routes/api/daily-room'
 import { Route as ApiDeepgramTokenRouteImport } from './routes/api/deepgram-token'
 import { Route as ApiBryCreateEnvelopeRouteImport } from './routes/api/bry/create-envelope'
+import { Route as ApiBryGetEnvelopeRouteImport } from './routes/api/bry/get-envelope'
 import { Route as ApiSignatureAuthenticateRouteImport } from './routes/api/signature/authenticate'
 import { Route as ApiSignatureCredentialRouteImport } from './routes/api/signature/credential'
 import { Route as ApiSignatureLocalCertificateRouteImport } from './routes/api/signature/local-certificate'
@@ -57,6 +58,11 @@ const ApiDeepgramTokenRoute = ApiDeepgramTokenRouteImport.update({
 const ApiBryCreateEnvelopeRoute = ApiBryCreateEnvelopeRouteImport.update({
   id: '/api/bry/create-envelope',
   path: '/api/bry/create-envelope',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBryGetEnvelopeRoute = ApiBryGetEnvelopeRouteImport.update({
+  id: '/api/bry/get-envelope',
+  path: '/api/bry/get-envelope',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSignatureAuthenticateRoute =
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
+  '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
+  '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
+  '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/api/daily-room'
     | '/api/deepgram-token'
     | '/api/bry/create-envelope'
+    | '/api/bry/get-envelope'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
     | '/api/signature/local-certificate'
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/api/daily-room'
     | '/api/deepgram-token'
     | '/api/bry/create-envelope'
+    | '/api/bry/get-envelope'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
     | '/api/signature/local-certificate'
@@ -180,6 +191,7 @@ export interface FileRouteTypes {
     | '/api/daily-room'
     | '/api/deepgram-token'
     | '/api/bry/create-envelope'
+    | '/api/bry/get-envelope'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
     | '/api/signature/local-certificate'
@@ -196,6 +208,7 @@ export interface RootRouteChildren {
   ApiDailyRoomRoute: typeof ApiDailyRoomRoute
   ApiDeepgramTokenRoute: typeof ApiDeepgramTokenRoute
   ApiBryCreateEnvelopeRoute: typeof ApiBryCreateEnvelopeRoute
+  ApiBryGetEnvelopeRoute: typeof ApiBryGetEnvelopeRoute
   ApiSignatureAuthenticateRoute: typeof ApiSignatureAuthenticateRoute
   ApiSignatureCredentialRoute: typeof ApiSignatureCredentialRoute
   ApiSignatureLocalCertificateRoute: typeof ApiSignatureLocalCertificateRoute
@@ -255,6 +268,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBryCreateEnvelopeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/bry/get-envelope': {
+      id: '/api/bry/get-envelope'
+      path: '/api/bry/get-envelope'
+      fullPath: '/api/bry/get-envelope'
+      preLoaderRoute: typeof ApiBryGetEnvelopeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/signature/authenticate': {
       id: '/api/signature/authenticate'
       path: '/api/signature/authenticate'
@@ -308,6 +328,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDailyRoomRoute: ApiDailyRoomRoute,
   ApiDeepgramTokenRoute: ApiDeepgramTokenRoute,
   ApiBryCreateEnvelopeRoute: ApiBryCreateEnvelopeRoute,
+  ApiBryGetEnvelopeRoute: ApiBryGetEnvelopeRoute,
   ApiSignatureAuthenticateRoute: ApiSignatureAuthenticateRoute,
   ApiSignatureCredentialRoute: ApiSignatureCredentialRoute,
   ApiSignatureLocalCertificateRoute: ApiSignatureLocalCertificateRoute,
