@@ -15,12 +15,17 @@ import { Route as ApiAssistenteIaConversasRouteImport } from './routes/api/assis
 import { Route as ApiChatIaRouteImport } from './routes/api/chat-ia'
 import { Route as ApiDailyRoomRouteImport } from './routes/api/daily-room'
 import { Route as ApiDeepgramTokenRouteImport } from './routes/api/deepgram-token'
+import { Route as ApiBryCancelEnvelopeRouteImport } from './routes/api/bry/cancel-envelope'
+import { Route as ApiBryCreateEnvelopeRouteImport } from './routes/api/bry/create-envelope'
+import { Route as ApiBryDownloadDocumentRouteImport } from './routes/api/bry/download-document'
+import { Route as ApiBryGetEnvelopeRouteImport } from './routes/api/bry/get-envelope'
 import { Route as ApiSignatureAuthenticateRouteImport } from './routes/api/signature/authenticate'
 import { Route as ApiSignatureCredentialRouteImport } from './routes/api/signature/credential'
 import { Route as ApiSignatureLocalCertificateRouteImport } from './routes/api/signature/local-certificate'
 import { Route as ApiSignatureSignRouteImport } from './routes/api/signature/sign'
 import { Route as ApiPublicHooksSyncInteracoesRouteImport } from './routes/api/public/hooks/sync-interacoes'
 import { Route as ApiPublicSignatureCallbackRouteImport } from './routes/api/public/signature/callback'
+import { Route as ApiPublicWebhooksBryRouteImport } from './routes/api/public/webhooks/bry'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -51,6 +56,26 @@ const ApiDailyRoomRoute = ApiDailyRoomRouteImport.update({
 const ApiDeepgramTokenRoute = ApiDeepgramTokenRouteImport.update({
   id: '/api/deepgram-token',
   path: '/api/deepgram-token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBryCancelEnvelopeRoute = ApiBryCancelEnvelopeRouteImport.update({
+  id: '/api/bry/cancel-envelope',
+  path: '/api/bry/cancel-envelope',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBryCreateEnvelopeRoute = ApiBryCreateEnvelopeRouteImport.update({
+  id: '/api/bry/create-envelope',
+  path: '/api/bry/create-envelope',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBryDownloadDocumentRoute = ApiBryDownloadDocumentRouteImport.update({
+  id: '/api/bry/download-document',
+  path: '/api/bry/download-document',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBryGetEnvelopeRoute = ApiBryGetEnvelopeRouteImport.update({
+  id: '/api/bry/get-envelope',
+  path: '/api/bry/get-envelope',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSignatureAuthenticateRoute =
@@ -87,6 +112,11 @@ const ApiPublicSignatureCallbackRoute =
     path: '/api/public/signature/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicWebhooksBryRoute = ApiPublicWebhooksBryRouteImport.update({
+  id: '/api/public/webhooks/bry',
+  path: '/api/public/webhooks/bry',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -95,12 +125,17 @@ export interface FileRoutesByFullPath {
   '/api/chat-ia': typeof ApiChatIaRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
+  '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
+  '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
+  '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
+  '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
+  '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -109,12 +144,17 @@ export interface FileRoutesByTo {
   '/api/chat-ia': typeof ApiChatIaRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
+  '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
+  '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
+  '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
+  '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
+  '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -124,12 +164,17 @@ export interface FileRoutesById {
   '/api/chat-ia': typeof ApiChatIaRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
+  '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
+  '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
+  '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
+  '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
+  '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -140,12 +185,17 @@ export interface FileRouteTypes {
     | '/api/chat-ia'
     | '/api/daily-room'
     | '/api/deepgram-token'
+    | '/api/bry/cancel-envelope'
+    | '/api/bry/create-envelope'
+    | '/api/bry/download-document'
+    | '/api/bry/get-envelope'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
     | '/api/signature/local-certificate'
     | '/api/signature/sign'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/signature/callback'
+    | '/api/public/webhooks/bry'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -154,12 +204,17 @@ export interface FileRouteTypes {
     | '/api/chat-ia'
     | '/api/daily-room'
     | '/api/deepgram-token'
+    | '/api/bry/cancel-envelope'
+    | '/api/bry/create-envelope'
+    | '/api/bry/download-document'
+    | '/api/bry/get-envelope'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
     | '/api/signature/local-certificate'
     | '/api/signature/sign'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/signature/callback'
+    | '/api/public/webhooks/bry'
   id:
     | '__root__'
     | '/'
@@ -168,12 +223,17 @@ export interface FileRouteTypes {
     | '/api/chat-ia'
     | '/api/daily-room'
     | '/api/deepgram-token'
+    | '/api/bry/cancel-envelope'
+    | '/api/bry/create-envelope'
+    | '/api/bry/download-document'
+    | '/api/bry/get-envelope'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
     | '/api/signature/local-certificate'
     | '/api/signature/sign'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/signature/callback'
+    | '/api/public/webhooks/bry'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -183,12 +243,17 @@ export interface RootRouteChildren {
   ApiChatIaRoute: typeof ApiChatIaRoute
   ApiDailyRoomRoute: typeof ApiDailyRoomRoute
   ApiDeepgramTokenRoute: typeof ApiDeepgramTokenRoute
+  ApiBryCancelEnvelopeRoute: typeof ApiBryCancelEnvelopeRoute
+  ApiBryCreateEnvelopeRoute: typeof ApiBryCreateEnvelopeRoute
+  ApiBryDownloadDocumentRoute: typeof ApiBryDownloadDocumentRoute
+  ApiBryGetEnvelopeRoute: typeof ApiBryGetEnvelopeRoute
   ApiSignatureAuthenticateRoute: typeof ApiSignatureAuthenticateRoute
   ApiSignatureCredentialRoute: typeof ApiSignatureCredentialRoute
   ApiSignatureLocalCertificateRoute: typeof ApiSignatureLocalCertificateRoute
   ApiSignatureSignRoute: typeof ApiSignatureSignRoute
   ApiPublicHooksSyncInteracoesRoute: typeof ApiPublicHooksSyncInteracoesRoute
   ApiPublicSignatureCallbackRoute: typeof ApiPublicSignatureCallbackRoute
+  ApiPublicWebhooksBryRoute: typeof ApiPublicWebhooksBryRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -235,6 +300,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDeepgramTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/bry/cancel-envelope': {
+      id: '/api/bry/cancel-envelope'
+      path: '/api/bry/cancel-envelope'
+      fullPath: '/api/bry/cancel-envelope'
+      preLoaderRoute: typeof ApiBryCancelEnvelopeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bry/create-envelope': {
+      id: '/api/bry/create-envelope'
+      path: '/api/bry/create-envelope'
+      fullPath: '/api/bry/create-envelope'
+      preLoaderRoute: typeof ApiBryCreateEnvelopeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bry/download-document': {
+      id: '/api/bry/download-document'
+      path: '/api/bry/download-document'
+      fullPath: '/api/bry/download-document'
+      preLoaderRoute: typeof ApiBryDownloadDocumentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bry/get-envelope': {
+      id: '/api/bry/get-envelope'
+      path: '/api/bry/get-envelope'
+      fullPath: '/api/bry/get-envelope'
+      preLoaderRoute: typeof ApiBryGetEnvelopeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/signature/authenticate': {
       id: '/api/signature/authenticate'
       path: '/api/signature/authenticate'
@@ -277,6 +370,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSignatureCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/webhooks/bry': {
+      id: '/api/public/webhooks/bry'
+      path: '/api/public/webhooks/bry'
+      fullPath: '/api/public/webhooks/bry'
+      preLoaderRoute: typeof ApiPublicWebhooksBryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -287,12 +387,17 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatIaRoute: ApiChatIaRoute,
   ApiDailyRoomRoute: ApiDailyRoomRoute,
   ApiDeepgramTokenRoute: ApiDeepgramTokenRoute,
+  ApiBryCancelEnvelopeRoute: ApiBryCancelEnvelopeRoute,
+  ApiBryCreateEnvelopeRoute: ApiBryCreateEnvelopeRoute,
+  ApiBryDownloadDocumentRoute: ApiBryDownloadDocumentRoute,
+  ApiBryGetEnvelopeRoute: ApiBryGetEnvelopeRoute,
   ApiSignatureAuthenticateRoute: ApiSignatureAuthenticateRoute,
   ApiSignatureCredentialRoute: ApiSignatureCredentialRoute,
   ApiSignatureLocalCertificateRoute: ApiSignatureLocalCertificateRoute,
   ApiSignatureSignRoute: ApiSignatureSignRoute,
   ApiPublicHooksSyncInteracoesRoute: ApiPublicHooksSyncInteracoesRoute,
   ApiPublicSignatureCallbackRoute: ApiPublicSignatureCallbackRoute,
+  ApiPublicWebhooksBryRoute: ApiPublicWebhooksBryRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
