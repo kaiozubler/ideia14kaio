@@ -16,6 +16,7 @@ import { Route as ApiChatIaRouteImport } from './routes/api/chat-ia'
 import { Route as ApiDailyRoomRouteImport } from './routes/api/daily-room'
 import { Route as ApiDeepgramTokenRouteImport } from './routes/api/deepgram-token'
 import { Route as ApiBryCreateEnvelopeRouteImport } from './routes/api/bry/create-envelope'
+import { Route as ApiBryDownloadDocumentRouteImport } from './routes/api/bry/download-document'
 import { Route as ApiBryGetEnvelopeRouteImport } from './routes/api/bry/get-envelope'
 import { Route as ApiSignatureAuthenticateRouteImport } from './routes/api/signature/authenticate'
 import { Route as ApiSignatureCredentialRouteImport } from './routes/api/signature/credential'
@@ -58,6 +59,11 @@ const ApiDeepgramTokenRoute = ApiDeepgramTokenRouteImport.update({
 const ApiBryCreateEnvelopeRoute = ApiBryCreateEnvelopeRouteImport.update({
   id: '/api/bry/create-envelope',
   path: '/api/bry/create-envelope',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBryDownloadDocumentRoute = ApiBryDownloadDocumentRouteImport.update({
+  id: '/api/bry/download-document',
+  path: '/api/bry/download-document',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBryGetEnvelopeRoute = ApiBryGetEnvelopeRouteImport.update({
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
+  '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
+  '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
+  '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/api/daily-room'
     | '/api/deepgram-token'
     | '/api/bry/create-envelope'
+    | '/api/bry/download-document'
     | '/api/bry/get-envelope'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
@@ -175,6 +185,7 @@ export interface FileRouteTypes {
     | '/api/daily-room'
     | '/api/deepgram-token'
     | '/api/bry/create-envelope'
+    | '/api/bry/download-document'
     | '/api/bry/get-envelope'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
     | '/api/daily-room'
     | '/api/deepgram-token'
     | '/api/bry/create-envelope'
+    | '/api/bry/download-document'
     | '/api/bry/get-envelope'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
@@ -208,6 +220,7 @@ export interface RootRouteChildren {
   ApiDailyRoomRoute: typeof ApiDailyRoomRoute
   ApiDeepgramTokenRoute: typeof ApiDeepgramTokenRoute
   ApiBryCreateEnvelopeRoute: typeof ApiBryCreateEnvelopeRoute
+  ApiBryDownloadDocumentRoute: typeof ApiBryDownloadDocumentRoute
   ApiBryGetEnvelopeRoute: typeof ApiBryGetEnvelopeRoute
   ApiSignatureAuthenticateRoute: typeof ApiSignatureAuthenticateRoute
   ApiSignatureCredentialRoute: typeof ApiSignatureCredentialRoute
@@ -266,6 +279,13 @@ declare module '@tanstack/react-router' {
       path: '/api/bry/create-envelope'
       fullPath: '/api/bry/create-envelope'
       preLoaderRoute: typeof ApiBryCreateEnvelopeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bry/download-document': {
+      id: '/api/bry/download-document'
+      path: '/api/bry/download-document'
+      fullPath: '/api/bry/download-document'
+      preLoaderRoute: typeof ApiBryDownloadDocumentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/bry/get-envelope': {
@@ -328,6 +348,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDailyRoomRoute: ApiDailyRoomRoute,
   ApiDeepgramTokenRoute: ApiDeepgramTokenRoute,
   ApiBryCreateEnvelopeRoute: ApiBryCreateEnvelopeRoute,
+  ApiBryDownloadDocumentRoute: ApiBryDownloadDocumentRoute,
   ApiBryGetEnvelopeRoute: ApiBryGetEnvelopeRoute,
   ApiSignatureAuthenticateRoute: ApiSignatureAuthenticateRoute,
   ApiSignatureCredentialRoute: ApiSignatureCredentialRoute,
