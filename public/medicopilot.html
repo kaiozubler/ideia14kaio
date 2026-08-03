@@ -10816,12 +10816,20 @@ let rxSelected = [];
                                                     const token = sess?.session?.access_token;
                                                     if (!token) throw new Error('Sessão expirada');
                                                     const filename = d.arquivo_nome || 'documento.pdf';
-                                                    const resp = await fetch('/api/signature/sign', {
+                                                    const contentDescription = `${(DOC_TIPO_META[d.tipo] || {}).label || 'Documento'} para ${d.paciente_nome || 'paciente'}`;
+                                                    const postSign = (certificatePassword) => fetch('/api/signature/sign', {
                                                       method: 'POST',
                                                       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-                                                      body: JSON.stringify({ pdfBase64, filename, contentDescription: `${(DOC_TIPO_META[d.tipo] || {}).label || 'Documento'} para ${d.paciente_nome || 'paciente'}` }),
+                                                      body: JSON.stringify({ pdfBase64, filename, contentDescription, ...(certificatePassword ? { certificatePassword } : {}) }),
                                                     });
-                                                    const j = await resp.json().catch(() => ({}));
+                                                    let resp = await postSign(null);
+                                                    let j = await resp.json().catch(() => ({}));
+                                                    if (resp.status === 428 || j.error === 'password_required') {
+                                                      const pin = prompt('Informe o PIN/senha do seu certificado digital para assinar:');
+                                                      if (!pin) { showToast && showToast('Assinatura cancelada', 'warn'); return; }
+                                                      resp = await postSign(pin);
+                                                      j = await resp.json().catch(() => ({}));
+                                                    }
                                                     if (!resp.ok) {
                                                       const msgs = { credential_expired: 'Certificado ICP-Brasil expirado ou não conectado.', not_configured: 'Nenhum certificado ICP-Brasil conectado.' };
                                                       throw new Error(msgs[j.error] || j.message || 'Falha ao assinar o documento');
