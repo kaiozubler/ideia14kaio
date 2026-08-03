@@ -1109,6 +1109,33 @@ export type Database = {
         }
         Relationships: []
       }
+      receita_modelos: {
+        Row: {
+          created_at: string
+          id: string
+          medicamentos: Json
+          nome: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          medicamentos?: Json
+          nome: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          medicamentos?: Json
+          nome?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       resumo_prontuario: {
         Row: {
           created_at: string
@@ -1186,24 +1213,30 @@ export type Database = {
           created_at: string
           grupo_busca: string | null
           id_substancia: string
+          lista_portaria344: string | null
           nome_dcb: string
           nome_exibicao: string
+          tipo_receita: string | null
         }
         Insert: {
           api_id?: number | null
           created_at?: string
           grupo_busca?: string | null
           id_substancia?: string
+          lista_portaria344?: string | null
           nome_dcb: string
           nome_exibicao: string
+          tipo_receita?: string | null
         }
         Update: {
           api_id?: number | null
           created_at?: string
           grupo_busca?: string | null
           id_substancia?: string
+          lista_portaria344?: string | null
           nome_dcb?: string
           nome_exibicao?: string
+          tipo_receita?: string | null
         }
         Relationships: []
       }
