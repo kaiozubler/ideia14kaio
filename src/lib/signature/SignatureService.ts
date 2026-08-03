@@ -9,10 +9,22 @@ import type { StoredCertificate } from "./CertificateProvider";
 import type { AuthenticateInput, AuthenticateResult } from "./types";
 
 export const SignatureService = {
-  /** Cloud enrollment (unchanged behavior). */
+  /** Cloud enrollment via IntegraICP (fluxo legado, requer secrets da IntegraICP). */
   async authenticate(input: AuthenticateInput): Promise<AuthenticateResult> {
     const provider = await CertificateProviderFactory.getById("integra_icp");
     return (await provider.authenticate(input)) as AuthenticateResult;
+  },
+
+  /** Cloud enrollment via BRy (BRyKMS) — padrão do app. */
+  async registerBryCloudCertificate(input: {
+    doctorId: string;
+    cpf: string;
+    uuidCert?: string | null;
+    label?: string | null;
+    holderName?: string | null;
+  }) {
+    const provider = await CertificateProviderFactory.getById("bry_cloud");
+    return provider.authenticate(input as never);
   },
 
   /** Local (.pfx/.p12) enrollment. */
