@@ -3,11 +3,13 @@
 import type { CertificateProvider, StoredCertificate } from "./CertificateProvider";
 import { SignatureErrors } from "./errors";
 
-export type ProviderId = "integra_icp" | "local" | (string & {});
+export type ProviderId = "bry_cloud" | "integra_icp" | "local" | (string & {});
 
 type Loader = () => Promise<CertificateProvider>;
 
 const registry: Record<string, Loader> = {
+  bry_cloud: async () =>
+    (await import("./providers/BryCloudCertificateProvider.server")).BryCloudCertificateProvider,
   integra_icp: async () =>
     (await import("./providers/IntegraICPCertificateProvider")).IntegraICPCertificateProvider,
   local: async () =>
@@ -30,7 +32,7 @@ export const CertificateProviderFactory = {
     return loader();
   },
 
-  /** Resolves from the stored certificate row (default keeps legacy rows on cloud). */
+  /** Resolves from the stored certificate row (legacy rows without provider are IntegraICP). */
   async get(certificate: StoredCertificate | null | undefined): Promise<CertificateProvider> {
     return this.getById(certificate?.provider || "integra_icp");
   },

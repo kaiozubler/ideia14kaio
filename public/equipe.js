@@ -339,7 +339,11 @@
         };
         const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("pt-BR") : "—");
         const providerLabel = (id) =>
-          id === "local" ? "Certificado local (.pfx/.p12)" : "Certificado em nuvem (ICP)";
+          id === "local"
+            ? "Certificado local (.pfx/.p12)"
+            : id === "bry_cloud"
+              ? "BRy Cloud (Certificado em Nuvem)"
+              : "Certificado em nuvem (ICP)";
         const typeLabel = (t) => (t === "pfx" ? "Arquivo A1 (.pfx/.p12)" : "Nuvem");
 
         function renderCert(c) {
@@ -495,49 +499,48 @@
         }
 
         async function connectCloud() {
-          const cpf = prompt("Informe o CPF do titular do certificado (somente números):");
-          if (!cpf) return;
-          certBtn.disabled = true;
-          certStatus.textContent = "Conectando ao provedor…";
-          try {
-            const token = await authToken();
-            if (!token) {
-              alert("Sessão expirada. Faça login novamente.");
-              return;
-            }
-            const callbackUrl = window.location.origin + "/api/public/signature/callback";
-            const res = await fetch("/api/signature/authenticate", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-              body: JSON.stringify({ cpf, callbackUrl }),
-            });
-            const j = await res.json();
-            if (!res.ok) {
-              const msg = j.message || j.error || "Falha ao iniciar autenticação.";
-              certStatus.innerHTML = `<b style="color:#dc2626">${esc(msg)}</b>`;
-              return;
-            }
-            if (j.redirectUrl) {
-              window.location.href = j.redirectUrl;
-              return;
-            }
-            if (j.clearances && j.clearances.length > 1) {
-              const pick = prompt(
-                "Escolha o provedor:\n" +
-                  j.clearances.map((c, i) => `${i + 1}) ${c.provider} — ${c.product || ""}`).join("\n"),
-              );
-              const idx = Number(pick) - 1;
-              if (j.clearances[idx]?.authorizationUrl) {
-                window.location.href = j.clearances[idx].authorizationUrl;
+          modalShell(
+            "Certificado em Nuvem (BRy)",
+            `<div style="display:grid;gap:10px">
+               <div><label class="eq-label">CPF do titular do certificado</label><input class="eq-input" id="eq-cloud-cpf" placeholder="000.000.000-00" maxlength="14" inputmode="numeric"></div>
+               <div><label class="eq-label">Nome do titular (opcional)</label><input class="eq-input" id="eq-cloud-name"></div>
+               <div><label class="eq-label">UUID do certificado (opcional)</label><input class="eq-input" id="eq-cloud-uuid" placeholder="Somente se você possui mais de um certificado"></div>
+               <div><label class="eq-label">Nome de identificação (opcional)</label><input class="eq-input" id="eq-cloud-label"></div>
+               <div style="font-size:12px;color:#64748b">O PIN do certificado é solicitado a cada assinatura e nunca é armazenado.</div>
+               <div id="eq-cloud-msg" style="font-size:12px;color:#64748b"></div>
+               <button type="button" class="eq-btn eq-btn-primary" id="eq-cloud-send"><i class="ti ti-cloud-lock"></i> Vincular certificado</button>
+             </div>`,
+          );
+          const msg = document.getElementById("eq-cloud-msg");
+          document.getElementById("eq-cloud-send").onclick = async () => {
+            const cpf = (document.getElementById("eq-cloud-cpf").value || "").replace(/\D/g, "");
+            if (cpf.length !== 11) return (msg.textContent = "Informe um CPF válido (11 dígitos).");
+            msg.textContent = "Vinculando certificado…";
+            try {
+              const token = await authToken();
+              if (!token) return (msg.textContent = "Sessão expirada. Faça login novamente.");
+              const res = await fetch("/api/signature/authenticate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+                body: JSON.stringify({
+                  provider: "bry_cloud",
+                  cpf,
+                  holderName: document.getElementById("eq-cloud-name").value || null,
+                  uuidCert: document.getElementById("eq-cloud-uuid").value || null,
+                  label: document.getElementById("eq-cloud-label").value || null,
+                }),
+              });
+              const j = await res.json().catch(() => ({}));
+              if (!res.ok) {
+                msg.innerHTML = `<b style="color:#dc2626">${esc(j.message || j.error || "Falha ao vincular o certificado.")}</b>`;
                 return;
               }
+              closeModal();
+              loadCert();
+            } catch (err) {
+              msg.innerHTML = `<b style="color:#dc2626">${esc(String(err))}</b>`;
             }
-            certStatus.textContent = "Nenhum provedor disponível retornado.";
-          } catch (err) {
-            certStatus.innerHTML = `<b style="color:#dc2626">Erro: ${esc(String(err))}</b>`;
-          } finally {
-            certBtn.disabled = false;
-          }
+          };
         }
 
         certBtn.onclick = openTypeChooser;

@@ -196,6 +196,46 @@ export const CredentialRepository = {
     if (error) throw error;
   },
 
+  /** Persists a BRy Cloud (BRyKMS) certificate reference — the PIN is NEVER stored. */
+  async upsertCloudCertificate(params: {
+    doctorId: string;
+    provider: string;
+    credentialId: string;
+    label: string | null;
+    holderDocument: string | null;
+    subject: string | null;
+    providerName: string;
+    productName: string;
+    uuidCert?: string | null;
+  }) {
+    const sb = await admin();
+    const { error } = await sb.from("doctor_certificates").upsert(
+      {
+        doctor_id: params.doctorId,
+        credential_id: params.credentialId,
+        provider: params.provider,
+        certificate_type: "cloud",
+        storage_path: null,
+        label: params.label,
+        provider_name: params.providerName,
+        product_name: params.productName,
+        certificate_subject: params.subject,
+        holder_document: params.holderDocument,
+        certificate_serial: null,
+        certificate_fingerprint: null,
+        issuer: params.providerName,
+        certificate_valid_from: null,
+        certificate_valid_until: null,
+        credential_expires_at: null,
+        code_verifier_encrypted: null,
+        raw_metadata: { uuid_cert: params.uuidCert ?? null } as never,
+        updated_at: new Date().toISOString(),
+      } as never,
+      { onConflict: "doctor_id,credential_id" },
+    );
+    if (error) throw error;
+  },
+
   async getActiveCertificateWithVerifier(doctorId: string) {
     const cert = await this.getActiveCertificate(doctorId);
     if (!cert) return null;
