@@ -1787,7 +1787,10 @@
                                                       #m-kcol-cfg .fld .lg-hint{font-size:10.5px;color:#a3a29c;margin-top:4px;display:block;line-height:1.4}
                                                       #m-kcol-cfg input[type=text],#m-kcol-cfg input[type=number],#m-kcol-cfg select{width:100%;padding:9px 12px;border-radius:14px;border:1px solid rgba(0,0,0,.08);background:rgba(255,255,255,.72);font-size:12.5px;color:#2a2926;transition:all .15s;box-sizing:border-box}
                                                       #m-kcol-cfg input[type=text]:focus,#m-kcol-cfg input[type=number]:focus,#m-kcol-cfg select:focus{outline:none;border-color:#34d399;box-shadow:0 0 0 3px rgba(52,211,153,.22);background:#fff}
-                                                      #m-kcol-cfg input[type=color]{width:100%;height:38px;border-radius:14px;border:1px solid rgba(0,0,0,.08);padding:3px;background:rgba(255,255,255,.72);box-sizing:border-box}
+                                                      #m-kcol-cfg input[type=color]{-webkit-appearance:none;appearance:none;width:38px;height:38px;padding:0;border-radius:12px;border:1px solid rgba(0,0,0,.08);background:rgba(255,255,255,.72);box-sizing:border-box;cursor:pointer}
+                                                      #m-kcol-cfg input[type=color]::-webkit-color-swatch-wrapper{padding:3px}
+                                                      #m-kcol-cfg input[type=color]::-webkit-color-swatch{border:none;border-radius:8px}
+                                                      #m-kcol-cfg .fld-color{align-items:flex-start}
                                                       #m-kcol-cfg .kcfg-sec{grid-column:1/-1;display:flex;align-items:center;gap:7px;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin:6px 0 2px;padding-top:16px;border-top:1px solid rgba(0,0,0,.06);color:#059669}
                                                       #m-kcol-cfg .kcfg-sec:first-of-type{border-top:none;padding-top:0;margin-top:0}
                                                       #m-kcol-cfg .kcfg-sec::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
@@ -1796,17 +1799,18 @@
                                                       #m-kcol-cfg .kcfg-sec.sec-perm{color:#0284c7}
                                                       #m-kcol-cfg .lg-toggle{display:flex;align-items:flex-start;gap:11px;cursor:pointer;padding:9px 10px;border-radius:16px;transition:background .15s;position:relative}
                                                       #m-kcol-cfg .lg-toggle:hover{background:rgba(124,58,237,.06)}
-                                                      #m-kcol-cfg .lg-toggle input{position:absolute;opacity:0;width:0;height:0}
+                                                      #m-kcol-cfg .lg-toggle input{position:absolute;top:0;left:0;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
                                                       #m-kcol-cfg .lg-toggle-track{flex-shrink:0;width:36px;height:21px;border-radius:999px;background:#e3e2de;position:relative;transition:background .18s;margin-top:1px}
                                                       #m-kcol-cfg .lg-toggle-thumb{position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.28);transition:transform .18s}
                                                       #m-kcol-cfg .lg-toggle input:checked+.lg-toggle-track{background:linear-gradient(135deg,#a78bfa,#7c3aed)}
                                                       #m-kcol-cfg .lg-toggle input:checked+.lg-toggle-track .lg-toggle-thumb{transform:translateX(15px)}
                                                       #m-kcol-cfg .lg-toggle-text strong{display:block;font-size:12px;font-weight:600;color:#2a2926}
                                                       #m-kcol-cfg .lg-toggle-text small{display:block;font-size:10.5px;color:#8e8d87;margin-top:2px;line-height:1.4}
-                                                      #m-kcol-cfg .kmulti{border:1px solid rgba(0,0,0,.07);background:rgba(255,255,255,.55);border-radius:16px;padding:8px;max-height:120px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:6px}
-                                                      #m-kcol-cfg .kmulti label{display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.75);border:1px solid #e3e2de;font-size:11.5px;color:#46453f;cursor:pointer;transition:all .15s}
-                                                      #m-kcol-cfg .kmulti label:hover{background:#fff}
-                                                      #m-kcol-cfg .kmulti label:has(input:checked){background:linear-gradient(135deg,#38bdf8,#0284c7);border-color:transparent;color:#fff}
+                                                      #m-kcol-cfg .kmulti{border:1px solid rgba(0,0,0,.07);background:rgba(255,255,255,.5);border-radius:16px;padding:5px;max-height:130px;overflow-y:auto;display:flex;flex-direction:column;gap:1px}
+                                                      #m-kcol-cfg .kmulti label{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:11px;font-size:12px;color:#46453f;cursor:pointer;transition:background .13s}
+                                                      #m-kcol-cfg .kmulti label:hover{background:rgba(255,255,255,.85)}
+                                                      #m-kcol-cfg .kmulti input[type=checkbox]{width:15px;height:15px;margin:0;flex-shrink:0;accent-color:#0284c7;cursor:pointer}
+                                                      #m-kcol-cfg .kmulti label:has(input:checked){background:rgba(2,132,199,.09);color:#0284c7;font-weight:600}
                                                       #m-kcol-cfg .mfoot{padding:14px 22px;border-top:1px solid rgba(0,0,0,.06);background:transparent;display:flex;justify-content:flex-end;gap:10px}
                                                       #m-kcol-cfg .mfoot .btn{border-radius:999px;padding:8px 18px;font-weight:600;font-size:12px;border:1px solid #e3e2de;background:rgba(255,255,255,.7);color:#46453f}
                                                       #m-kcol-cfg .mfoot .btn:hover{background:#fff}
@@ -3669,7 +3673,7 @@
           <div class="form-grid">
             <div class="fld kcfg-sec">Identidade</div>
             <div class="fld"><label>Nome da etapa</label><input type="text" id="kcfg-name" /></div>
-            <div class="fld"><label>Cor</label><input type="color" id="kcfg-color" /></div>
+            <div class="fld fld-color"><label>Cor</label><input type="color" id="kcfg-color" /></div>
 
             <div class="fld wide kcfg-sec sec-triggers">Gatilhos automáticos</div>
             <div class="fld wide" style="display:flex;flex-direction:column;gap:2px">
