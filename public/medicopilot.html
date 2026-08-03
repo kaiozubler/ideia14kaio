@@ -4804,36 +4804,42 @@
         </div>
       </div>
 
-      <!-- MODELOS DE RECEITA: lista de modelos salvos -->
-      <div class="modal" id="m-rx-modelos" style="display:none;width:360px">
-        <div class="mhd">
-          <span class="mhd-title"><i class="ti ti-bookmark"></i> Modelos de receita</span>
-          <button class="mclose" onclick="openModal('receita')"><i class="ti ti-x"></i></button>
-        </div>
-        <div class="mbody" style="padding:14px 16px;max-height:60vh;overflow-y:auto">
-          <div id="rx-modelos-lista"></div>
+      <!-- MODELOS DE RECEITA: lista de modelos salvos (popup empilhado,
+           não usa openModal()/closeModal() de propósito — assim o modal
+           "Emitir receita" continua visível por baixo, sem fechar) -->
+      <div class="rx-popup-backdrop" id="m-rx-modelos-backdrop" style="display:none;position:fixed;inset:0;z-index:310;background:rgba(26,25,23,.45);align-items:center;justify-content:center" onclick="rxCloseModelosPopup()">
+        <div class="modal" id="m-rx-modelos" style="width:360px" onclick="event.stopPropagation()">
+          <div class="mhd">
+            <span class="mhd-title"><i class="ti ti-bookmark"></i> Modelos de receita</span>
+            <button class="mclose" onclick="rxCloseModelosPopup()"><i class="ti ti-x"></i></button>
+          </div>
+          <div class="mbody" style="padding:14px 16px;max-height:60vh;overflow-y:auto">
+            <div id="rx-modelos-lista"></div>
+          </div>
         </div>
       </div>
 
-      <!-- MODELOS DE RECEITA: nome do modelo ao salvar -->
-      <div class="modal" id="m-rx-modelo-nome" style="display:none;width:340px">
-        <div class="mhd">
-          <span class="mhd-title"><i class="ti ti-device-floppy"></i> Salvar como modelo</span>
-          <button class="mclose" onclick="openModal('receita')"><i class="ti ti-x"></i></button>
-        </div>
-        <div class="mbody" style="padding:16px 18px">
-          <div style="font-size:10.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Nome do modelo</div>
-          <input
-            type="text"
-            id="rx-modelo-nome-input"
-            placeholder="Ex: Hipertensão leve..."
-            autocomplete="off"
-            style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none"
-          />
-        </div>
-        <div class="mfoot" style="justify-content:flex-end;gap:8px">
-          <button class="btn" onclick="openModal('receita')">Cancelar</button>
-          <button class="btn primary" onclick="rxConfirmarNomeModelo()">Salvar e emitir</button>
+      <!-- MODELOS DE RECEITA: nome do modelo ao salvar (mesmo popup empilhado) -->
+      <div class="rx-popup-backdrop" id="m-rx-modelo-nome-backdrop" style="display:none;position:fixed;inset:0;z-index:310;background:rgba(26,25,23,.45);align-items:center;justify-content:center" onclick="rxFecharNomeModelo()">
+        <div class="modal" id="m-rx-modelo-nome" style="width:340px" onclick="event.stopPropagation()">
+          <div class="mhd">
+            <span class="mhd-title"><i class="ti ti-device-floppy"></i> Salvar como modelo</span>
+            <button class="mclose" onclick="rxFecharNomeModelo()"><i class="ti ti-x"></i></button>
+          </div>
+          <div class="mbody" style="padding:16px 18px">
+            <div style="font-size:10.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Nome do modelo</div>
+            <input
+              type="text"
+              id="rx-modelo-nome-input"
+              placeholder="Ex: Hipertensão leve..."
+              autocomplete="off"
+              style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none"
+            />
+          </div>
+          <div class="mfoot" style="justify-content:flex-end;gap:8px">
+            <button class="btn" onclick="rxFecharNomeModelo()">Cancelar</button>
+            <button class="btn primary" onclick="rxConfirmarNomeModelo()">Salvar e emitir</button>
+          </div>
         </div>
       </div>
     </div>
@@ -9476,6 +9482,8 @@ let rxSelected = [];
                                                               rxSalvarModeloAtivo = false;
                                                               const rxModeloChk = document.getElementById('rx-salvar-modelo-toggle');
                                                               if (rxModeloChk) rxModeloChk.checked = false;
+                                                              rxCloseModelosPopup();
+                                                              rxFecharNomeModelo();
                                                               openModal('receita');
                                                               const inp = document.getElementById('rx-search');
                                                               if (inp) { inp.value = ''; inp.style.borderColor = '#e2e8f0'; }
@@ -9872,8 +9880,14 @@ let rxSelected = [];
                                                             }
 
                                                             async function rxOpenModelos() {
-                                                              openModal('rx-modelos');
+                                                              const bd = document.getElementById('m-rx-modelos-backdrop');
+                                                              if (bd) bd.style.display = 'flex';
                                                               await rxCarregarModelos();
+                                                            }
+
+                                                            function rxCloseModelosPopup() {
+                                                              const bd = document.getElementById('m-rx-modelos-backdrop');
+                                                              if (bd) bd.style.display = 'none';
                                                             }
 
                                                             async function rxCarregarModelos() {
@@ -9920,7 +9934,7 @@ let rxSelected = [];
                                                                 uid: Math.random().toString(36).slice(2, 10)
                                                               }));
                                                               rxRenderSelected();
-                                                              openModal('receita');
+                                                              rxCloseModelosPopup();
                                                               showToast && showToast('Modelo "' + modelo.nome + '" aplicado', 'success');
                                                             }
 
@@ -9957,19 +9971,31 @@ let rxSelected = [];
                                                               }
                                                             }
 
+                                                            function rxAbrirNomeModelo() {
+                                                              const bd = document.getElementById('m-rx-modelo-nome-backdrop');
+                                                              if (bd) bd.style.display = 'flex';
+                                                              setTimeout(() => { const inp = document.getElementById('rx-modelo-nome-input'); if (inp) inp.focus(); }, 50);
+                                                            }
+
+                                                            function rxFecharNomeModelo() {
+                                                              const bd = document.getElementById('m-rx-modelo-nome-backdrop');
+                                                              if (bd) bd.style.display = 'none';
+                                                            }
+
                                                             async function rxConfirmarNomeModelo() {
                                                               const input = document.getElementById('rx-modelo-nome-input');
                                                               const nome = ((input && input.value) || '').trim();
                                                               if (!nome) { showToast && showToast('Digite um nome para o modelo', 'warn'); return; }
                                                               await rxSalvarModeloAtual(nome);
                                                               if (input) input.value = '';
+                                                              rxFecharNomeModelo();
                                                               rxEmitirConfirmado();
                                                             }
 
                                                             function rxEmitir() {
                                                               if (!rxSelected.length) { showToast && showToast('Adicione ao menos um medicamento', 'warn'); return; }
                                                               if (rxSalvarModeloAtivo) {
-                                                                openModal('rx-modelo-nome');
+                                                                rxAbrirNomeModelo();
                                                                 return;
                                                               }
                                                               rxEmitirConfirmado();
