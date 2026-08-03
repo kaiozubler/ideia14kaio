@@ -34,18 +34,33 @@ export const Route = createFileRoute("/api/signature/authenticate")({
             doctorId?: string;
             cpf?: string;
             callbackUrl?: string;
+            provider?: string;
+            uuidCert?: string | null;
+            label?: string | null;
+            holderName?: string | null;
           };
           const cpf = (body.cpf ?? "").replace(/\D/g, "");
           if (cpf.length !== 11) {
             return Response.json({ error: "invalid_cpf" }, { status: 400 });
           }
+          const provider = body.provider ?? "bry_cloud";
+
+          if (provider === "bry_cloud") {
+            const result = await SignatureService.registerBryCloudCertificate({
+              doctorId: userId,
+              cpf,
+              uuidCert: body.uuidCert ?? null,
+              label: body.label ?? null,
+              holderName: body.holderName ?? null,
+            });
+            return Response.json(result);
+          }
+
           if (!body.callbackUrl) {
             return Response.json({ error: "callback_url_required" }, { status: 400 });
           }
-          const doctorId = body.doctorId && body.doctorId === userId ? userId : userId;
-
           const result = await SignatureService.authenticate({
-            doctorId,
+            doctorId: userId,
             cpf,
             callbackUrl: body.callbackUrl,
           });
