@@ -59,6 +59,20 @@
     S.loading = false; render();
   }
 
+  async function sincronizarProtocolo(id) {
+    const sb = sbc(); if (!sb || !id) return;
+    try {
+      const { data: sess } = await sb.auth.getSession();
+      const token = sess && sess.session && sess.session.access_token;
+      if (!token) return;
+      await fetch("/api/protocolos/sincronizar", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: "Bearer " + token },
+        body: JSON.stringify({ protocoloId: id }),
+      });
+    } catch (e) { console.error("sincronizar_protocolo", e); }
+  }
+
   async function saveProtocol(form) {
     const sb = sbc(); if (!sb) return;
     let id = form.id;
@@ -75,14 +89,14 @@
       protocolo_id: id, tipo: a.type, nome: a.name, start_day: a.startDay, frequency: a.frequency,
       recurrent: !!a.recurrent, auto_restart: !!a.autoRestart, especialidade: a.specialty || null, descricao: a.desc || null,
     })));
-    await sb.rpc("sincronizar_protocolo", { p_protocolo_id: id });
+    await sincronizarProtocolo(id);
     await load();
   }
 
   async function toggleActive(id) {
     const sb = sbc(); const p = S.protocols.find((x) => x.id === id); if (!sb || !p) return;
     await sb.from("protocolos").update({ ativo: !p.active }).eq("id", id);
-    await sb.rpc("sincronizar_protocolo", { p_protocolo_id: id });
+    await sincronizarProtocolo(id);
     await load();
   }
 
