@@ -97,6 +97,11 @@
                                                       /* SEARCH */
                                                       /* ===== PATIENTS SCREEN ===== */
                                                       .search-wrap{max-width:none;margin:0}
+                                                      .search-hero{padding:20px 24px !important}
+                                                      .results-card .results-hd{padding:12px 20px !important}
+                                                      .results-card .pt-col-hd{padding:8px 20px !important}
+                                                      .results-card .pt-row{padding:13px 20px !important}
+                                                      .results-card .pt-pagination{padding:11px 20px !important}
                                                       .search-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
                                                       .search-kicker{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--n400)}
                                                       .adv-link{font-size:11px;color:var(--g600);cursor:pointer;display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;border:0.5px solid var(--g200);background:var(--g50);transition:all .14s}
@@ -156,14 +161,14 @@
                                                       .ra-btn.phone:hover{color:#2563eb;border-color:rgba(37,99,235,.4)}
                                                       .ra-btn.cal:hover{color:var(--g600);border-color:var(--g300)}
                                                       .ra-btn .ti{font-size:13px}
-                                                      .bulk-bar{display:none;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 16px;background:linear-gradient(135deg,#10b981,#059669);border-radius:16px;margin-bottom:10px;box-shadow:0 8px 24px -8px rgba(16,185,129,.45)}
+                                                      .bulk-bar{display:none;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 20px;background:linear-gradient(135deg,#059669 0%,#047857 100%) !important;border-radius:16px !important;margin-bottom:10px;box-shadow:0 8px 28px -6px rgba(5,150,105,.55) !important;border:1px solid rgba(255,255,255,.25) !important}
                                                       .bulk-bar.show{display:flex}
                                                       .bulk-bar-info{font-size:12px;font-weight:600;color:#fff;display:flex;align-items:center;gap:10px}
                                                       .bulk-clear{font-size:11px;color:rgba(255,255,255,.75);text-decoration:underline;cursor:pointer;background:none;border:none;padding:0}
                                                       .bulk-bar-acts{display:flex;gap:6px;flex-wrap:wrap}
-                                                      .bulk-act{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:11px;font-weight:500;cursor:pointer;transition:background .14s}
-                                                      .bulk-act:hover{background:rgba(255,255,255,.3)}
-                                                      .bulk-act.danger{background:rgba(239,68,68,.3);border-color:rgba(239,68,68,.5)}
+                                                      .bulk-act{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:999px;background:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.55);color:#fff;font-size:11px;font-weight:600;cursor:pointer;transition:background .14s;text-shadow:0 1px 2px rgba(0,0,0,.15)}
+                                                      .bulk-act:hover{background:rgba(255,255,255,.42)}
+                                                      .bulk-act.danger{background:rgba(254,202,202,.35);border-color:rgba(254,202,202,.7)}
                                                       .bulk-act .ti{font-size:12px}
                                                       .pt-pagination{padding:10px 16px;border-top:0.5px solid rgba(255,255,255,.6);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
                                                       .pg-info{font-size:11px;color:var(--n400);display:flex;align-items:center;gap:6px}
@@ -1480,7 +1485,6 @@
                                                          #s-patient-detail keeps its own scoped rules (higher specificity). */
                                                       .search-hero,
                                                       .results-card,
-                                                      .bulk-bar,
                                                       .kcol,
                                                       .atd-search,
                                                       .modal-card,
@@ -5406,18 +5410,25 @@
                                                             }
 
                                                             /* ===== SELECTION ===== */
+                                                            function ptRowClick(id,ev){
+                                                              // if click landed on the checkbox itself, handled by ptToggleRow — do nothing
+                                                              if(ev.target.classList.contains('pt-cb')||ev.target.closest('.row-acts'))return;
+                                                              openPatient(id);
+                                                            }
                                                             function ptToggleRow(id,ev){
                                                               ev.stopPropagation();
-                                                              ptSelected.has(id)?ptSelected.delete(id):ptSelected.add(id);
+                                                              const sid=String(id);
+                                                              // use string keys consistently
+                                                              if(ptSelected.has(sid)){ptSelected.delete(sid);}else{ptSelected.add(sid);}
                                                               ptUpdateBulkBar();
-                                                              const row=document.querySelector(`.pt-row[data-id="${id}"]`);
-                                                              const cb=document.querySelector(`.pt-row[data-id="${id}"] .pt-cb`);
-                                                              if(row)row.classList.toggle('sel',ptSelected.has(id));
-                                                              if(cb)cb.classList.toggle('on',ptSelected.has(id));
+                                                              const row=document.querySelector('.pt-row[data-id="'+sid+'"]');
+                                                              const cb=row?row.querySelector('.pt-cb'):null;
+                                                              if(row)row.classList.toggle('sel',ptSelected.has(sid));
+                                                              if(cb)cb.classList.toggle('on',ptSelected.has(sid));
                                                               ptUpdateSelectAll();
                                                             }
                                                             function ptToggleAll(){
-                                                              const allIds=ptCurrentList.map(p=>p.id);
+                                                              const allIds=ptCurrentList.map(p=>String(p.id));
                                                               const allSel=allIds.every(id=>ptSelected.has(id));
                                                               if(allSel){allIds.forEach(id=>ptSelected.delete(id));}
                                                               else{allIds.forEach(id=>ptSelected.add(id));}
@@ -5425,7 +5436,7 @@
                                                               renderPatients(ptCurrentList,false);
                                                             }
                                                             function ptUpdateSelectAll(){
-                                                              const allIds=ptCurrentList.map(p=>p.id);
+                                                              const allIds=ptCurrentList.map(p=>String(p.id));
                                                               const cb=document.getElementById('pt-cb-all');
                                                               if(!cb)return;
                                                               const allSel=allIds.length>0&&allIds.every(id=>ptSelected.has(id));
@@ -5523,13 +5534,13 @@
                                                               ptRenderPagination(sorted.length);
 
                                                               el.innerHTML=pageItems.map(p=>{
-                                                                const sel=ptSelected.has(p.id);
+                                                                const sel=ptSelected.has(String(p.id));
                                                                 const grupo=getPatientGrupo(p.id);
                                                                 const vis=ptRelVisit(p.updated_at);
                                                                 const tel=p.tel&&p.tel!=='—'?p.tel:'';
                                                                 const waHref=tel?`https://wa.me/55${tel.replace(/\D/g,'')}`:'#';
                                                                 return `
-                                                                <div class="pt-row${sel?' sel':''}" data-id="${p.id}" onclick="openPatient(${JSON.stringify(p.id)})">
+                                                                <div class="pt-row${sel?' sel':''}" data-id="${p.id}" onclick="ptRowClick(${JSON.stringify(p.id)},event)">
                                                                   <div class="pt-cb${sel?' on':''}" onclick="ptToggleRow(${JSON.stringify(p.id)},event)" title="Selecionar"></div>
                                                                   <div class="pt-av">${p.init}</div>
                                                                   <div class="pt-info">
