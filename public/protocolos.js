@@ -15,6 +15,7 @@
     screen: "report", protocols: [], rows: [], selected: [], groupBy: "none",
     search: "", psearch: "", zoom: 1, loading: true,
     modal: null, editingAction: null, showActionEditor: false, cidInput: "",
+    aiModal: null,
     filters: { protocols: [], doctors: [], specialties: [], actions: [], statuses: [], patient: "", cid: "" },
     showFilter: false, dd: null,
   };

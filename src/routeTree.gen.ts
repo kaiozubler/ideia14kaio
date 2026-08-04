@@ -19,6 +19,7 @@ import { Route as ApiBryCancelEnvelopeRouteImport } from './routes/api/bry/cance
 import { Route as ApiBryCreateEnvelopeRouteImport } from './routes/api/bry/create-envelope'
 import { Route as ApiBryDownloadDocumentRouteImport } from './routes/api/bry/download-document'
 import { Route as ApiBryGetEnvelopeRouteImport } from './routes/api/bry/get-envelope'
+import { Route as ApiProtocolosGerarIaRouteImport } from './routes/api/protocolos/gerar-ia'
 import { Route as ApiProtocolosSincronizarRouteImport } from './routes/api/protocolos/sincronizar'
 import { Route as ApiSignatureAuthenticateRouteImport } from './routes/api/signature/authenticate'
 import { Route as ApiSignatureCredentialRouteImport } from './routes/api/signature/credential'
@@ -79,6 +80,11 @@ const ApiBryGetEnvelopeRoute = ApiBryGetEnvelopeRouteImport.update({
   path: '/api/bry/get-envelope',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiProtocolosGerarIaRoute = ApiProtocolosGerarIaRouteImport.update({
+  id: '/api/protocolos/gerar-ia',
+  path: '/api/protocolos/gerar-ia',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiProtocolosSincronizarRoute =
   ApiProtocolosSincronizarRouteImport.update({
     id: '/api/protocolos/sincronizar',
@@ -136,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
+  '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
@@ -156,6 +163,7 @@ export interface FileRoutesByTo {
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
+  '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
@@ -177,6 +185,7 @@ export interface FileRoutesById {
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
+  '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
@@ -199,6 +208,7 @@ export interface FileRouteTypes {
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
     | '/api/bry/get-envelope'
+    | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
@@ -219,6 +229,7 @@ export interface FileRouteTypes {
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
     | '/api/bry/get-envelope'
+    | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
@@ -239,6 +250,7 @@ export interface FileRouteTypes {
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
     | '/api/bry/get-envelope'
+    | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
@@ -260,6 +272,7 @@ export interface RootRouteChildren {
   ApiBryCreateEnvelopeRoute: typeof ApiBryCreateEnvelopeRoute
   ApiBryDownloadDocumentRoute: typeof ApiBryDownloadDocumentRoute
   ApiBryGetEnvelopeRoute: typeof ApiBryGetEnvelopeRoute
+  ApiProtocolosGerarIaRoute: typeof ApiProtocolosGerarIaRoute
   ApiProtocolosSincronizarRoute: typeof ApiProtocolosSincronizarRoute
   ApiSignatureAuthenticateRoute: typeof ApiSignatureAuthenticateRoute
   ApiSignatureCredentialRoute: typeof ApiSignatureCredentialRoute
@@ -342,6 +355,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBryGetEnvelopeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/protocolos/gerar-ia': {
+      id: '/api/protocolos/gerar-ia'
+      path: '/api/protocolos/gerar-ia'
+      fullPath: '/api/protocolos/gerar-ia'
+      preLoaderRoute: typeof ApiProtocolosGerarIaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/protocolos/sincronizar': {
       id: '/api/protocolos/sincronizar'
       path: '/api/protocolos/sincronizar'
@@ -412,6 +432,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBryCreateEnvelopeRoute: ApiBryCreateEnvelopeRoute,
   ApiBryDownloadDocumentRoute: ApiBryDownloadDocumentRoute,
   ApiBryGetEnvelopeRoute: ApiBryGetEnvelopeRoute,
+  ApiProtocolosGerarIaRoute: ApiProtocolosGerarIaRoute,
   ApiProtocolosSincronizarRoute: ApiProtocolosSincronizarRoute,
   ApiSignatureAuthenticateRoute: ApiSignatureAuthenticateRoute,
   ApiSignatureCredentialRoute: ApiSignatureCredentialRoute,
@@ -424,13 +445,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
