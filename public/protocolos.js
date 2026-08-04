@@ -350,6 +350,52 @@
     </div></div>`;
   }
 
+  function aiModalHtml() {
+    const a = S.aiModal; if (!a) return "";
+    return `<div class="pt-modal-bg" data-aibg="1" style="z-index:2100"><div class="pt-modal sm">
+      <div class="pt-modal-h"><h2>✨ Criar protocolo com IA</h2>
+        <button class="pt-btn ghost" data-aiclose="1" style="padding:2px 10px">×</button></div>
+      <div class="pt-modal-b">
+        <p style="font-size:12px;color:#64748b;margin:0 0 14px">Anexe um PDF com o protocolo (diretriz, artigo, fluxograma) e/ou escreva instruções. A IA monta o nome, os CIDs e as ações.</p>
+        <div style="margin-bottom:14px"><span class="pt-lbl">Arquivo PDF (opcional)</span>
+          <input class="pt-in" type="file" accept="application/pdf" id="pt-ai-file">
+          ${a.filename ? `<div style="font-size:11px;color:#4f46e5;margin-top:6px">📄 ${esc(a.filename)}</div>` : ""}</div>
+        <div><span class="pt-lbl">Observações / instruções para a IA</span>
+          <textarea class="pt-in" rows="5" id="pt-ai-obs" style="resize:vertical" placeholder="Ex: protocolo de hipertensão, consulta a cada 6 meses, exames laboratoriais anuais...">${esc(a.obs || "")}</textarea></div>
+        ${a.error ? `<div style="margin-top:12px;font-size:12px;color:#b91c1c">${esc(a.error)}</div>` : ""}
+        ${a.loading ? `<div style="margin-top:12px;font-size:12px;color:#6366f1">Gerando protocolo…</div>` : ""}
+      </div>
+      <div class="pt-modal-f"><button class="pt-btn ghost" data-aiclose="1">Cancelar</button>
+      <button class="pt-btn ai" data-aigen="1" ${a.loading ? "disabled" : ""}>${a.loading ? "Gerando…" : "Gerar protocolo"}</button></div>
+    </div></div>`;
+  }
+
+  async function generateWithAI() {
+    const a = S.aiModal; if (!a || a.loading) return;
+    a.obs = (document.getElementById("pt-ai-obs") || {}).value || a.obs || "";
+    if (!a.pdf && !a.obs.trim()) { a.error = "Anexe um PDF ou escreva instruções."; return render(); }
+    a.loading = true; a.error = ""; render();
+    try {
+      const res = await fetch("/api/protocolos/gerar-ia", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pdf_base64: a.pdf || null, filename: a.filename || null, observacao: a.obs }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const d = await res.json();
+      S.modal = S.modal || { title: "", cids: [], actions: [] };
+      if (d.titulo) S.modal.title = d.titulo;
+      if (Array.isArray(d.cids)) S.modal.cids = [...new Set([...S.modal.cids, ...d.cids.map((c) => String(c).toUpperCase())])];
+      (d.acoes || []).forEach((x) => S.modal.actions.push({
+        id: uid(), type: AT[x.tipo] ? x.tipo : "Exame", name: String(x.nome || ""),
+        specialty: x.especialidade || "", startDay: +x.start_day || 0, frequency: +x.frequency || 90,
+        recurrent: x.recurrent !== false, autoRestart: !!x.auto_restart, desc: x.descricao || "",
+      }));
+      S.aiModal = null; render();
+    } catch (err) {
+      a.loading = false; a.error = String((err && err.message) || err); render();
+    }
+  }
+
   /* ---------- SCREENS ---------- */
   function myProtocolsHtml() {
     const q = S.psearch.toLowerCase();
