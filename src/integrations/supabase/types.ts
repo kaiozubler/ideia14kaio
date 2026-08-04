@@ -1112,6 +1112,7 @@ export type Database = {
       receita_modelos: {
         Row: {
           created_at: string
+          formulas: Json
           id: string
           medicamentos: Json
           nome: string
@@ -1120,6 +1121,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          formulas?: Json
           id?: string
           medicamentos?: Json
           nome: string
@@ -1128,6 +1130,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          formulas?: Json
           id?: string
           medicamentos?: Json
           nome?: string
