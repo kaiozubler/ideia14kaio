@@ -293,7 +293,8 @@
 
   /* ---------- MODAL ---------- */
   function actionEditorHtml(a) {
-    const f = a || { type: "Exame", name: "", startDay: 0, frequency: 90, recurrent: true, autoRestart: false, specialty: "", desc: "" };
+    const base = { type: "Exame", name: "", startDay: 0, frequency: 90, recurrent: true, autoRestart: false, specialty: "", desc: "" };
+    const f = a || { ...base, ...(S._draft || {}), id: "", type: S._atype || (S._draft && S._draft.type) || "Exame" };
     return `<div class="pt-card" style="padding:16px;margin-bottom:12px" id="pt-aeditor" data-editid="${esc(f.id || "")}">
       <div style="margin-bottom:12px"><span class="pt-lbl">Tipo da ação</span>
         <div style="display:flex;gap:8px">${["Consulta", "Exame", "Receita"].map((t) => `<button class="pt-btn" style="flex:1;${f.type === t ? "color:#fff;border:none;background:" + (t === "Consulta" ? "linear-gradient(135deg,#60a5fa,#6366f1)" : t === "Exame" ? "linear-gradient(135deg,#a78bfa,#7c3aed)" : "linear-gradient(135deg,#34d399,#0d9488)") : ""}" data-atype="${t}">${AT[t].icon} ${t}</button>`).join("")}</div></div>
