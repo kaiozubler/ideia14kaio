@@ -95,44 +95,85 @@
                                                       .btn.sm .ti{font-size:12px}
 
                                                       /* SEARCH */
-                                                      .search-wrap{max-width:640px;margin:0 auto}
-                                                      .search-hero{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12);padding:20px;margin-bottom:14px}
+                                                      /* ===== PATIENTS SCREEN ===== */
+                                                      .search-wrap{max-width:none;margin:0}
                                                       .search-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
                                                       .search-kicker{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--n400)}
-                                                      .adv-link{font-size:11px;color:var(--g600);cursor:pointer;display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:var(--r4);border:0.5px solid var(--g200);background:var(--g50)}
+                                                      .adv-link{font-size:11px;color:var(--g600);cursor:pointer;display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;border:0.5px solid var(--g200);background:var(--g50);transition:all .14s}
+                                                      .adv-link.on{background:var(--g500);border-color:var(--g500);color:#fff}
                                                       .adv-link .ti{font-size:12px}
-                                                      .search-bar{display:flex;align-items:center;gap:9px;border:0.5px solid var(--n200);border-radius:var(--r8);padding:0 13px;height:40px;background:var(--n50);transition:border-color .15s,background .15s}
+                                                      .search-bar{display:flex;align-items:center;gap:9px;border:0.5px solid var(--n200);border-radius:999px;padding:0 16px;height:42px;background:var(--n50);transition:border-color .15s,background .15s}
                                                       .search-bar:focus-within{border-color:var(--g400);background:var(--white)}
                                                       .search-bar .ti{color:var(--n300);font-size:17px;flex-shrink:0}
                                                       .search-bar input{flex:1;border:none;background:transparent;font-size:13px;color:var(--n700);outline:none}
                                                       .search-bar input::placeholder{color:var(--n400)}
-                                                      .adv-filters{display:none;border-top:0.5px solid var(--n100);margin-top:14px;padding-top:14px}
+                                                      .adv-filters{display:none;border-top:0.5px solid rgba(255,255,255,.6);margin-top:16px;padding-top:16px}
                                                       .adv-filters.open{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
                                                       .ff label{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--n400);display:block;margin-bottom:3px}
                                                       .ff input,.ff select{width:100%;height:32px;border:0.5px solid var(--n200);border-radius:var(--r6);padding:0 9px;font-size:12px;color:var(--n700);background:var(--n50);outline:none}
                                                       .ff.wide{grid-column:1/-1}
+                                                      .ult-atend-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+                                                      .ua-chip{padding:3px 10px;border-radius:999px;border:0.5px solid var(--n200);background:rgba(255,255,255,.65);font-size:11px;font-weight:500;color:var(--n500);cursor:pointer;transition:all .14s}
+                                                      .ua-chip:hover{border-color:var(--g300);color:var(--g700)}
+                                                      .ua-chip.on{background:var(--g500);border-color:var(--g500);color:#fff}
                                                       .nf-bar{background:var(--g50);border:0.5px solid var(--g200);border-radius:var(--r8);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-top:10px}
                                                       .nf-bar p{font-size:12px;color:var(--g800)}
                                                       .nf-bar strong{font-weight:600}
                                                       .results-card{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12);overflow:hidden}
-                                                      .results-hd{padding:10px 16px;border-bottom:0.5px solid var(--n100);display:flex;align-items:center;justify-content:space-between}
+                                                      .results-hd{padding:10px 16px;border-bottom:0.5px solid var(--n100);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+                                                      .results-hd-left{display:flex;align-items:center;gap:10px}
                                                       .results-ct{font-size:11px;color:var(--n400)}
+                                                      .sort-sel{height:28px;border:0.5px solid var(--n200);border-radius:999px;padding:0 10px;font-size:11px;color:var(--n600);background:rgba(255,255,255,.7);outline:none;cursor:pointer}
+                                                      .pt-col-hd{display:flex;align-items:center;gap:11px;padding:7px 16px;border-bottom:0.5px solid var(--n100);background:rgba(255,255,255,.3)}
+                                                      .pt-col-hd span{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--n400)}
+                                                      .pt-cb{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--n300);background:rgba(255,255,255,.8);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s}
+                                                      .pt-cb.on{background:var(--g500);border-color:var(--g500)}
+                                                      .pt-cb.on::after{content:'✓';font-size:10px;color:#fff;font-weight:700;line-height:1}
                                                       .pt-row{display:flex;align-items:center;gap:11px;padding:11px 16px;border-bottom:0.5px solid var(--n75);cursor:pointer;transition:background .12s}
                                                       .pt-row:last-child{border-bottom:none}
                                                       .pt-row:hover{background:var(--n50)}
-                                                      .pt-row:hover .row-acts{opacity:1}
-                                                      .pt-av{width:34px;height:34px;border-radius:50%;background:var(--g100);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--g700);flex-shrink:0}
+                                                      .pt-row.sel{background:rgba(16,185,129,.05)}
+                                                      .pt-row:hover .row-acts,.pt-row.sel .row-acts{opacity:1}
+                                                      .pt-av{width:36px;height:36px;border-radius:50%;background:var(--g100);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--g700);flex-shrink:0}
                                                       .pt-info{flex:1;min-width:0}
-                                                      .pt-name{font-size:12.5px;font-weight:500;color:var(--n700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-                                                      .pt-meta{font-size:11px;color:var(--n400);margin-top:1px}
-                                                      .pt-badge{font-size:10px;padding:2px 7px;border-radius:var(--r4);background:var(--n75);color:var(--n500);border:0.5px solid var(--n200);flex-shrink:0}
+                                                      .pt-name{font-size:12.5px;font-weight:600;color:var(--n700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+                                                      .pt-meta{font-size:11px;color:var(--n400);margin-top:1px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+                                                      .pt-lv{min-width:110px;text-align:right;flex-shrink:0}
+                                                      .pt-lv-val{font-size:11px;font-weight:600}
+                                                      .pt-lv-val.fresh{color:var(--g600)}
+                                                      .pt-lv-val.mid{color:var(--n500)}
+                                                      .pt-lv-val.old{color:#d97706}
+                                                      .pt-lv-val.none{color:var(--n300)}
+                                                      .pt-lv-sub{font-size:10px;color:var(--n400);margin-top:1px}
+                                                      .pt-badge{font-size:10px;padding:2px 8px;border-radius:999px;background:var(--n75);color:var(--n500);border:0.5px solid var(--n200);flex-shrink:0}
                                                       .pt-badge.green{background:var(--g50);color:var(--g700);border-color:var(--g200)}
                                                       .pt-badge.grupo{background:#eef2ff;color:#3730a3;border-color:#c7d2fe}
                                                       select option.opt-criar-grupo{font-style:italic;color:#2563eb;background:#eff6ff;font-weight:600}
-                                                      .row-acts{display:flex;gap:3px;opacity:0;transition:opacity .14s}
-                                                      .ra-btn{width:26px;height:26px;border-radius:var(--r4);border:0.5px solid var(--n200);background:transparent;display:flex;align-items:center;justify-content:center;color:var(--n400);cursor:pointer}
-                                                      .ra-btn:hover{background:var(--n100);color:var(--n600)}
+                                                      .row-acts{display:flex;gap:3px;opacity:0;transition:opacity .14s;flex-shrink:0}
+                                                      .ra-btn{width:28px;height:28px;border-radius:8px;border:0.5px solid var(--n200);background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;color:var(--n400);cursor:pointer;transition:all .12s}
+                                                      .ra-btn:hover{background:#fff;color:var(--n600)}
+                                                      .ra-btn.wa:hover{color:#25d366;border-color:rgba(37,211,102,.4)}
+                                                      .ra-btn.phone:hover{color:#2563eb;border-color:rgba(37,99,235,.4)}
+                                                      .ra-btn.cal:hover{color:var(--g600);border-color:var(--g300)}
                                                       .ra-btn .ti{font-size:13px}
+                                                      .bulk-bar{display:none;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 16px;background:linear-gradient(135deg,#10b981,#059669);border-radius:16px;margin-bottom:10px;box-shadow:0 8px 24px -8px rgba(16,185,129,.45)}
+                                                      .bulk-bar.show{display:flex}
+                                                      .bulk-bar-info{font-size:12px;font-weight:600;color:#fff;display:flex;align-items:center;gap:10px}
+                                                      .bulk-clear{font-size:11px;color:rgba(255,255,255,.75);text-decoration:underline;cursor:pointer;background:none;border:none;padding:0}
+                                                      .bulk-bar-acts{display:flex;gap:6px;flex-wrap:wrap}
+                                                      .bulk-act{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:11px;font-weight:500;cursor:pointer;transition:background .14s}
+                                                      .bulk-act:hover{background:rgba(255,255,255,.3)}
+                                                      .bulk-act.danger{background:rgba(239,68,68,.3);border-color:rgba(239,68,68,.5)}
+                                                      .bulk-act .ti{font-size:12px}
+                                                      .pt-pagination{padding:10px 16px;border-top:0.5px solid rgba(255,255,255,.6);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+                                                      .pg-info{font-size:11px;color:var(--n400);display:flex;align-items:center;gap:6px}
+                                                      .pg-size{height:26px;border:0.5px solid var(--n200);border-radius:999px;padding:0 8px;font-size:11px;color:var(--n600);background:rgba(255,255,255,.7);outline:none;cursor:pointer}
+                                                      .pg-btns{display:flex;gap:4px;align-items:center}
+                                                      .pg-btn{width:28px;height:28px;border-radius:8px;border:0.5px solid var(--n200);background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;color:var(--n500);cursor:pointer;font-size:11px;font-weight:600;transition:all .12s}
+                                                      .pg-btn:hover:not([disabled]){background:#fff;border-color:var(--g300);color:var(--g700)}
+                                                      .pg-btn.on{background:var(--g500);border-color:var(--g500);color:#fff;box-shadow:0 4px 10px -4px rgba(16,185,129,.5)}
+                                                      .pg-btn[disabled]{opacity:.35;cursor:not-allowed}
+                                                      .pg-ellipsis{font-size:11px;color:var(--n300);padding:0 2px}
                                                       .empty-st{padding:36px;text-align:center;color:var(--n400)}
                                                       .empty-st .ti{font-size:30px;color:var(--n200);display:block;margin-bottom:8px}
                                                       .empty-st p{font-size:12.5px}
@@ -1439,6 +1480,7 @@
                                                          #s-patient-detail keeps its own scoped rules (higher specificity). */
                                                       .search-hero,
                                                       .results-card,
+                                                      .bulk-bar,
                                                       .kcol,
                                                       .atd-search,
                                                       .modal-card,
@@ -2082,87 +2124,132 @@
 
           <!-- SCREEN: PATIENTS -->
           <div id="s-patients" style="display:none">
-            <div class="search-wrap">
-              <div class="search-hero">
-                <div class="search-meta">
-                  <span class="search-kicker">Buscar paciente</span>
-                  <button class="adv-link" onclick="toggleAdv()">
-                    <i class="ti ti-adjustments-horizontal"></i> Filtro avançado
-                  </button>
+            <div style="display:flex;flex-direction:column;gap:12px;height:100%">
+
+              <!-- BULK ACTION BAR -->
+              <div class="bulk-bar" id="bulk-bar">
+                <div class="bulk-bar-info">
+                  <span id="bulk-count">0 pacientes selecionados</span>
+                  <button class="bulk-clear" onclick="ptClearSelection()">limpar seleção</button>
                 </div>
-                <div class="search-bar">
-                  <i class="ti ti-search"></i>
-                  <input
-                    type="text"
-                    id="search-input"
-                    placeholder="Nome, CPF, telefone ou cartão SUS..."
-                    oninput="handleSearch(this.value)"
-                    autocomplete="off"
-                  />
-                </div>
-                <div class="adv-filters" id="adv-filters">
-                  <div class="ff wide">
-                    <label>Nome completo</label><input type="text" id="adv-nome" placeholder="Busca por nome..." />
-                  </div>
-                  <div class="ff"><label>Data de nascimento</label><input type="date" id="adv-nasc" /></div>
-                  <div class="ff">
-                    <label>E-mail</label><input type="text" id="adv-email" placeholder="email@..." />
-                  </div>
-                  <div class="ff"><label>Nome da mãe</label><input type="text" id="adv-mae" /></div>
-                  <div class="ff"><label>Nome do pai</label><input type="text" id="adv-pai" /></div>
-                  <div class="ff"><label>Última consulta</label><input type="date" id="adv-consulta" /></div>
-                  <div class="ff">
-                    <label>Convênio</label>
-                    <select id="adv-convenio">
-                      <option value="">Todos</option>
-                      <option>Particular</option>
-                      <option>SUS</option>
-                      <option>Unimed</option>
-                      <option>Bradesco</option>
-                      <option>Amil</option>
-                    </select>
-                  </div>
-                  <div class="ff"><label>Cidade</label><input type="text" id="adv-cidade" /></div>
-                  <div class="ff">
-                    <label>Sexo</label>
-                    <select id="adv-sexo">
-                      <option value="">Todos</option>
-                      <option>Feminino</option>
-                      <option>Masculino</option>
-                      <option>Outro</option>
-                    </select>
-                  </div>
-                  <div class="ff">
-                    <label>Grupo</label>
-                    <select id="adv-grupo" onchange="onGrupoSelectChange(this)"></select>
-                  </div>
-                  <div class="ff wide" style="display:flex;align-items:flex-end;justify-content:flex-end;gap:8px">
-                    <button class="btn" onclick="clearAdvFilters()"><i class="ti ti-x"></i> Limpar</button>
-                    <button class="btn primary" onclick="applyAdvFilters()">
-                      <i class="ti ti-search"></i> Pesquisar
-                    </button>
-                  </div>
-                </div>
-                <div class="nf-bar" id="nf-bar" style="display:none">
-                  <p>Paciente <strong id="nf-name"></strong> não encontrado</p>
-                  <button class="btn primary sm" onclick="openModal('new-patient')">
-                    <i class="ti ti-user-plus"></i> Adicionar novo
-                  </button>
+                <div class="bulk-bar-acts">
+                  <button class="bulk-act" onclick="bulkWhatsApp()"><i class="ti ti-brand-whatsapp"></i> Mensagem em massa</button>
+                  <button class="bulk-act" onclick="bulkAgendar()"><i class="ti ti-calendar-clock"></i> Agendar</button>
+                  <button class="bulk-act" onclick="bulkEntrada()"><i class="ti ti-login"></i> Dar entrada</button>
+                  <button class="bulk-act" onclick="bulkExportar()"><i class="ti ti-download"></i> Exportar</button>
+                  <button class="bulk-act danger" onclick="bulkExcluir()"><i class="ti ti-trash"></i> Excluir</button>
                 </div>
               </div>
+
+              <!-- SEARCH CARD -->
+              <div class="search-wrap">
+                <div class="search-hero">
+                  <div class="search-meta">
+                    <span class="search-kicker">Buscar paciente</span>
+                    <button class="adv-link" id="adv-toggle-btn" onclick="toggleAdv()">
+                      <i class="ti ti-adjustments-horizontal"></i> Filtro avançado
+                      <span id="adv-badge" style="display:none;background:#fff;color:var(--g600);border-radius:999px;padding:0 5px;font-size:10px;font-weight:700;margin-left:2px"></span>
+                    </button>
+                  </div>
+                  <div class="search-bar">
+                    <i class="ti ti-search"></i>
+                    <input type="text" id="search-input" placeholder="Nome, CPF, telefone ou cartão SUS…" oninput="handleSearch(this.value)">
+                  </div>
+
+                  <!-- ADVANCED FILTERS -->
+                  <div class="adv-filters" id="adv-filters">
+                    <div class="ff"><label>Nome completo</label><input type="text" id="adv-nome" placeholder="Busca por nome…"></div>
+                    <div class="ff"><label>Data de nascimento</label><input type="date" id="adv-nasc"></div>
+                    <div class="ff"><label>E-mail</label><input type="text" id="adv-email" placeholder="email@…"></div>
+                    <div class="ff"><label>Nome da mãe</label><input type="text" id="adv-mae"></div>
+                    <div class="ff"><label>Nome do pai</label><input type="text" id="adv-pai"></div>
+                    <div class="ff"><label>Convênio</label>
+                      <select id="adv-convenio">
+                        <option value="">Todos</option>
+                        <option>Particular</option><option>SUS</option><option>Unimed</option>
+                        <option>Bradesco Saúde</option><option>Amil</option><option>Outro</option>
+                      </select>
+                    </div>
+                    <div class="ff"><label>Cidade</label><input type="text" id="adv-cidade"></div>
+                    <div class="ff"><label>Sexo</label>
+                      <select id="adv-sexo">
+                        <option value="">Todos</option>
+                        <option>Feminino</option><option>Masculino</option><option>Outro</option>
+                      </select>
+                    </div>
+                    <div class="ff"><label>Grupo</label>
+                      <select id="adv-grupo" onchange="onGrupoSelectChange(this)">
+                        <option value="">Todos</option>
+                      </select>
+                    </div>
+                    <!-- Último atendimento chips (full row) -->
+                    <div class="ff wide">
+                      <label>Último atendimento</label>
+                      <div class="ult-atend-chips">
+                        <span class="ua-chip" data-val="7"  onclick="toggleUaChip(this,'7')">Últimos 7 dias</span>
+                        <span class="ua-chip" data-val="30" onclick="toggleUaChip(this,'30')">Últimos 30 dias</span>
+                        <span class="ua-chip" data-val="90" onclick="toggleUaChip(this,'90')">Últimos 90 dias</span>
+                        <span class="ua-chip" data-val="90+" onclick="toggleUaChip(this,'90+')">Há mais de 90 dias</span>
+                        <span class="ua-chip" data-val="nunca" onclick="toggleUaChip(this,'nunca')">Nunca atendido</span>
+                      </div>
+                    </div>
+                    <!-- Filter actions -->
+                    <div class="ff wide" style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
+                      <button class="btn sm" onclick="clearAdvFilters()"><i class="ti ti-x"></i> Limpar</button>
+                      <button class="btn primary sm" onclick="applyAdvFilters()"><i class="ti ti-search"></i> Pesquisar</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- NOT-FOUND BAR -->
+                <div class="nf-bar" id="nf-bar" style="display:none">
+                  <p>Nenhum resultado para <strong id="nf-name"></strong></p>
+                  <button class="btn sm ghost" onclick="openModal('new-patient')"><i class="ti ti-plus"></i> Novo paciente</button>
+                </div>
+              </div>
+
+              <!-- RESULTS CARD -->
               <div class="results-card" id="results-card">
                 <div class="results-hd">
-                  <span class="results-ct" id="results-ct">6 pacientes</span>
+                  <div class="results-hd-left">
+                    <span id="results-ct" class="results-ct">0 pacientes</span>
+                    <select class="sort-sel" id="pt-sort" onchange="ptApplySort()">
+                      <option value="name">Nome (A–Z)</option>
+                      <option value="recent">Atend. mais recente</option>
+                      <option value="oldest">Atend. mais antigo</option>
+                    </select>
+                  </div>
                   <button class="btn primary sm" onclick="openModal('new-patient')">
                     <i class="ti ti-plus"></i> Novo paciente
                   </button>
                 </div>
+                <!-- Column header -->
+                <div class="pt-col-hd">
+                  <div class="pt-cb" id="pt-cb-all" onclick="ptToggleAll()" title="Selecionar todos"></div>
+                  <span style="flex:1">Paciente</span>
+                  <span style="min-width:120px">Convênio</span>
+                  <span style="min-width:110px;text-align:right">Último atend.</span>
+                  <span style="min-width:110px;text-align:right">Ações</span>
+                </div>
                 <div id="patient-list"></div>
+                <!-- Pagination -->
+                <div class="pt-pagination" id="pt-pagination" style="display:none">
+                  <div class="pg-info">
+                    Mostrar
+                    <select class="pg-size" id="pg-size" onchange="ptSetPageSize(this.value)">
+                      <option value="10">10</option>
+                      <option value="20" selected>20</option>
+                      <option value="50">50</option>
+                    </select>
+                    por página · <span id="pg-range"></span>
+                  </div>
+                  <div class="pg-btns" id="pg-btns"></div>
+                </div>
               </div>
+
             </div>
           </div>
 
-          <!-- SCREEN: PATIENT DETAIL -->
           <div id="s-patient-detail" style="display:none;flex-direction:column;height:calc(100vh - 94px)">
             <!-- PRINT HEADER (only visible on print) -->
             <div id="print-header" class="print-hd">
@@ -4983,7 +5070,7 @@
                                                                 nasc:p.data_nascimento||'',
                                                                 tel:p.telefone||'—',init:patientInitials(p.name),
                                                                 conv:p.convenio||'Particular',sus:p.sus||'—',email:p.email||'',mae:p.mae||'',pai:p.pai||'',end:p.endereco||'—',sexo:p.sexo||'',medico:p.medico||'',
-                                                                grupo:p.grupo||'',ocup:p.ocupacao||'',cpf:p.cpf||'',dadosClinicos:p.dados_clinicos||'',infoComp:p.info_complementar||{},updated_at:p.updated_at||p.created_at||null
+                                                                grupo:p.grupo||'',ocup:p.ocupacao||'',cpf:p.cpf||'',cidade:p.cidade||'',dadosClinicos:p.dados_clinicos||'',infoComp:p.info_complementar||{},updated_at:p.updated_at||p.created_at||null
                                                                 ,cids:Array.isArray(p.cids)?p.cids:[]
                                                               };
                                                             }
@@ -5035,7 +5122,7 @@
                                                             async function loadPatients(){
                                                               const {data,error}=await sb.from('pacientes').select('*').order('created_at',{ascending:false});
                                                               if(error){console.error('Erro ao carregar pacientes:',error);patients=[];renderPatients(patients);return;}
-                                                              patients=(data||[]).map(mapPatientRow);
+                                                              patients=(data||[]).map(mapPatientRow);ptPage=1;
                                                               gruposCache=[...new Set(patients.map(p=>p.grupo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
                                                               renderPatients(patients);
                                                               seedKanbanIfEmpty();
@@ -5270,37 +5357,225 @@
                                                               }
                                                             }
 
-                                                            function renderPatients(list){
+
+                                                            /* ===== PATIENT LIST STATE ===== */
+                                                            let ptSelected=new Set();
+                                                            let ptPage=1;
+                                                            let ptPageSize=20;
+                                                            let ptSortBy='name';
+                                                            let ptAdvUltAtend=''; // chip value
+                                                            let ptCurrentList=[]; // last filtered list
+
+                                                            /* ===== HELPERS ===== */
+                                                            function ptRelVisit(updatedAt){
+                                                              if(!updatedAt)return{label:'Sem atendimento',cls:'none',sub:''};
+                                                              const d=new Date(updatedAt);
+                                                              const days=Math.floor((Date.now()-d.getTime())/86400000);
+                                                              const sub=d.toLocaleDateString('pt-BR');
+                                                              if(days<=30)return{label:`há ${days} dia${days===1?'':'s'}`,cls:'fresh',sub};
+                                                              if(days<=90)return{label:`há ${Math.floor(days/30)} mes${Math.floor(days/30)===1?'':'es'}`,cls:'mid',sub};
+                                                              return{label:`há ${Math.floor(days/30)} meses`,cls:'old',sub};
+                                                            }
+                                                            function ptSortList(list){
+                                                              return [...list].sort((a,b)=>{
+                                                                if(ptSortBy==='name')return a.name.localeCompare(b.name,'pt-BR');
+                                                                const da=a.updated_at?new Date(a.updated_at).getTime():0;
+                                                                const db=b.updated_at?new Date(b.updated_at).getTime():0;
+                                                                return ptSortBy==='recent'?db-da:da-db;
+                                                              });
+                                                            }
+                                                            function ptFilterUltAtend(list){
+                                                              if(!ptAdvUltAtend)return list;
+                                                              const now=Date.now();
+                                                              return list.filter(p=>{
+                                                                const ua=p.updated_at?new Date(p.updated_at).getTime():null;
+                                                                if(ptAdvUltAtend==='nunca')return!ua;
+                                                                if(!ua)return false;
+                                                                const days=(now-ua)/86400000;
+                                                                if(ptAdvUltAtend==='7')return days<=7;
+                                                                if(ptAdvUltAtend==='30')return days<=30;
+                                                                if(ptAdvUltAtend==='90')return days<=90;
+                                                                if(ptAdvUltAtend==='90+')return days>90;
+                                                                return true;
+                                                              });
+                                                            }
+                                                            function toggleUaChip(el,val){
+                                                              document.querySelectorAll('.ua-chip').forEach(c=>c.classList.remove('on'));
+                                                              if(ptAdvUltAtend===val){ptAdvUltAtend='';}
+                                                              else{ptAdvUltAtend=val;el.classList.add('on');}
+                                                            }
+
+                                                            /* ===== SELECTION ===== */
+                                                            function ptToggleRow(id,ev){
+                                                              ev.stopPropagation();
+                                                              ptSelected.has(id)?ptSelected.delete(id):ptSelected.add(id);
+                                                              ptUpdateBulkBar();
+                                                              const row=document.querySelector(`.pt-row[data-id="${id}"]`);
+                                                              const cb=document.querySelector(`.pt-row[data-id="${id}"] .pt-cb`);
+                                                              if(row)row.classList.toggle('sel',ptSelected.has(id));
+                                                              if(cb)cb.classList.toggle('on',ptSelected.has(id));
+                                                              ptUpdateSelectAll();
+                                                            }
+                                                            function ptToggleAll(){
+                                                              const allIds=ptCurrentList.map(p=>p.id);
+                                                              const allSel=allIds.every(id=>ptSelected.has(id));
+                                                              if(allSel){allIds.forEach(id=>ptSelected.delete(id));}
+                                                              else{allIds.forEach(id=>ptSelected.add(id));}
+                                                              ptUpdateBulkBar();
+                                                              renderPatients(ptCurrentList,false);
+                                                            }
+                                                            function ptUpdateSelectAll(){
+                                                              const allIds=ptCurrentList.map(p=>p.id);
+                                                              const cb=document.getElementById('pt-cb-all');
+                                                              if(!cb)return;
+                                                              const allSel=allIds.length>0&&allIds.every(id=>ptSelected.has(id));
+                                                              cb.classList.toggle('on',allSel);
+                                                            }
+                                                            function ptClearSelection(){
+                                                              ptSelected.clear();
+                                                              ptUpdateBulkBar();
+                                                              document.querySelectorAll('.pt-row.sel').forEach(r=>r.classList.remove('sel'));
+                                                              document.querySelectorAll('.pt-row .pt-cb.on').forEach(c=>c.classList.remove('on'));
+                                                              ptUpdateSelectAll();
+                                                            }
+                                                            function ptUpdateBulkBar(){
+                                                              const bar=document.getElementById('bulk-bar');
+                                                              const ct=document.getElementById('bulk-count');
+                                                              if(!bar)return;
+                                                              if(ptSelected.size>0){
+                                                                bar.classList.add('show');
+                                                                ct.textContent=ptSelected.size+' paciente'+(ptSelected.size!==1?'s':'')+' selecionado'+(ptSelected.size!==1?'s':'');
+                                                              }else{bar.classList.remove('show');}
+                                                            }
+
+                                                            /* ===== BULK ACTIONS ===== */
+                                                            function bulkWhatsApp(){if(typeof toast==='function')toast('Recurso de mensagem em massa em breve');}
+                                                            function bulkAgendar(){if(typeof toast==='function')toast('Agendamento em massa em breve');}
+                                                            function bulkEntrada(){if(typeof toast==='function')toast('Dar entrada em breve');}
+                                                            function bulkExportar(){if(typeof toast==='function')toast('Exportação em breve');}
+                                                            function bulkExcluir(){if(!confirm('Excluir '+ptSelected.size+' paciente(s)?'))return;if(typeof toast==='function')toast('Exclusão em breve');}
+
+                                                            /* ===== SORT ===== */
+                                                            function ptApplySort(){
+                                                              ptSortBy=document.getElementById('pt-sort')?.value||'name';
+                                                              ptPage=1;
+                                                              renderPatients(ptCurrentList,false);
+                                                            }
+
+                                                            /* ===== PAGINATION ===== */
+                                                            function ptSetPageSize(v){ptPageSize=Number(v);ptPage=1;renderPatients(ptCurrentList,false);}
+                                                            function ptGoPage(n){ptPage=n;renderPatients(ptCurrentList,false);}
+                                                            function ptRenderPagination(total){
+                                                              const pg=document.getElementById('pt-pagination');
+                                                              const range=document.getElementById('pg-range');
+                                                              const btns=document.getElementById('pg-btns');
+                                                              if(!pg)return;
+                                                              const totalPages=Math.max(1,Math.ceil(total/ptPageSize));
+                                                              if(totalPages<=1){pg.style.display='none';return;}
+                                                              pg.style.display='flex';
+                                                              const from=(ptPage-1)*ptPageSize+1;
+                                                              const to=Math.min(ptPage*ptPageSize,total);
+                                                              if(range)range.textContent=from+'–'+to+' de '+total;
+                                                              // build page buttons
+                                                              let html='';
+                                                              const mkBtn=(n,label,cls)=>`<button class="pg-btn${cls}" ${n?'onclick="ptGoPage('+n+')"':'disabled'}>${label}</button>`;
+                                                              html+=mkBtn(ptPage>1?ptPage-1:null,'<i class="ti ti-chevron-left" style="font-size:11px"></i>','');
+                                                              const pages=[];
+                                                              for(let i=1;i<=totalPages;i++){
+                                                                if(i===1||i===totalPages||Math.abs(i-ptPage)<=1)pages.push(i);
+                                                                else if(pages[pages.length-1]!=='…')pages.push('…');
+                                                              }
+                                                              pages.forEach(p=>{
+                                                                if(p==='…'){html+='<span class="pg-ellipsis">…</span>';}
+                                                                else{html+=`<button class="pg-btn${p===ptPage?' on':''}" onclick="ptGoPage(${p})">${p}</button>`;}
+                                                              });
+                                                              html+=mkBtn(ptPage<totalPages?ptPage+1:null,'<i class="ti ti-chevron-right" style="font-size:11px"></i>','');
+                                                              if(btns)btns.innerHTML=html;
+                                                            }
+
+                                                            /* ===== WA SVG icon ===== */
+                                                            const WA_SVG=`<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M17.47 14.38c-.29-.15-1.7-.84-1.97-.93-.26-.1-.46-.15-.65.15-.2.29-.75.93-.92 1.12-.17.2-.34.22-.63.08-.29-.15-1.22-.45-2.32-1.43-.86-.76-1.43-1.71-1.6-2-.17-.29-.02-.45.13-.6.15-.15.34-.39.5-.59.17-.2.22-.34.34-.56.11-.22.06-.41-.03-.56-.1-.15-.6-1.45-.82-1.98-.22-.52-.45-.45-.62-.46h-.53c-.17 0-.46.06-.7.34-.24.29-.93.91-.93 2.22 0 1.31.95 2.58 1.08 2.76.13.17 1.83 2.8 4.45 3.82 2.61 1.02 2.61.68 3.08.64.47-.04 1.7-.7 1.95-1.37.24-.68.24-1.27.17-1.39-.07-.12-.27-.2-.56-.3z"/><path d="M12.04 2.5c-5.27 0-9.55 4.27-9.55 9.55 0 1.86.54 3.6 1.46 5.07L2.5 21.5l4.55-1.42a9.5 9.5 0 0 0 4.99 1.42c5.27 0 9.55-4.27 9.55-9.55s-4.28-9.45-9.55-9.45zm0 17.32a7.74 7.74 0 0 1-4.03-1.13l-.29-.17-2.7.84.86-2.64-.19-.3a7.76 7.76 0 0 1-1.21-4.17c0-4.3 3.5-7.79 7.79-7.79 4.3 0 7.66 3.45 7.66 7.74s-3.59 7.62-7.89 7.62z"/></svg>`;
+
+                                                            /* ===== RENDER ===== */
+                                                            function renderPatients(list, resetPage=true){
+                                                              ptCurrentList=list||[];
+                                                              if(resetPage)ptPage=1;
+
+                                                              // apply sort
+                                                              const sorted=ptSortList(ptCurrentList);
+
                                                               const el=document.getElementById('patient-list');
                                                               const ct=document.getElementById('results-ct');
-                                                              if(!list.length){el.innerHTML='<div class="empty-st"><i class="ti ti-user-search"></i><p>Nenhum resultado encontrado</p></div>';ct.textContent='0 pacientes';return;}
-                                                              ct.textContent=list.length+' paciente'+(list.length!==1?'s':'');
-                                                              el.innerHTML=list.map(p=>`
-                                                                <div class="pt-row" onclick='openPatient(${JSON.stringify(p.id)})'>
+                                                              const cbAll=document.getElementById('pt-cb-all');
+
+                                                              if(!sorted.length){
+                                                                el.innerHTML='<div class="empty-st"><i class="ti ti-user-search"></i><p>Nenhum resultado encontrado</p></div>';
+                                                                if(ct)ct.textContent='0 pacientes';
+                                                                ptRenderPagination(0);
+                                                                if(cbAll)cbAll.classList.remove('on');
+                                                                return;
+                                                              }
+
+                                                              if(ct)ct.textContent=sorted.length+' paciente'+(sorted.length!==1?'s':'');
+
+                                                              // paginate
+                                                              const pageItems=sorted.slice((ptPage-1)*ptPageSize, ptPage*ptPageSize);
+                                                              ptRenderPagination(sorted.length);
+
+                                                              el.innerHTML=pageItems.map(p=>{
+                                                                const sel=ptSelected.has(p.id);
+                                                                const grupo=getPatientGrupo(p.id);
+                                                                const vis=ptRelVisit(p.updated_at);
+                                                                const tel=p.tel&&p.tel!=='—'?p.tel:'';
+                                                                const waHref=tel?`https://wa.me/55${tel.replace(/\D/g,'')}`:'#';
+                                                                return `
+                                                                <div class="pt-row${sel?' sel':''}" data-id="${p.id}" onclick="openPatient(${JSON.stringify(p.id)})">
+                                                                  <div class="pt-cb${sel?' on':''}" onclick="ptToggleRow(${JSON.stringify(p.id)},event)" title="Selecionar"></div>
                                                                   <div class="pt-av">${p.init}</div>
                                                                   <div class="pt-info">
                                                                     <div class="pt-name">${p.name}</div>
-                                                                    <div class="pt-meta">Nasc. ${p.dob} \u00a0\u00b7\u00a0 ${p.tel}</div>
+                                                                    <div class="pt-meta">
+                                                                      <span>Nasc. ${p.dob}</span>
+                                                                      ${p.tel&&p.tel!=='—'?`<span class="pt-meta-dot">·</span><span>${p.tel}</span>`:''}
+                                                                      ${p.cidade?`<span class="pt-meta-dot">·</span><i class="ti ti-map-pin" style="font-size:10px"></i><span>${p.cidade}</span>`:''}
+                                                                    </div>
                                                                   </div>
-                                                                  <span class="pt-badge green">${p.conv}</span>
-                                                                  ${getPatientGrupo(p.id)?`<span class="pt-badge grupo" title="Grupo"><i class="ti ti-users"></i> ${getPatientGrupo(p.id)}</span>`:''}
-                                                                  <div class="row-acts">
-                                                                    <button class="ra-btn" onclick="event.stopPropagation()" title="Agendar"><i class="ti ti-calendar-plus"></i></button>
+                                                                  <div style="min-width:120px;display:flex;gap:5px;flex-wrap:wrap">
+                                                                    <span class="pt-badge green">${p.conv}</span>
+                                                                    ${grupo?`<span class="pt-badge grupo"><i class="ti ti-users" style="font-size:9px"></i> ${grupo}</span>`:''}
+                                                                  </div>
+                                                                  <div class="pt-lv">
+                                                                    <div class="pt-lv-val ${vis.cls}">${vis.label}</div>
+                                                                    ${vis.sub?`<div class="pt-lv-sub">${vis.sub}</div>`:''}
+                                                                  </div>
+                                                                  <div class="row-acts" onclick="event.stopPropagation()">
+                                                                    <button class="ra-btn wa" onclick="window.open('${waHref}','_blank')" title="Enviar WhatsApp">${WA_SVG}</button>
+                                                                    <button class="ra-btn phone" onclick="window.open('tel:${tel}')" title="Ligar""><i class="ti ti-phone-call"></i></button>
+                                                                    <button class="ra-btn cal" onclick="event.stopPropagation()" title="Agendar"><i class="ti ti-calendar-plus"></i></button>
                                                                     <button class="ra-btn" onclick="event.stopPropagation()" title="Mais"><i class="ti ti-dots-vertical"></i></button>
                                                                   </div>
-                                                                </div>`).join('');
+                                                                </div>`;
+                                                              }).join('');
+
+                                                              ptUpdateSelectAll();
                                                             }
+
+                                                            /* ===== SEARCH ===== */
                                                             function handleSearch(v){
                                                               const nf=document.getElementById('nf-bar');
                                                               const rc=document.getElementById('results-card');
-                                                              if(!v.trim()){nf.style.display='none';rc.style.display='';renderPatients(patients);return;}
+                                                              if(!v.trim()){nf.style.display='none';rc.style.display='';renderPatients(ptFilterUltAtend(patients));return;}
                                                               const q=v.toLowerCase();
-                                                              const f=patients.filter(p=>p.name.toLowerCase().includes(q)||p.tel.includes(q)||p.sus.includes(q));
-                                                              if(!f.length){nf.style.display='flex';rc.style.display='none';document.getElementById('nf-name').textContent='"'+v+'"';}
-                                                              else{nf.style.display='none';rc.style.display='';renderPatients(f);}
+                                                              const f=patients.filter(p=>p.name.toLowerCase().includes(q)||p.tel.includes(q)||p.sus.includes(q)||p.cpf.includes(q));
+                                                              const fu=ptFilterUltAtend(f);
+                                                              if(!fu.length){nf.style.display='flex';rc.style.display='none';const nn=document.getElementById('nf-name');if(nn)nn.textContent='"'+v+'"';}
+                                                              else{nf.style.display='none';rc.style.display='';renderPatients(fu);}
                                                             }
                                                             function toggleAdv(){
-                                                              document.getElementById('adv-filters').classList.toggle('open');
+                                                              const panel=document.getElementById('adv-filters');
+                                                              const btn=document.getElementById('adv-toggle-btn');
+                                                              panel.classList.toggle('open');
+                                                              if(btn)btn.classList.toggle('on',panel.classList.contains('open'));
                                                               const g=document.getElementById('adv-grupo');if(g)populateGrupoSelect(g);
                                                             }
                                                             function applyAdvFilters(){
@@ -5321,21 +5596,21 @@
                                                               if(sexo)f=f.filter(p=>p.sexo===sexo);
                                                               const grupo=(document.getElementById('adv-grupo')?.value||'');
                                                               if(grupo)f=f.filter(p=>getPatientGrupo(p.id)===grupo);
+                                                              f=ptFilterUltAtend(f);
                                                               renderPatients(f);
                                                               document.getElementById('adv-filters').classList.remove('open');
+                                                              const btn=document.getElementById('adv-toggle-btn');if(btn)btn.classList.remove('on');
                                                             }
                                                             function clearAdvFilters(){
-                                                              document.getElementById('adv-nome').value='';
-                                                              document.getElementById('adv-nasc').value='';
-                                                              document.getElementById('adv-email').value='';
-                                                              document.getElementById('adv-mae').value='';
-                                                              document.getElementById('adv-pai').value='';
-                                                              document.getElementById('adv-convenio').value='';
-                                                              document.getElementById('adv-cidade').value='';
-                                                              document.getElementById('adv-sexo').value='';
+                                                              ['adv-nome','adv-nasc','adv-email','adv-mae','adv-pai','adv-cidade'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+                                                              ['adv-convenio','adv-sexo'].forEach(id=>{const el=document.getElementById(id);if(el)el.selectedIndex=0;});
                                                               const g=document.getElementById('adv-grupo');if(g)g.value='';
+                                                              document.querySelectorAll('.ua-chip').forEach(c=>c.classList.remove('on'));
+                                                              ptAdvUltAtend='';
+                                                              const si=document.getElementById('search-input');if(si)si.value='';
                                                               renderPatients(patients);
                                                             }
+
 
                                                             /* ========== PATIENT ========== */
                                                             function mapConsultaRow(a){
