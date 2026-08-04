@@ -15,6 +15,7 @@
     screen: "report", protocols: [], rows: [], selected: [], groupBy: "none",
     search: "", psearch: "", zoom: 1, loading: true,
     modal: null, editingAction: null, showActionEditor: false, cidInput: "",
+    aiModal: null,
     filters: { protocols: [], doctors: [], specialties: [], actions: [], statuses: [], patient: "", cid: "" },
     showFilter: false, dd: null,
   };
@@ -292,7 +293,8 @@
 
   /* ---------- MODAL ---------- */
   function actionEditorHtml(a) {
-    const f = a || { type: "Exame", name: "", startDay: 0, frequency: 90, recurrent: true, autoRestart: false, specialty: "", desc: "" };
+    const base = { type: "Exame", name: "", startDay: 0, frequency: 90, recurrent: true, autoRestart: false, specialty: "", desc: "" };
+    const f = a || { ...base, ...(S._draft || {}), id: "", type: S._atype || (S._draft && S._draft.type) || "Exame" };
     return `<div class="pt-card" style="padding:16px;margin-bottom:12px" id="pt-aeditor" data-editid="${esc(f.id || "")}">
       <div style="margin-bottom:12px"><span class="pt-lbl">Tipo da ação</span>
         <div style="display:flex;gap:8px">${["Consulta", "Exame", "Receita"].map((t) => `<button class="pt-btn" style="flex:1;${f.type === t ? "color:#fff;border:none;background:" + (t === "Consulta" ? "linear-gradient(135deg,#60a5fa,#6366f1)" : t === "Exame" ? "linear-gradient(135deg,#a78bfa,#7c3aed)" : "linear-gradient(135deg,#34d399,#0d9488)") : ""}" data-atype="${t}">${AT[t].icon} ${t}</button>`).join("")}</div></div>
@@ -318,7 +320,9 @@
     const sorted = [...m.actions].sort((a, b) => a.startDay - b.startDay);
     return `<div class="pt-modal-bg" data-mbg="1"><div class="pt-modal">
       <div class="pt-modal-h"><h2>${m.id ? "Editar protocolo" : "Novo protocolo"}</h2>
-        <button class="pt-btn ghost" data-mclose="1" style="padding:2px 10px">×</button></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="pt-btn ai" data-aiopen="1">✨ Criar com IA</button>
+          <button class="pt-btn ghost" data-mclose="1" style="padding:2px 10px">×</button></div></div>
       <div class="pt-modal-b">
         <div style="margin-bottom:16px"><span class="pt-lbl">Nome do protocolo</span>
           <input class="pt-in" id="pt-m-title" value="${esc(m.title)}" placeholder="Ex: Hipertensão Arterial"></div>
@@ -344,6 +348,52 @@
       <div class="pt-modal-f"><button class="pt-btn ghost" data-mclose="1">Cancelar</button>
       <button class="pt-btn primary" data-msave="1">Salvar protocolo</button></div>
     </div></div>`;
+  }
+
+  function aiModalHtml() {
+    const a = S.aiModal; if (!a) return "";
+    return `<div class="pt-modal-bg" data-aibg="1" style="z-index:2100"><div class="pt-modal sm">
+      <div class="pt-modal-h"><h2>✨ Criar protocolo com IA</h2>
+        <button class="pt-btn ghost" data-aiclose="1" style="padding:2px 10px">×</button></div>
+      <div class="pt-modal-b">
+        <p style="font-size:12px;color:#64748b;margin:0 0 14px">Anexe um PDF com o protocolo (diretriz, artigo, fluxograma) e/ou escreva instruções. A IA monta o nome, os CIDs e as ações.</p>
+        <div style="margin-bottom:14px"><span class="pt-lbl">Arquivo PDF (opcional)</span>
+          <input class="pt-in" type="file" accept="application/pdf" id="pt-ai-file">
+          ${a.filename ? `<div style="font-size:11px;color:#4f46e5;margin-top:6px">📄 ${esc(a.filename)}</div>` : ""}</div>
+        <div><span class="pt-lbl">Observações / instruções para a IA</span>
+          <textarea class="pt-in" rows="5" id="pt-ai-obs" style="resize:vertical" placeholder="Ex: protocolo de hipertensão, consulta a cada 6 meses, exames laboratoriais anuais...">${esc(a.obs || "")}</textarea></div>
+        ${a.error ? `<div style="margin-top:12px;font-size:12px;color:#b91c1c">${esc(a.error)}</div>` : ""}
+        ${a.loading ? `<div style="margin-top:12px;font-size:12px;color:#6366f1">Gerando protocolo…</div>` : ""}
+      </div>
+      <div class="pt-modal-f"><button class="pt-btn ghost" data-aiclose="1">Cancelar</button>
+      <button class="pt-btn ai" data-aigen="1" ${a.loading ? "disabled" : ""}>${a.loading ? "Gerando…" : "Gerar protocolo"}</button></div>
+    </div></div>`;
+  }
+
+  async function generateWithAI() {
+    const a = S.aiModal; if (!a || a.loading) return;
+    a.obs = (document.getElementById("pt-ai-obs") || {}).value || a.obs || "";
+    if (!a.pdf && !a.obs.trim()) { a.error = "Anexe um PDF ou escreva instruções."; return render(); }
+    a.loading = true; a.error = ""; render();
+    try {
+      const res = await fetch("/api/protocolos/gerar-ia", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pdf_base64: a.pdf || null, filename: a.filename || null, observacao: a.obs }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const d = await res.json();
+      S.modal = S.modal || { title: "", cids: [], actions: [] };
+      if (d.titulo) S.modal.title = d.titulo;
+      if (Array.isArray(d.cids)) S.modal.cids = [...new Set([...S.modal.cids, ...d.cids.map((c) => String(c).toUpperCase())])];
+      (d.acoes || []).forEach((x) => S.modal.actions.push({
+        id: uid(), type: AT[x.tipo] ? x.tipo : "Exame", name: String(x.nome || ""),
+        specialty: x.especialidade || "", startDay: +x.start_day || 0, frequency: +x.frequency || 90,
+        recurrent: x.recurrent !== false, autoRestart: !!x.auto_restart, desc: x.descricao || "",
+      }));
+      S.aiModal = null; render();
+    } catch (err) {
+      a.loading = false; a.error = String((err && err.message) || err); render();
+    }
   }
 
   /* ---------- SCREENS ---------- */
@@ -393,7 +443,7 @@
 
   function render() {
     const el = document.getElementById("s-protocolos"); if (!el) return;
-    el.innerHTML = `<div class="pt-wrap">${S.loading ? '<div class="pt-empty">Carregando protocolos…</div>' : (S.screen === "protocols" ? myProtocolsHtml() : reportHtml())}${modalHtml()}</div>`;
+    el.innerHTML = `<div class="pt-wrap">${S.loading ? '<div class="pt-empty">Carregando protocolos…</div>' : (S.screen === "protocols" ? myProtocolsHtml() : reportHtml())}${modalHtml()}${aiModalHtml()}</div>`;
   }
 
   /* ---------- EVENTS ---------- */
@@ -415,9 +465,13 @@
   document.addEventListener("click", (e) => {
     const root = document.getElementById("s-protocolos");
     if (!root || root.style.display === "none") return;
-    const t = e.target.closest("[data-menu],[data-act],[data-dd],[data-group],[data-bulk],[data-clear],[data-goprot],[data-back],[data-new],[data-edit],[data-toggle],[data-mclose],[data-msave],[data-mbg],[data-cidadd],[data-cidrm],[data-anew],[data-aedit],[data-adel],[data-asave],[data-acancel],[data-atype],[data-afreq],[data-zoom],[data-gact],[data-fclear],[data-fapply],[data-tladd]");
+    const t = e.target.closest("[data-menu],[data-act],[data-dd],[data-group],[data-bulk],[data-clear],[data-goprot],[data-back],[data-new],[data-edit],[data-toggle],[data-mclose],[data-msave],[data-mbg],[data-cidadd],[data-cidrm],[data-anew],[data-aedit],[data-adel],[data-asave],[data-acancel],[data-atype],[data-afreq],[data-zoom],[data-gact],[data-fclear],[data-fapply],[data-tladd],[data-aiopen],[data-aiclose],[data-aigen],[data-aibg]");
     if (!t) { if (S.dd) { S.dd = null; render(); } return; }
     const d = t.dataset;
+    if (d.aiopen) { S.aiModal = { obs: "", pdf: null, filename: "", loading: false, error: "" }; return render(); }
+    if (d.aiclose) { S.aiModal = null; return render(); }
+    if (d.aigen) return generateWithAI();
+    if (d.aibg && e.target === t) { S.aiModal = null; return render(); }
     if (d.menu) { S.dd = S.dd === "m" + d.menu ? null : "m" + d.menu; return render(); }
     if (d.dd) { S.dd = S.dd === d.dd ? null : d.dd; return render(); }
     if (d.act) { S.dd = null; return rowAction(d.id, d.act); }
@@ -429,7 +483,7 @@
     if (d.fapply) { S.dd = null; return render(); }
     if (d.goprot) { S.screen = "protocols"; return render(); }
     if (d.back) { S.screen = "report"; return render(); }
-    if (d.new) { S.modal = { title: "", cids: [], actions: [] }; S.showActionEditor = false; S.editingAction = null; return render(); }
+    if (d.new) { S.modal = { title: "", cids: [], actions: [] }; S.showActionEditor = false; S.editingAction = null; S._draft = null; return render(); }
     if (d.edit) { const p = S.protocols.find((x) => x.id === d.edit); S.modal = { id: p.id, title: p.title, cids: [...p.cids], actions: p.actions.map((a) => ({ ...a })) }; return render(); }
     if (d.toggle) return toggleActive(d.toggle);
     if (d.mbg && e.target === t) { S.modal = null; return render(); }
@@ -437,10 +491,10 @@
     if (d.msave) { const m = { ...S.modal, title: document.getElementById("pt-m-title").value.trim() }; if (!m.title) return alert("Informe o nome do protocolo."); S.modal = null; render(); return saveProtocol(m); }
     if (d.cidadd) { const v = (document.getElementById("pt-m-cid").value || "").trim().toUpperCase(); if (v && !S.modal.cids.includes(v)) S.modal.cids.push(v); S.cidInput = ""; return render(); }
     if (d.cidrm) { S.modal.cids = S.modal.cids.filter((c) => c !== d.cidrm); return render(); }
-    if (d.anew || d.tladd) { S.editingAction = null; S.showActionEditor = true; S._atype = "Exame"; return render(); }
+    if (d.anew || d.tladd) { S.editingAction = null; S.showActionEditor = true; S._atype = "Exame"; S._draft = null; return render(); }
     if (d.aedit) { S.editingAction = d.aedit; S.showActionEditor = false; S._atype = (S.modal.actions.find((a) => a.id === d.aedit) || {}).type; return render(); }
     if (d.adel) { S.modal.actions = S.modal.actions.filter((a) => a.id !== d.adel); return render(); }
-    if (d.acancel) { S.editingAction = null; S.showActionEditor = false; return render(); }
+    if (d.acancel) { S.editingAction = null; S.showActionEditor = false; S._draft = null; return render(); }
     if (d.atype) { const cur = collectAction(); S._atype = d.atype; if (cur) { cur.type = d.atype; S._draft = cur; } return renderDraft(cur, d.atype); }
     if (d.afreq) { document.getElementById("pt-a-freq").value = d.afreq; return; }
     if (d.zoom) { S.zoom = +d.zoom; return render(); }
@@ -448,7 +502,7 @@
       const a = collectAction(); if (!a || !a.name) return alert("Informe o nome da ação.");
       const i = S.modal.actions.findIndex((x) => x.id === a.id);
       if (i >= 0) S.modal.actions[i] = a; else S.modal.actions.push(a);
-      S.editingAction = null; S.showActionEditor = false; return render();
+      S.editingAction = null; S.showActionEditor = false; S._draft = null; return render();
     }
   });
 
@@ -469,6 +523,7 @@
   }
 
   document.addEventListener("input", (e) => {
+    if (e.target.id === "pt-ai-obs" && S.aiModal) { S.aiModal.obs = e.target.value; return; }
     if (e.target.id === "pt-q") { S.search = e.target.value; const p = e.target.selectionStart; render(); const n = document.getElementById("pt-q"); if (n) { n.focus(); n.setSelectionRange(p, p); } }
     if (e.target.id === "pt-pq") { S.psearch = e.target.value; const p = e.target.selectionStart; render(); const n = document.getElementById("pt-pq"); if (n) { n.focus(); n.setSelectionRange(p, p); } }
     if (e.target.dataset && e.target.dataset.ftext) S.filters[e.target.dataset.ftext] = e.target.value;
@@ -476,6 +531,19 @@
 
   document.addEventListener("change", (e) => {
     const d = e.target.dataset || {};
+    if (e.target.id === "pt-ai-file" && S.aiModal) {
+      const f = e.target.files && e.target.files[0];
+      if (!f) { S.aiModal.pdf = null; S.aiModal.filename = ""; return render(); }
+      const r = new FileReader();
+      r.onload = () => {
+        S.aiModal.pdf = String(r.result).split(",")[1] || null;
+        S.aiModal.filename = f.name;
+        S.aiModal.error = "";
+        render();
+      };
+      r.readAsDataURL(f);
+      return;
+    }
     if (d.sel) { S.selected = e.target.checked ? [...new Set([...S.selected, d.sel])] : S.selected.filter((x) => x !== d.sel); return render(); }
     if (d.gsel) { const ids = d.gsel.split(","); S.selected = e.target.checked ? [...new Set([...S.selected, ...ids])] : S.selected.filter((x) => !ids.includes(x)); return render(); }
     if (d.all) { S.selected = e.target.checked ? filteredRows().map((r) => r.id) : []; return render(); }

@@ -43,12 +43,15 @@
 .pt-group-row{display:flex;align-items:center;gap:12px;padding:8px 18px;border-bottom:1px solid rgba(255,255,255,.25)}
 .pt-group-row:last-child{border-bottom:none}
 .pt-legend{margin-top:14px;display:flex;align-items:center;gap:18px;padding:8px 14px;width:fit-content;font-size:11px;color:#64748b;flex-wrap:wrap}
-.pt-modal-bg{position:fixed;inset:0;z-index:2000;overflow-y:auto;background:rgba(0,0,0,.25);backdrop-filter:blur(8px)}
-.pt-modal{max-width:820px;margin:32px auto;background:rgba(255,255,255,.85);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.8);box-shadow:0 20px 60px rgba(0,0,0,.18);border-radius:22px;overflow:visible}
-.pt-modal-h{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid rgba(255,255,255,.5)}
+.pt-modal-bg{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.25);backdrop-filter:blur(8px);display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto}
+.pt-modal{width:100%;max-width:820px;max-height:calc(100dvh - 32px);margin:auto;background:rgba(255,255,255,.85);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.8);box-shadow:0 20px 60px rgba(0,0,0,.18);border-radius:22px;display:flex;flex-direction:column;overflow:hidden}
+.pt-modal.sm{max-width:520px}
+.pt-modal-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 22px;border-bottom:1px solid rgba(255,255,255,.5);flex-wrap:wrap;flex-shrink:0}
 .pt-modal-h h2{margin:0;font-size:17px;font-weight:700;color:#1e293b}
-.pt-modal-b{padding:16px 22px}
-.pt-modal-f{padding:14px 22px;border-top:1px solid rgba(255,255,255,.5);display:flex;gap:12px}
+.pt-modal-b{padding:16px 22px;overflow-y:auto;flex:1;min-height:0;-webkit-overflow-scrolling:touch}
+.pt-modal-f{padding:14px 22px;border-top:1px solid rgba(255,255,255,.5);display:flex;gap:12px;flex-shrink:0;flex-wrap:wrap}
+.pt-btn.ai{background:linear-gradient(135deg,#f59e0b,#ec4899);color:#fff;border:none;box-shadow:0 4px 18px rgba(236,72,153,.35)}
+@media(max-width:640px){.pt-modal-h h2{font-size:15px}.pt-modal-b,.pt-modal-h,.pt-modal-f{padding-left:14px;padding-right:14px}.pt-metrics{grid-template-columns:1fr}}
 .pt-modal-f .pt-btn{flex:1;text-align:center}
 .pt-lbl{font-size:11px;color:#64748b;font-weight:500;display:block;margin-bottom:5px}
 .pt-in{width:100%;padding:8px 12px;border-radius:12px;font-size:13px;background:rgba(255,255,255,.65);border:1px solid rgba(255,255,255,.8);outline:none;color:#334155}
