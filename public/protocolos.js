@@ -531,6 +531,19 @@
 
   document.addEventListener("change", (e) => {
     const d = e.target.dataset || {};
+    if (e.target.id === "pt-ai-file" && S.aiModal) {
+      const f = e.target.files && e.target.files[0];
+      if (!f) { S.aiModal.pdf = null; S.aiModal.filename = ""; return render(); }
+      const r = new FileReader();
+      r.onload = () => {
+        S.aiModal.pdf = String(r.result).split(",")[1] || null;
+        S.aiModal.filename = f.name;
+        S.aiModal.error = "";
+        render();
+      };
+      r.readAsDataURL(f);
+      return;
+    }
     if (d.sel) { S.selected = e.target.checked ? [...new Set([...S.selected, d.sel])] : S.selected.filter((x) => x !== d.sel); return render(); }
     if (d.gsel) { const ids = d.gsel.split(","); S.selected = e.target.checked ? [...new Set([...S.selected, ...ids])] : S.selected.filter((x) => !ids.includes(x)); return render(); }
     if (d.all) { S.selected = e.target.checked ? filteredRows().map((r) => r.id) : []; return render(); }
