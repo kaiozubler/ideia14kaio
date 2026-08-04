@@ -523,6 +523,7 @@
   }
 
   document.addEventListener("input", (e) => {
+    if (e.target.id === "pt-ai-obs" && S.aiModal) { S.aiModal.obs = e.target.value; return; }
     if (e.target.id === "pt-q") { S.search = e.target.value; const p = e.target.selectionStart; render(); const n = document.getElementById("pt-q"); if (n) { n.focus(); n.setSelectionRange(p, p); } }
     if (e.target.id === "pt-pq") { S.psearch = e.target.value; const p = e.target.selectionStart; render(); const n = document.getElementById("pt-pq"); if (n) { n.focus(); n.setSelectionRange(p, p); } }
     if (e.target.dataset && e.target.dataset.ftext) S.filters[e.target.dataset.ftext] = e.target.value;
