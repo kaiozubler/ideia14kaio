@@ -320,7 +320,9 @@
     const sorted = [...m.actions].sort((a, b) => a.startDay - b.startDay);
     return `<div class="pt-modal-bg" data-mbg="1"><div class="pt-modal">
       <div class="pt-modal-h"><h2>${m.id ? "Editar protocolo" : "Novo protocolo"}</h2>
-        <button class="pt-btn ghost" data-mclose="1" style="padding:2px 10px">×</button></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="pt-btn ai" data-aiopen="1">✨ Criar com IA</button>
+          <button class="pt-btn ghost" data-mclose="1" style="padding:2px 10px">×</button></div></div>
       <div class="pt-modal-b">
         <div style="margin-bottom:16px"><span class="pt-lbl">Nome do protocolo</span>
           <input class="pt-in" id="pt-m-title" value="${esc(m.title)}" placeholder="Ex: Hipertensão Arterial"></div>
