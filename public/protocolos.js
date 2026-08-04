@@ -465,9 +465,13 @@
   document.addEventListener("click", (e) => {
     const root = document.getElementById("s-protocolos");
     if (!root || root.style.display === "none") return;
-    const t = e.target.closest("[data-menu],[data-act],[data-dd],[data-group],[data-bulk],[data-clear],[data-goprot],[data-back],[data-new],[data-edit],[data-toggle],[data-mclose],[data-msave],[data-mbg],[data-cidadd],[data-cidrm],[data-anew],[data-aedit],[data-adel],[data-asave],[data-acancel],[data-atype],[data-afreq],[data-zoom],[data-gact],[data-fclear],[data-fapply],[data-tladd]");
+    const t = e.target.closest("[data-menu],[data-act],[data-dd],[data-group],[data-bulk],[data-clear],[data-goprot],[data-back],[data-new],[data-edit],[data-toggle],[data-mclose],[data-msave],[data-mbg],[data-cidadd],[data-cidrm],[data-anew],[data-aedit],[data-adel],[data-asave],[data-acancel],[data-atype],[data-afreq],[data-zoom],[data-gact],[data-fclear],[data-fapply],[data-tladd],[data-aiopen],[data-aiclose],[data-aigen],[data-aibg]");
     if (!t) { if (S.dd) { S.dd = null; render(); } return; }
     const d = t.dataset;
+    if (d.aiopen) { S.aiModal = { obs: "", pdf: null, filename: "", loading: false, error: "" }; return render(); }
+    if (d.aiclose) { S.aiModal = null; return render(); }
+    if (d.aigen) return generateWithAI();
+    if (d.aibg && e.target === t) { S.aiModal = null; return render(); }
     if (d.menu) { S.dd = S.dd === "m" + d.menu ? null : "m" + d.menu; return render(); }
     if (d.dd) { S.dd = S.dd === d.dd ? null : d.dd; return render(); }
     if (d.act) { S.dd = null; return rowAction(d.id, d.act); }
@@ -479,7 +483,7 @@
     if (d.fapply) { S.dd = null; return render(); }
     if (d.goprot) { S.screen = "protocols"; return render(); }
     if (d.back) { S.screen = "report"; return render(); }
-    if (d.new) { S.modal = { title: "", cids: [], actions: [] }; S.showActionEditor = false; S.editingAction = null; return render(); }
+    if (d.new) { S.modal = { title: "", cids: [], actions: [] }; S.showActionEditor = false; S.editingAction = null; S._draft = null; return render(); }
     if (d.edit) { const p = S.protocols.find((x) => x.id === d.edit); S.modal = { id: p.id, title: p.title, cids: [...p.cids], actions: p.actions.map((a) => ({ ...a })) }; return render(); }
     if (d.toggle) return toggleActive(d.toggle);
     if (d.mbg && e.target === t) { S.modal = null; return render(); }
@@ -487,10 +491,10 @@
     if (d.msave) { const m = { ...S.modal, title: document.getElementById("pt-m-title").value.trim() }; if (!m.title) return alert("Informe o nome do protocolo."); S.modal = null; render(); return saveProtocol(m); }
     if (d.cidadd) { const v = (document.getElementById("pt-m-cid").value || "").trim().toUpperCase(); if (v && !S.modal.cids.includes(v)) S.modal.cids.push(v); S.cidInput = ""; return render(); }
     if (d.cidrm) { S.modal.cids = S.modal.cids.filter((c) => c !== d.cidrm); return render(); }
-    if (d.anew || d.tladd) { S.editingAction = null; S.showActionEditor = true; S._atype = "Exame"; return render(); }
+    if (d.anew || d.tladd) { S.editingAction = null; S.showActionEditor = true; S._atype = "Exame"; S._draft = null; return render(); }
     if (d.aedit) { S.editingAction = d.aedit; S.showActionEditor = false; S._atype = (S.modal.actions.find((a) => a.id === d.aedit) || {}).type; return render(); }
     if (d.adel) { S.modal.actions = S.modal.actions.filter((a) => a.id !== d.adel); return render(); }
-    if (d.acancel) { S.editingAction = null; S.showActionEditor = false; return render(); }
+    if (d.acancel) { S.editingAction = null; S.showActionEditor = false; S._draft = null; return render(); }
     if (d.atype) { const cur = collectAction(); S._atype = d.atype; if (cur) { cur.type = d.atype; S._draft = cur; } return renderDraft(cur, d.atype); }
     if (d.afreq) { document.getElementById("pt-a-freq").value = d.afreq; return; }
     if (d.zoom) { S.zoom = +d.zoom; return render(); }
@@ -498,7 +502,7 @@
       const a = collectAction(); if (!a || !a.name) return alert("Informe o nome da ação.");
       const i = S.modal.actions.findIndex((x) => x.id === a.id);
       if (i >= 0) S.modal.actions[i] = a; else S.modal.actions.push(a);
-      S.editingAction = null; S.showActionEditor = false; return render();
+      S.editingAction = null; S.showActionEditor = false; S._draft = null; return render();
     }
   });
 
