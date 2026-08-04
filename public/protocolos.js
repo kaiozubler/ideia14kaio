@@ -443,7 +443,7 @@
 
   function render() {
     const el = document.getElementById("s-protocolos"); if (!el) return;
-    el.innerHTML = `<div class="pt-wrap">${S.loading ? '<div class="pt-empty">Carregando protocolos…</div>' : (S.screen === "protocols" ? myProtocolsHtml() : reportHtml())}${modalHtml()}</div>`;
+    el.innerHTML = `<div class="pt-wrap">${S.loading ? '<div class="pt-empty">Carregando protocolos…</div>' : (S.screen === "protocols" ? myProtocolsHtml() : reportHtml())}${modalHtml()}${aiModalHtml()}</div>`;
   }
 
   /* ---------- EVENTS ---------- */
