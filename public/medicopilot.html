@@ -5403,23 +5403,6 @@
 
                                                             const RESUMO_TEXT=`RESUMO DO ATENDIMENTO — ${new Date().toLocaleDateString('pt-BR')}
 
-                                                            QUEIXA PRINCIPAL:
-                                                            Cefaleia intensa há 3 dias, associada a náuseas. Nega febre.
-
-                                                            EXAME FÍSICO:
-                                                            PA: 148/92 mmHg · FC: 78 bpm · Orientada, sem déficits.
-
-                                                            HIPÓTESE DIAGNÓSTICA:
-                                                            Cefaleia tensional + crise hipertensiva leve (CID G44.2 / I10)
-
-                                                            CONDUTA:
-                                                            • Ajuste Losartana 50mg → 100mg (1x/dia)
-                                                            • Dipirona 500mg 6/6h por 3 dias SOS
-                                                            • Retorno em 7 dias para reavaliação de PA
-                                                            • Solicitar: hemograma + creatinina + Na/K
-
-                                                            ORIENTAÇÕES:
-                                                            Reduzir sódio. Hidratação adequada. Evitar estresse.`;
 
                                                             /* ========== SCREEN NAV ========== */
                                                             function goScreen(name){
@@ -8876,7 +8859,7 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                                                               list.innerHTML='<div style="padding:24px;text-align:center;font-size:12px;color:#94a3b8"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Analisando o atendimento e gerando sugestões de conduta…</div>';
                                                               const anam=cfBuildAnamneseTxt();
                                                               condState.anamnese=anam;
-                                                              const sys='Você é um assistente clínico. Com base na anamnese abaixo, sugira de 3 a 6 CONDUTAS MÉDICAS possíveis, curtas e objetivas (uma frase cada, começando com verbo). Retorne EXCLUSIVAMENTE JSON válido, sem markdown, no formato: {"condutas":["...","..."]}. Não invente dados clínicos não presentes.';
+                                                              const sys='Você é um assistente clínico. Com base na anamnese abaixo, sugira de 3 a 6 CONDUTAS MÉDICAS possíveis, curtas e objetivas (uma frase cada, começando com verbo). As condutas sugeridas são um resumo organizados por tópicos das práticas sugeridas que o médico poderá tomar. Na elaboração das condutas você deve organizar os tópicos de forma a agrupar assuntos correlacionados, sempre atentendo a necessidade do paciente na consulta. Sempre que informado ou solicitado um medicamento ou exame, você deve incluir nas condutas. As condutas sugeridas serão somáveis, não excluídas, de forma que não deve repetir a mesma ação em mais de uma conduta. Separa as condutas em condutas referente ao atendimento e outros pontos relevantes. Retorne EXCLUSIVAMENTE JSON válido, sem markdown, no formato: {"condutas":["...","..."]}. Não invente dados clínicos não presentes.';
                                                               const usr='ANAMNESE:\n\n'+anam+'\n\nRetorne o JSON agora.';
                                                               try{
                                                                 const j=await cfCallIaJson(sys,usr);
