@@ -18,6 +18,8 @@
     <script src="equipe.js" defer></script>
     <link rel="stylesheet" href="protocolos.css" />
     <script src="protocolos.js" defer></script>
+    <link rel="stylesheet" href="faturamento.css" />
+    <script src="faturamento.js" defer></script>
     <style>
                                                       *{box-sizing:border-box;margin:0;padding:0}
                                                       :root{
@@ -1922,6 +1924,9 @@
           <div class="sb-item" id="nav-protocolos" onclick="goScreen('protocolos')">
             <i class="ti ti-clipboard-heart"></i><span class="sb-lbl">Protocolos</span>
           </div>
+          <div class="sb-item" id="nav-faturamento" onclick="goScreen('faturamento')">
+            <i class="ti ti-cash-banknote"></i><span class="sb-lbl">Faturamento</span>
+          </div>
           <div class="sb-item" id="nav-indicadores" onclick="goScreen('indicadores')">
             <i class="ti ti-chart-line"></i><span class="sb-lbl">Indicadores</span>
           </div>
@@ -3318,6 +3323,7 @@
 
           <!-- SCREEN: PROTOCOLOS -->
           <div id="s-protocolos" style="display:none"></div>
+          <div id="s-faturamento" style="display:none"></div>
 
           <!-- SCREEN: MINHA EQUIPE -->
           <div id="s-equipe" style="display:none"></div>
@@ -5215,6 +5221,7 @@
                                                               if(name==='clinica')loadClinica();
                                                               if(name==='equipe'&&typeof initEquipe==='function')initEquipe();
                                                               if(name==='protocolos'&&typeof initProtocolos==='function')initProtocolos();
+                                                              if(name==='faturamento'&&typeof initFaturamento==='function')initFaturamento();
                                                               if(['secretaria','anamnese','copiloto'].includes(name)){
                                                                 const g=document.getElementById('grp-ia');if(g)g.classList.add('open');
                                                               }
