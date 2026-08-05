@@ -2687,10 +2687,16 @@
 
             <!-- TAB AGENDA -->
             <div class="tab-body" id="tb-agenda" style="display:none">
-              <div class="empty-st">
-                <i class="ti ti-calendar"></i>
-                <p>Nenhum agendamento</p>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:#0f172a">Histórico de agendamentos</div>
+                  <div style="font-size:11px;color:#64748b">Consultas e retornos deste paciente</div>
+                </div>
+                <button class="cv-btn-blue" onclick="openNovoAgendamentoFromPatient()" style="display:inline-flex;align-items:center;gap:6px">
+                  <i class="ti ti-plus"></i> Novo agendamento
+                </button>
               </div>
+              <div id="pat-agenda-list"></div>
             </div>
 
             <!-- TAB TIMELINE -->
@@ -5713,6 +5719,7 @@
                                                               if(name==='atendimentos')restoreAtendState();
                                                               if(name==='prontuario')renderProntuario();
                                                               if(name==='timeline')renderTimeline();
+                                                              if(name==='agenda')renderPatientAgenda();
                                                               updateCadastroFloatBar(name);
                                                             }
                                                             function updateCadastroFloatBar(activeTab){
@@ -6340,6 +6347,77 @@ showAtendList();
                                                             }
 
                                                             /* ========== PRONTUÁRIO ========== */
+                                                            /* ========== AGENDA DO PACIENTE ========== */
+                                                            const PAT_AG_STATUS={
+                                                              agendado:{label:'Agendado',bg:'#e0edff',fg:'#1d4ed8'},
+                                                              confirmado:{label:'Confirmado',bg:'#e0edff',fg:'#1d4ed8'},
+                                                              compareceu:{label:'Compareceu',bg:'#dcfce7',fg:'#15803d'},
+                                                              faltou:{label:'Faltou',bg:'#fee2e2',fg:'#b91c1c'},
+                                                              reagendado:{label:'Reagendado',bg:'#fef3c7',fg:'#a16207'},
+                                                              cancelado:{label:'Cancelado',bg:'#f1f5f9',fg:'#475569'}
+                                                            };
+                                                            let PAT_AG_ITEMS=[];
+                                                            async function renderPatientAgenda(){
+                                                              const el=document.getElementById('pat-agenda-list');if(!el)return;
+                                                              if(!currentPatient||!currentPatient.id){
+                                                                el.innerHTML='<div class="empty-st"><i class="ti ti-calendar"></i><p>Nenhum agendamento</p></div>';return;
+                                                              }
+                                                              el.innerHTML='<div class="empty-st"><i class="ti ti-loader-2"></i><p>Carregando agendamentos…</p></div>';
+                                                              try{
+                                                                const{data,error}=await sb.from('agendamentos').select('*').eq('paciente_id',currentPatient.id).order('data_hora',{ascending:false});
+                                                                if(error)throw error;
+                                                                PAT_AG_ITEMS=data||[];
+                                                              }catch(e){
+                                                                console.error('agenda paciente',e);
+                                                                el.innerHTML='<div class="empty-st"><i class="ti ti-alert-triangle"></i><p>Não foi possível carregar os agendamentos</p></div>';return;
+                                                              }
+                                                              if(!PAT_AG_ITEMS.length){
+                                                                el.innerHTML='<div class="empty-st"><i class="ti ti-calendar"></i><p>Nenhum agendamento</p></div>';return;
+                                                              }
+                                                              const pad=n=>String(n).padStart(2,'0');
+                                                              el.innerHTML=PAT_AG_ITEMS.map(a=>{
+                                                                const d=new Date(a.data_hora);
+                                                                const st=(a.status||'agendado').toLowerCase();
+                                                                const cfg=PAT_AG_STATUS[st]||PAT_AG_STATUS.agendado;
+                                                                const opts=['compareceu','faltou','reagendado'].map(k=>`<option value="${k}" ${st===k?'selected':''}>${PAT_AG_STATUS[k].label}</option>`).join('');
+                                                                const extra=PAT_AG_STATUS[st]&&!['compareceu','faltou','reagendado'].includes(st)?`<option value="${st}" selected>${cfg.label}</option>`:'';
+                                                                return `<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;margin-bottom:8px;flex-wrap:wrap">
+                                                                  <div style="min-width:120px">
+                                                                    <div style="font-size:13px;font-weight:700;color:#0f172a">${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}</div>
+                                                                    <div style="font-size:11px;color:#64748b">${pad(d.getHours())}:${pad(d.getMinutes())} · ${a.duracao_min||30} min</div>
+                                                                  </div>
+                                                                  <div style="flex:1;min-width:140px">
+                                                                    <div style="font-size:12.5px;color:#0f172a">${a.tipo||a.motivo||'Consulta'}</div>
+                                                                    <div style="font-size:11px;color:#64748b">${a.medico_nome||a.especialidade||'—'}</div>
+                                                                  </div>
+                                                                  <span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:${cfg.bg};color:${cfg.fg}">${cfg.label}</span>
+                                                                  <select onchange="setPatientAgStatus('${a.id}',this.value)" style="font-size:11.5px;padding:5px 8px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;color:#0f172a">
+                                                                    ${extra}<option value="">Alterar status…</option>${opts}
+                                                                  </select>
+                                                                </div>`;
+                                                              }).join('');
+                                                            }
+                                                            async function setPatientAgStatus(id,status){
+                                                              if(!status)return;
+                                                              try{
+                                                                const{error}=await sb.from('agendamentos').update({status}).eq('id',id);
+                                                                if(error)throw error;
+                                                                showToast&&showToast('Status atualizado','success');
+                                                                renderPatientAgenda();
+                                                              }catch(e){
+                                                                console.error(e);showToast&&showToast('Não foi possível atualizar o status','error');
+                                                              }
+                                                            }
+                                                            function openNovoAgendamentoFromPatient(){
+                                                              if(!currentPatient){openNovoAgendamentoModal();return;}
+                                                              openNovoAgendamentoModal({
+                                                                patientId:currentPatient.id,
+                                                                nome:currentPatient.name,
+                                                                cpf:currentPatient.cpf,
+                                                                tel:currentPatient.tel&&currentPatient.tel!=='—'?currentPatient.tel:''
+                                                              });
+                                                            }
+
                                                             function renderNotasWithHighlight(text){
                                                               if(!text)return '';
                                                               const esc=text.replace(/&/g,'&').replace(/\x3c/g,'<').replace(/\x3e/g,'>');
@@ -12801,6 +12879,10 @@ let rxSelected = [];
                                                                 if(preset.dia)document.getElementById('lgm-dia').value=preset.dia;
                                                                 if(preset.hora)document.getElementById('lgm-hora').value=preset.hora;
                                                                 if(preset.medicoId)document.getElementById('lgm-medico').value=preset.medicoId;
+                                                                if(preset.nome){const n=document.getElementById('lgm-nome');if(n)n.value=preset.nome;}
+                                                                if(preset.cpf){const c=document.getElementById('lgm-cpf');if(c)c.value=typeof formatCPF==='function'?formatCPF(preset.cpf):preset.cpf;}
+                                                                if(preset.tel){const t=document.getElementById('lgm-tel');if(t)t.value=preset.tel;}
+                                                                if(preset.patientId){AGM_STATE.selectedPatientId=preset.patientId;agmUpdateStatus();}
                                                               }
                                                               document.getElementById('lgm-overlay').classList.add('open');
                                                               setTimeout(()=>document.getElementById('lgm-nome')?.focus(),50);
