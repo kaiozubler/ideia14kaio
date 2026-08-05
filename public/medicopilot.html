@@ -5546,28 +5546,6 @@
                                                               document.querySelectorAll('.pt-row.sel').forEach(r=>r.classList.remove('sel'));
                                                               document.querySelectorAll('.pt-row .pt-cb.on').forEach(c=>c.classList.remove('on'));
                                                               ptUpdateSelectAll();
-                                                              // Attach click listeners after render (avoids inline onclick escaping issues)
-                                                              el.querySelectorAll('.pt-row').forEach(row=>{
-                                                                const pid=row.dataset.id;
-                                                                const cb=row.querySelector('.pt-cb');
-                                                                // checkbox: toggle selection, don't open patient
-                                                                cb.addEventListener('click',function(e){
-                                                                  e.stopPropagation();
-                                                                  const sid=String(pid);
-                                                                  if(ptSelected.has(sid)){ptSelected.delete(sid);}else{ptSelected.add(sid);}
-                                                                  cb.classList.toggle('on',ptSelected.has(sid));
-                                                                  row.classList.toggle('sel',ptSelected.has(sid));
-                                                                  ptUpdateBulkBar();
-                                                                  ptUpdateSelectAll();
-                                                                });
-                                                                // row-acts area: stop propagation only
-                                                                const acts=row.querySelector('.row-acts');
-                                                                if(acts)acts.addEventListener('click',function(e){e.stopPropagation();});
-                                                                // row: open patient (unless click was on cb or acts)
-                                                                row.addEventListener('click',function(e){
-                                                                  openPatient(pid);
-                                                                });
-                                                              });
                                                             }
                                                             function ptUpdateBulkBar(){
                                                               const bar=document.getElementById('bulk-bar');
@@ -5689,6 +5667,27 @@
                                                               }).join('');
 
                                                               ptUpdateSelectAll();
+                                                              // Attach listeners after innerHTML (avoids inline-onclick issues with UUIDs)
+                                                              el.querySelectorAll('.pt-row').forEach(function(row){
+                                                                const pid=row.dataset.id;
+                                                                const cb=row.querySelector('.pt-cb');
+                                                                if(cb){
+                                                                  cb.addEventListener('click',function(e){
+                                                                    e.stopPropagation();
+                                                                    const sid=String(pid);
+                                                                    if(ptSelected.has(sid)){ptSelected.delete(sid);}else{ptSelected.add(sid);}
+                                                                    cb.classList.toggle('on',ptSelected.has(sid));
+                                                                    row.classList.toggle('sel',ptSelected.has(sid));
+                                                                    ptUpdateBulkBar();
+                                                                    ptUpdateSelectAll();
+                                                                  });
+                                                                }
+                                                                const acts=row.querySelector('.row-acts');
+                                                                if(acts){acts.addEventListener('click',function(e){e.stopPropagation();});}
+                                                                row.addEventListener('click',function(){
+                                                                  openPatient(pid);
+                                                                });
+                                                              });
                                                             }
 
                                                             /* ===== SEARCH ===== */
