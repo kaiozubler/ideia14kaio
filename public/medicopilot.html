@@ -6348,9 +6348,6 @@ showAtendList();
                                                             /* ========== PRONTUÁRIO ========== */
                                                             function renderNotasWithHighlight(text){
                                                               if(!text)return '';
-                                                              return _renderNotasWithHighlightImpl(text);
-                                                            }
-                                                            function _renderNotasWithHighlightImpl(text){
                                                               const esc=text.replace(/&/g,'&').replace(/\x3c/g,'<').replace(/\x3e/g,'>');
                                                               const re=new RegExp('\\[NOTA INTERNA (\\d{2}:\\d{2})\\] (.+)','g');
                                                               return esc.replace(re,function(m,time,note){
