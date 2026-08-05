@@ -2687,10 +2687,16 @@
 
             <!-- TAB AGENDA -->
             <div class="tab-body" id="tb-agenda" style="display:none">
-              <div class="empty-st">
-                <i class="ti ti-calendar"></i>
-                <p>Nenhum agendamento</p>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:#0f172a">Histórico de agendamentos</div>
+                  <div style="font-size:11px;color:#64748b">Consultas e retornos deste paciente</div>
+                </div>
+                <button class="cv-btn-blue" onclick="openNovoAgendamentoFromPatient()" style="display:inline-flex;align-items:center;gap:6px">
+                  <i class="ti ti-plus"></i> Novo agendamento
+                </button>
               </div>
+              <div id="pat-agenda-list"></div>
             </div>
 
             <!-- TAB TIMELINE -->
