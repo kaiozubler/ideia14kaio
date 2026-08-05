@@ -12879,6 +12879,10 @@ let rxSelected = [];
                                                                 if(preset.dia)document.getElementById('lgm-dia').value=preset.dia;
                                                                 if(preset.hora)document.getElementById('lgm-hora').value=preset.hora;
                                                                 if(preset.medicoId)document.getElementById('lgm-medico').value=preset.medicoId;
+                                                                if(preset.nome){const n=document.getElementById('lgm-nome');if(n)n.value=preset.nome;}
+                                                                if(preset.cpf){const c=document.getElementById('lgm-cpf');if(c)c.value=typeof formatCPF==='function'?formatCPF(preset.cpf):preset.cpf;}
+                                                                if(preset.tel){const t=document.getElementById('lgm-tel');if(t)t.value=preset.tel;}
+                                                                if(preset.patientId){AGM_STATE.selectedPatientId=preset.patientId;agmUpdateStatus();}
                                                               }
                                                               document.getElementById('lgm-overlay').classList.add('open');
                                                               setTimeout(()=>document.getElementById('lgm-nome')?.focus(),50);
