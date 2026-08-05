@@ -604,6 +604,95 @@ export type Database = {
         }
         Relationships: []
       }
+      lancamentos_financeiros: {
+        Row: {
+          comissao_pct: number
+          comissao_val: number
+          created_at: string
+          data: string
+          descricao: string
+          especialidade: string | null
+          etiqueta: string | null
+          id: string
+          medico: string | null
+          natureza: string | null
+          nf_emitida_em: string | null
+          nf_numero: number | null
+          nf_payload: Json | null
+          nf_serie: string | null
+          nf_status: string | null
+          paciente_id: string | null
+          paciente_nome: string | null
+          pago: boolean
+          status: string
+          tipo: string
+          updated_at: string
+          user_id: string
+          valor: number
+          vencimento: string | null
+        }
+        Insert: {
+          comissao_pct?: number
+          comissao_val?: number
+          created_at?: string
+          data?: string
+          descricao?: string
+          especialidade?: string | null
+          etiqueta?: string | null
+          id?: string
+          medico?: string | null
+          natureza?: string | null
+          nf_emitida_em?: string | null
+          nf_numero?: number | null
+          nf_payload?: Json | null
+          nf_serie?: string | null
+          nf_status?: string | null
+          paciente_id?: string | null
+          paciente_nome?: string | null
+          pago?: boolean
+          status?: string
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number
+          vencimento?: string | null
+        }
+        Update: {
+          comissao_pct?: number
+          comissao_val?: number
+          created_at?: string
+          data?: string
+          descricao?: string
+          especialidade?: string | null
+          etiqueta?: string | null
+          id?: string
+          medico?: string | null
+          natureza?: string | null
+          nf_emitida_em?: string | null
+          nf_numero?: number | null
+          nf_payload?: Json | null
+          nf_serie?: string | null
+          nf_status?: string | null
+          paciente_id?: string | null
+          paciente_nome?: string | null
+          pago?: boolean
+          status?: string
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number
+          vencimento?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lancamentos_financeiros_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["paciente_id"]
+          },
+        ]
+      }
       medicamento_substancias: {
         Row: {
           concentracao: string | null
