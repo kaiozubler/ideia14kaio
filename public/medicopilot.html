@@ -1865,6 +1865,75 @@
                                                       #m-kcol-cfg .mfoot .btn:hover{background:#fff}
                                                       #m-kcol-cfg .mfoot .btn.primary{background:linear-gradient(135deg,#34d399,#059669);border:none;color:#fff;box-shadow:0 8px 20px -6px rgba(5,150,105,.5)}
                                                       #m-kcol-cfg .mfoot .btn.primary:hover{box-shadow:0 10px 24px -6px rgba(5,150,105,.6)}
+
+/* ========== DISCADOR (topbar) ========== */
+.dialer-wrap{position:relative;display:flex;align-items:center}
+.dialer-trigger{width:32px;height:32px;border-radius:12px;display:flex;align-items:center;justify-content:center;border:none;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.8);backdrop-filter:blur(14px);color:var(--n400);cursor:pointer;transition:all .14s;position:relative}
+.dialer-trigger:hover{background:rgba(255,255,255,.85);color:var(--n600)}
+.dialer-trigger .ti{font-size:17px}
+.dialer-trigger.active{background:linear-gradient(135deg,#34d399,#059669);color:#fff;border-color:transparent;box-shadow:0 4px 14px -3px rgba(5,150,105,.5)}
+.dialer-trigger.incall{background:linear-gradient(135deg,#34d399,#059669);color:#fff;border-color:transparent;box-shadow:0 4px 14px -3px rgba(5,150,105,.5)}
+.dialer-pulse{width:7px;height:7px;background:#34d399;border-radius:50%;position:absolute;top:-2px;right:-2px;border:1.5px solid #fff;animation:dialerPulse 1.4s ease-in-out infinite}
+@keyframes dialerPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.3)}}
+.dialer-panel{position:absolute;top:calc(100% + 10px);right:0;width:288px;background:rgba(255,255,255,.82);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border:1px solid rgba(255,255,255,.9);border-radius:24px;box-shadow:0 24px 60px -12px rgba(5,60,45,.22),0 2px 8px rgba(0,0,0,.06);z-index:900;overflow:hidden;display:none}
+.dialer-panel.open{display:block}
+.dialer-blob{position:absolute;border-radius:50%;filter:blur(40px);opacity:.45;pointer-events:none}
+.dialer-blob.b1{width:160px;height:160px;top:-60px;left:-50px;background:radial-gradient(circle,#6ee7b7,#34d399)}
+.dialer-blob.b2{width:140px;height:140px;bottom:-50px;right:-40px;background:radial-gradient(circle,#bfdbfe,#60a5fa)}
+/* tabs */
+.dialer-head{position:relative;z-index:1;padding:14px 14px 10px;display:flex;align-items:center;justify-content:space-between}
+.dialer-title{font-size:13px;font-weight:700;color:var(--n700)}
+.dialer-tabs{display:flex;gap:4px;background:rgba(255,255,255,.6);border:0.5px solid rgba(0,0,0,.07);border-radius:999px;padding:3px}
+.dialer-tab{height:24px;padding:0 10px;border-radius:999px;border:none;background:transparent;color:var(--n500);font-size:11px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .14s}
+.dialer-tab .ti{font-size:13px}
+.dialer-tab.active{background:#fff;color:#059669;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+/* number display */
+.dialer-digits-row{position:relative;z-index:1;padding:0 14px 10px;display:flex;align-items:center;gap:6px}
+.dialer-digits{flex:1;font-size:20px;font-weight:700;color:var(--n700);letter-spacing:.04em;text-align:center;background:transparent;border:none;outline:none;width:0}
+.dialer-digits::placeholder{color:var(--n300);font-weight:400;font-size:14px}
+.dialer-del{width:28px;height:28px;border:none;background:transparent;color:var(--n400);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:all .14s}
+.dialer-del:hover{background:rgba(244,63,94,.1);color:#e11d48}
+.dialer-del .ti{font-size:16px}
+/* keypad */
+.dialer-keys{position:relative;z-index:1;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 14px 12px}
+.dialer-key{height:46px;border:0.5px solid rgba(255,255,255,.9);background:rgba(255,255,255,.7);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.dialer-key:hover{background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1);transform:translateY(-1px)}
+.dialer-key:active{transform:scale(.94);box-shadow:none}
+.dialer-key-num{font-size:16px;font-weight:700;color:var(--n700);line-height:1}
+.dialer-key-sub{font-size:8px;letter-spacing:.06em;color:var(--n400);line-height:1;margin-top:2px}
+/* call button */
+.dialer-call-btn{position:relative;z-index:1;margin:0 14px 14px;height:42px;border-radius:999px;border:none;background:linear-gradient(135deg,#34d399,#059669);color:#fff;font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;box-shadow:0 8px 20px -6px rgba(5,150,105,.5);transition:all .14s;width:calc(100% - 28px)}
+.dialer-call-btn:hover{filter:brightness(1.06);box-shadow:0 10px 24px -6px rgba(5,150,105,.6)}
+.dialer-call-btn:disabled{background:var(--n150);color:var(--n400);box-shadow:none;cursor:default}
+.dialer-call-btn .ti{font-size:15px}
+/* recentes */
+.dialer-recents{position:relative;z-index:1;max-height:240px;overflow-y:auto;padding:0 8px 10px}
+.dialer-recent-item{display:flex;align-items:center;gap:10px;padding:8px;border-radius:14px;cursor:pointer;transition:all .12s}
+.dialer-recent-item:hover{background:rgba(255,255,255,.8)}
+.dialer-recent-ico{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px}
+.dialer-recent-ico.out{background:#dbeafe;color:#2563eb}
+.dialer-recent-ico.in{background:#dcfce7;color:#15803d}
+.dialer-recent-ico.missed{background:#fee2e2;color:#dc2626}
+.dialer-recent-name{flex:1;min-width:0;font-size:12px;font-weight:600;color:var(--n700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dialer-recent-num{font-size:10.5px;color:var(--n400);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dialer-recent-time{font-size:10px;color:var(--n400);flex-shrink:0;align-self:flex-start;margin-top:1px}
+/* in-call view */
+.dialer-incall-view{position:relative;z-index:1;padding:20px 14px 14px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.dialer-avatar{width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;font-size:22px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px -6px rgba(124,58,237,.5);margin-bottom:10px}
+.dialer-cname{font-size:14px;font-weight:700;color:var(--n700)}
+.dialer-cnum{font-size:11.5px;color:var(--n500);margin-top:2px}
+.dialer-status{font-size:12px;font-weight:600;margin-top:6px}
+.dialer-status.calling{color:#0284c7;animation:dialerPulse 1.2s ease-in-out infinite}
+.dialer-status.active{color:#059669}
+.dialer-timer{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;color:#059669;margin-top:4px}
+.dialer-incall-actions{display:flex;gap:10px;margin:14px 0 10px}
+.dialer-action-btn{width:46px;height:46px;border-radius:14px;border:0.5px solid rgba(255,255,255,.8);background:rgba(255,255,255,.7);color:var(--n500);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px;transition:all .14s}
+.dialer-action-btn:hover{background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.dialer-action-btn.on{background:linear-gradient(135deg,#38bdf8,#0284c7);color:#fff;border-color:transparent;box-shadow:0 4px 12px -3px rgba(2,132,199,.45)}
+.dialer-action-btn.muted{background:linear-gradient(135deg,#fb7185,#e11d48);color:#fff;border-color:transparent;box-shadow:0 4px 12px -3px rgba(225,29,72,.4)}
+.dialer-end-btn{width:calc(100%);height:42px;border-radius:999px;border:none;background:linear-gradient(135deg,#fb7185,#e11d48);color:#fff;font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;box-shadow:0 8px 20px -6px rgba(225,29,72,.45);transition:all .14s}
+.dialer-end-btn:hover{filter:brightness(1.07)}
+.dialer-end-btn .ti{font-size:15px}
     </style>
   </head>
   <body>
@@ -2051,6 +2120,84 @@
                 <i class="ti ti-sparkles"></i>
               </button>
             </div>
+            <!-- DISCADOR -->
+            <div class="dialer-wrap" id="dialer-wrap">
+              <button class="dialer-trigger" id="dialer-trigger" onclick="dialerToggle()" title="Discador">
+                <i class="ti ti-device-mobile"></i>
+              </button>
+              <div class="dialer-panel" id="dialer-panel">
+                <div class="dialer-blob b1"></div>
+                <div class="dialer-blob b2"></div>
+                <!-- idle/keypad/recents view -->
+                <div id="dialer-idle-view">
+                  <div class="dialer-head">
+                    <span class="dialer-title">Discador</span>
+                    <div class="dialer-tabs">
+                      <button class="dialer-tab active" id="dtab-teclado" onclick="dialerTab('teclado')">
+                        <i class="ti ti-keyboard"></i> Teclado
+                      </button>
+                      <button class="dialer-tab" id="dtab-recentes" onclick="dialerTab('recentes')">
+                        <i class="ti ti-clock"></i> Recentes
+                      </button>
+                    </div>
+                  </div>
+                  <!-- TECLADO -->
+                  <div id="dialer-teclado">
+                    <div class="dialer-digits-row">
+                      <input class="dialer-digits" id="dialer-digits" type="text" placeholder="Digite um número" maxlength="18" oninput="dialerDigitsChanged()" />
+                      <button class="dialer-del" id="dialer-del" onclick="dialerBackspace()" style="display:none"><i class="ti ti-backspace"></i></button>
+                    </div>
+                    <div class="dialer-keys">
+                      <button class="dialer-key" onclick="dialerKey('1')"><span class="dialer-key-num">1</span><span class="dialer-key-sub"></span></button>
+                      <button class="dialer-key" onclick="dialerKey('2')"><span class="dialer-key-num">2</span><span class="dialer-key-sub">ABC</span></button>
+                      <button class="dialer-key" onclick="dialerKey('3')"><span class="dialer-key-num">3</span><span class="dialer-key-sub">DEF</span></button>
+                      <button class="dialer-key" onclick="dialerKey('4')"><span class="dialer-key-num">4</span><span class="dialer-key-sub">GHI</span></button>
+                      <button class="dialer-key" onclick="dialerKey('5')"><span class="dialer-key-num">5</span><span class="dialer-key-sub">JKL</span></button>
+                      <button class="dialer-key" onclick="dialerKey('6')"><span class="dialer-key-num">6</span><span class="dialer-key-sub">MNO</span></button>
+                      <button class="dialer-key" onclick="dialerKey('7')"><span class="dialer-key-num">7</span><span class="dialer-key-sub">PQRS</span></button>
+                      <button class="dialer-key" onclick="dialerKey('8')"><span class="dialer-key-num">8</span><span class="dialer-key-sub">TUV</span></button>
+                      <button class="dialer-key" onclick="dialerKey('9')"><span class="dialer-key-num">9</span><span class="dialer-key-sub">WXYZ</span></button>
+                      <button class="dialer-key" onclick="dialerKey('*')"><span class="dialer-key-num">*</span></button>
+                      <button class="dialer-key" onclick="dialerKey('0')"><span class="dialer-key-num">0</span><span class="dialer-key-sub">+</span></button>
+                      <button class="dialer-key" onclick="dialerKey('#')"><span class="dialer-key-num">#</span></button>
+                    </div>
+                    <button class="dialer-call-btn" id="dialer-call-btn" onclick="dialerStartCall()" disabled>
+                      <i class="ti ti-phone"></i> Ligar
+                    </button>
+                  </div>
+                  <!-- RECENTES -->
+                  <div id="dialer-recentes" style="display:none">
+                    <div class="dialer-recents" id="dialer-recents-list"></div>
+                  </div>
+                </div>
+                <!-- in-call view -->
+                <div id="dialer-incall-view" style="display:none">
+                  <div class="dialer-incall-view">
+                    <div class="dialer-avatar" id="dialer-avatar">?</div>
+                    <div class="dialer-cname" id="dialer-cname">—</div>
+                    <div class="dialer-cnum" id="dialer-cnum">—</div>
+                    <div class="dialer-status calling" id="dialer-call-status">Chamando…</div>
+                    <div class="dialer-timer" id="dialer-timer" style="display:none">00:00</div>
+                    <div class="dialer-incall-actions" id="dialer-actions" style="display:none">
+                      <button class="dialer-action-btn" id="dialer-mute-btn" onclick="dialerToggleMute()" title="Mudo">
+                        <i class="ti ti-microphone" id="dialer-mute-icon"></i>
+                      </button>
+                      <button class="dialer-action-btn" id="dialer-spk-btn" onclick="dialerToggleSpeaker()" title="Viva-voz">
+                        <i class="ti ti-volume" id="dialer-spk-icon"></i>
+                      </button>
+                      <button class="dialer-action-btn" onclick="dialerOpenKeypad()" title="Teclado">
+                        <i class="ti ti-keyboard"></i>
+                      </button>
+                    </div>
+                    <button class="dialer-end-btn" onclick="dialerEndCall()">
+                      <i class="ti ti-phone-off"></i>
+                      <span id="dialer-end-lbl">Cancelar</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- /DISCADOR -->
             <button class="ib" title="Notificações"><i class="ti ti-bell"></i><span class="notif-dot"></span></button>
             <button class="ib" title="Configurações" onclick="goScreen('configuracoes')">
               <i class="ti ti-settings"></i>
@@ -13929,6 +14076,181 @@ let rxSelected = [];
                                                                 }
                                                               };
                                                             })();
+
+/* ========================================================
+   DISCADOR
+   ======================================================== */
+(function(){
+  const RECENTS=[
+    {id:1,name:'Dra. Marina Costa',number:'(47) 99821-1043',type:'out',time:'há 12 min'},
+    {id:2,name:'Recepção — Unidade 2',number:'(47) 3322-5510',type:'in',time:'há 1 h'},
+    {id:3,name:'Paciente — João Pedro',number:'(47) 99654-2210',type:'missed',time:'ontem'},
+    {id:4,name:'Lab. Vitalis',number:'(47) 3344-9080',type:'out',time:'ontem'},
+  ];
+
+  let _open=false,_callState='idle',_muted=false,_speaker=false;
+  let _timerSec=0,_timerInt=null,_callingTmr=null;
+  let _activeContact=null,_currentTab='teclado';
+
+  /* ---- helpers ---- */
+  function el(id){return document.getElementById(id)}
+  function fmt(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+
+  /* ---- open / close panel ---- */
+  window.dialerToggle=function(){
+    _open=!_open;
+    el('dialer-panel').classList.toggle('open',_open);
+    el('dialer-trigger').classList.toggle('active',_open&&_callState==='idle');
+    if(_open&&_callState==='idle') dialerTab(_currentTab);
+  };
+
+  document.addEventListener('mousedown',function(e){
+    const wrap=el('dialer-wrap');
+    if(wrap&&!wrap.contains(e.target)){
+      _open=false;
+      el('dialer-panel').classList.remove('open');
+      if(_callState==='idle') el('dialer-trigger').classList.remove('active');
+    }
+  });
+
+  /* ---- tabs ---- */
+  window.dialerTab=function(tab){
+    _currentTab=tab;
+    el('dtab-teclado').classList.toggle('active',tab==='teclado');
+    el('dtab-recentes').classList.toggle('active',tab==='recentes');
+    el('dialer-teclado').style.display=tab==='teclado'?'':'none';
+    el('dialer-recentes').style.display=tab==='recentes'?'':'none';
+    if(tab==='recentes') renderRecents();
+  };
+
+  function renderRecents(){
+    const ico={out:'ti-arrow-up-right',in:'ti-arrow-down-left',missed:'ti-arrow-down-left'};
+    el('dialer-recents-list').innerHTML=RECENTS.map(r=>`
+      <div class="dialer-recent-item" onclick="dialerCallContact(${r.id})">
+        <div class="dialer-recent-ico ${r.type}"><i class="ti ${ico[r.type]}"></i></div>
+        <div style="flex:1;min-width:0">
+          <div class="dialer-recent-name" style="${r.type==='missed'?'color:#dc2626':''}">${r.name}</div>
+          <div class="dialer-recent-num">${r.number}</div>
+        </div>
+        <div class="dialer-recent-time">${r.time}</div>
+      </div>`).join('');
+  }
+
+  /* ---- keypad ---- */
+  window.dialerKey=function(k){
+    const inp=el('dialer-digits');
+    if(inp.value.length<18){inp.value+=k; dialerDigitsChanged();}
+  };
+  window.dialerDigitsChanged=function(){
+    const v=el('dialer-digits').value.replace(/[^0-9*#+]/g,'');
+    el('dialer-digits').value=v;
+    el('dialer-del').style.display=v?'':'none';
+    el('dialer-call-btn').disabled=!v;
+  };
+  window.dialerBackspace=function(){
+    const inp=el('dialer-digits');
+    inp.value=inp.value.slice(0,-1);
+    dialerDigitsChanged();
+  };
+
+  /* ---- in-call keypad toggle ---- */
+  window.dialerOpenKeypad=function(){
+    if(_callState!=='in-call') return;
+    el('dialer-idle-view').style.display='';
+    el('dialer-incall-view').style.display='none';
+    dialerTab('teclado');
+    // clear digits for DTMF use
+    el('dialer-digits').value='';
+    dialerDigitsChanged();
+  };
+
+  /* ---- start call ---- */
+  window.dialerStartCall=function(){
+    const d=el('dialer-digits').value;
+    if(!d) return;
+    _activeContact={name:d,number:d};
+    _startCall();
+  };
+  window.dialerCallContact=function(id){
+    _activeContact=RECENTS.find(r=>r.id===id)||null;
+    _startCall();
+  };
+
+  function _startCall(){
+    _callState='calling';
+    _syncIncallUI();
+    el('dialer-trigger').classList.remove('active');
+    el('dialer-trigger').classList.add('incall');
+    if(!el('dialer-trigger').querySelector('.dialer-pulse')){
+      const dot=document.createElement('span');
+      dot.className='dialer-pulse';
+      el('dialer-trigger').appendChild(dot);
+    }
+    // open panel and show incall
+    _open=true;
+    el('dialer-panel').classList.add('open');
+    el('dialer-idle-view').style.display='none';
+    el('dialer-incall-view').style.display='';
+    // after 1.8s → connected
+    _callingTmr=setTimeout(()=>{
+      _callState='in-call';
+      _timerSec=0;
+      _timerInt=setInterval(()=>{
+        _timerSec++;
+        el('dialer-timer').textContent=fmt(_timerSec);
+      },1000);
+      _syncIncallUI();
+    },1800);
+  }
+
+  function _syncIncallUI(){
+    const c=_activeContact||{name:'—',number:'—'};
+    el('dialer-avatar').textContent=(c.name[0]||'?').toUpperCase();
+    el('dialer-cname').textContent=c.name;
+    el('dialer-cnum').textContent=c.number;
+    if(_callState==='calling'){
+      el('dialer-call-status').style.display='';
+      el('dialer-call-status').textContent='Chamando…';
+      el('dialer-timer').style.display='none';
+      el('dialer-actions').style.display='none';
+      el('dialer-end-lbl').textContent='Cancelar';
+    } else {
+      el('dialer-call-status').style.display='none';
+      el('dialer-timer').style.display='';
+      el('dialer-actions').style.display='';
+      el('dialer-end-lbl').textContent='Encerrar chamada';
+    }
+  }
+
+  /* ---- end call ---- */
+  window.dialerEndCall=function(){
+    clearTimeout(_callingTmr);
+    clearInterval(_timerInt);
+    _callState='idle'; _muted=false; _speaker=false; _activeContact=null; _timerSec=0;
+    el('dialer-trigger').classList.remove('incall','active');
+    const dot=el('dialer-trigger').querySelector('.dialer-pulse');
+    if(dot) dot.remove();
+    el('dialer-incall-view').style.display='none';
+    el('dialer-idle-view').style.display='';
+    el('dialer-digits').value='';
+    dialerDigitsChanged();
+    _open=false;
+    el('dialer-panel').classList.remove('open');
+  };
+
+  /* ---- mute / speaker ---- */
+  window.dialerToggleMute=function(){
+    _muted=!_muted;
+    el('dialer-mute-btn').classList.toggle('muted',_muted);
+    el('dialer-mute-icon').className=_muted?'ti ti-microphone-off':'ti ti-microphone';
+  };
+  window.dialerToggleSpeaker=function(){
+    _speaker=!_speaker;
+    el('dialer-spk-btn').classList.toggle('on',_speaker);
+    el('dialer-spk-icon').className=_speaker?'ti ti-volume-3':'ti ti-volume';
+  };
+})();
+
     </script>
   </body>
 </html>
