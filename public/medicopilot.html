@@ -5199,13 +5199,13 @@
                                                                 const el=document.getElementById('s-'+s);
                                                                 if(el)el.style.display='none';
                                                               });
-                                                              ['conversas'].forEach(s=>{const el=document.getElementById('s-'+s);if(el)el.style.display='none';});
+                                                              ['conversas','protocolos','faturamento'].forEach(s=>{const el=document.getElementById('s-'+s);if(el)el.style.display='none';});
                                                               const el=document.getElementById('s-'+name);
                                                               if(el)el.style.display=name==='patient-detail'?'flex':'block';
                                                               document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
                                                               const nav=document.getElementById('nav-'+name);
                                                               if(nav)nav.classList.add('active');
-                                                              const titles={atendimentos:'Atendimentos',patients:'Pacientes',conversas:'Conversas',agenda:'Agenda',receitas:'Receitas e Atestados',indicadores:'Indicadores',secretaria:'Secretária digital',anamnese:'Gerador de Anamnese',copiloto:'Copiloto de consulta',configuracoes:'Configurações',equipe:'Minha equipe',clinica:'Minha clínica'};
+                                                              const titles={atendimentos:'Atendimentos',patients:'Pacientes',conversas:'Conversas',agenda:'Agenda',receitas:'Receitas e Atestados',protocolos:'Protocolos',faturamento:'Faturamento',indicadores:'Indicadores',secretaria:'Secretária digital',anamnese:'Gerador de Anamnese',copiloto:'Copiloto de consulta',configuracoes:'Configurações',equipe:'Minha equipe',clinica:'Minha clínica'};
                                                               const pt=document.getElementById('page-title');
                                                               pt.textContent=titles[name]||'Paciente';
                                                               pt.style.cursor='';
