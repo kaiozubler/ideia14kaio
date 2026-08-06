@@ -1376,6 +1376,114 @@ export type Database = {
           },
         ]
       }
+      tuss_procedimentos: {
+        Row: {
+          classe: string | null
+          codigo_tuss: string
+          created_at: string
+          dados_originais: Json
+          descricao: string | null
+          fim_implantacao: string | null
+          fim_vigencia: string | null
+          grupo: string | null
+          id: string
+          inicio_vigencia: string | null
+          nome: string
+          status: string | null
+          subgrupo: string | null
+          tabela: string
+          ultima_sincronizacao: string | null
+          updated_at: string
+        }
+        Insert: {
+          classe?: string | null
+          codigo_tuss: string
+          created_at?: string
+          dados_originais?: Json
+          descricao?: string | null
+          fim_implantacao?: string | null
+          fim_vigencia?: string | null
+          grupo?: string | null
+          id?: string
+          inicio_vigencia?: string | null
+          nome: string
+          status?: string | null
+          subgrupo?: string | null
+          tabela?: string
+          ultima_sincronizacao?: string | null
+          updated_at?: string
+        }
+        Update: {
+          classe?: string | null
+          codigo_tuss?: string
+          created_at?: string
+          dados_originais?: Json
+          descricao?: string | null
+          fim_implantacao?: string | null
+          fim_vigencia?: string | null
+          grupo?: string | null
+          id?: string
+          inicio_vigencia?: string | null
+          nome?: string
+          status?: string | null
+          subgrupo?: string | null
+          tabela?: string
+          ultima_sincronizacao?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tuss_sync_log: {
+        Row: {
+          created_at: string
+          data_fim: string | null
+          data_inicio: string
+          id: string
+          mensagem_erro: string | null
+          paginas_processadas: number
+          paginas_total: number
+          quantidade_atualizadas: number
+          quantidade_erros: number
+          quantidade_novas: number
+          quantidade_processada: number
+          status: string
+          tabela: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          id?: string
+          mensagem_erro?: string | null
+          paginas_processadas?: number
+          paginas_total?: number
+          quantidade_atualizadas?: number
+          quantidade_erros?: number
+          quantidade_novas?: number
+          quantidade_processada?: number
+          status?: string
+          tabela?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          id?: string
+          mensagem_erro?: string | null
+          paginas_processadas?: number
+          paginas_total?: number
+          quantidade_atualizadas?: number
+          quantidade_erros?: number
+          quantidade_novas?: number
+          quantidade_processada?: number
+          status?: string
+          tabela?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1397,6 +1505,18 @@ export type Database = {
           id_substancia: string
           nome_exibicao: string
           qtd_fabricantes: number
+        }[]
+      }
+      buscar_tuss: {
+        Args: { p_limit?: number; p_tabela?: string; termo: string }
+        Returns: {
+          classe: string
+          codigo_tuss: string
+          descricao: string
+          grupo: string
+          id: string
+          nome: string
+          subgrupo: string
         }[]
       }
       consolidar_interacoes_crfmg: { Args: never; Returns: number }
