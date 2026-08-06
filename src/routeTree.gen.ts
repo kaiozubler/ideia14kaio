@@ -25,7 +25,9 @@ import { Route as ApiSignatureAuthenticateRouteImport } from './routes/api/signa
 import { Route as ApiSignatureCredentialRouteImport } from './routes/api/signature/credential'
 import { Route as ApiSignatureLocalCertificateRouteImport } from './routes/api/signature/local-certificate'
 import { Route as ApiSignatureSignRouteImport } from './routes/api/signature/sign'
+import { Route as ApiTussBuscarRouteImport } from './routes/api/tuss/buscar'
 import { Route as ApiPublicHooksSyncInteracoesRouteImport } from './routes/api/public/hooks/sync-interacoes'
+import { Route as ApiPublicHooksSyncTussRouteImport } from './routes/api/public/hooks/sync-tuss'
 import { Route as ApiPublicSignatureCallbackRouteImport } from './routes/api/public/signature/callback'
 import { Route as ApiPublicWebhooksBryRouteImport } from './routes/api/public/webhooks/bry'
 
@@ -113,12 +115,22 @@ const ApiSignatureSignRoute = ApiSignatureSignRouteImport.update({
   path: '/api/signature/sign',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTussBuscarRoute = ApiTussBuscarRouteImport.update({
+  id: '/api/tuss/buscar',
+  path: '/api/tuss/buscar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksSyncInteracoesRoute =
   ApiPublicHooksSyncInteracoesRouteImport.update({
     id: '/api/public/hooks/sync-interacoes',
     path: '/api/public/hooks/sync-interacoes',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksSyncTussRoute = ApiPublicHooksSyncTussRouteImport.update({
+  id: '/api/public/hooks/sync-tuss',
+  path: '/api/public/hooks/sync-tuss',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicSignatureCallbackRoute =
   ApiPublicSignatureCallbackRouteImport.update({
     id: '/api/public/signature/callback',
@@ -148,7 +160,9 @@ export interface FileRoutesByFullPath {
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
+  '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
+  '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
   '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
 }
@@ -169,7 +183,9 @@ export interface FileRoutesByTo {
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
+  '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
+  '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
   '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
 }
@@ -191,7 +207,9 @@ export interface FileRoutesById {
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
+  '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
+  '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
   '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
 }
@@ -214,7 +232,9 @@ export interface FileRouteTypes {
     | '/api/signature/credential'
     | '/api/signature/local-certificate'
     | '/api/signature/sign'
+    | '/api/tuss/buscar'
     | '/api/public/hooks/sync-interacoes'
+    | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
     | '/api/public/webhooks/bry'
   fileRoutesByTo: FileRoutesByTo
@@ -235,7 +255,9 @@ export interface FileRouteTypes {
     | '/api/signature/credential'
     | '/api/signature/local-certificate'
     | '/api/signature/sign'
+    | '/api/tuss/buscar'
     | '/api/public/hooks/sync-interacoes'
+    | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
     | '/api/public/webhooks/bry'
   id:
@@ -256,7 +278,9 @@ export interface FileRouteTypes {
     | '/api/signature/credential'
     | '/api/signature/local-certificate'
     | '/api/signature/sign'
+    | '/api/tuss/buscar'
     | '/api/public/hooks/sync-interacoes'
+    | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
     | '/api/public/webhooks/bry'
   fileRoutesById: FileRoutesById
@@ -278,7 +302,9 @@ export interface RootRouteChildren {
   ApiSignatureCredentialRoute: typeof ApiSignatureCredentialRoute
   ApiSignatureLocalCertificateRoute: typeof ApiSignatureLocalCertificateRoute
   ApiSignatureSignRoute: typeof ApiSignatureSignRoute
+  ApiTussBuscarRoute: typeof ApiTussBuscarRoute
   ApiPublicHooksSyncInteracoesRoute: typeof ApiPublicHooksSyncInteracoesRoute
+  ApiPublicHooksSyncTussRoute: typeof ApiPublicHooksSyncTussRoute
   ApiPublicSignatureCallbackRoute: typeof ApiPublicSignatureCallbackRoute
   ApiPublicWebhooksBryRoute: typeof ApiPublicWebhooksBryRoute
 }
@@ -397,11 +423,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSignatureSignRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/tuss/buscar': {
+      id: '/api/tuss/buscar'
+      path: '/api/tuss/buscar'
+      fullPath: '/api/tuss/buscar'
+      preLoaderRoute: typeof ApiTussBuscarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/sync-interacoes': {
       id: '/api/public/hooks/sync-interacoes'
       path: '/api/public/hooks/sync-interacoes'
       fullPath: '/api/public/hooks/sync-interacoes'
       preLoaderRoute: typeof ApiPublicHooksSyncInteracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/sync-tuss': {
+      id: '/api/public/hooks/sync-tuss'
+      path: '/api/public/hooks/sync-tuss'
+      fullPath: '/api/public/hooks/sync-tuss'
+      preLoaderRoute: typeof ApiPublicHooksSyncTussRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/signature/callback': {
@@ -438,20 +478,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSignatureCredentialRoute: ApiSignatureCredentialRoute,
   ApiSignatureLocalCertificateRoute: ApiSignatureLocalCertificateRoute,
   ApiSignatureSignRoute: ApiSignatureSignRoute,
+  ApiTussBuscarRoute: ApiTussBuscarRoute,
   ApiPublicHooksSyncInteracoesRoute: ApiPublicHooksSyncInteracoesRoute,
+  ApiPublicHooksSyncTussRoute: ApiPublicHooksSyncTussRoute,
   ApiPublicSignatureCallbackRoute: ApiPublicSignatureCallbackRoute,
   ApiPublicWebhooksBryRoute: ApiPublicWebhooksBryRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
