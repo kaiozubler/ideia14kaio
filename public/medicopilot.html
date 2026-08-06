@@ -6471,12 +6471,12 @@
                                                               nv.style.display='flex';
                                                               if(!restore){
                                                                 resetAI();
-                                                                atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[],startedAt:new Date().toISOString(),patientId:currentPatient?.id,patientName:currentPatient?.name};
+                                                                const novoSessionId=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():('sess-'+Date.now()+'-'+Math.random().toString(36).slice(2));
+                                                                atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[],startedAt:new Date().toISOString(),patientId:currentPatient?.id,patientName:currentPatient?.name,sessionId:novoSessionId};
                                                                 const pa=document.getElementById('pront-area');if(pa)pa.value='';
                                                                 const npta=document.getElementById('nota-personal-ta');if(npta)npta.value='';
                                                                 aiChatHistory=[];
                                                                 iniciarConsultaEResumo();
-                                                                tryRestoreAtendDraft();
                                                               }else{
                                                                 const pa=document.getElementById('pront-area');if(pa)pa.value=atendEmAndamento.pront;
                                                                 const npta=document.getElementById('nota-personal-ta');if(npta)npta.value=atendEmAndamento.notaPessoal;
@@ -12921,9 +12921,9 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                             const ATEND_DRAFT_INTERVAL_MS=10000;
                                                             let _atendDraftTimer=null;
                                                             function _atendDraftKey(){
-                                                              const pid=(currentPatient&&currentPatient.id)?currentPatient.id:'novo';
+                                                              const sid=(atendEmAndamento&&atendEmAndamento.sessionId)?atendEmAndamento.sessionId:'sem-sessao';
                                                               const uid=(currentUser&&currentUser.id)?currentUser.id:'anon';
-                                                              return 'atendDraft:'+uid+':'+pid;
+                                                              return 'atendDraft:'+uid+':'+sid;
                                                             }
                                                             function hasAtendDraft(){
                                                               try{
