@@ -1607,7 +1607,6 @@
                                                   justify-content:flex-start;
                                                   z-index:200000 !important;
                                                 }
-                                                      }
                                                       #modal-overlay.video-floating #m-video{
                                                         pointer-events:auto;
                                                         position:fixed;
@@ -13674,7 +13673,7 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               m.style.left='70px';m.style.top='70px';
                                                               m.style.display='flex';m.style.flexDirection='column';
                                                               ov.classList.add('open');
-                                                              ov.classList.add('video-floating');
+                                                              ov.classList.remove('video-floating');
                                                               vcShowView('lobby');
                                                               const sub=document.getElementById('vc-lobby-sub');
                                                               const joinBtn=document.getElementById('vc-join-btn');
@@ -14047,6 +14046,9 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               window.toggleMinimizeVideoCall = function(){
                                                                 const willMinimize = !modal.classList.contains('minimized');
                                                                 modal.classList.toggle('minimized');
+                                                                const ov=document.getElementById('modal-overlay');
+                                                                if(ov) ov.classList.toggle('video-floating', willMinimize);
+                                                                if(willMinimize){ modal.style.left='70px'; modal.style.top='70px'; }
                                                                 const icon=document.getElementById('vc-minimize-icon');
                                                                 if(icon) icon.className = modal.classList.contains('minimized') ? 'ti ti-square' : 'ti ti-minus';
                                                                 if(willMinimize && window.__vcJoined){
