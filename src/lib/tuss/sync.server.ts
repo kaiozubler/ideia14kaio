@@ -98,7 +98,19 @@ export async function syncTabelaTuss(opts: TussSyncOptions = {}): Promise<TussSy
     logId = novoLog.id as string;
   }
 
-  const gravarLog = async (patch: Record<string, unknown>) => {
+  type LogPatch = Partial<{
+    status: string;
+    mensagem_erro: string | null;
+    paginas_total: number;
+    paginas_processadas: number;
+    quantidade_processada: number;
+    quantidade_novas: number;
+    quantidade_atualizadas: number;
+    quantidade_erros: number;
+    data_fim: string | null;
+  }>;
+
+  const gravarLog = async (patch: LogPatch) => {
     await supabaseAdmin.from("tuss_sync_log").update(patch).eq("id", logId);
   };
 
