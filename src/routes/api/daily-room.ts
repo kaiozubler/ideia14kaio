@@ -29,19 +29,52 @@ export const Route = createFileRoute("/api/daily-room")({
           },
         };
         if (body.name) payload.name = body.name;
-        const r = await fetch("https://api.daily.co/v1/rooms", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-        const text = await r.text();
-        if (!r.ok) {
-          return new Response(`Daily ${r.status}: ${text}`, { status: r.status });
+
+        // Se um nome de sala foi informado, primeiro verifica se ela já existe
+        // (ex.: usuário recarregou a página ou entrou na consulta mais de uma vez).
+        // Isso evita o erro "a room named X already exists" e reaproveita a sala.
+        let data: { url?: string; name?: string } | null = null;
+        if (body.name) {
+          const existing = await fetch(
+            `https://api.daily.co/v1/rooms/${encodeURIComponent(body.name)}`,
+            { headers: { Authorization: `Bearer ${apiKey}` } }
+          );
+          if (existing.ok) {
+            data = (await existing.json()) as { url?: string; name?: string };
+          }
         }
-        const data = JSON.parse(text) as { url?: string; name?: string };
+
+        if (!data) {
+          const r = await fetch("https://api.daily.co/v1/rooms", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          });
+          const text = await r.text();
+          if (!r.ok) {
+            // Condição de corrida: a sala foi criada entre a checagem acima e este POST.
+            // Nesse caso, busca a sala existente em vez de retornar erro.
+            const alreadyExists =
+              r.status === 400 && /already exists/i.test(text) && body.name;
+            if (alreadyExists) {
+              const existing = await fetch(
+                `https://api.daily.co/v1/rooms/${encodeURIComponent(body.name!)}`,
+                { headers: { Authorization: `Bearer ${apiKey}` } }
+              );
+              if (existing.ok) {
+                data = (await existing.json()) as { url?: string; name?: string };
+              }
+            }
+            if (!data) {
+              return new Response(`Daily ${r.status}: ${text}`, { status: r.status });
+            }
+          } else {
+            data = JSON.parse(text) as { url?: string; name?: string };
+          }
+        }
         const roomName = data.name || body.name;
         let token: string | undefined;
         if (roomName) {
