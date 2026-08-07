@@ -7001,7 +7001,7 @@ showAtendList();
                                                               const icon=document.getElementById('file-icon');
                                                               if(input.files.length){const f=input.files[0];name.textContent=f.name;icon.className='ti '+(f.type.includes('image')?'ti-photo':'ti-file-text');wrap.style.display='block';}
                                                             }
-                                                            function clearFile(){document.getElementById('file-input').value='';document.getElementById('file-preview-wrap').style.display='none';}
+                                                            function clearFile(){document.getElementById('file-input').value='';document.getElementById('file-preview-wrap').style.display='none';const r=document.getElementById('exame-ia-report');if(r){r.style.display='none';r.innerHTML='';}}
                                                             // ── IA de análise de exames ──────────────────────────────────────────────
                                                             function iaFileToBase64(file){
                                                               return new Promise(function(res,rej){
