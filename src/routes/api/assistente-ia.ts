@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { analisarExameArquivo, type AnaliseExame } from "@/lib/exames/analise.server";
 
 type ChatMessage = {
   role: "system" | "user" | "assistant" | "tool";
@@ -26,6 +27,9 @@ type RequestBody = {
   paciente_id?: string | null;
   paciente_nome?: string | null;
   paciente_telefone?: string | null;
+  // Anexo enviado pelo médico no chat. Quando é um exame, a análise é feita pela
+  // IA dedicada de exames antes de o assistente responder.
+  anexo?: { nome?: string; mime?: string; base64?: string } | null;
 };
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -83,6 +87,14 @@ OUTRAS REGRAS
 - Pedido ambíguo ou fora dos comandos suportados: converse normalmente / use consultar_faq.
 - Atestado sem CID: pergunte se deseja incluir CID ou seguir sem ele.
 - Agendamento em horário ocupado: a tool avisa o conflito; sugira os horários alternativos devolvidos.
+
+EXAMES ANEXADOS
+- Quando a conversa trouxer o bloco "ANÁLISE DE EXAME (IA de exames)", o arquivo enviado pelo médico já foi analisado pela IA dedicada de exames. Use exclusivamente aquele conteúdo — não invente valores.
+- Responda apresentando: nome e CPF do paciente detectados no exame (ou avise que o documento não traz esses dados), data do exame, os exames identificados e os pontos de atenção.
+- Em seguida, use buscar_paciente com o nome detectado:
+  * Se houver cadastro correspondente, PERGUNTE se o médico deseja salvar o exame no cadastro desse paciente. Só chame salvar_exame_paciente após o "sim", com confirmado=true.
+  * Se NÃO houver cadastro, avise e pergunte se deseja criar o cadastro do paciente com os dados do exame. Após a confirmação, chame criar_paciente e depois salvar_exame_paciente (confirmado=true).
+- Nunca salve exame nem crie cadastro sem confirmação explícita do médico.
 `;
 
 type ToolDef = {
@@ -318,6 +330,30 @@ const tools: ToolDef[] = [
         type: "object",
         properties: { pergunta: { type: "string" } },
         required: ["pergunta"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "salvar_exame_paciente",
+      description:
+        "Salva no cadastro do paciente o exame analisado pela IA de exames. Exige confirmação explícita do médico.",
+      parameters: {
+        type: "object",
+        properties: {
+          paciente_id: { type: "string", description: "id do paciente já cadastrado" },
+          nome: { type: "string", description: "nome/título do exame" },
+          tipo: {
+            type: "string",
+            enum: ["Laboratorial", "Imagem", "Laudo", "Receita", "Atestado", "Documento", "Outro"],
+          },
+          data: { type: "string", description: "data do exame em AAAA-MM-DD" },
+          obs: { type: "string" },
+          resultado: { type: "string", description: "resultado / resumo do exame" },
+          confirmado: { type: "boolean" },
+        },
+        required: ["paciente_id", "nome", "confirmado"],
       },
     },
   },
