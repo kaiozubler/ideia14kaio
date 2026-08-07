@@ -6657,11 +6657,19 @@
                                                               appendAdvChat('assistant','...');
                                                               const loading=document.getElementById('adv-chat-log').lastChild;
                                                               fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'chat',messages:atendChatHistory,resumo_prontuario:atendChatContext})})
-                                                                .then(r=>r.json()).then(j=>{
-                                                                  const reply=j.reply||'(sem resposta)';
+                                                                .then(r=>r.json()).then(async j=>{
+                                                                  const raw=(j.reply||'').trim()||'(sem resposta)';
+                                                                  const blocks=iaExtractJsonBlocks(raw);
+                                                                  const withAction=blocks.filter(b=>b&&typeof b==='object'&&b.action);
+                                                                  const reply=withAction.length
+                                                                    ?(withAction.map(b=>(b.reply||'').trim()).filter(Boolean).join('\n\n')||'Pronto!')
+                                                                    :raw;
                                                                   if(loading)loading.remove();
                                                                   atendChatHistory.push({role:'assistant',content:reply});
                                                                   appendAdvChat('assistant',reply);
+                                                                  for(const b of withAction){
+                                                                    try{ await iaExecuteAction(b.action); }catch(e){ console.warn('iaExecuteAction falhou',e); }
+                                                                  }
                                                                 }).catch(e=>{if(loading)loading.remove();appendAdvChat('assistant','⚠️ Erro: '+(e.message||e));});
                                                             }
                                                             function handleNovoAtendimentoClick(){
@@ -8360,6 +8368,38 @@ showAtendList();
                                                               finally{if(ico)ico.classList.remove('spinning');if(btn)btn.disabled=false;}
                                                             }
                                                       // ── IA Action Executor ────────────────────────────────────────────────────
+                                                      // Extrai TODOS os objetos JSON top-level de um texto (a IA pode devolver
+                                                      // mais de um bloco {"reply":...,"action":...} colado quando o médico pede
+                                                      // mais de uma coisa na mesma mensagem, ex.: receita + agendamento).
+                                                      // Faz o parsing respeitando chaves dentro de strings, para não quebrar
+                                                      // com "{" ou "}" que apareçam em texto livre.
+                                                      function iaExtractJsonBlocks(raw){
+                                                        const blocks=[];
+                                                        let idx=0;
+                                                        while(idx<raw.length){
+                                                          const start=raw.indexOf('{',idx);
+                                                          if(start===-1)break;
+                                                          let depth=0,inStr=false,esc=false,end=-1;
+                                                          for(let j=start;j<raw.length;j++){
+                                                            const c=raw[j];
+                                                            if(inStr){
+                                                              if(esc)esc=false;
+                                                              else if(c==='\\')esc=true;
+                                                              else if(c==='"')inStr=false;
+                                                            }else{
+                                                              if(c==='"')inStr=true;
+                                                              else if(c==='{')depth++;
+                                                              else if(c==='}'){depth--;if(depth===0){end=j;break;}}
+                                                            }
+                                                          }
+                                                          if(end===-1)break; // bloco não fechado, para por aqui
+                                                          const slice=raw.slice(start,end+1);
+                                                          try{blocks.push(JSON.parse(slice));}catch(e){}
+                                                          idx=end+1;
+                                                        }
+                                                        return blocks;
+                                                      }
+
                                                       async function iaExecuteAction(action){
                                                         if(!action||!action.type)return;
 
@@ -8706,22 +8746,27 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                                                                 body:JSON.stringify(Object.assign({mode:'chat',messages:aiChatHistory,resumo_prontuario:currentResumoProntuario||'',anexo:iaTakeAnexo('ai')},(function(){const p=iaExamePacienteCtx();return p?{paciente_nome:p.nome,paciente_cpf:p.cpf,paciente_nascimento:p.data_nascimento}:{};})()))
                                                               })
                                                               .then(async r=>{if(!r.ok)throw new Error(await r.text());return r.json();})
-                                                              .then(d=>{
+                                                              .then(async d=>{
                                                         const raw=(d.reply||'').trim()||'(sem resposta)';
-                                                        // Tenta detectar uma action no JSON da resposta
-                                                        let reply=raw, action=null;
-                                                        try{
-                                                          const firstBrace=raw.indexOf('{');
-                                                          if(firstBrace>=0){
-                                                            const parsed=JSON.parse(raw.slice(firstBrace));
-                                                            if(parsed.action){reply=parsed.reply||'Pronto!';action=parsed.action;}
-                                                          }
-                                                        }catch(e){}
+                                                        // A resposta pode conter um ou mais blocos JSON {"reply":...,"action":...}
+                                                        // (mais de um quando o médico pede mais de uma coisa na mesma mensagem,
+                                                        // ex.: "faça a receita e agende retorno em 30 dias").
+                                                        const blocks=iaExtractJsonBlocks(raw);
+                                                        const withAction=blocks.filter(b=>b&&typeof b==='object'&&b.action);
+                                                        let reply;
+                                                        if(withAction.length){
+                                                          reply=withAction.map(b=>(b.reply||'').trim()).filter(Boolean).join('\n\n')||'Pronto!';
+                                                        }else{
+                                                          // nenhum bloco com "action" reconhecido: mostra o texto como veio
+                                                          reply=raw;
+                                                        }
                                                         aiChatHistory.push({role:'assistant',content:reply});
                                                         removeTypingBubble(typingId);
                                                         spawnBubble('ia',reply);
-                                                        // Executa a ação se existir
-                                                        if(action) iaExecuteAction(action);
+                                                        // Executa CADA ação encontrada (em vez de só a primeira / só exibir texto)
+                                                        for(const b of withAction){
+                                                          try{ await iaExecuteAction(b.action); }catch(e){ console.warn('iaExecuteAction falhou',e); }
+                                                        }
                                                         // Persiste mensagens da consulta atual (best-effort)
                                                         if(window._idConsultaAtual){
                                                                   sb.from('mensagens_consulta').insert([
