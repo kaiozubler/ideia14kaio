@@ -1038,6 +1038,32 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
 
     default:
       return { erro: `Tool desconhecida: ${name}` };
+
+    case "salvar_exame_paciente": {
+      if (!medicoId) return { erro: "Usuário não identificado na sessão." };
+      if (!args.confirmado) return { erro: "Peça a confirmação explícita do médico antes de salvar o exame." };
+      const pacienteId = String(args.paciente_id || "").trim();
+      if (!pacienteId) return { erro: "Informe o paciente (paciente_id) do cadastro." };
+      const nome = String(args.nome || "").trim();
+      if (!nome) return { erro: "Informe o nome do exame." };
+      const { data, error } = await db
+        .from("exames")
+        .insert({
+          paciente_id: pacienteId,
+          user_id: medicoId,
+          nome,
+          tipo: args.tipo ? String(args.tipo) : "Laboratorial",
+          data: args.data ? String(args.data) : "",
+          obs: args.obs ? String(args.obs) : "",
+          resultado: args.resultado ? String(args.resultado) : "",
+          validade: "Indefinido",
+        })
+        .select("id")
+        .single();
+      if (error) return { erro: error.message };
+      ctx.pendingAction.value = { type: "exame_salvo", exame_id: data.id, paciente_id: pacienteId };
+      return { salvo: true, exame_id: data.id };
+    }
   }
 }
 
