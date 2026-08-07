@@ -5280,17 +5280,20 @@
               <textarea id="ex-indicacao" rows="2" placeholder="Motivo clínico da solicitação..."
                 style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;resize:vertical;font-family:inherit"></textarea>
             </div>
-            <div style="display:flex;gap:8px;margin-bottom:10px">
+            <div style="display:flex;gap:8px;margin-bottom:10px;position:relative">
               <div style="flex:0 0 120px">
                 <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px">CID <span style="font-weight:400">(opcional)</span></label>
-                <input type="text" id="ex-cid-code" placeholder="Ex: I10"
+                <input type="text" id="ex-cid-code" placeholder="Ex: I10" autocomplete="off"
+                  oninput="exCidSearch('codigo')" onfocus="exCidSearch('codigo')" onblur="setTimeout(hideExCidSuggest,150)"
                   style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none" />
               </div>
               <div style="flex:1">
                 <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px">Descrição do CID <span style="font-weight:400">(opcional)</span></label>
-                <input type="text" id="ex-cid-desc" placeholder="Ex: Hipertensão essencial"
+                <input type="text" id="ex-cid-desc" placeholder="Ex: Hipertensão essencial" autocomplete="off"
+                  oninput="exCidSearch('descricao')" onfocus="exCidSearch('descricao')" onblur="setTimeout(hideExCidSuggest,150)"
                   style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none" />
               </div>
+              <div id="ex-cid-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.08);max-height:220px;overflow-y:auto;margin-top:2px"></div>
             </div>
             <div style="margin-bottom:10px">
               <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px">Preparo / orientações ao paciente <span style="font-weight:400">(opcional)</span></label>
@@ -7477,11 +7480,25 @@ showAtendList();
                                                               const sg=document.getElementById('ic-cids-suggest');if(sg){sg.style.display='none';sg.innerHTML='';}
                                                             }
                                                             function removeCid(i){_editCids.splice(i,1);renderCidChips();}
+                                                            let _icCidSearchTimer=null;
+                                                            let _icCidLastMatches=[];
                                                             function renderCidSuggestions(){
                                                               const inp=document.getElementById('ic-cids-input');const sg=document.getElementById('ic-cids-suggest');if(!inp||!sg)return;
-                                                              const q=inp.value.trim().toLowerCase();
-                                                              if(!q){sg.style.display='none';sg.innerHTML='';return;}
-                                                              const matches=CID10_DB.filter(it=>it.c.toLowerCase().includes(q)||it.d.toLowerCase().includes(q)).slice(0,20);
+                                                              const q=inp.value.trim();
+                                                              if(!q){sg.style.display='none';sg.innerHTML='';_icCidLastMatches=[];return;}
+                                                              clearTimeout(_icCidSearchTimer);
+                                                              _icCidSearchTimer=setTimeout(()=>_icCidDoSearch(q),200);
+                                                            }
+                                                            async function _icCidDoSearch(q){
+                                                              const inp=document.getElementById('ic-cids-input');const sg=document.getElementById('ic-cids-suggest');if(!inp||!sg)return;
+                                                              if(inp.value.trim()!==q)return; // input mudou enquanto buscava
+                                                              let matches=[];
+                                                              try{
+                                                                const {data,error}=await sb.rpc('buscar_cid10',{termo:q,p_limit:20});
+                                                                if(error){console.warn('buscar_cid10 falhou:',error);}
+                                                                matches=(data||[]).map(it=>({c:it.codigo,d:it.descricao}));
+                                                              }catch(e){console.warn('buscar_cid10 falhou:',e);}
+                                                              _icCidLastMatches=matches;
                                                               if(!matches.length){sg.innerHTML='<div style="padding:8px 10px;font-size:11px;color:var(--n500)">Sem correspondência. Pressione Enter para adicionar "'+escapeHtml(inp.value.trim())+'" como CID personalizado.</div>';sg.style.display='block';return;}
                                                               sg.innerHTML=matches.map(m=>'<div onmousedown="event.preventDefault();addCid(\''+m.c+'\',\''+m.d.replace(/'/g,"\\'")+'\')" style="padding:7px 10px;font-size:12px;cursor:pointer;border-bottom:0.5px solid var(--n100)" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'transparent\'"><b style="color:#1d4ed8">'+escapeHtml(m.c)+'</b> <span style="color:var(--n700)">'+escapeHtml(m.d)+'</span></div>').join('');
                                                               sg.style.display='block';
@@ -7490,8 +7507,7 @@ showAtendList();
                                                               if(ev.key==='Enter'){
                                                                 ev.preventDefault();
                                                                 const inp=ev.target;const raw=inp.value.trim();if(!raw)return;
-                                                                const sg=document.getElementById('ic-cids-suggest');
-                                                                const matches=CID10_DB.filter(it=>it.c.toLowerCase().includes(raw.toLowerCase())||it.d.toLowerCase().includes(raw.toLowerCase()));
+                                                                const matches=_icCidLastMatches.filter(it=>it.c.toLowerCase().includes(raw.toLowerCase())||it.d.toLowerCase().includes(raw.toLowerCase()));
                                                                 if(matches.length===1){addCid(matches[0].c,matches[0].d);return;}
                                                                 // Try "CODE - description" or "CODE description"
                                                                 const m=raw.match(/^([A-Za-z]\d{2}(?:\.\d+)?)(?:\s*[-–:]\s*|\s+)?(.*)$/);
@@ -9016,6 +9032,7 @@ if(d.action){
                           const layer=document.getElementById('ia-assist-bubbles');if(!layer)return;
                           const card=document.createElement('div');
                           card.className='ia-assist-attach';
+                          card.dataset.attachId=attachId;
                           card.onclick=function(){iaAssistOpenPreview(attachId);};
                           card.innerHTML='<span class="ia-assist-attach-icon"><i class="ti ti-file-text"></i></span>'
                             +'<div class="ia-assist-attach-info">'
@@ -9028,9 +9045,26 @@ if(d.action){
                           layer.scrollTop=layer.scrollHeight;
                         }
 
+                        // Gera o PDF assim que o anexo aparece (sem esperar o médico tocar), igual
+                        // ao pedido: "gerar o arquivo e anexar automaticamente". Quando terminar,
+                        // atualiza o rótulo do card; se falhar, deixa "Toque para visualizar" e a
+                        // geração é refeita normalmente ao abrir a pré-visualização.
+                        async function iaAssistPrebuildAttachment(attachId,buildFn){
+                          const att=window.iaAssistAttachments[attachId];if(!att)return;
+                          const sub=document.querySelector('.ia-assist-attach[data-attach-id="'+attachId+'"] .ia-assist-attach-sub');
+                          try{
+                            const built=await buildFn(att);
+                            if(sub)sub.textContent=built?'Arquivo pronto — toque para visualizar':'Toque para visualizar';
+                          }catch(e){
+                            console.warn('iaAssistPrebuildAttachment falhou:',e);
+                            if(sub)sub.textContent='Toque para visualizar';
+                          }
+                        }
+
                         // Monta a receita usando o MESMO modelo real (/receita-modelo.html) que a
                   // tela de receita do Copiloto já usa — não é mais um layout genérico.
                   async function iaAssistBuildReceitaSheet(att){
+                    if(att.__built)return att.__built;
                     const items=(att.medicamentos||[]);
                     const itemsHtml=items.map(function(it,i){
                       return '<div class="rx-item"><div class="rx-index">'+(i+1)+'</div><div>'
@@ -9096,12 +9130,14 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
 
                     const styleMatch=html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
                     const bodyMatch=html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-                    return {rawCss: styleMatch?styleMatch[1]:'', rawBody: bodyMatch?bodyMatch[1]:html, hasLogo:!!logoDataUrl, hasSig:!!sigDataUrl};
+                    att.__built={rawCss: styleMatch?styleMatch[1]:'', rawBody: bodyMatch?bodyMatch[1]:html, hasLogo:!!logoDataUrl, hasSig:!!sigDataUrl};
+                    return att.__built;
                   }
 
                   // Monta a solicitação de exames usando o MESMO modelo real
                   // (/solicitacao-exames-modelo.html) que a tela Atestado e Receitas já usa.
                   async function iaAssistBuildExameSheet(att){
+                    if(att.__built)return att.__built;
                     const items=(att.exames||[]);
                     const examsHtml=items.map(function(it,i){
                       return '<div class="rx-item"><div class="rx-index">'+(i+1)+'</div><div>'
@@ -9181,13 +9217,14 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
 
                     const styleMatch=html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
                     const bodyMatch=html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-                    return {
+                    att.__built={
                       rawCss: styleMatch?styleMatch[1]:'',
                       rawBody: bodyMatch?bodyMatch[1]:html,
                       hasLogo:!!logoDataUrl,
                       hasSig:!!sigDataUrl,
                       hasCid: !!(att.cid||att.cid_descricao),
                     };
+                    return att.__built;
                   }
 
                   function iaAssistBuildAtestadoHtml(att){
@@ -9418,10 +9455,12 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
   if(!action||!action.type)return;
   if(action.type==='gerar_receita'){
     const id=iaAssistRegisterAttachment('receita',action);
-    iaAssistAppendAttachmentCard(id,'Receita — '+(action.paciente_nome||'paciente'),'Toque para visualizar');
+    iaAssistAppendAttachmentCard(id,'Receita — '+(action.paciente_nome||'paciente'),'Gerando o arquivo...');
+    iaAssistPrebuildAttachment(id,iaAssistBuildReceitaSheet);
   }else if(action.type==='gerar_solicitacao_exame'){
     const id=iaAssistRegisterAttachment('exame',action);
-    iaAssistAppendAttachmentCard(id,'Solicitação de exames — '+(action.paciente_nome||'paciente'),'Toque para visualizar');
+    iaAssistAppendAttachmentCard(id,'Solicitação de exames — '+(action.paciente_nome||'paciente'),'Gerando o arquivo...');
+    iaAssistPrebuildAttachment(id,iaAssistBuildExameSheet);
   }else if(action.type==='gerar_atestado'){
     const id=iaAssistRegisterAttachment('atestado',action);
     const label=action.tipo==='declaracao'?'Declaração':'Atestado';
@@ -12718,6 +12757,49 @@ let rxSelected = [];
                                                   if (idadeEl) idadeEl.value = _rxIdade(pac.data_nascimento) || '';
                                                   hideExNomeSuggest();
                                                   exMatchedPaciente = { id: pac.paciente_id, name: pac.name, cpf: pac.cpf, nasc: pac.data_nascimento };
+                                                }
+
+                                                /* ── CID (código e descrição) — busca na tabela cid10 via RPC
+                                                   buscar_cid10, mesmo padrão de busca do TUSS. Digitar em
+                                                   qualquer um dos dois campos busca e, ao selecionar, os dois
+                                                   campos são preenchidos juntos. ─────────────────────────── */
+                                                let exCidSearchTimer = null;
+                                                let exCidLastResults = [];
+                                                function exCidSearch(source) {
+                                                  clearTimeout(exCidSearchTimer);
+                                                  const el = document.getElementById(source === 'codigo' ? 'ex-cid-code' : 'ex-cid-desc');
+                                                  const term = (el && el.value || '').trim();
+                                                  if (!term) { hideExCidSuggest(); return; }
+                                                  exCidSearchTimer = setTimeout(() => exCidDoSearch(term), 200);
+                                                }
+                                                async function exCidDoSearch(term) {
+                                                  const box = document.getElementById('ex-cid-suggest');
+                                                  if (!box) return;
+                                                  try {
+                                                    const { data, error } = await sb.rpc('buscar_cid10', { termo: term, p_limit: 20 });
+                                                    if (error) { console.warn('buscar_cid10 falhou:', error); hideExCidSuggest(); return; }
+                                                    exCidLastResults = data || [];
+                                                    if (!exCidLastResults.length) { hideExCidSuggest(); return; }
+                                                    box.innerHTML = exCidLastResults.map(c => `<div class="rx-opt" onmousedown="selecionarExCid('${c.codigo}')"
+                                                      style="padding:8px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer" onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background=''">
+                                                      <span style="font-weight:700;font-size:12px;color:#0f172a">${_rxEsc(c.codigo)}</span>
+                                                      <span style="font-size:12px;color:#475569;margin-left:6px">${_rxEsc(c.descricao)}</span>
+                                                    </div>`).join('');
+                                                    box.style.display = 'block';
+                                                  } catch (e) { console.warn('exCidDoSearch falhou:', e); hideExCidSuggest(); }
+                                                }
+                                                function hideExCidSuggest() {
+                                                  const box = document.getElementById('ex-cid-suggest');
+                                                  if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+                                                }
+                                                function selecionarExCid(codigo) {
+                                                  const item = exCidLastResults.find(c => c.codigo === codigo);
+                                                  if (!item) return;
+                                                  const codeEl = document.getElementById('ex-cid-code');
+                                                  const descEl = document.getElementById('ex-cid-desc');
+                                                  if (codeEl) codeEl.value = item.codigo;
+                                                  if (descEl) descEl.value = item.descricao;
+                                                  hideExCidSuggest();
                                                 }
 
                                                 /* ── Modelos de solicitação de exames (tabela exame_modelos no
