@@ -18,6 +18,14 @@ type RequestBody = {
   messages?: { role: string; content: string }[];
   user_id?: string | null;
   conversa_id?: string | null;
+  // canal === "paciente": conversa vinda do WhatsApp do paciente (fora do app), com
+  // acesso restrito — só pode consultar/agendar/cancelar o PRÓPRIO atendimento.
+  // Nesse canal, user_id é o id_medico dono do número de WhatsApp, e a identidade do
+  // paciente já vem resolvida pelo webhook (nunca decidida pela IA).
+  canal?: "interno" | "paciente";
+  paciente_id?: string | null;
+  paciente_nome?: string | null;
+  paciente_telefone?: string | null;
 };
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -27,7 +35,7 @@ const TZ_OFFSET_MIN = -180; // America/Sao_Paulo
 const SYSTEM = `Você é o Assistente do MediCopilot, usado por médicos e secretárias FORA do contexto de uma consulta em andamento.
 Fale sempre em português do Brasil, de forma curta, objetiva e cordial.
 
-Você pode: agendar pacientes, gerar receitas, gerar atestados/declarações, responder perguntas sobre a agenda do dia, enviar mensagens/documentos ao paciente por WhatsApp, criar cadastro de paciente e responder dúvidas de uso do sistema.
+Você pode: agendar pacientes, gerar receitas, gerar atestados/declarações, responder perguntas sobre a agenda do dia, enviar mensagens/documentos ao paciente por WhatsApp, convidar um paciente a agendar sozinho pelo WhatsApp (ele conversa com uma versão restrita da IA, que só agenda/consulta/cancela o próprio atendimento dele), criar cadastro de paciente e responder dúvidas de uso do sistema.
 
 REGRAS DE IDENTIFICAÇÃO DO PACIENTE
 - Você NÃO sabe quem é o paciente até perguntar. Sempre que uma ação precisar de um paciente ainda não identificado nesta conversa, pergunte o NOME.
@@ -71,7 +79,20 @@ OUTRAS REGRAS
 - Agendamento em horário ocupado: a tool avisa o conflito; sugira os horários alternativos devolvidos.
 `;
 
-const tools = [
+type ToolDef = {
+  type: "function";
+  function: {
+    name: string;
+    description: string;
+    parameters: {
+      type: "object";
+      properties: Record<string, { type: string; description?: string; enum?: string[]; items?: unknown }>;
+      required?: string[];
+    };
+  };
+};
+
+const tools: ToolDef[] = [
   {
     type: "function",
     function: {
@@ -218,8 +239,110 @@ const tools = [
   {
     type: "function",
     function: {
+      name: "convidar_agendamento_whatsapp",
+      description:
+        "Envia uma mensagem de WhatsApp convidando o paciente a marcar/remarcar uma consulta diretamente com a IA. Só chame após confirmação explícita do médico.",
+      parameters: {
+        type: "object",
+        properties: {
+          paciente_id: { type: "string" },
+          paciente_nome: { type: "string" },
+          confirmado: { type: "boolean" },
+        },
+        required: ["paciente_id", "confirmado"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "consultar_faq",
       description: "Consulta a base de conhecimento de uso do sistema.",
+      parameters: {
+        type: "object",
+        properties: { pergunta: { type: "string" } },
+        required: ["pergunta"],
+      },
+    },
+  },
+];
+
+const SYSTEM_PACIENTE = `Você é o assistente de agendamento do consultório, conversando DIRETAMENTE com o
+PACIENTE pelo WhatsApp — não é o médico falando com você.
+Fale sempre em português do Brasil, de forma curta, cordial e simples (sem jargão médico).
+
+O QUE VOCÊ PODE FAZER
+- Agendar uma nova consulta/retorno para este paciente.
+- Consultar os agendamentos futuros deste paciente.
+- Remarcar ou cancelar um agendamento futuro deste paciente.
+- Tirar dúvidas simples sobre horário de funcionamento e como funciona o agendamento.
+
+O QUE VOCÊ NUNCA PODE FAZER (mesmo que o paciente peça)
+- Nunca gere receitas, atestados, laudos ou qualquer orientação clínica/diagnóstica. Se pedirem, explique
+  gentilmente que isso só pode ser feito pelo médico durante a consulta.
+- Nunca busque, mencione ou agende em nome de outro paciente. Você só enxerga o cadastro da pessoa com
+  quem está falando agora.
+- Nunca peça ou revele dados de outros pacientes.
+- Nunca invente horários livres — sempre chame a tool antes de confirmar um horário.
+
+CONFIRMAÇÃO OBRIGATÓRIA
+- Antes de criar, remarcar ou cancelar um agendamento, repita a data/horário em português claro e peça
+  uma confirmação simples (ex.: "posso confirmar?"). Só chame a tool com confirmado=true depois que a
+  pessoa confirmar explicitamente (ex.: "sim", "pode", "confirmo").
+- Horário ocupado: a tool devolve o conflito e sugestões de horários alternativos — ofereça-as.
+
+OUTRAS REGRAS
+- Se a pessoa pedir algo fora do que você pode fazer, explique com simpatia e sugira que fale diretamente
+  com a clínica.
+- Nunca afirme que algo foi feito sem a tool confirmar (agendado:true, cancelado:true etc.).
+`;
+
+const patientTools: ToolDef[] = [
+  {
+    type: "function",
+    function: {
+      name: "agendar_paciente",
+      description: "Agenda uma consulta/retorno para o próprio paciente da conversa. Só chame após confirmação explícita.",
+      parameters: {
+        type: "object",
+        properties: {
+          data: { type: "string", description: "AAAA-MM-DD" },
+          horario: { type: "string", description: "HH:MM" },
+          motivo: { type: "string" },
+          confirmado: { type: "boolean" },
+        },
+        required: ["data", "horario", "confirmado"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "listar_meus_agendamentos",
+      description: "Lista os próximos agendamentos futuros do próprio paciente da conversa.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "cancelar_meu_agendamento",
+      description: "Cancela ou remarca um agendamento futuro do próprio paciente da conversa. Só chame após confirmação explícita.",
+      parameters: {
+        type: "object",
+        properties: {
+          agendamento_id: { type: "string" },
+          confirmado: { type: "boolean" },
+        },
+        required: ["agendamento_id", "confirmado"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "consultar_faq",
+      description: "Consulta dúvidas simples sobre funcionamento/horários da clínica.",
       parameters: {
         type: "object",
         properties: { pergunta: { type: "string" } },
@@ -275,7 +398,17 @@ function fmtHora(iso: string) {
 
 type Db = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
 
-type ToolCtx = { db: Db; medicoId: string | null; pendingAction: { value: unknown } };
+type ToolCtx = {
+  db: Db;
+  medicoId: string | null;
+  pendingAction: { value: unknown };
+  // Preenchidos apenas no canal "paciente": identidade já resolvida pelo webhook,
+  // nunca decidida pela IA a partir do texto da conversa.
+  canal: "interno" | "paciente";
+  pacienteFixoId?: string | null;
+  pacienteFixoNome?: string | null;
+  pacienteFixoTelefone?: string | null;
+};
 
 async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): Promise<unknown> {
   const { db, medicoId } = ctx;
@@ -341,6 +474,10 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
     case "agendar_paciente": {
       if (!args.confirmado) return { erro: "Peça a confirmação explícita antes de agendar." };
       if (!medicoId) return { erro: "Usuário não identificado na sessão." };
+      // No canal do paciente, a identidade é sempre a resolvida pelo webhook —
+      // nunca o que vier (ou não vier) no texto da conversa.
+      const pacienteId = ctx.canal === "paciente" ? ctx.pacienteFixoId ?? null : args.paciente_id || null;
+      const pacienteNome = ctx.canal === "paciente" ? ctx.pacienteFixoNome ?? null : args.paciente_nome || null;
       const dt = toIsoFromLocal(String(args.data), String(args.horario));
       if (!dt) return { erro: "Data ou horário inválido." };
       const janelaIni = new Date(dt.getTime() - 29 * 60000).toISOString();
@@ -365,11 +502,12 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         .from("agendamentos")
         .insert({
           id_medico: medicoId,
-          paciente_id: args.paciente_id || null,
-          paciente_nome: args.paciente_nome || null,
+          paciente_id: pacienteId,
+          paciente_nome: pacienteNome,
           data_hora: dt.toISOString(),
           motivo: args.motivo || null,
           status: "agendado",
+          origem: ctx.canal === "paciente" ? "paciente_whatsapp" : "assistente_ia",
         })
         .select("id,data_hora")
         .single();
@@ -377,11 +515,49 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
       ctx.pendingAction.value = {
         type: "agendar_paciente",
         agendamento_id: data.id,
-        paciente_id: args.paciente_id || null,
-        paciente_nome: args.paciente_nome || null,
+        paciente_id: pacienteId,
+        paciente_nome: pacienteNome,
         data_hora: data.data_hora,
       };
       return { agendado: true, quando: fmtHora(data.data_hora) };
+    }
+
+    case "listar_meus_agendamentos": {
+      if (!medicoId || !ctx.pacienteFixoId) return { erro: "Paciente não identificado." };
+      const { data, error } = await db
+        .from("agendamentos")
+        .select("id,data_hora,motivo,status")
+        .eq("id_medico", medicoId)
+        .eq("paciente_id", ctx.pacienteFixoId)
+        .neq("status", "cancelado")
+        .gte("data_hora", new Date().toISOString())
+        .order("data_hora");
+      if (error) return { erro: error.message };
+      return {
+        agendamentos: (data ?? []).map((a) => ({
+          agendamento_id: a.id,
+          quando: fmtHora(a.data_hora),
+          motivo: a.motivo,
+          status: a.status,
+        })),
+      };
+    }
+
+    case "cancelar_meu_agendamento": {
+      if (!args.confirmado) return { erro: "Peça a confirmação explícita antes de cancelar/remarcar." };
+      if (!medicoId || !ctx.pacienteFixoId) return { erro: "Paciente não identificado." };
+      const { data, error } = await db
+        .from("agendamentos")
+        .update({ status: "cancelado" })
+        .eq("id", String(args.agendamento_id))
+        .eq("id_medico", medicoId)
+        .eq("paciente_id", ctx.pacienteFixoId) // impede cancelar agendamento de outro paciente
+        .select("id")
+        .maybeSingle();
+      if (error) return { erro: error.message };
+      if (!data) return { erro: "Agendamento não encontrado para este paciente." };
+      ctx.pendingAction.value = { type: "cancelar_agendamento", agendamento_id: data.id };
+      return { cancelado: true };
     }
 
     case "consultar_agenda_hoje": {
@@ -600,6 +776,44 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
       return { enviado: true, para: nome, telefone_mascarado: maskPhone(telefone) };
     }
 
+    case "convidar_agendamento_whatsapp": {
+      if (!args.confirmado) return { erro: "Peça a confirmação explícita antes de enviar o convite." };
+      if (!medicoId) return { erro: "Usuário não identificado na sessão." };
+      const { data: paciente } = await db
+        .from("pacientes")
+        .select("name,telefone")
+        .eq("paciente_id", args.paciente_id)
+        .eq("user_id", medicoId)
+        .maybeSingle();
+      if (!paciente?.telefone) {
+        return {
+          enviado: false,
+          motivo: "sem_telefone",
+          instrucao: "Peça o número de WhatsApp do paciente e crie/atualize o cadastro antes de convidar.",
+        };
+      }
+      const { data: config } = await db
+        .from("medico_whatsapp_config")
+        .select("phone_number_id,agendamento_ativo,mensagem_convite")
+        .eq("id_medico", medicoId)
+        .maybeSingle();
+      if (!config?.phone_number_id || !config.agendamento_ativo) {
+        return {
+          enviado: false,
+          motivo: "sem_config",
+          instrucao: "O número de WhatsApp para autoatendimento ainda não está configurado ou está desativado nas configurações.",
+        };
+      }
+      // O envio efetivo é feito pela rota /api/whatsapp-convite (usa a Cloud API e grava a
+      // conversa); aqui só sinalizamos ao front que deve chamá-la com estes dados.
+      ctx.pendingAction.value = {
+        type: "convidar_agendamento_whatsapp",
+        paciente_id: args.paciente_id,
+        paciente_nome: paciente.name || args.paciente_nome || null,
+      };
+      return { enviado: true, para: paciente.name, telefone_mascarado: maskPhone(paciente.telefone) };
+    }
+
     case "consultar_faq":
       return {
         encontrado: false,
@@ -612,7 +826,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
   }
 }
 
-async function callGateway(messages: ChatMessage[], apiKey: string) {
+async function callGateway(messages: ChatMessage[], apiKey: string, toolset: ToolDef[] = tools) {
   const res = await fetch(GATEWAY_URL, {
     method: "POST",
     headers: {
@@ -620,7 +834,7 @@ async function callGateway(messages: ChatMessage[], apiKey: string) {
       "Lovable-API-Key": apiKey,
       "X-Lovable-AIG-SDK": "raw",
     },
-    body: JSON.stringify({ model: MODEL, messages, tools, tool_choice: "auto" }),
+    body: JSON.stringify({ model: MODEL, messages, tools: toolset, tool_choice: "auto" }),
   });
   if (!res.ok) {
     const text = await res.text();
@@ -712,29 +926,43 @@ export const Route = createFileRoute("/api/assistente-ia")({  server: {
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const pendingAction: { value: unknown } = { value: null };
+        const canal = body.canal === "paciente" ? "paciente" : "interno";
         const ctx: ToolCtx = {
           db: supabaseAdmin,
           medicoId: body.user_id || null,
           pendingAction,
+          canal,
+          pacienteFixoId: body.paciente_id || null,
+          pacienteFixoNome: body.paciente_nome || null,
+          pacienteFixoTelefone: body.paciente_telefone || null,
         };
 
         const agora = new Date(Date.now() + TZ_OFFSET_MIN * 60000).toISOString().slice(0, 16);
+        const systemBase = canal === "paciente" ? SYSTEM_PACIENTE : SYSTEM;
+        const toolset = canal === "paciente" ? patientTools : tools;
+        const identContext =
+          canal === "paciente"
+            ? `\nPaciente da conversa: ${body.paciente_nome || "(sem nome cadastrado)"}.`
+            : "";
         const messages: ChatMessage[] = [
           {
             role: "system",
-            content: `${SYSTEM}\n\nData e hora atuais (America/Sao_Paulo): ${agora}`,
+            content: `${systemBase}\n\nData e hora atuais (America/Sao_Paulo): ${agora}${identContext}`,
           },
           ...history,
         ];
 
         try {
           for (let step = 0; step < 8; step++) {
-            const msg = await callGateway(messages, apiKey);
+            const msg = await callGateway(messages, apiKey, toolset);
             messages.push(msg);
             const calls = msg.tool_calls ?? [];
             if (!calls.length) {
               const reply = (msg.content || "").trim();
-              const conversaId = await salvarConversa(supabaseAdmin, body.user_id || null, body.conversa_id || null, history, reply, apiKey);
+              const conversaId =
+                canal === "paciente"
+                  ? body.conversa_id || null
+                  : await salvarConversa(supabaseAdmin, body.user_id || null, body.conversa_id || null, history, reply, apiKey);
               return Response.json({
                 reply,
                 action: pendingAction.value,

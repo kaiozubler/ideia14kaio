@@ -4643,6 +4643,19 @@
             >
             <div id="cic-cids-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px"></div>
           </div>
+          <div id="cic-agend-wrap" style="margin-top:14px;display:none;border:0.5px solid #bfdbfe;border-radius:var(--r8);padding:10px 12px;background:#eff6ff">
+            <label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#1d4ed8;cursor:pointer;margin-bottom:6px">
+              <input type="checkbox" id="cic-agend-apply" checked style="width:14px;height:14px;flex-shrink:0">
+              <i class="ti ti-calendar-event" style="font-size:13px"></i> A IA identificou um comentário sobre retorno/nova consulta
+            </label>
+            <div id="cic-agend-prazo" style="font-size:11px;color:#1e3a8a;margin-bottom:6px"></div>
+            <div style="display:flex;gap:6px;margin-bottom:6px">
+              <input type="date" id="cic-agend-data" style="flex:1;padding:6px 8px;border-radius:6px;border:0.5px solid #bfdbfe;font-size:12px">
+              <input type="time" id="cic-agend-hora" style="flex:1;padding:6px 8px;border-radius:6px;border:0.5px solid #bfdbfe;font-size:12px">
+            </div>
+            <input type="text" id="cic-agend-motivo" placeholder="Motivo do retorno" style="width:100%;padding:6px 8px;border-radius:6px;border:0.5px solid #bfdbfe;font-size:12px">
+            <div style="font-size:10.5px;color:#1e3a8a;margin-top:6px;font-style:italic">Deixe data/horário em branco para decidir depois — o retorno só é criado se ambos forem preenchidos.</div>
+          </div>
         </div>
         <div class="mfoot">
           <button class="btn" onclick="cancelarConfirmaInfoComp()">Finalizar sem alterar</button>
@@ -7278,8 +7291,15 @@ showAtendList();
                                         const cidsSugeridos=(Array.isArray(data.cids_sugeridos)?data.cids_sugeridos:[])
                                           .filter(c=>c&&c.code&&!cidsAtuais.some(x=>String(x.code).toUpperCase()===String(c.code).toUpperCase()))
                                           .map(c=>({code:String(c.code).toUpperCase(),description:c.description||''}));
-                                        if(!alteracoes.length&&!cidsSugeridos.length)return null;
-                                        return {alteracoes,cidsSugeridos};
+                                        const ag=data.agendamento_sugerido;
+                                        const agendamentoSugerido=(ag&&typeof ag==='object')?{
+                                          prazoTexto:(ag.prazo_texto||'').trim(),
+                                          data:(ag.data||'').trim(),
+                                          horario:(ag.horario||'').trim(),
+                                          motivo:(ag.motivo||'Retorno').trim()
+                                        }:null;
+                                        if(!alteracoes.length&&!cidsSugeridos.length&&!agendamentoSugerido)return null;
+                                        return {alteracoes,cidsSugeridos,agendamentoSugerido};
                                       }catch(e){console.warn('Falha ao avaliar informações complementares via IA',e);return null;}
                                     }
                                                               function renderCicRow(alt){
@@ -7313,7 +7333,22 @@ showAtendList();
                                         cidsWrap.style.display='block';
                                         renderCicCidsChips();
                                       }else if(cidsWrap){cidsWrap.style.display='none';}
+                                      renderCicAgendamentoSugerido(proposta.agendamentoSugerido||null);
                                       openModal('confirma-info-comp');
+                                    }
+                                    // Bloco de sugestão de retorno/agendamento identificado pela IA ao finalizar o
+                                    // atendimento (nunca criado sozinho — o médico revisa data/motivo e confirma).
+                                    function renderCicAgendamentoSugerido(ag){
+                                      const wrap=document.getElementById('cic-agend-wrap');
+                                      if(!wrap)return;
+                                      if(!ag){wrap.style.display='none';return;}
+                                      wrap.style.display='block';
+                                      const prazoEl=document.getElementById('cic-agend-prazo');
+                                      if(prazoEl)prazoEl.textContent=ag.prazoTexto?('Prazo comentado: '+ag.prazoTexto):'';
+                                      const dataEl=document.getElementById('cic-agend-data');if(dataEl)dataEl.value=ag.data||'';
+                                      const horaEl=document.getElementById('cic-agend-hora');if(horaEl)horaEl.value=ag.horario||'';
+                                      const motEl=document.getElementById('cic-agend-motivo');if(motEl)motEl.value=ag.motivo||'Retorno';
+                                      const chk=document.getElementById('cic-agend-apply');if(chk)chk.checked=true;
                                     }
                                     function renderCicCidsChips(){
                                       const box=document.getElementById('cic-cids-chips');if(!box)return;
@@ -7322,9 +7357,45 @@ showAtendList();
                                     function removeCicCidSugerido(i){_cicCidsSugeridos.splice(i,1);renderCicCidsChips();if(!_cicCidsSugeridos.length){const w=document.getElementById('cic-cids-wrap');if(w)w.style.display='none';}}
                                         async function cancelarConfirmaInfoComp(){
                                       const opts=_cicPendingOpts;_cicPendingOpts=null;_cicCidsSugeridos=[];
+                                      await aplicarAgendamentoSugeridoCic();
                                       closeModal();
                                       if(opts&&!opts.avulsa)await saveAtendInternal(opts);
                                       if(opts&&opts.avulsa&&('restorePatient' in opts))currentPatient=opts.restorePatient;
+                                    }
+                                    // Cria o agendamento a partir do bloco de sugestão do modal, se o médico deixou
+                                    // marcado e informou data/horário. Roda tanto ao aplicar quanto ao "finalizar
+                                    // sem alterar", pois é uma sugestão independente das infos complementares.
+                                    async function aplicarAgendamentoSugeridoCic(){
+                                      const wrap=document.getElementById('cic-agend-wrap');
+                                      if(!wrap||wrap.style.display==='none')return;
+                                      const chk=document.getElementById('cic-agend-apply');
+                                      if(!chk||!chk.checked)return;
+                                      const dataVal=(document.getElementById('cic-agend-data')||{}).value;
+                                      const horaVal=(document.getElementById('cic-agend-hora')||{}).value;
+                                      const motivoVal=((document.getElementById('cic-agend-motivo')||{}).value||'Retorno').trim();
+                                      if(!dataVal||!horaVal)return; // sem data/horário definidos, o médico agenda depois manualmente
+                                      if(!currentPatient||!currentPatient.id)return;
+                                      try{
+                                        const dt=new Date(dataVal+'T'+horaVal+':00');
+                                        const janelaIni=new Date(dt.getTime()-29*60000).toISOString();
+                                        const janelaFim=new Date(dt.getTime()+29*60000).toISOString();
+                                        const {data:conflitos}=await sb.from('agendamentos').select('id,paciente_nome')
+                                          .eq('id_medico',currentUser.id).neq('status','cancelado')
+                                          .gte('data_hora',janelaIni).lte('data_hora',janelaFim);
+                                        if(conflitos&&conflitos.length){
+                                          showToast('Retorno sugerido não agendado: horário ocupado por '+conflitos[0].paciente_nome+'. Agende manualmente.','error');
+                                          return;
+                                        }
+                                        const {error}=await sb.from('agendamentos').insert({
+                                          id_medico:currentUser.id,paciente_id:currentPatient.id,paciente_nome:currentPatient.name,
+                                          data_hora:dt.toISOString(),motivo:motivoVal,status:'agendado',origem:'ia_encerramento'
+                                        });
+                                        if(error)throw error;
+                                        showToast('Retorno agendado automaticamente para '+dt.toLocaleDateString('pt-BR'),'success');
+                                      }catch(e){
+                                        console.warn('Falha ao aplicar agendamento sugerido',e);
+                                        showToast('Não foi possível criar o retorno sugerido. Agende manualmente.','error');
+                                      }
                                     }
                                         async function confirmarAplicarInfoComp(){
                                       const opts=_cicPendingOpts;
@@ -7350,6 +7421,7 @@ showAtendList();
                                           renderProntStaleAlert();
                                           showToast('Informações complementares atualizadas pela IA','success');
                                         }
+                                        await aplicarAgendamentoSugeridoCic();
                                       }catch(e){
                                         console.warn('Falha ao aplicar informações complementares sugeridas',e);
                                         showToast('Não foi possível salvar as informações complementares sugeridas','error');
@@ -8077,6 +8149,94 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                                                           openCondutaFlow();
                                                           return;
                                                         }
+
+                                                        // ── Agendamento rápido (durante a própria consulta) ─────────────────────────
+                                                        if(action.type==='open_agendamento'){
+                                                          iaMostrarBubbleAgendamento(action);
+                                                          return;
+                                                        }
+                                                      }
+
+                                                      // Mostra uma bolha inline no chat com os dados de agendamento sugeridos pela
+                                                      // IA (data/horário/motivo), editáveis, com confirmação em 1 clique — não abre
+                                                      // modal nem interrompe o fluxo da consulta.
+                                                      function iaMostrarBubbleAgendamento(action){
+                                                        const layer=document.getElementById('bubbles-layer');
+                                                        if(!layer||!currentPatient)return;
+                                                        const ph=document.getElementById('orb-center-placeholder');if(ph)ph.style.display='none';
+                                                        const bid='bbl-agend-'+Date.now();
+                                                        const dataVal=(action.data||'').trim();
+                                                        const horaVal=(action.horario||'').trim();
+                                                        const motivoVal=(action.motivo||'Retorno').trim();
+                                                        const prazoTxt=(action.prazo_sugerido||'').trim();
+                                                        const el=document.createElement('div');
+                                                        el.className='bbl ia';
+                                                        el.id=bid;
+                                                        el.innerHTML=`
+                                                          <span class="bbl-text">
+                                                            <strong>📅 Agendar consulta/retorno</strong>${prazoTxt?' <span style="color:#94a3b8;font-weight:400">('+escapeHtml(prazoTxt)+')</span>':''}<br>
+                                                            <span style="font-size:11px;color:#64748b">Confira e ajuste se necessário:</span>
+                                                          </span>
+                                                          <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
+                                                            <div style="display:flex;gap:6px">
+                                                              <input type="date" id="${bid}-data" value="${escapeHtml(dataVal)}" style="flex:1;padding:5px 7px;border-radius:6px;border:1px solid #e2e8f0;font-size:11px">
+                                                              <input type="time" id="${bid}-hora" value="${escapeHtml(horaVal)}" style="flex:1;padding:5px 7px;border-radius:6px;border:1px solid #e2e8f0;font-size:11px">
+                                                            </div>
+                                                            <input type="text" id="${bid}-motivo" value="${escapeHtml(motivoVal)}" placeholder="Motivo" style="padding:5px 7px;border-radius:6px;border:1px solid #e2e8f0;font-size:11px">
+                                                            <div style="display:flex;gap:6px;flex-wrap:wrap">
+                                                              <button id="${bid}-btn" onclick="iaConfirmarAgendamentoBubble('${bid}')"
+                                                                style="padding:5px 12px;border-radius:7px;background:linear-gradient(135deg,#34d399,#059669);color:#fff;border:none;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px">
+                                                                <i class="ti ti-calendar-check"></i> Confirmar agendamento
+                                                              </button>
+                                                              <button onclick="document.getElementById('${bid}')?.remove()"
+                                                                style="padding:5px 10px;border-radius:7px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-size:11px;cursor:pointer">
+                                                                Cancelar
+                                                              </button>
+                                                            </div>
+                                                          </div>`;
+                                                        layer.appendChild(el);
+                                                        layer.scrollTop=layer.scrollHeight;
+                                                      }
+
+                                                      async function iaConfirmarAgendamentoBubble(bid){
+                                                        const dataEl=document.getElementById(bid+'-data');
+                                                        const horaEl=document.getElementById(bid+'-hora');
+                                                        const motivoEl=document.getElementById(bid+'-motivo');
+                                                        const btn=document.getElementById(bid+'-btn');
+                                                        const dataVal=dataEl?dataEl.value:'';
+                                                        const horaVal=horaEl?horaEl.value:'';
+                                                        if(!dataVal||!horaVal){showToast('Informe data e horário do agendamento','error');return;}
+                                                        if(!currentPatient||!currentPatient.id){showToast('Identifique o paciente antes de agendar','error');return;}
+                                                        if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Agendando...';}
+                                                        try{
+                                                          const dt=new Date(dataVal+'T'+horaVal+':00');
+                                                          const janelaIni=new Date(dt.getTime()-29*60000).toISOString();
+                                                          const janelaFim=new Date(dt.getTime()+29*60000).toISOString();
+                                                          const {data:conflitos}=await sb.from('agendamentos').select('id,paciente_nome')
+                                                            .eq('id_medico',currentUser.id).neq('status','cancelado')
+                                                            .gte('data_hora',janelaIni).lte('data_hora',janelaFim);
+                                                          if(conflitos&&conflitos.length){
+                                                            showToast('Horário ocupado ('+conflitos[0].paciente_nome+'). Ajuste o horário.','error');
+                                                            if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-calendar-check"></i> Confirmar agendamento';}
+                                                            return;
+                                                          }
+                                                          const {error}=await sb.from('agendamentos').insert({
+                                                            id_medico:currentUser.id,
+                                                            paciente_id:currentPatient.id,
+                                                            paciente_nome:currentPatient.name,
+                                                            data_hora:dt.toISOString(),
+                                                            motivo:(motivoEl&&motivoEl.value.trim())||'Retorno',
+                                                            status:'agendado',
+                                                            origem:'ia_consulta'
+                                                          });
+                                                          if(error)throw error;
+                                                          const wrap=document.getElementById(bid);
+                                                          if(wrap)wrap.innerHTML='<span class="bbl-text"><i class="ti ti-check" style="color:#059669"></i> Retorno agendado para '+dt.toLocaleDateString('pt-BR')+' às '+horaVal+'.</span>';
+                                                          showToast('Agendamento criado com sucesso','success');
+                                                        }catch(e){
+                                                          showToast('Erro ao agendar: '+(e.message||e),'error');
+                                                          if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-calendar-check"></i> Confirmar agendamento';}
+                                                        }
                                                       }
 
                                                       async function iaEnviarOrientacoes(texto, btn, canal='whatsapp'){
@@ -8659,8 +8819,29 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
     const id=iaAssistRegisterAttachment('atestado',action);
     const label=action.tipo==='declaracao'?'Declaração':'Atestado';
     iaAssistAppendAttachmentCard(id,label+' — '+(action.paciente_nome||'paciente'),'Toque para visualizar');
+  }else if(action.type==='convidar_agendamento_whatsapp'){
+    iaAssistEnviarConviteWhatsapp(action);
   }else{
     console.log('[ia-assist] ação recebida (sem tratamento visual no front):',action);
+  }
+}
+
+// Efetiva o convite de autoagendamento por WhatsApp (a IA já confirmou telefone/config;
+// aqui só disparamos o envio real e mostramos o resultado na conversa).
+async function iaAssistEnviarConviteWhatsapp(action){
+  try{
+    const r=await fetch('/api/whatsapp-convite',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({id_medico:iaAssistUserId(),paciente_id:action.paciente_id})
+    });
+    const d=await r.json();
+    if(d&&d.enviado){
+      spawnIaAssistBubble('ia','✅ Convite de agendamento enviado por WhatsApp para '+(action.paciente_nome||'o paciente')+'.');
+    }else{
+      spawnIaAssistBubble('ia','⚠️ Não consegui enviar o convite ('+(d&&d.motivo||'erro desconhecido')+').');
+    }
+  }catch(e){
+    spawnIaAssistBubble('ia','⚠️ Erro ao enviar o convite por WhatsApp: '+(e.message||e));
   }
 }
 

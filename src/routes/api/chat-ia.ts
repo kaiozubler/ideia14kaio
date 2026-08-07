@@ -102,7 +102,20 @@ Tipos de ação disponíveis:
   "sugestao": "descrição da conduta sugerida"
 }
 
-Se a mensagem não for um pedido de documento, responda normalmente em texto puro (sem JSON).`;
+4. Agendar retorno/consulta futura para o paciente (uso rápido, durante a própria consulta):
+{
+  "type": "open_agendamento",
+  "data": "AAAA-MM-DD ou vazio se o médico não especificou",
+  "horario": "HH:MM ou vazio se o médico não especificou",
+  "motivo": "Ex: Retorno para reavaliação",
+  "prazo_sugerido": "texto curto tipo '7 dias', '1 mês', '30 dias' — preencha quando o médico falar em prazo relativo em vez de data exata"
+}
+Use "open_agendamento" sempre que o médico pedir explicitamente para agendar, marcar retorno ou remarcar
+o paciente durante a conversa. Como isso acontece em meio à consulta, o processo deve ser o mais rápido
+possível: NÃO peça confirmação por texto antes de gerar a ação — apenas gere o JSON com os dados que o
+médico informou (mesmo que incompletos); a confirmação final acontece na interface, não no chat.
+
+Se a mensagem não for um pedido de documento nem de agendamento, responda normalmente em texto puro (sem JSON).`;
 
 const SYSTEM_RESUMO = `Você é um assistente clínico. Gere um RESUMO ESTRUTURADO do prontuário
 do paciente em português do Brasil, organizado em seções:
@@ -170,7 +183,14 @@ Retorne EXCLUSIVAMENTE um JSON válido (sem comentários, sem markdown, sem cerc
 }`;
 const SYSTEM_EXTRAI_COMPLEMENTARES = `Você é um assistente clínico responsável por revisar o conteúdo de UM
 atendimento (anotações do prontuário, transcrição, anamnese e notas do médico) e identificar
-informações objetivas que deveriam atualizar o cadastro "Informações complementares" do paciente.
+1) informações objetivas que deveriam atualizar o cadastro "Informações complementares" do paciente, e
+2) qualquer menção a um retorno ou nova consulta que o médico tenha comentado durante o atendimento
+(ex.: "volta em 15 dias", "quero reavaliar em um mês", "marca um retorno pra ela").
+
+Este segundo ponto é importante: durante a consulta o médico pode comentar sobre um retorno sem pedir
+explicitamente para agendar ali na hora. Você NÃO deve interromper nada em tempo real — este processamento
+só roda depois que o atendimento é encerrado. Seu papel é apenas identificar essa menção, se houver, e
+propor um agendamento para o médico revisar e confirmar (ele pode editar data/horário/motivo ou descartar).
 
 REGRAS CRÍTICAS (siga rigorosamente):
 - Só proponha uma alteração quando a informação for EXPLÍCITA, CLARA e POSITIVA no conteúdo do
@@ -192,11 +212,24 @@ REGRAS CRÍTICAS (siga rigorosamente):
 - Se nada disso se aplicar a nenhum campo, retorne listas vazias. Não force sugestões apenas para
   preencher a resposta.
 
+REGRAS PARA "agendamento_sugerido":
+- Só preencha quando houver uma menção EXPLÍCITA do médico a um retorno/nova consulta futura para este
+  mesmo paciente. Nunca infira um retorno "padrão" quando ninguém falou nisso.
+- "prazo_texto": copie o prazo como o médico disse (ex.: "15 dias", "1 mês", "30 dias"), sem calcular datas.
+- "data" e "horario": preencha SOMENTE se o médico tiver dito uma data e/ou horário explícitos
+  (ex.: "dia 20 às 14h"). Caso contrário deixe como string vazia — quem decide a data final é o médico,
+  na hora de confirmar.
+- "motivo": frase curta com o motivo do retorno, se mencionado (ex.: "Reavaliação pós-tratamento").
+- Se não houver nenhuma menção a retorno/nova consulta, retorne "agendamento_sugerido": null.
+
 Retorne EXCLUSIVAMENTE um JSON válido (sem comentários, sem markdown, sem cercas de código) no
 formato exato:
 {
   "alteracoes": [ { "campo": "nome_do_campo_conforme_recebido", "valor_sugerido": "..." } ],
-  "cids_sugeridos": [ { "code": "...", "description": "..." } ]
+  "cids_sugeridos": [ { "code": "...", "description": "..." } ],
+  "agendamento_sugerido": null
+  // ou, quando houver menção clara a retorno:
+  // "agendamento_sugerido": { "prazo_texto": "...", "data": "", "horario": "", "motivo": "..." }
 }`;
 
 function parseJsonLoose(text: string): Record<string, unknown> {
@@ -350,7 +383,17 @@ export const Route = createFileRoute("/api/chat-ia")({
             const parsed = parseJsonLoose(text);
             const alteracoes = Array.isArray(parsed.alteracoes) ? parsed.alteracoes : [];
             const cidsSugeridos = Array.isArray(parsed.cids_sugeridos) ? parsed.cids_sugeridos : [];
-            return Response.json({ alteracoes, cids_sugeridos: cidsSugeridos });
+            const agRaw = parsed.agendamento_sugerido;
+            const agendamentoSugerido =
+              agRaw && typeof agRaw === "object" && !Array.isArray(agRaw)
+                ? {
+                    prazo_texto: typeof (agRaw as any).prazo_texto === "string" ? (agRaw as any).prazo_texto : "",
+                    data: typeof (agRaw as any).data === "string" ? (agRaw as any).data : "",
+                    horario: typeof (agRaw as any).horario === "string" ? (agRaw as any).horario : "",
+                    motivo: typeof (agRaw as any).motivo === "string" ? (agRaw as any).motivo : "",
+                  }
+                : null;
+            return Response.json({ alteracoes, cids_sugeridos: cidsSugeridos, agendamento_sugerido: agendamentoSugerido });
           }
 
           // chat mode

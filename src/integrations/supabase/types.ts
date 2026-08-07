@@ -824,6 +824,36 @@ export type Database = {
           },
         ]
       }
+      medico_whatsapp_config: {
+        Row: {
+          id_medico: string
+          phone_number_id: string | null
+          numero_exibicao: string | null
+          agendamento_ativo: boolean
+          mensagem_convite: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id_medico: string
+          phone_number_id?: string | null
+          numero_exibicao?: string | null
+          agendamento_ativo?: boolean
+          mensagem_convite?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id_medico?: string
+          phone_number_id?: string | null
+          numero_exibicao?: string | null
+          agendamento_ativo?: boolean
+          mensagem_convite?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mensagens_consulta: {
         Row: {
           content: string
@@ -1483,6 +1513,47 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      whatsapp_conversas: {
+        Row: {
+          id: string
+          id_medico: string
+          paciente_id: string | null
+          telefone: string
+          mensagens: Json
+          ultima_interacao: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          id_medico: string
+          paciente_id?: string | null
+          telefone: string
+          mensagens?: Json
+          ultima_interacao?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          id_medico?: string
+          paciente_id?: string | null
+          telefone?: string
+          mensagens?: Json
+          ultima_interacao?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_conversas_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["paciente_id"]
+          },
+        ]
       }
     }
     Views: {
