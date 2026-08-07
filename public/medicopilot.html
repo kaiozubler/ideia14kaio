@@ -4201,10 +4201,16 @@
             <div class="file-preview">
               <i class="ti ti-file-check" id="file-icon"></i>
               <span id="file-name">—</span>
-              <button class="ai-process-btn" title="Processar com IA"><i class="ti ti-sparkles"></i></button>
+              <button class="ai-process-btn" id="exame-ia-btn" title="Processar com IA" onclick="processarExameIA()">
+                <i class="ti ti-sparkles"></i>
+              </button>
               <button class="btn sm danger" onclick="clearFile()"><i class="ti ti-x"></i></button>
             </div>
           </div>
+          <div
+            id="exame-ia-report"
+            style="display:none;margin:10px 0;padding:10px 12px;border:0.5px solid #ddd6fe;background:#f5f3ff;border-radius:var(--r8)"
+          ></div>
           <div class="form-grid">
             <div class="fld wide">
               <label>Nome / título *</label
