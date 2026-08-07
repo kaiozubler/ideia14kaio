@@ -371,6 +371,48 @@ export type Database = {
           },
         ]
       }
+      exame_modelos: {
+        Row: {
+          carater: string
+          created_at: string
+          id: string
+          indicacao_clinica: string | null
+          itens: Json
+          jejum_necessario: boolean
+          nome: string
+          preparo: string | null
+          updated_at: string
+          user_id: string
+          validade_dias: number | null
+        }
+        Insert: {
+          carater?: string
+          created_at?: string
+          id?: string
+          indicacao_clinica?: string | null
+          itens?: Json
+          jejum_necessario?: boolean
+          nome: string
+          preparo?: string | null
+          updated_at?: string
+          user_id?: string
+          validade_dias?: number | null
+        }
+        Update: {
+          carater?: string
+          created_at?: string
+          id?: string
+          indicacao_clinica?: string | null
+          itens?: Json
+          jejum_necessario?: boolean
+          nome?: string
+          preparo?: string | null
+          updated_at?: string
+          user_id?: string
+          validade_dias?: number | null
+        }
+        Relationships: []
+      }
       exames: {
         Row: {
           arquivo_path: string | null
@@ -826,30 +868,30 @@ export type Database = {
       }
       medico_whatsapp_config: {
         Row: {
-          id_medico: string
-          phone_number_id: string | null
-          numero_exibicao: string | null
           agendamento_ativo: boolean
-          mensagem_convite: string | null
           created_at: string
+          id_medico: string
+          mensagem_convite: string | null
+          numero_exibicao: string | null
+          phone_number_id: string | null
           updated_at: string
         }
         Insert: {
-          id_medico: string
-          phone_number_id?: string | null
-          numero_exibicao?: string | null
           agendamento_ativo?: boolean
-          mensagem_convite?: string | null
           created_at?: string
+          id_medico: string
+          mensagem_convite?: string | null
+          numero_exibicao?: string | null
+          phone_number_id?: string | null
           updated_at?: string
         }
         Update: {
-          id_medico?: string
-          phone_number_id?: string | null
-          numero_exibicao?: string | null
           agendamento_ativo?: boolean
-          mensagem_convite?: string | null
           created_at?: string
+          id_medico?: string
+          mensagem_convite?: string | null
+          numero_exibicao?: string | null
+          phone_number_id?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1516,33 +1558,33 @@ export type Database = {
       }
       whatsapp_conversas: {
         Row: {
+          created_at: string
           id: string
           id_medico: string
+          mensagens: Json
           paciente_id: string | null
           telefone: string
-          mensagens: Json
           ultima_interacao: string
-          created_at: string
           updated_at: string
         }
         Insert: {
+          created_at?: string
           id?: string
           id_medico: string
+          mensagens?: Json
           paciente_id?: string | null
           telefone: string
-          mensagens?: Json
           ultima_interacao?: string
-          created_at?: string
           updated_at?: string
         }
         Update: {
+          created_at?: string
           id?: string
           id_medico?: string
+          mensagens?: Json
           paciente_id?: string | null
           telefone?: string
-          mensagens?: Json
           ultima_interacao?: string
-          created_at?: string
           updated_at?: string
         }
         Relationships: [
