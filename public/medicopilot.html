@@ -5559,11 +5559,11 @@
 
                                                             async function bootstrap(){
                                                         const {data}=await sb.auth.getSession();
-                                                        if(data.session){currentUser=data.session.user;showApp();await loadPatients();}
+                                                        if(data.session){currentUser=data.session.user;showApp();await loadPatients();if(typeof fetchAnamneseModels==='function')fetchAnamneseModels();}
                                                         else{showAuthGate();}
                                                         sb.auth.onAuthStateChange((event,session)=>{
-                                                          if(event==='SIGNED_IN'&&session){currentUser=session.user;showApp();loadPatients();}
-                                                          if(event==='SIGNED_OUT'){location.reload();}
+                                                          if(event==='SIGNED_IN'&&session){currentUser=session.user;showApp();loadPatients();if(typeof fetchAnamneseModels==='function')fetchAnamneseModels();}
+                                                          if(event==='SIGNED_OUT'){anamneseModelsCache=null;location.reload();}
                                                         });
                                                         initCepAutofillFields(); // <-- adicionar aqui
                                                         initCpfMaskFields();
@@ -9592,12 +9592,13 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                               Object.entries(map).forEach(([k,v])=>{out=out.split(k).join(v);});
                                                               return out;
                                                             }
-                                                            function openAnamnesePanel(){
+                                                            async function openAnamnesePanel(){
                                                               const panel=document.getElementById('resumo-panel');
                                                               const txtEl=document.getElementById('resumo-panel-text');
                                                               panel.classList.add('open');
                                                               txtEl.classList.remove('rich');
-                                                              const models=loadAnamneseModels();
+                                                              txtEl.textContent='Carregando modelos...';
+                                                              const models=await fetchAnamneseModels();
                                                               if(models.length>1){
                                                                 const opts=models.map(m=>`<option value="${m.id}">${(m.name||'(sem nome)').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]))}</option>`).join('');
                                                                 txtEl.innerHTML=`<div style="display:flex;flex-direction:column;gap:10px;font-family:var(--sans)">
@@ -9608,7 +9609,7 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                                 </div>`;
                                                                 return;
                                                               }
-                                                              const model=models.find(m=>m.id==='default')||models[0];
+                                                              const model=models.find(m=>m.is_default)||models[0];
                                                               runAnamneseGeneration(model.id);
                                                             }
 
@@ -10474,11 +10475,14 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                               // Popula seletor de modelo de anamnese
                                                               const sel=document.getElementById('cf-anamnese-model');
                                                               if(sel){
-                                                                const models=loadAnamneseModels();
-                                                                const prev=sel.value||condState.anamneseModelId||'default';
-                                                                sel.innerHTML='<option value="">— Não gerar anamnese —</option>'+
-                                                                  models.map(m=>`<option value="${m.id}">${(m.name||m.id).replace(/</g,'&lt;')}</option>`).join('');
-                                                                sel.value=models.find(m=>m.id===prev)?prev:'default';
+                                                                fetchAnamneseModels().then(models=>{
+                                                                  const defModel=models.find(m=>m.is_default)||models[0];
+                                                                  const defId=defModel?defModel.id:'';
+                                                                  const prev=sel.value||condState.anamneseModelId||defId;
+                                                                  sel.innerHTML='<option value="">— Não gerar anamnese —</option>'+
+                                                                    models.map(m=>`<option value="${m.id}">${(m.name||m.id).replace(/</g,'&lt;')}</option>`).join('');
+                                                                  sel.value=models.find(m=>m.id===prev)?prev:defId;
+                                                                });
                                                               }
                                                               cfUpdateSendBtn();
                                                             }
@@ -10509,8 +10513,8 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                               if(modelId){
                                                                 const origHtml=btn.innerHTML;btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Gerando anamnese...';
                                                                 try{
-                                                                  const models=loadAnamneseModels();
-                                                                  const model=models.find(m=>m.id===modelId)||models.find(m=>m.id==='default');
+                                                                  const models=await fetchAnamneseModels();
+                                                                  const model=models.find(m=>m.id===modelId)||models.find(m=>m.is_default);
                                                                   if(model){
                                                                     const sources=model.sources||inferSourcesFromPrompt(model.prompt||'');
                                                                     const ctx=buildAnamneseContext();
@@ -10569,13 +10573,13 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                       showToast('Documentos enviados via '+(condState.canal==='whatsapp'?'WhatsApp':'e-mail')+(modelId?' • Anamnese adicionada ao prontuário':''),'success');
                                                               closeModal();
                                                             }
-                                                            function runAnamneseGeneration(modelId){
+                                                            async function runAnamneseGeneration(modelId){
                                                               const txtEl=document.getElementById('resumo-panel-text');
                                                               txtEl.classList.remove('rich');
                                                               txtEl.innerHTML='';
                                                               txtEl.textContent='Gerando anamnese com a IA...';
-                                                              const models=loadAnamneseModels();
-                                                              const model=models.find(m=>m.id===modelId)||models.find(m=>m.id==='default')||models[0];
+                                                              const models=await fetchAnamneseModels();
+                                                              const model=models.find(m=>m.id===modelId)||models.find(m=>m.is_default)||models[0];
                                                               if(!model){txtEl.textContent='⚠️ Nenhum modelo de prompt disponível.';return;}
                                                               const sources=model.sources||inferSourcesFromPrompt(model.prompt||'');
                                                               // Compatibilidade: se o prompt antigo ainda usar tokens {variáveis}, substitui.
@@ -13907,34 +13911,48 @@ let rxSelected = [];
                                                               return blocks.join('\n\n');
                                                             }
 
-                                                            function loadAnamneseModels(){
-                                                              let arr=[];
-                                                              try{arr=JSON.parse(localStorage.getItem('anamnese_models')||'[]');}catch{arr=[];}
-                                                              if(!arr.find(m=>m.id==='default')){
-                                                                arr.unshift({id:'default',name:'Modelo padrão',prompt:DEFAULT_ANAMNESE_PROMPT,sources:{...DEFAULT_ANAMNESE_SOURCES},createdAt:Date.now()});
-                                                                saveAnamneseModels(arr);
-                                                              } else {
-                                                                // garante que o modelo padrão deixou de ser somente leitura
-                                                                const def=arr.find(m=>m.id==='default');
-                                                                if(def&&def.readonly){delete def.readonly;saveAnamneseModels(arr);}
-                                                              }
-                                                              // Migração: garantir que todo modelo tenha o campo "sources".
-                                                              let migrated=false;
-                                                              arr.forEach(m=>{
-                                                                if(!m.sources||typeof m.sources!=='object'){
-                                                                  m.sources=inferSourcesFromPrompt(m.prompt||'');
-                                                                  migrated=true;
+                                                            /* ========== ANAMNESE MODELS — persistidos no Supabase (tabela anamnese_models) ========== */
+                                                            let anamneseModelsCache=null; // cache em memória; null = ainda não carregado nesta sessão
+                                                            let anamneseModelsLoading=null; // Promise em andamento, evita buscas duplicadas em paralelo
+                                                            async function fetchAnamneseModels(force){
+                                                              if(!force&&anamneseModelsCache)return anamneseModelsCache;
+                                                              if(anamneseModelsLoading)return anamneseModelsLoading;
+                                                              anamneseModelsLoading=(async()=>{
+                                                                let arr=[];
+                                                                try{
+                                                                  const {data,error}=await sb.from('anamnese_models').select('*').order('created_at',{ascending:true});
+                                                                  if(error)throw error;
+                                                                  arr=data||[];
+                                                                  // Garante que exista um modelo padrão (semeado uma única vez por usuário).
+                                                                  if(!arr.some(m=>m.is_default)){
+                                                                    const {data:novo,error:errIns}=await sb.from('anamnese_models')
+                                                                      .insert({name:'Modelo padrão',prompt:DEFAULT_ANAMNESE_PROMPT,sources:{...DEFAULT_ANAMNESE_SOURCES},is_default:true})
+                                                                      .select('*').single();
+                                                                    if(errIns)throw errIns;
+                                                                    if(novo)arr=[novo,...arr];
+                                                                  }
+                                                                  arr.forEach(m=>{
+                                                                    if(!m.sources||typeof m.sources!=='object')m.sources=inferSourcesFromPrompt(m.prompt||'');
+                                                                  });
+                                                                  anamneseModelsCache=arr;
+                                                                }catch(e){
+                                                                  console.error('Erro ao carregar modelos de anamnese:',e);
+                                                                  if(typeof showToast==='function')showToast('Erro ao carregar modelos de anamnese: '+(e.message||e),'error');
+                                                                  anamneseModelsCache=anamneseModelsCache||[];
                                                                 }
-                                                              });
-                                                              if(migrated)saveAnamneseModels(arr);
-                                                              return arr;
+                                                                anamneseModelsLoading=null;
+                                                                return anamneseModelsCache;
+                                                              })();
+                                                              return anamneseModelsLoading;
                                                             }
-                                                            function saveAnamneseModels(arr){localStorage.setItem('anamnese_models',JSON.stringify(arr));}
-                                                            function renderAnamneseList(){
+                                                            // Acesso síncrono ao cache já carregado (usar fetchAnamneseModels() para garantir dados atualizados).
+                                                            function loadAnamneseModels(){return anamneseModelsCache||[];}
+                                                            async function renderAnamneseList(){
                                                               const el=document.getElementById('anamnese-list');if(!el)return;
-                                                              const models=loadAnamneseModels();
+                                                              if(!anamneseModelsCache)el.innerHTML='<div style="padding:16px;text-align:center;color:var(--n400);font-size:12.5px">Carregando modelos…</div>';
+                                                              const models=await fetchAnamneseModels();
                                                               el.innerHTML=models.map(m=>{
-                                                                const isDef=m.id==='default';
+                                                                const isDef=!!m.is_default;
                                                                 const preview=(m.prompt||'').slice(0,140).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))+((m.prompt||'').length>140?'…':'');
                                                                 const srcs=m.sources||{};
                                                                 const chips=ANAMNESE_SOURCES.filter(s=>srcs[s.k]).map(s=>`<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--n50);color:var(--n600);border:0.5px solid var(--n200)">${s.label}</span>`).join('');
@@ -13969,7 +13987,7 @@ let rxSelected = [];
                                                               document.getElementById('map-prompt').value=m.prompt;
                                                               document.getElementById('map-name').readOnly=false;
                                                               document.getElementById('map-prompt').readOnly=false;
-                                                              document.getElementById('map-title').innerHTML='<i class="ti ti-file-text-ai" style="font-size:14px;margin-right:5px"></i>'+(m.id==='default'?'Editar Modelo padrão':'Editar prompt');
+                                                              document.getElementById('map-title').innerHTML='<i class="ti ti-file-text-ai" style="font-size:14px;margin-right:5px"></i>'+(m.is_default?'Editar Modelo padrão':'Editar prompt');
                                                               renderSourceChecks(m.sources||inferSourcesFromPrompt(m.prompt||''));
                                                               openModal('anamnese-prompt');
                                                             }
@@ -13996,26 +14014,46 @@ let rxSelected = [];
                                                               document.querySelectorAll('#map-sources input[type=checkbox]').forEach(cb=>{out[cb.dataset.src]=cb.checked;});
                                                               return out;
                                                             }
-                                                            function saveAnamnesePrompt(){
+                                                            async function saveAnamnesePrompt(){
                                                               const id=document.getElementById('map-id').value;
                                                               const name=document.getElementById('map-name').value.trim();
                                                               const prompt=document.getElementById('map-prompt').value.trim();
                                                               const sources=readSourcesFromForm();
-                                                              const arr=loadAnamneseModels();
-                                                              const existing=id?arr.find(m=>m.id===id):null;
                                                               if(!name||!prompt){alert('Preencha nome e prompt.');return;}
-                                                              if(existing){existing.name=name;existing.prompt=prompt;existing.sources=sources;}
-                                                              else arr.push({id:'p'+Date.now(),name,prompt,sources,createdAt:Date.now()});
-                                                              saveAnamneseModels(arr);
-                                                              closeModal();
-                                                              renderAnamneseList();
-                                                              if(typeof showToast==='function')showToast('Prompt salvo com sucesso','success');
+                                                              const btn=document.querySelector('#m-anamnese-prompt .btn.primary');
+                                                              const origHtml=btn?btn.innerHTML:'';
+                                                              if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Salvando...';}
+                                                              try{
+                                                                const existing=id?loadAnamneseModels().find(m=>m.id===id):null;
+                                                                if(existing){
+                                                                  const {error}=await sb.from('anamnese_models').update({name,prompt,sources}).eq('id',id);
+                                                                  if(error)throw error;
+                                                                }else{
+                                                                  const {error}=await sb.from('anamnese_models').insert({name,prompt,sources});
+                                                                  if(error)throw error;
+                                                                }
+                                                                await fetchAnamneseModels(true);
+                                                                closeModal();
+                                                                await renderAnamneseList();
+                                                                if(typeof showToast==='function')showToast('Prompt salvo com sucesso','success');
+                                                              }catch(e){
+                                                                if(typeof showToast==='function')showToast('Erro ao salvar prompt: '+(e.message||e),'error');
+                                                                else alert('Erro ao salvar prompt: '+(e.message||e));
+                                                              }finally{
+                                                                if(btn){btn.disabled=false;btn.innerHTML=origHtml;}
+                                                              }
                                                             }
-                                                            function deleteAnamnesePrompt(id){
+                                                            async function deleteAnamnesePrompt(id){
                                                               if(!confirm('Excluir este prompt?'))return;
-                                                              const arr=loadAnamneseModels().filter(m=>m.id!==id);
-                                                              saveAnamneseModels(arr);
-                                                              renderAnamneseList();
+                                                              try{
+                                                                const {error}=await sb.from('anamnese_models').delete().eq('id',id);
+                                                                if(error)throw error;
+                                                                await fetchAnamneseModels(true);
+                                                                await renderAnamneseList();
+                                                              }catch(e){
+                                                                if(typeof showToast==='function')showToast('Erro ao excluir prompt: '+(e.message||e),'error');
+                                                                else alert('Erro ao excluir prompt: '+(e.message||e));
+                                                              }
                                                             document.getElementById('d-pai').value='';
                                                               ['d-cep','d-log','d-num','d-compl','d-bairro','d-cidade','d-uf'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
                                                               document.getElementById('d-pais').value='Brasil';
