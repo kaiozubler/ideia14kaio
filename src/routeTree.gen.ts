@@ -10,11 +10,14 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiAnalisarExameRouteImport } from './routes/api/analisar-exame'
 import { Route as ApiAssistenteIaRouteImport } from './routes/api/assistente-ia'
 import { Route as ApiAssistenteIaConversasRouteImport } from './routes/api/assistente-ia-conversas'
 import { Route as ApiChatIaRouteImport } from './routes/api/chat-ia'
 import { Route as ApiDailyRoomRouteImport } from './routes/api/daily-room'
 import { Route as ApiDeepgramTokenRouteImport } from './routes/api/deepgram-token'
+import { Route as ApiWhatsappConviteRouteImport } from './routes/api/whatsapp-convite'
+import { Route as ApiWhatsappWebhookRouteImport } from './routes/api/whatsapp-webhook'
 import { Route as ApiBryCancelEnvelopeRouteImport } from './routes/api/bry/cancel-envelope'
 import { Route as ApiBryCreateEnvelopeRouteImport } from './routes/api/bry/create-envelope'
 import { Route as ApiBryDownloadDocumentRouteImport } from './routes/api/bry/download-document'
@@ -34,6 +37,11 @@ import { Route as ApiPublicWebhooksBryRouteImport } from './routes/api/public/we
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAnalisarExameRoute = ApiAnalisarExameRouteImport.update({
+  id: '/api/analisar-exame',
+  path: '/api/analisar-exame',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAssistenteIaRoute = ApiAssistenteIaRouteImport.update({
@@ -60,6 +68,16 @@ const ApiDailyRoomRoute = ApiDailyRoomRouteImport.update({
 const ApiDeepgramTokenRoute = ApiDeepgramTokenRouteImport.update({
   id: '/api/deepgram-token',
   path: '/api/deepgram-token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWhatsappConviteRoute = ApiWhatsappConviteRouteImport.update({
+  id: '/api/whatsapp-convite',
+  path: '/api/whatsapp-convite',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWhatsappWebhookRoute = ApiWhatsappWebhookRouteImport.update({
+  id: '/api/whatsapp-webhook',
+  path: '/api/whatsapp-webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBryCancelEnvelopeRoute = ApiBryCancelEnvelopeRouteImport.update({
@@ -145,11 +163,14 @@ const ApiPublicWebhooksBryRoute = ApiPublicWebhooksBryRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/analisar-exame': typeof ApiAnalisarExameRoute
   '/api/assistente-ia': typeof ApiAssistenteIaRoute
   '/api/assistente-ia-conversas': typeof ApiAssistenteIaConversasRoute
   '/api/chat-ia': typeof ApiChatIaRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
+  '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
+  '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
   '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
@@ -168,11 +189,14 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/analisar-exame': typeof ApiAnalisarExameRoute
   '/api/assistente-ia': typeof ApiAssistenteIaRoute
   '/api/assistente-ia-conversas': typeof ApiAssistenteIaConversasRoute
   '/api/chat-ia': typeof ApiChatIaRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
+  '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
+  '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
   '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
@@ -192,11 +216,14 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/analisar-exame': typeof ApiAnalisarExameRoute
   '/api/assistente-ia': typeof ApiAssistenteIaRoute
   '/api/assistente-ia-conversas': typeof ApiAssistenteIaConversasRoute
   '/api/chat-ia': typeof ApiChatIaRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
+  '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
+  '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
   '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
@@ -217,11 +244,14 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/api/analisar-exame'
     | '/api/assistente-ia'
     | '/api/assistente-ia-conversas'
     | '/api/chat-ia'
     | '/api/daily-room'
     | '/api/deepgram-token'
+    | '/api/whatsapp-convite'
+    | '/api/whatsapp-webhook'
     | '/api/bry/cancel-envelope'
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
@@ -240,11 +270,14 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/api/analisar-exame'
     | '/api/assistente-ia'
     | '/api/assistente-ia-conversas'
     | '/api/chat-ia'
     | '/api/daily-room'
     | '/api/deepgram-token'
+    | '/api/whatsapp-convite'
+    | '/api/whatsapp-webhook'
     | '/api/bry/cancel-envelope'
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
@@ -263,11 +296,14 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/api/analisar-exame'
     | '/api/assistente-ia'
     | '/api/assistente-ia-conversas'
     | '/api/chat-ia'
     | '/api/daily-room'
     | '/api/deepgram-token'
+    | '/api/whatsapp-convite'
+    | '/api/whatsapp-webhook'
     | '/api/bry/cancel-envelope'
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
@@ -287,11 +323,14 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiAnalisarExameRoute: typeof ApiAnalisarExameRoute
   ApiAssistenteIaRoute: typeof ApiAssistenteIaRoute
   ApiAssistenteIaConversasRoute: typeof ApiAssistenteIaConversasRoute
   ApiChatIaRoute: typeof ApiChatIaRoute
   ApiDailyRoomRoute: typeof ApiDailyRoomRoute
   ApiDeepgramTokenRoute: typeof ApiDeepgramTokenRoute
+  ApiWhatsappConviteRoute: typeof ApiWhatsappConviteRoute
+  ApiWhatsappWebhookRoute: typeof ApiWhatsappWebhookRoute
   ApiBryCancelEnvelopeRoute: typeof ApiBryCancelEnvelopeRoute
   ApiBryCreateEnvelopeRoute: typeof ApiBryCreateEnvelopeRoute
   ApiBryDownloadDocumentRoute: typeof ApiBryDownloadDocumentRoute
@@ -316,6 +355,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/analisar-exame': {
+      id: '/api/analisar-exame'
+      path: '/api/analisar-exame'
+      fullPath: '/api/analisar-exame'
+      preLoaderRoute: typeof ApiAnalisarExameRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/assistente-ia': {
@@ -351,6 +397,20 @@ declare module '@tanstack/react-router' {
       path: '/api/deepgram-token'
       fullPath: '/api/deepgram-token'
       preLoaderRoute: typeof ApiDeepgramTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/whatsapp-convite': {
+      id: '/api/whatsapp-convite'
+      path: '/api/whatsapp-convite'
+      fullPath: '/api/whatsapp-convite'
+      preLoaderRoute: typeof ApiWhatsappConviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/whatsapp-webhook': {
+      id: '/api/whatsapp-webhook'
+      path: '/api/whatsapp-webhook'
+      fullPath: '/api/whatsapp-webhook'
+      preLoaderRoute: typeof ApiWhatsappWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/bry/cancel-envelope': {
@@ -463,11 +523,14 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiAnalisarExameRoute: ApiAnalisarExameRoute,
   ApiAssistenteIaRoute: ApiAssistenteIaRoute,
   ApiAssistenteIaConversasRoute: ApiAssistenteIaConversasRoute,
   ApiChatIaRoute: ApiChatIaRoute,
   ApiDailyRoomRoute: ApiDailyRoomRoute,
   ApiDeepgramTokenRoute: ApiDeepgramTokenRoute,
+  ApiWhatsappConviteRoute: ApiWhatsappConviteRoute,
+  ApiWhatsappWebhookRoute: ApiWhatsappWebhookRoute,
   ApiBryCancelEnvelopeRoute: ApiBryCancelEnvelopeRoute,
   ApiBryCreateEnvelopeRoute: ApiBryCreateEnvelopeRoute,
   ApiBryDownloadDocumentRoute: ApiBryDownloadDocumentRoute,

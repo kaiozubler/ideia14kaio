@@ -2896,6 +2896,21 @@
                           placeholder="Mensagem para a IA..."
                           onkeydown="if(event.key==='Enter')sendAIMsg()"
                         />
+                        <input
+                          type="file"
+                          id="ai-anexo-inp"
+                          style="display:none"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onchange="iaSetAnexo('ai',this)"
+                        />
+                        <button
+                          class="ai-sbtn"
+                          id="ai-anexo-btn"
+                          title="Anexar exame (PDF ou imagem)"
+                          onclick="document.getElementById('ai-anexo-inp').click()"
+                        >
+                          <i class="ti ti-paperclip"></i>
+                        </button>
                         <button class="ai-sbtn" onclick="sendAIMsg()"><i class="ti ti-send"></i></button>
                       </div>
                     </div>
@@ -3709,6 +3724,20 @@
                   placeholder="Peça algo à IA ou tire uma dúvida..."
                   onkeydown="if(event.key==='Enter')sendIaAssistMsg()"
                 />
+                <input
+                  type="file"
+                  id="ia-assist-anexo-inp"
+                  style="display:none"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onchange="iaSetAnexo('assist',this)"
+                />
+                <button
+                  class="ai-sbtn"
+                  title="Anexar exame (PDF ou imagem)"
+                  onclick="document.getElementById('ia-assist-anexo-inp').click()"
+                >
+                  <i class="ti ti-paperclip"></i>
+                </button>
                 <button class="ai-sbtn" onclick="sendIaAssistMsg()"><i class="ti ti-send"></i></button>
               </div>
             </div>
@@ -4201,10 +4230,16 @@
             <div class="file-preview">
               <i class="ti ti-file-check" id="file-icon"></i>
               <span id="file-name">—</span>
-              <button class="ai-process-btn" title="Processar com IA"><i class="ti ti-sparkles"></i></button>
+              <button class="ai-process-btn" id="exame-ia-btn" title="Processar com IA" onclick="processarExameIA()">
+                <i class="ti ti-sparkles"></i>
+              </button>
               <button class="btn sm danger" onclick="clearFile()"><i class="ti ti-x"></i></button>
             </div>
           </div>
+          <div
+            id="exame-ia-report"
+            style="display:none;margin:10px 0;padding:10px 12px;border:0.5px solid #ddd6fe;background:#f5f3ff;border-radius:var(--r8)"
+          ></div>
           <div class="form-grid">
             <div class="fld wide">
               <label>Nome / título *</label
@@ -6966,7 +7001,111 @@ showAtendList();
                                                               const icon=document.getElementById('file-icon');
                                                               if(input.files.length){const f=input.files[0];name.textContent=f.name;icon.className='ti '+(f.type.includes('image')?'ti-photo':'ti-file-text');wrap.style.display='block';}
                                                             }
-                                                            function clearFile(){document.getElementById('file-input').value='';document.getElementById('file-preview-wrap').style.display='none';}
+                                                            function clearFile(){document.getElementById('file-input').value='';document.getElementById('file-preview-wrap').style.display='none';const r=document.getElementById('exame-ia-report');if(r){r.style.display='none';r.innerHTML='';}}
+                                                            // ── IA de análise de exames ──────────────────────────────────────────────
+                                                            function iaFileToBase64(file){
+                                                              return new Promise(function(res,rej){
+                                                                const fr=new FileReader();
+                                                                fr.onload=function(){res(String(fr.result||'').split(',')[1]||'');};
+                                                                fr.onerror=rej;
+                                                                fr.readAsDataURL(file);
+                                                              });
+                                                            }
+                                                            function iaExamePacienteCtx(){
+                                                              const p=(typeof currentPatient!=='undefined'&&currentPatient)?currentPatient:null;
+                                                              if(!p)return null;
+                                                              return {nome:p.name||'',cpf:p.cpf||'',data_nascimento:p.nasc||p.dob||''};
+                                                            }
+                                                            async function iaAnalisarArquivoExame(file,paciente){
+                                                              const base64=await iaFileToBase64(file);
+                                                              const r=await fetch('/api/analisar-exame',{
+                                                                method:'POST',headers:{'Content-Type':'application/json'},
+                                                                body:JSON.stringify({arquivo:{nome:file.name,mime:file.type||'application/pdf',base64},paciente:paciente||null})
+                                                              });
+                                                              if(!r.ok)throw new Error(await r.text());
+                                                              return r.json();
+                                                            }
+                                                            function iaExameReportHtml(a){
+                                                              const esc=(typeof iaEscHtml==='function')?iaEscHtml:function(s){return String(s==null?'':s);};
+                                                              const pd=a.paciente_detectado||{};
+                                                              let h='<div style="font-size:11px;font-weight:700;color:#6d28d9;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">'
+                                                                +'<i class="ti ti-sparkles"></i> Análise da IA</div>';
+                                                              h+='<div style="font-size:12px;color:#334155;line-height:1.55">';
+                                                              h+='<div><strong>Paciente no documento:</strong> '+esc(pd.nome||'não identificado')
+                                                                +(pd.cpf?(' · CPF '+esc(pd.cpf)):'')+'</div>';
+                                                              if(a.paciente_confere===false){
+                                                                h+='<div style="color:#b91c1c;margin-top:3px"><i class="ti ti-alert-triangle"></i> '
+                                                                  +esc(a.divergencia_paciente||'Os dados do documento parecem ser de outro paciente.')+'</div>';
+                                                              }
+                                                              if(a.data_exame)h+='<div><strong>Data do exame:</strong> '+esc(a.data_exame)+'</div>';
+                                                              const exs=Array.isArray(a.exames)?a.exames:[];
+                                                              if(exs.length){
+                                                                h+='<div style="margin-top:6px"><strong>Exames identificados ('+exs.length+'):</strong><ul style="margin:4px 0 0 16px;padding:0">';
+                                                                exs.forEach(function(e){
+                                                                  h+='<li>'+esc(e.nome)+(e.codigo_tuss?(' <span style="color:#64748b">(TUSS '+esc(e.codigo_tuss)+')</span>'):'')
+                                                                    +(e.resultado?(' — '+esc(e.resultado)):'')+'</li>';
+                                                                });
+                                                                h+='</ul></div>';
+                                                              }
+                                                              const pts=Array.isArray(a.pontos_atencao)?a.pontos_atencao:[];
+                                                              if(pts.length){
+                                                                h+='<div style="margin-top:6px;color:#b45309"><strong><i class="ti ti-alert-triangle"></i> Pontos de atenção:</strong><ul style="margin:4px 0 0 16px;padding:0">';
+                                                                pts.forEach(function(p){h+='<li>'+esc(p)+'</li>';});
+                                                                h+='</ul></div>';
+                                                              }
+                                                              if(a.relatorio)h+='<div style="margin-top:6px"><strong>Relatório:</strong><br>'+esc(a.relatorio)+'</div>';
+                                                              h+='</div>';
+                                                              return h;
+                                                            }
+                                                            async function processarExameIA(){
+                                                              const input=document.getElementById('file-input');
+                                                              if(!input||!input.files.length){showToast('Selecione um arquivo primeiro','error');return;}
+                                                              const btn=document.getElementById('exame-ia-btn');
+                                                              const orig=btn?btn.innerHTML:'';
+                                                              if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>';}
+                                                              const box=document.getElementById('exame-ia-report');
+                                                              try{
+                                                                const a=await iaAnalisarArquivoExame(input.files[0],iaExamePacienteCtx());
+                                                                const cs=a.cadastro_sugerido||{};
+                                                                const setV=function(id,v){const el=document.getElementById(id);if(el&&v)el.value=v;};
+                                                                setV('exame-nome',cs.nome);
+                                                                setV('exame-data',cs.data||a.data_exame);
+                                                                setV('exame-obs',cs.obs);
+                                                                setV('exame-resultado',cs.resultado);
+                                                                const tipoSel=document.getElementById('exame-tipo');
+                                                                if(tipoSel&&cs.tipo){
+                                                                  Array.from(tipoSel.options).forEach(function(o){if(o.text===cs.tipo)tipoSel.value=o.value;});
+                                                                }
+                                                                if(box){box.innerHTML=iaExameReportHtml(a);box.style.display='block';}
+                                                                if(a.paciente_confere===false){
+                                                                  showToast('Atenção: o exame parece ser de outro paciente','error');
+                                                                }else{
+                                                                  showToast('Exame analisado pela IA','success');
+                                                                }
+                                                              }catch(e){
+                                                                showToast('Erro ao analisar o exame: '+(e.message||e),'error');
+                                                              }finally{
+                                                                if(btn){btn.disabled=false;btn.innerHTML=orig;}
+                                                              }
+                                                            }
+                                                            // Anexos nos chats (consulta e assistente global)
+                                                            window.iaAnexoPend={ai:null,assist:null};
+                                                            async function iaSetAnexo(scope,input){
+                                                              if(!input.files.length)return;
+                                                              const f=input.files[0];
+                                                              try{
+                                                                window.iaAnexoPend[scope]={nome:f.name,mime:f.type||'application/pdf',base64:await iaFileToBase64(f)};
+                                                                const inp=document.getElementById(scope==='ai'?'ai-inp':'ia-assist-inp');
+                                                                if(inp&&!inp.value.trim())inp.value='Analise este exame anexado.';
+                                                                showToast('Anexo pronto: '+f.name+'. Envie a mensagem para analisar.','success');
+                                                              }catch(e){showToast('Erro ao ler o arquivo','error');}
+                                                              input.value='';
+                                                            }
+                                                            function iaTakeAnexo(scope){
+                                                              const a=window.iaAnexoPend[scope];
+                                                              window.iaAnexoPend[scope]=null;
+                                                              return a;
+                                                            }
                                                             async function viewExame(id){
                                                               const e=exames.find(x=>x.id===id);
                                                               if(!e)return;
@@ -8224,6 +8363,32 @@ showAtendList();
                                                       async function iaExecuteAction(action){
                                                         if(!action||!action.type)return;
 
+                                                        // ── Salvar exame no cadastro do paciente ─────────────────────────────────
+                                                        if(action.type==='salvar_exame'){
+                                                          if(!currentPatient||!currentPatient.id){
+                                                            spawnBubble('ia','⚠️ Abra o cadastro de um paciente para salvar o exame.');
+                                                            return;
+                                                          }
+                                                          try{
+                                                            const {error}=await sb.from('exames').insert({
+                                                              paciente_id:currentPatient.id,
+                                                              user_id:(await sb.auth.getUser()).data.user?.id,
+                                                              nome:action.nome||'Exame',
+                                                              tipo:action.tipo||'Laboratorial',
+                                                              data:action.data||'',
+                                                              obs:action.obs||'',
+                                                              resultado:action.resultado||'',
+                                                              validade:'Indefinido'
+                                                            });
+                                                            if(error)throw error;
+                                                            spawnBubble('ia','✅ Exame salvo no cadastro de '+(currentPatient.name||'paciente')+'.');
+                                                            if(typeof renderExames==='function')renderExames();
+                                                          }catch(e){
+                                                            spawnBubble('ia','⚠️ Erro ao salvar o exame: '+(e.message||e));
+                                                          }
+                                                          return;
+                                                        }
+
                                                         // ── Receita ──────────────────────────────────────────────────────────────
                                                         if(action.type==='open_receita'){
                                                           const meds=Array.isArray(action.medicamentos)?action.medicamentos:[];
@@ -8538,7 +8703,7 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                                                               fetch('/api/chat-ia',{
                                                                 method:'POST',
                                                                 headers:{'Content-Type':'application/json'},
-                                                                body:JSON.stringify({mode:'chat',messages:aiChatHistory,resumo_prontuario:currentResumoProntuario||''})
+                                                                body:JSON.stringify(Object.assign({mode:'chat',messages:aiChatHistory,resumo_prontuario:currentResumoProntuario||'',anexo:iaTakeAnexo('ai')},(function(){const p=iaExamePacienteCtx();return p?{paciente_nome:p.nome,paciente_cpf:p.cpf,paciente_nascimento:p.data_nascimento}:{};})()))
                                                               })
                                                               .then(async r=>{if(!r.ok)throw new Error(await r.text());return r.json();})
                                                               .then(d=>{
@@ -8762,7 +8927,7 @@ async function sendIaAssistMsg(){
     const r=await fetch('/api/assistente-ia',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({mode:'assistente_global',messages:iaAssistHistory,user_id:iaAssistUserId(),conversa_id:iaAssistConversaId})
+      body:JSON.stringify({mode:'assistente_global',messages:iaAssistHistory,user_id:iaAssistUserId(),conversa_id:iaAssistConversaId,anexo:iaTakeAnexo('assist')})
     });
     if(!r.ok)throw new Error(await r.text());
     const d=await r.json();

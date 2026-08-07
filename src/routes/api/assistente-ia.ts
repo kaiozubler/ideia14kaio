@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { analisarExameArquivo, type AnaliseExame } from "@/lib/exames/analise.server";
 
 type ChatMessage = {
   role: "system" | "user" | "assistant" | "tool";
@@ -26,6 +27,9 @@ type RequestBody = {
   paciente_id?: string | null;
   paciente_nome?: string | null;
   paciente_telefone?: string | null;
+  // Anexo enviado pelo médico no chat. Quando é um exame, a análise é feita pela
+  // IA dedicada de exames antes de o assistente responder.
+  anexo?: { nome?: string; mime?: string; base64?: string } | null;
 };
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -83,6 +87,14 @@ OUTRAS REGRAS
 - Pedido ambíguo ou fora dos comandos suportados: converse normalmente / use consultar_faq.
 - Atestado sem CID: pergunte se deseja incluir CID ou seguir sem ele.
 - Agendamento em horário ocupado: a tool avisa o conflito; sugira os horários alternativos devolvidos.
+
+EXAMES ANEXADOS
+- Quando a conversa trouxer o bloco "ANÁLISE DE EXAME (IA de exames)", o arquivo enviado pelo médico já foi analisado pela IA dedicada de exames. Use exclusivamente aquele conteúdo — não invente valores.
+- Responda apresentando: nome e CPF do paciente detectados no exame (ou avise que o documento não traz esses dados), data do exame, os exames identificados e os pontos de atenção.
+- Em seguida, use buscar_paciente com o nome detectado:
+  * Se houver cadastro correspondente, PERGUNTE se o médico deseja salvar o exame no cadastro desse paciente. Só chame salvar_exame_paciente após o "sim", com confirmado=true.
+  * Se NÃO houver cadastro, avise e pergunte se deseja criar o cadastro do paciente com os dados do exame. Após a confirmação, chame criar_paciente e depois salvar_exame_paciente (confirmado=true).
+- Nunca salve exame nem crie cadastro sem confirmação explícita do médico.
 `;
 
 type ToolDef = {
@@ -318,6 +330,30 @@ const tools: ToolDef[] = [
         type: "object",
         properties: { pergunta: { type: "string" } },
         required: ["pergunta"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "salvar_exame_paciente",
+      description:
+        "Salva no cadastro do paciente o exame analisado pela IA de exames. Exige confirmação explícita do médico.",
+      parameters: {
+        type: "object",
+        properties: {
+          paciente_id: { type: "string", description: "id do paciente já cadastrado" },
+          nome: { type: "string", description: "nome/título do exame" },
+          tipo: {
+            type: "string",
+            enum: ["Laboratorial", "Imagem", "Laudo", "Receita", "Atestado", "Documento", "Outro"],
+          },
+          data: { type: "string", description: "data do exame em AAAA-MM-DD" },
+          obs: { type: "string" },
+          resultado: { type: "string", description: "resultado / resumo do exame" },
+          confirmado: { type: "boolean" },
+        },
+        required: ["paciente_id", "nome", "confirmado"],
       },
     },
   },
@@ -1000,6 +1036,32 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
           "A base de ajuda do sistema ainda não está disponível. Responda com o que souber do fluxo do app e ofereça ajuda humana se necessário.",
       };
 
+    case "salvar_exame_paciente": {
+      if (!medicoId) return { erro: "Usuário não identificado na sessão." };
+      if (!args.confirmado) return { erro: "Peça a confirmação explícita do médico antes de salvar o exame." };
+      const pacienteId = String(args.paciente_id || "").trim();
+      if (!pacienteId) return { erro: "Informe o paciente (paciente_id) do cadastro." };
+      const nome = String(args.nome || "").trim();
+      if (!nome) return { erro: "Informe o nome do exame." };
+      const { data, error } = await db
+        .from("exames")
+        .insert({
+          paciente_id: pacienteId,
+          user_id: medicoId,
+          nome,
+          tipo: args.tipo ? String(args.tipo) : "Laboratorial",
+          data: args.data ? String(args.data) : "",
+          obs: args.obs ? String(args.obs) : "",
+          resultado: args.resultado ? String(args.resultado) : "",
+          validade: "Indefinido",
+        })
+        .select("id")
+        .single();
+      if (error) return { erro: error.message };
+      ctx.pendingAction.value = { type: "exame_salvo", exame_id: data.id, paciente_id: pacienteId };
+      return { salvo: true, exame_id: data.id };
+    }
+
     default:
       return { erro: `Tool desconhecida: ${name}` };
   }
@@ -1131,6 +1193,37 @@ export const Route = createFileRoute("/api/assistente-ia")({  server: {
           ...history,
         ];
 
+        // Anexo recebido no chat interno: encaminha para a IA dedicada de exames e
+        // injeta a análise no contexto, para o assistente conversar sobre ela.
+        let analiseExame: AnaliseExame | null = null;
+        if (canal === "interno" && body.anexo?.base64) {
+          try {
+            analiseExame = await analisarExameArquivo({
+              apiKey,
+              anexo: body.anexo,
+              buscarTuss: async (termo) => {
+                const { data } = await supabaseAdmin.rpc("buscar_tuss", { termo, p_limit: 1 });
+                const hit = (data as any[] | null)?.[0];
+                return hit ? { codigo_tuss: hit.codigo_tuss, nome: hit.nome } : null;
+              },
+            });
+            messages.push({
+              role: "system",
+              content:
+                `ANÁLISE DE EXAME (IA de exames) — arquivo "${body.anexo.nome || "anexo"}" enviado pelo médico:\n` +
+                JSON.stringify(analiseExame, null, 2),
+            });
+          } catch (e) {
+            messages.push({
+              role: "system",
+              content:
+                "Falha ao analisar o arquivo anexado como exame: " +
+                (e instanceof Error ? e.message : "erro desconhecido") +
+                ". Avise o médico e peça para reenviar o arquivo.",
+            });
+          }
+        }
+
         try {
           for (let step = 0; step < 8; step++) {
             const msg = await callGateway(messages, apiKey, toolset);
@@ -1146,6 +1239,7 @@ export const Route = createFileRoute("/api/assistente-ia")({  server: {
                 reply,
                 action: pendingAction.value,
                 conversa_id: conversaId,
+                analise_exame: analiseExame,
               });
             }
             for (const call of calls) {
