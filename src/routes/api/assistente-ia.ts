@@ -1036,9 +1036,6 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
           "A base de ajuda do sistema ainda não está disponível. Responda com o que souber do fluxo do app e ofereça ajuda humana se necessário.",
       };
 
-    default:
-      return { erro: `Tool desconhecida: ${name}` };
-
     case "salvar_exame_paciente": {
       if (!medicoId) return { erro: "Usuário não identificado na sessão." };
       if (!args.confirmado) return { erro: "Peça a confirmação explícita do médico antes de salvar o exame." };
@@ -1064,6 +1061,9 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
       ctx.pendingAction.value = { type: "exame_salvo", exame_id: data.id, paciente_id: pacienteId };
       return { salvo: true, exame_id: data.id };
     }
+
+    default:
+      return { erro: `Tool desconhecida: ${name}` };
   }
 }
 
