@@ -3724,6 +3724,20 @@
                   placeholder="Peça algo à IA ou tire uma dúvida..."
                   onkeydown="if(event.key==='Enter')sendIaAssistMsg()"
                 />
+                <input
+                  type="file"
+                  id="ia-assist-anexo-inp"
+                  style="display:none"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onchange="iaSetAnexo('assist',this)"
+                />
+                <button
+                  class="ai-sbtn"
+                  title="Anexar exame (PDF ou imagem)"
+                  onclick="document.getElementById('ia-assist-anexo-inp').click()"
+                >
+                  <i class="ti ti-paperclip"></i>
+                </button>
                 <button class="ai-sbtn" onclick="sendIaAssistMsg()"><i class="ti ti-send"></i></button>
               </div>
             </div>
