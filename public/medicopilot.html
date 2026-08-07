@@ -2733,6 +2733,9 @@
                             <div class="dm-item green" onclick="closeDropdown();rxIsAvulsa=false;openReceita()">
                               <i class="ti ti-prescription"></i> Emitir receita
                             </div>
+                            <div class="dm-item green" onclick="closeDropdown();exIsAvulsa=false;openExameSolicitacao()">
+                              <i class="ti ti-test-pipe"></i> Solicitar exames
+                            </div>
                             <div class="dm-item green" onclick="closeDropdown()">
                               <i class="ti ti-certificate"></i> Emitir atestado
                             </div>
@@ -4374,6 +4377,23 @@
                 <i class="ti ti-pill"></i> Selecionar medicamentos
               </button>
             </div>
+            <div class="fld wide" id="gd-exames-wrap" style="display:none">
+              <label>Exames</label>
+              <div
+                id="gd-exames-summary"
+                style="border:1px dashed var(--n200);border-radius:10px;padding:14px;font-size:12px;color:var(--n400);text-align:center"
+              >
+                Nenhum exame selecionado ainda.
+              </div>
+              <button
+                type="button"
+                class="btn ghost"
+                style="margin-top:8px;width:100%;justify-content:center"
+                onclick="abrirSelecaoExamesDocumento()"
+              >
+                <i class="ti ti-test-pipe"></i> Selecionar exames
+              </button>
+            </div>
           </div>
         </div>
         <div class="mfoot">
@@ -5137,6 +5157,165 @@
           <div class="mfoot" style="justify-content:flex-end;gap:8px">
             <button class="btn" onclick="rxFecharNomeModelo()">Cancelar</button>
             <button class="btn primary" onclick="rxConfirmarNomeModelo()">Salvar e emitir</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SOLICITAR EXAMES -->
+      <div class="modal wide" id="m-exame-solicitacao" style="display:none;width:660px">
+        <div class="mhd">
+          <span class="mhd-title"><i class="ti ti-test-pipe"></i> Solicitar exames</span>
+          <button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody" style="padding:18px 20px;display:flex;flex-direction:column;gap:16px;max-height:68vh;overflow-y:auto">
+
+          <!-- PACIENTE (Nome, CPF, Idade — mesmo mecanismo de busca do modal "Gerar documento") -->
+          <div>
+            <div style="font-size:10.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Paciente</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <div style="flex:2;min-width:180px;position:relative">
+                <input type="text" id="ex-pac-nome" placeholder="Nome completo do paciente" autocomplete="off"
+                  oninput="onExNomeChange()" onblur="setTimeout(hideExNomeSuggest,150)"
+                  style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none" />
+                <div id="ex-pac-nome-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.08);max-height:220px;overflow-y:auto;margin-top:2px"></div>
+              </div>
+              <div style="flex:1;min-width:140px">
+                <input type="text" id="ex-pac-cpf" placeholder="CPF" maxlength="14" oninput="onExCpfChange()"
+                  style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none" />
+              </div>
+              <div style="flex:0 0 90px">
+                <input type="text" id="ex-pac-idade" placeholder="Idade"
+                  style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none" />
+              </div>
+            </div>
+          </div>
+
+          <!-- BUSCA E SELEÇÃO DE EXAMES (TUSS) -->
+          <div style="position:relative">
+            <div style="font-size:10.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Adicionar exame</div>
+            <div style="position:relative">
+              <i class="ti ti-search" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:14px;pointer-events:none"></i>
+              <input type="text" id="ex-search" placeholder="Nome do exame ou código TUSS..." oninput="exSearch(this.value)" autocomplete="off"
+                style="width:100%;padding:9px 12px 9px 34px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;background:#fff"
+                onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'" />
+            </div>
+            <div id="ex-results" style="position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(15,23,42,.10);max-height:min(60vh,420px);overflow-y:auto;z-index:20;display:none"></div>
+          </div>
+
+          <div style="min-height:140px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span style="font-size:10.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em">Exames selecionados <span id="ex-count" style="color:#94a3b8;font-weight:500">(0)</span></span>
+              <button id="ex-clear-btn" onclick="exClearAll()" style="display:none;font-size:11px;color:#dc2626;background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px">
+                <i class="ti ti-trash"></i> Limpar tudo
+              </button>
+            </div>
+            <div id="ex-selected" style="display:flex;flex-direction:column;gap:8px">
+              <div id="ex-empty" style="text-align:center;color:#94a3b8;font-size:12px;padding:28px 16px;border:1px dashed #e2e8f0;border-radius:10px;line-height:1.6">
+                <i class="ti ti-test-pipe" style="font-size:22px;display:block;margin-bottom:6px;opacity:.4"></i>Nenhum exame adicionado ainda.<br /><span style="font-size:11px">Use o campo acima para buscar. Exames odontológicos não aparecem na busca.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- DETALHES DA SOLICITAÇÃO -->
+          <div>
+            <div style="font-size:10.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Detalhes da solicitação</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+              <div style="flex:1;min-width:150px">
+                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px">Caráter do atendimento</label>
+                <select id="ex-carater" style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none">
+                  <option value="eletivo" selected>Eletivo</option>
+                  <option value="urgente">Urgente</option>
+                </select>
+              </div>
+              <div style="flex:1;min-width:150px">
+                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px">Jejum necessário</label>
+                <select id="ex-jejum" style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none">
+                  <option value="nao" selected>Não</option>
+                  <option value="sim">Sim</option>
+                </select>
+              </div>
+              <div style="flex:0 0 130px">
+                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px">Validade (dias)</label>
+                <input type="number" id="ex-validade" value="90" min="1"
+                  style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none" />
+              </div>
+            </div>
+            <div style="margin-bottom:10px">
+              <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px">Indicação clínica <span style="font-weight:400">(opcional)</span></label>
+              <textarea id="ex-indicacao" rows="2" placeholder="Motivo clínico da solicitação..."
+                style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;resize:vertical;font-family:inherit"></textarea>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:10px">
+              <div style="flex:0 0 120px">
+                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px">CID <span style="font-weight:400">(opcional)</span></label>
+                <input type="text" id="ex-cid-code" placeholder="Ex: I10"
+                  style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none" />
+              </div>
+              <div style="flex:1">
+                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px">Descrição do CID <span style="font-weight:400">(opcional)</span></label>
+                <input type="text" id="ex-cid-desc" placeholder="Ex: Hipertensão essencial"
+                  style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none" />
+              </div>
+            </div>
+            <div style="margin-bottom:10px">
+              <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px">Preparo / orientações ao paciente <span style="font-weight:400">(opcional)</span></label>
+              <textarea id="ex-preparo" rows="2" placeholder="Ex: Jejum de 8h. Trazer exames anteriores..."
+                style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;resize:vertical;font-family:inherit"></textarea>
+            </div>
+            <div>
+              <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px">Observações adicionais <span style="font-weight:400">(opcional)</span></label>
+              <textarea id="ex-obs" rows="2" placeholder="Observações gerais..."
+                style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;resize:vertical;font-family:inherit"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="mfoot" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <button class="btn" onclick="exOpenModelos()" style="font-size:12px;padding:6px 10px">
+              <i class="ti ti-bookmark"></i> Modelos
+            </button>
+            <label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#475569;cursor:pointer;user-select:none">
+              <input type="checkbox" id="ex-salvar-modelo-toggle" onchange="exToggleSalvarModelo(this.checked)" style="cursor:pointer" />
+              Salvar modelo
+            </label>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" onclick="closeModal()">Cancelar</button>
+            <button class="btn primary" onclick="exEmitir()">
+              <i class="ti ti-test-pipe"></i> Emitir solicitação
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODELOS DE EXAME: lista de modelos salvos (popup empilhado, mesmo padrão dos modelos de receita) -->
+      <div class="rx-popup-backdrop" id="m-ex-modelos-backdrop" style="display:none;position:fixed;inset:0;z-index:310;background:rgba(26,25,23,.45);align-items:center;justify-content:center" onclick="exCloseModelosPopup()">
+        <div class="modal" id="m-ex-modelos" style="width:360px" onclick="event.stopPropagation()">
+          <div class="mhd">
+            <span class="mhd-title"><i class="ti ti-bookmark"></i> Modelos de solicitação de exames</span>
+            <button class="mclose" onclick="exCloseModelosPopup()"><i class="ti ti-x"></i></button>
+          </div>
+          <div class="mbody" style="padding:14px 16px;max-height:60vh;overflow-y:auto">
+            <div id="ex-modelos-lista"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODELOS DE EXAME: nome do modelo ao salvar (mesmo popup empilhado) -->
+      <div class="rx-popup-backdrop" id="m-ex-modelo-nome-backdrop" style="display:none;position:fixed;inset:0;z-index:310;background:rgba(26,25,23,.45);align-items:center;justify-content:center" onclick="exFecharNomeModelo()">
+        <div class="modal" id="m-ex-modelo-nome" style="width:340px" onclick="event.stopPropagation()">
+          <div class="mhd">
+            <span class="mhd-title"><i class="ti ti-device-floppy"></i> Salvar como modelo</span>
+            <button class="mclose" onclick="exFecharNomeModelo()"><i class="ti ti-x"></i></button>
+          </div>
+          <div class="mbody" style="padding:16px 18px">
+            <div style="font-size:10.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Nome do modelo</div>
+            <input type="text" id="ex-modelo-nome-input" placeholder="Ex: Check-up anual..." autocomplete="off"
+              style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none" />
+          </div>
+          <div class="mfoot" style="justify-content:flex-end;gap:8px">
+            <button class="btn" onclick="exFecharNomeModelo()">Cancelar</button>
+            <button class="btn primary" onclick="exConfirmarNomeModelo()">Salvar e emitir</button>
           </div>
         </div>
       </div>
@@ -11873,6 +12052,659 @@ let rxSelected = [];
                                                   });
                                                 }
 
+                                                /* ========== SOLICITAÇÃO DE EXAMES (TUSS) ==========
+                                                   Espelha o namespace rx* da Receita, mas buscando em
+                                                   tuss_procedimentos (via RPC buscar_tuss, que já exclui
+                                                   procedimentos odontológicos) e gerando o PDF a partir de
+                                                   /solicitacao-exames-modelo.html em vez de /receita-modelo.html. */
+                                                let exSelected = [];
+                                                let exManualPatient = null;
+                                                let exIsAvulsa = false;
+                                                let exSearchTimer = null;
+                                                let exLastResults = [];
+                                                let exModelosCache = [];
+                                                let exSalvarModeloAtivo = false;
+                                                let exNomeSearchTimer = null;
+                                                let exCpfSearchTimer = null;
+                                                let exMatchedPaciente = null;
+
+                                                async function openExameSolicitacao() {
+                                                  exSelected = [];
+                                                  exSalvarModeloAtivo = false;
+                                                  const exModeloChk = document.getElementById('ex-salvar-modelo-toggle');
+                                                  if (exModeloChk) exModeloChk.checked = false;
+                                                  exCloseModelosPopup();
+                                                  exFecharNomeModelo();
+                                                  hideExNomeSuggest();
+                                                  exMatchedPaciente = null;
+
+                                                  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+                                                  const p = exIsAvulsa ? (exManualPatient || {}) : (currentPatient || {});
+                                                  set('ex-pac-nome', p.name || '');
+                                                  set('ex-pac-cpf', p.cpf ? formatCPF(p.cpf) : '');
+                                                  set('ex-pac-idade', _rxIdade(p.nasc || p.data_nascimento || '') || '');
+                                                  const caraterEl = document.getElementById('ex-carater'); if (caraterEl) caraterEl.value = 'eletivo';
+                                                  const jejumEl = document.getElementById('ex-jejum'); if (jejumEl) jejumEl.value = 'nao';
+                                                  set('ex-validade', '90');
+                                                  set('ex-indicacao', '');
+                                                  set('ex-cid-code', '');
+                                                  set('ex-cid-desc', '');
+                                                  set('ex-preparo', '');
+                                                  set('ex-obs', '');
+
+                                                  openModal('exame-solicitacao');
+                                                  const inp = document.getElementById('ex-search');
+                                                  if (inp) { inp.value = ''; inp.style.borderColor = '#e2e8f0'; }
+                                                  const box = document.getElementById('ex-results');
+                                                  if (box) box.style.display = 'none';
+                                                  exRenderSelected();
+                                                  setTimeout(() => inp && inp.focus(), 80);
+                                                }
+
+                                                function exSearch(q) {
+                                                  clearTimeout(exSearchTimer);
+                                                  exSearchTimer = setTimeout(() => exDoSearch(q), 220);
+                                                }
+
+                                                async function exDoSearch(q) {
+                                                  const box = document.getElementById('ex-results');
+                                                  const term = (q || '').trim();
+                                                  if (!term) { box.style.display = 'none'; box.innerHTML = ''; return; }
+                                                  box.style.display = 'block';
+                                                  box.innerHTML = '<div style="padding:14px;font-size:12px;color:#94a3b8;text-align:center"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Buscando...</div>';
+
+                                                  // buscar_tuss já exclui procedimentos odontológicos (grupo = 'Odontologia')
+                                                  const { data, error } = await sb.rpc('buscar_tuss', { termo: term, p_limit: 60 });
+
+                                                  if (error) {
+                                                    box.innerHTML = '<div style="padding:14px;font-size:12px;color:#dc2626;text-align:center"><i class="ti ti-alert-circle"></i> Erro ao buscar exames</div>';
+                                                    return;
+                                                  }
+
+                                                  const list = data || [];
+                                                  exLastResults = list;
+
+                                                  if (!list.length) {
+                                                    box.innerHTML = '<div style="padding:16px;font-size:12px;color:#94a3b8;text-align:center"><i class="ti ti-mood-empty" style="display:block;font-size:20px;margin-bottom:4px"></i>Nenhum exame encontrado</div>';
+                                                    return;
+                                                  }
+
+                                                  box.innerHTML = list.map(e => {
+                                                    const grupoLine = e.grupo ? `<div style="font-size:11px;color:#059669;margin-top:2px"><i class="ti ti-folder" style="font-size:11px"></i> ${_rxEsc(e.grupo)}</div>` : '';
+                                                    return `<div class="rx-opt" onclick='exAdd(${JSON.stringify(e.id)})'
+                                                      style="padding:10px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .1s"
+                                                      onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background=''">
+                                                      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                                                        <span style="font-weight:600;font-size:13px;color:#0f172a">${_rxEsc(e.nome)}</span>
+                                                        <span style="font-size:9.5px;font-weight:700;color:#475569;background:#f1f5f9;padding:1px 6px;border-radius:4px;letter-spacing:.04em">TUSS ${_rxEsc(e.codigo_tuss)}</span>
+                                                      </div>
+                                                      ${grupoLine}
+                                                    </div>`;
+                                                  }).join('');
+                                                }
+
+                                                function exAdd(id) {
+                                                  const item = (exLastResults || []).find(e => e.id === id);
+                                                  if (!item) return;
+                                                  if (exSelected.some(e => e.codigo_tuss === item.codigo_tuss)) {
+                                                    showToast && showToast('Este exame já foi adicionado', 'warn');
+                                                    return;
+                                                  }
+                                                  exSelected.push({
+                                                    uid: rxUid(),
+                                                    codigo_tuss: item.codigo_tuss,
+                                                    nome: item.nome,
+                                                    instrucoes: ''
+                                                  });
+                                                  document.getElementById('ex-search').value = '';
+                                                  document.getElementById('ex-results').style.display = 'none';
+                                                  exRenderSelected();
+                                                }
+
+                                                function exRemove(uid) {
+                                                  exSelected = exSelected.filter(e => e.uid !== uid);
+                                                  exRenderSelected();
+                                                }
+
+                                                function exUpdateInstrucoes(uid, valor) {
+                                                  const item = exSelected.find(e => e.uid === uid);
+                                                  if (item) item.instrucoes = valor;
+                                                }
+
+                                                function exClearAll() {
+                                                  exSelected = [];
+                                                  exRenderSelected();
+                                                }
+
+                                                function exRenderSelected() {
+                                                  const wrap = document.getElementById('ex-selected');
+                                                  const empty = document.getElementById('ex-empty');
+                                                  const count = document.getElementById('ex-count');
+                                                  const clearBtn = document.getElementById('ex-clear-btn');
+                                                  if (!wrap) return;
+                                                  if (count) count.textContent = '(' + exSelected.length + ')';
+                                                  if (clearBtn) clearBtn.style.display = exSelected.length ? '' : 'none';
+                                                  wrap.querySelectorAll('.ex-item-card').forEach(n => n.remove());
+                                                  if (!exSelected.length) {
+                                                    if (empty) empty.style.display = '';
+                                                    return;
+                                                  }
+                                                  if (empty) empty.style.display = 'none';
+                                                  exSelected.forEach((item, i) => {
+                                                    const card = document.createElement('div');
+                                                    card.className = 'ex-item-card';
+                                                    card.style.cssText = 'border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start';
+                                                    card.innerHTML = `
+                                                      <div style="flex-shrink:0;width:22px;height:22px;border-radius:6px;background:#eef2ff;color:#4f46e5;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${i + 1}</div>
+                                                      <div style="flex:1;min-width:0">
+                                                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                                                          <span style="font-weight:600;font-size:13px;color:#0f172a">${_rxEsc(item.nome)}</span>
+                                                          <span style="font-size:9.5px;font-weight:700;color:#475569;background:#f1f5f9;padding:1px 6px;border-radius:4px">TUSS ${_rxEsc(item.codigo_tuss)}</span>
+                                                        </div>
+                                                        <input type="text" value="${_rxEsc(item.instrucoes || '')}" placeholder="Instruções específicas deste exame (opcional)"
+                                                          oninput="exUpdateInstrucoes('${item.uid}', this.value)"
+                                                          style="margin-top:6px;width:100%;padding:6px 9px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;outline:none" />
+                                                      </div>
+                                                      <button title="Remover" onclick="exRemove('${item.uid}')" style="flex-shrink:0;border:none;background:none;cursor:pointer;padding:4px">
+                                                        <i class="ti ti-trash" style="font-size:14px;color:#dc2626"></i>
+                                                      </button>`;
+                                                    wrap.appendChild(card);
+                                                  });
+                                                }
+
+                                                /* ── Paciente (Nome/CPF/Idade) — mesmo mecanismo de busca do modal
+                                                   "Gerar documento" (onGdCpfChange / onGdNomeChange), só que gravando
+                                                   nos campos ex-pac-* deste modal. ─────────────────────────────── */
+                                                function onExCpfChange() {
+                                                  exMatchedPaciente = null;
+                                                  clearTimeout(exCpfSearchTimer);
+                                                  const digits = (document.getElementById('ex-pac-cpf').value || '').replace(/\D/g, '');
+                                                  if (digits.length < 11) return;
+                                                  exCpfSearchTimer = setTimeout(() => buscarPacientePorCpfExame(digits), 400);
+                                                }
+                                                async function buscarPacientePorCpfExame(digits) {
+                                                  try {
+                                                    const { data, error } = await sb.from('pacientes').select('paciente_id,name,data_nascimento,cpf').not('cpf', 'is', null);
+                                                    if (error) { console.warn('Falha ao buscar paciente por CPF:', error); return; }
+                                                    if (!data) return;
+                                                    const pac = data.find(p => (p.cpf || '').replace(/\D/g, '') === digits);
+                                                    if (!pac) return;
+                                                    const set = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+                                                    set('ex-pac-nome', pac.name);
+                                                    const idadeEl = document.getElementById('ex-pac-idade');
+                                                    if (idadeEl) idadeEl.value = _rxIdade(pac.data_nascimento) || '';
+                                                    hideExNomeSuggest();
+                                                    exMatchedPaciente = { id: pac.paciente_id, name: pac.name, cpf: pac.cpf, nasc: pac.data_nascimento };
+                                                    showToast && showToast('Paciente encontrado — dados preenchidos automaticamente', 'success');
+                                                  } catch (e) { console.warn('Falha ao buscar paciente por CPF:', e); }
+                                                }
+                                                function onExNomeChange() {
+                                                  exMatchedPaciente = null;
+                                                  clearTimeout(exNomeSearchTimer);
+                                                  const term = (document.getElementById('ex-pac-nome').value || '').trim();
+                                                  if (term.length < 2) { hideExNomeSuggest(); return; }
+                                                  exNomeSearchTimer = setTimeout(() => buscarPacientesPorNomeExame(term), 300);
+                                                }
+                                                async function buscarPacientesPorNomeExame(term) {
+                                                  const box = document.getElementById('ex-pac-nome-suggest');
+                                                  if (!box) return;
+                                                  try {
+                                                    const { data, error } = await sb.from('pacientes')
+                                                      .select('paciente_id,name,data_nascimento,cpf')
+                                                      .ilike('name', '%' + term + '%')
+                                                      .order('name', { ascending: true })
+                                                      .limit(5);
+                                                    if (error) { console.warn('Falha ao buscar pacientes por nome:', error); hideExNomeSuggest(); return; }
+                                                    renderExNomeSuggest(data || []);
+                                                  } catch (e) { console.warn('Falha ao buscar pacientes por nome:', e); hideExNomeSuggest(); }
+                                                }
+                                                function renderExNomeSuggest(list) {
+                                                  const box = document.getElementById('ex-pac-nome-suggest');
+                                                  if (!box) return;
+                                                  if (!list.length) { hideExNomeSuggest(); return; }
+                                                  box.innerHTML = list.map(p => {
+                                                    const cpfFmt = p.cpf ? formatCPF(p.cpf) : '';
+                                                    return `<div class="rx-opt" onmousedown="selecionarExPaciente('${p.paciente_id}')"
+                                                      style="padding:9px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer" onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background=''">
+                                                      <div style="font-weight:600;font-size:12.5px;color:#0f172a">${_rxEsc(p.name || '(sem nome)')}</div>
+                                                      ${cpfFmt ? `<div style="font-size:11px;color:#94a3b8;margin-top:1px">${_rxEsc(cpfFmt)}</div>` : ''}
+                                                    </div>`;
+                                                  }).join('');
+                                                  box.dataset.results = JSON.stringify(list);
+                                                  box.style.display = 'block';
+                                                }
+                                                function hideExNomeSuggest() {
+                                                  const box = document.getElementById('ex-pac-nome-suggest');
+                                                  if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+                                                }
+                                                function selecionarExPaciente(pacienteId) {
+                                                  const box = document.getElementById('ex-pac-nome-suggest');
+                                                  let list = [];
+                                                  try { list = JSON.parse(box?.dataset.results || '[]'); } catch (e) {}
+                                                  const pac = list.find(p => String(p.paciente_id) === String(pacienteId));
+                                                  if (!pac) return;
+                                                  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+                                                  set('ex-pac-nome', pac.name);
+                                                  set('ex-pac-cpf', pac.cpf ? formatCPF(pac.cpf) : '');
+                                                  const idadeEl = document.getElementById('ex-pac-idade');
+                                                  if (idadeEl) idadeEl.value = _rxIdade(pac.data_nascimento) || '';
+                                                  hideExNomeSuggest();
+                                                  exMatchedPaciente = { id: pac.paciente_id, name: pac.name, cpf: pac.cpf, nasc: pac.data_nascimento };
+                                                }
+
+                                                /* ── Modelos de solicitação de exames (tabela exame_modelos no
+                                                   Supabase), mesmo padrão dos modelos de receita. ────────────────── */
+                                                function exToggleSalvarModelo(checked) { exSalvarModeloAtivo = !!checked; }
+
+                                                async function exSalvarModeloAtual(nome) {
+                                                  const itens = exSelected.map(it => { const c = { ...it }; delete c.uid; return c; });
+                                                  try {
+                                                    const { error } = await sb.from('exame_modelos').insert({
+                                                      user_id: currentUser && currentUser.id,
+                                                      nome: nome,
+                                                      itens: itens,
+                                                      carater: document.getElementById('ex-carater').value,
+                                                      jejum_necessario: document.getElementById('ex-jejum').value === 'sim',
+                                                      validade_dias: parseInt(document.getElementById('ex-validade').value, 10) || null,
+                                                      indicacao_clinica: document.getElementById('ex-indicacao').value.trim() || null,
+                                                      preparo: document.getElementById('ex-preparo').value.trim() || null,
+                                                    });
+                                                    if (error) throw error;
+                                                  } catch (e) {
+                                                    console.warn('Falha ao salvar modelo de exame', e);
+                                                    showToast && showToast('Falha ao salvar o modelo', 'error');
+                                                  }
+                                                }
+
+                                                async function exOpenModelos() {
+                                                  const bd = document.getElementById('m-ex-modelos-backdrop');
+                                                  if (bd) bd.style.display = 'flex';
+                                                  await exCarregarModelos();
+                                                }
+                                                function exCloseModelosPopup() {
+                                                  const bd = document.getElementById('m-ex-modelos-backdrop');
+                                                  if (bd) bd.style.display = 'none';
+                                                }
+                                                async function exCarregarModelos() {
+                                                  const el = document.getElementById('ex-modelos-lista');
+                                                  if (el) el.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:12px;padding:20px 10px"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Carregando...</div>';
+                                                  try {
+                                                    const { data, error } = await sb.from('exame_modelos').select('*').order('created_at', { ascending: false });
+                                                    if (error) throw error;
+                                                    exModelosCache = data || [];
+                                                  } catch (e) {
+                                                    console.warn('Falha ao carregar modelos de exame', e);
+                                                    exModelosCache = [];
+                                                  }
+                                                  exRenderModelosLista();
+                                                }
+                                                function exRenderModelosLista() {
+                                                  const el = document.getElementById('ex-modelos-lista');
+                                                  if (!el) return;
+                                                  if (!exModelosCache.length) {
+                                                    el.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:12px;padding:20px 10px"><i class="ti ti-bookmark" style="font-size:22px;display:block;margin-bottom:6px;opacity:.4"></i>Nenhum modelo salvo ainda.<br><span style="font-size:11px">Marque "Salvar modelo" ao emitir uma solicitação.</span></div>';
+                                                    return;
+                                                  }
+                                                  el.innerHTML = exModelosCache.map(m => `
+                                                    <div style="display:flex;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid #f3f4f6;cursor:pointer" onclick="exAplicarModelo('${m.id}')">
+                                                      <div style="flex:1;min-width:0">
+                                                        <div style="font-size:12.5px;font-weight:600;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${rxEscape(m.nome)}</div>
+                                                        <div style="font-size:11px;color:#94a3b8">${(m.itens || []).length} exame${(m.itens || []).length === 1 ? '' : 's'}</div>
+                                                      </div>
+                                                      <button title="Renomear" style="padding:4px;border:none;background:none;cursor:pointer" onclick="event.stopPropagation();exRenomearModelo('${m.id}')">
+                                                        <i class="ti ti-pencil" style="font-size:13px;color:#64748b"></i>
+                                                      </button>
+                                                      <button title="Excluir" style="padding:4px;border:none;background:none;cursor:pointer" onclick="event.stopPropagation();exRemoverModelo('${m.id}')">
+                                                        <i class="ti ti-trash" style="font-size:13px;color:#dc2626"></i>
+                                                      </button>
+                                                    </div>`).join('');
+                                                }
+                                                function exAplicarModelo(id) {
+                                                  const modelo = exModelosCache.find(m => m.id === id);
+                                                  if (!modelo) return;
+                                                  exSelected = (modelo.itens || []).map(it => ({ ...JSON.parse(JSON.stringify(it)), uid: rxUid() }));
+                                                  const caraterEl = document.getElementById('ex-carater'); if (caraterEl && modelo.carater) caraterEl.value = modelo.carater;
+                                                  const jejumEl = document.getElementById('ex-jejum'); if (jejumEl) jejumEl.value = modelo.jejum_necessario ? 'sim' : 'nao';
+                                                  const validadeEl = document.getElementById('ex-validade'); if (validadeEl && modelo.validade_dias) validadeEl.value = modelo.validade_dias;
+                                                  const indicacaoEl = document.getElementById('ex-indicacao'); if (indicacaoEl && modelo.indicacao_clinica) indicacaoEl.value = modelo.indicacao_clinica;
+                                                  const preparoEl = document.getElementById('ex-preparo'); if (preparoEl && modelo.preparo) preparoEl.value = modelo.preparo;
+                                                  exRenderSelected();
+                                                  exCloseModelosPopup();
+                                                  showToast && showToast('Modelo "' + modelo.nome + '" aplicado', 'success');
+                                                }
+                                                async function exRenomearModelo(id) {
+                                                  const modelo = exModelosCache.find(m => m.id === id);
+                                                  if (!modelo) return;
+                                                  const novo = prompt('Novo nome do modelo:', modelo.nome);
+                                                  if (novo === null) return;
+                                                  const nome = novo.trim();
+                                                  if (!nome) return;
+                                                  try {
+                                                    const { error } = await sb.from('exame_modelos').update({ nome }).eq('id', id);
+                                                    if (error) throw error;
+                                                    modelo.nome = nome;
+                                                    exRenderModelosLista();
+                                                  } catch (e) {
+                                                    console.warn('Falha ao renomear modelo de exame', e);
+                                                    showToast && showToast('Falha ao renomear o modelo', 'error');
+                                                  }
+                                                }
+                                                async function exRemoverModelo(id) {
+                                                  const modelo = exModelosCache.find(m => m.id === id);
+                                                  if (!modelo) return;
+                                                  if (!confirm('Excluir o modelo "' + modelo.nome + '"?')) return;
+                                                  try {
+                                                    const { error } = await sb.from('exame_modelos').delete().eq('id', id);
+                                                    if (error) throw error;
+                                                    exModelosCache = exModelosCache.filter(m => m.id !== id);
+                                                    exRenderModelosLista();
+                                                  } catch (e) {
+                                                    console.warn('Falha ao excluir modelo de exame', e);
+                                                    showToast && showToast('Falha ao excluir o modelo', 'error');
+                                                  }
+                                                }
+                                                function exAbrirNomeModelo() {
+                                                  const bd = document.getElementById('m-ex-modelo-nome-backdrop');
+                                                  if (bd) bd.style.display = 'flex';
+                                                  setTimeout(() => { const inp = document.getElementById('ex-modelo-nome-input'); if (inp) inp.focus(); }, 50);
+                                                }
+                                                function exFecharNomeModelo() {
+                                                  const bd = document.getElementById('m-ex-modelo-nome-backdrop');
+                                                  if (bd) bd.style.display = 'none';
+                                                }
+                                                async function exConfirmarNomeModelo() {
+                                                  const input = document.getElementById('ex-modelo-nome-input');
+                                                  const nome = ((input && input.value) || '').trim();
+                                                  if (!nome) { showToast && showToast('Digite um nome para o modelo', 'warn'); return; }
+                                                  await exSalvarModeloAtual(nome);
+                                                  if (input) input.value = '';
+                                                  exFecharNomeModelo();
+                                                  exEmitirConfirmado();
+                                                }
+
+                                                /* ── Emissão da solicitação de exames ─────────────────────────────── */
+                                                function exEmitir() {
+                                                  if (!exSelected.length) { showToast && showToast('Adicione ao menos um exame', 'warn'); return; }
+                                                  const nome = (document.getElementById('ex-pac-nome').value || '').trim();
+                                                  if (!nome) { showToast && showToast('Informe o nome do paciente', 'warn'); return; }
+                                                  if (exSalvarModeloAtivo) { exAbrirNomeModelo(); return; }
+                                                  exEmitirConfirmado();
+                                                }
+
+                                                async function exEmitirConfirmado() {
+                                                  const nome = (document.getElementById('ex-pac-nome').value || '').trim();
+                                                  const cpf = (document.getElementById('ex-pac-cpf').value || '').trim();
+                                                  const idade = (document.getElementById('ex-pac-idade').value || '').trim();
+                                                  const carater = document.getElementById('ex-carater').value;
+                                                  const jejum = document.getElementById('ex-jejum').value === 'sim';
+                                                  const validadeDias = parseInt(document.getElementById('ex-validade').value, 10) || null;
+                                                  const indicacao = document.getElementById('ex-indicacao').value.trim();
+                                                  const cidCode = document.getElementById('ex-cid-code').value.trim();
+                                                  const cidDesc = document.getElementById('ex-cid-desc').value.trim();
+                                                  const preparo = document.getElementById('ex-preparo').value.trim();
+                                                  const obs = document.getElementById('ex-obs').value.trim();
+
+                                                  const pacienteId = exIsAvulsa
+                                                    ? ((exMatchedPaciente && exMatchedPaciente.name === nome ? exMatchedPaciente.id : null) || (exManualPatient && exManualPatient.id) || null)
+                                                    : ((currentPatient && currentPatient.id) || null);
+
+                                                  const itens = exSelected.map(it => ({ codigo_tuss: it.codigo_tuss, nome: it.nome, instrucoes: it.instrucoes || '' }));
+
+                                                  const examsHtml = exSelected.map((it, i) => `
+                                                    <div class="rx-item">
+                                                      <div class="rx-index">${i + 1}</div>
+                                                      <div>
+                                                        <div class="med-name">${_rxEsc(it.nome)}</div>
+                                                        <div class="med-instructions">${_rxEsc(it.instrucoes || '') || '&nbsp;'}</div>
+                                                      </div>
+                                                    </div>`).join('');
+
+                                                  const result = await _renderSolicitacaoExamesPdf({
+                                                    patientName: nome,
+                                                    patientAge: idade,
+                                                    patientCpf: cpf,
+                                                    examsHtml,
+                                                    careType: carater === 'urgente' ? 'Urgente' : 'Eletivo',
+                                                    urgente: carater === 'urgente',
+                                                    fastingRequired: jejum ? 'Sim' : 'Não',
+                                                    validityDays: validadeDias || '—',
+                                                    clinicalIndication: indicacao,
+                                                    cidCode,
+                                                    cidDescription: cidDesc,
+                                                    preparationNotes: preparo,
+                                                    additionalNotes: obs,
+                                                  });
+                                                  if (!result) return;
+
+                                                  _baixarBlob(result.finalBlob, result.filename);
+                                                  showToast && showToast(result.signedUrl ? 'Solicitação de exames assinada digitalmente ✓' : 'Solicitação de exames gerada com sucesso', 'success');
+
+                                                  await salvarDocumentoGerado({
+                                                    tipo: 'solicitacao_exame',
+                                                    pacienteNome: nome || 'Paciente',
+                                                    pacienteCpf: cpf || null,
+                                                    pacienteId,
+                                                    conteudo: {
+                                                      itens,
+                                                      carater,
+                                                      jejum_necessario: jejum,
+                                                      validade_dias: validadeDias,
+                                                      indicacao_clinica: indicacao,
+                                                      cid_code: cidCode,
+                                                      cid_description: cidDesc,
+                                                      preparo,
+                                                      observacoes: obs,
+                                                    },
+                                                    blob: result.finalBlob,
+                                                    filename: result.filename,
+                                                    assinado: !!result.signedUrl,
+                                                  });
+
+                                                  if (!exIsAvulsa) {
+                                                    const ta = document.getElementById('pront-area');
+                                                    const resumoItens = exSelected.map((it, i) => `${i + 1}. ${it.nome}${it.instrucoes ? ' — ' + it.instrucoes : ''}`).join('\n');
+                                                    if (ta) { ta.value = (ta.value ? ta.value + '\n\n' : '') + 'SOLICITAÇÃO DE EXAMES:\n' + resumoItens; if (typeof markAtendDirty === 'function') markAtendDirty(); }
+                                                    showToast && showToast('Solicitação de exames adicionada ao prontuário', 'success');
+                                                  }
+
+                                                  closeModal();
+                                                }
+
+                                                /* Renderiza o PDF da solicitação de exames a partir de
+                                                   /solicitacao-exames-modelo.html — mesmo motor de _renderDocumentoPdf,
+                                                   mas com os placeholders extras do template de exames. */
+                                                async function _renderSolicitacaoExamesPdf({ patientName, patientAge, patientCpf, examsHtml, careType, urgente, fastingRequired, validityDays, clinicalIndication, cidCode, cidDescription, preparationNotes, additionalNotes }) {
+                                                  let clinic = {};
+                                                  try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
+
+                                                  const u = currentUser || {};
+                                                  const meta = u.user_metadata || {};
+                                                  const doctorName  = meta.full_name || meta.name || (u.email || '').split('@')[0] || 'Médico responsável';
+                                                  const doctorCrm   = meta.crm || meta.CRM || '—';
+                                                  const doctorSpec  = meta.especialidade || meta.specialty || '';
+                                                  const clinicName  = clinic.fantasia || clinic.razao || 'Clínica';
+                                                  const cidadeUf    = [clinic.cidade, clinic.uf].filter(Boolean).join('/');
+                                                  const addr = [
+                                                    [clinic.logradouro, clinic.numero].filter(Boolean).join(', '),
+                                                    clinic.complemento,
+                                                    clinic.bairro,
+                                                    cidadeUf,
+                                                    clinic.cep ? 'CEP ' + clinic.cep : ''
+                                                  ].filter(Boolean).join(' · ');
+
+                                                  let html;
+                                                  try {
+                                                    const resp = await fetch('/solicitacao-exames-modelo.html', { cache: 'no-store' });
+                                                    html = await resp.text();
+                                                  } catch (e) { showToast && showToast('Falha ao carregar modelo de solicitação de exames', 'error'); return null; }
+
+                                                  const [logoDataUrl, sigDataUrl, qrDataUrl] = await Promise.all([
+                                                    _rxImgToDataUrl(clinic.logo || ''),
+                                                    _rxImgToDataUrl(clinic.assinatura_url || ''),
+                                                    _rxImgToDataUrl(clinic.qr_url || ''),
+                                                  ]);
+                                                  const primaryColor = clinic.cor_primaria || '#0E6E5D';
+
+                                                  const repl = {
+                                                    '{{PRIMARY_COLOR}}' : primaryColor,
+                                                    '{{URGENCY_COLOR}}' : urgente ? '#b3261e' : primaryColor,
+                                                    '{{CLINIC_NAME}}'   : _rxEsc(clinicName),
+                                                    '{{CLINIC_ADDRESS}}': _rxEsc(addr || '—'),
+                                                    '{{CLINIC_PHONE}}'  : _rxEsc(clinic.telefone || ''),
+                                                    '{{CLINIC_EMAIL}}'  : _rxEsc(clinic.email || ''),
+                                                    '{{LOGO_URL}}'      : logoDataUrl,
+                                                    '{{DOCTOR_NAME}}'   : _rxEsc(doctorName),
+                                                    '{{DOCTOR_SPECIALTY}}': _rxEsc(doctorSpec),
+                                                    '{{DOCTOR_CRM}}'    : _rxEsc(doctorCrm),
+                                                    '{{PATIENT_NAME}}'  : _rxEsc(patientName || '—'),
+                                                    '{{PATIENT_AGE}}'   : _rxEsc(patientAge || '—'),
+                                                    '{{PATIENT_CPF}}'   : _rxEsc(patientCpf || '—'),
+                                                    '{{ISSUE_DATE}}'    : _rxEsc(new Date().toLocaleDateString('pt-BR')),
+                                                    '{{DOC_TITLE}}'     : 'Solicitação de Exame',
+                                                    '{{DOC_MARK}}'      : '',
+                                                    '{{CARE_TYPE}}'     : _rxEsc(careType || 'Eletivo'),
+                                                    '{{URGENCY_LABEL}}' : _rxEsc(careType || 'Eletivo'),
+                                                    '{{FASTING_REQUIRED}}': _rxEsc(fastingRequired || 'Não'),
+                                                    '{{VALIDITY_DAYS}}' : _rxEsc(String(validityDays || '—')),
+                                                    '{{CLINICAL_INDICATION}}': _rxEsc(clinicalIndication || '—'),
+                                                    '{{CID_CODE}}'      : _rxEsc(cidCode || ''),
+                                                    '{{CID_DESCRIPTION}}': _rxEsc(cidDescription || ''),
+                                                    '{{EXAMS_HTML}}'    : examsHtml || '',
+                                                    '{{PREPARATION_NOTES}}': _rxEsc(preparationNotes || '—'),
+                                                    '{{ADDITIONAL_NOTES}}': _rxEsc(additionalNotes || '—'),
+                                                    '{{SIGNATURE_DATETIME}}': _rxEsc(new Date().toLocaleString('pt-BR')),
+                                                    '{{SIGNATURE_CERT_ID}}' : _rxEsc(clinic.cert_id || ''),
+                                                    '{{SIGNATURE_IMAGE_URL}}': sigDataUrl,
+                                                    '{{QR_CODE_URL}}'  : qrDataUrl,
+                                                    '{{VERIFICATION_URL}}': _rxEsc(clinic.verificacao_url || ''),
+                                                  };
+                                                  for (const [k, v] of Object.entries(repl)) {
+                                                    html = html.split(k).join(v);
+                                                  }
+
+                                                  const scopeId = 'ex-scope-' + Date.now();
+                                                  const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+                                                  const bodyMatch  = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+                                                  let rawCss    = styleMatch ? styleMatch[1] : '';
+                                                  const rawBody = bodyMatch  ? bodyMatch[1]  : html;
+
+                                                  rawCss = rawCss
+                                                    .replace(/\*\s*\{\s*box-sizing:\s*border-box;\s*margin:\s*0;\s*padding:\s*0;\s*\}/,
+                                                      `#${scopeId} * { box-sizing: border-box; margin: 0; padding: 0; }`)
+                                                    .replace(/html,\s*body\s*\{([^}]*)\}/,
+                                                      (_, decls) => `#${scopeId} { ${decls} }`);
+
+                                                  const styleEl = document.createElement('style');
+                                                  styleEl.setAttribute('data-ex-style', scopeId);
+                                                  styleEl.textContent = rawCss;
+                                                  document.head.appendChild(styleEl);
+
+                                                  const clipper = document.createElement('div');
+                                                  clipper.style.cssText = `
+                                                    position:fixed;
+                                                    left:0;
+                                                    top:0;
+                                                    width:210mm;
+                                                    overflow:hidden;
+                                                    z-index:-1;
+                                                    pointer-events:none;
+                                                  `;
+
+                                                  const holder = document.createElement('div');
+                                                  holder.id = scopeId;
+                                                  holder.style.cssText = `
+                                                    position:relative;
+                                                    width:210mm;
+                                                    min-width:210mm;
+                                                    max-width:210mm;
+                                                    margin:0 auto;
+                                                    background:#fff;
+                                                  `;
+                                                  holder.innerHTML = rawBody;
+                                                  clipper.appendChild(holder);
+
+                                                  const cleanup = () => {
+                                                    try { clipper.remove(); } catch(_) {}
+                                                    try { styleEl.remove(); } catch(_) {}
+                                                  };
+
+                                                  try {
+                                                    holder.querySelectorAll('.builder-note').forEach(n => n.remove());
+                                                    if (!sigDataUrl) {
+                                                      holder.querySelectorAll('.signature-area').forEach(n => n.remove());
+                                                    }
+                                                    if (!logoDataUrl) {
+                                                      const ls = holder.querySelector('.logo-slot');
+                                                      if (ls) ls.remove();
+                                                    }
+                                                    if (!cidCode && !cidDescription) {
+                                                      holder.querySelectorAll('.cid-box').forEach(n => n.remove());
+                                                    }
+
+                                                    try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
+                                                    const imgs = Array.from(holder.querySelectorAll('img'));
+                                                    await Promise.all(imgs.map(img =>
+                                                      img.complete ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; })
+                                                    ));
+
+                                                    const safeName = (patientName || 'paciente').replace(/[^\w\-]+/g, '_').toLowerCase();
+                                                    const filename = `solicitacao_exame_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+                                                    const pdfBlob = await window.html2pdf().set({
+                                                      margin: 0,
+                                                      filename,
+                                                      image: { type: 'jpeg', quality: 0.98 },
+                                                      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
+                                                      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                                                      pagebreak: { mode: ['css', 'legacy'] }
+                                                    }).from(holder.querySelector('.sheet') || holder).outputPdf('blob');
+
+                                                    let finalBlob = pdfBlob;
+                                                    let signedUrl = null;
+                                                    try {
+                                                      const { data: sess } = await sb.auth.getSession();
+                                                      const token = sess?.session?.access_token;
+                                                      if (token) {
+                                                        const pdfBase64 = await new Promise((resolve, reject) => {
+                                                          const r = new FileReader();
+                                                          r.onload = () => resolve(String(r.result).split(',')[1] || '');
+                                                          r.onerror = reject;
+                                                          r.readAsDataURL(pdfBlob);
+                                                        });
+                                                        const resp = await fetch('/api/signature/sign', {
+                                                          method: 'POST',
+                                                          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                                                          body: JSON.stringify({
+                                                            pdfBase64,
+                                                            filename,
+                                                            contentDescription: `Solicitação de exames para ${patientName || 'paciente'}`,
+                                                          }),
+                                                        });
+                                                        if (resp.ok) {
+                                                          const j = await resp.json();
+                                                          signedUrl = j.signedPdfUrl;
+                                                          const dl = await fetch(signedUrl);
+                                                          if (dl.ok) finalBlob = await dl.blob();
+                                                        } else {
+                                                          const j = await resp.json().catch(() => ({}));
+                                                          if (j.error && j.error !== 'not_configured' && j.error !== 'credential_expired') {
+                                                            console.warn('Assinatura ICP falhou:', j);
+                                                          }
+                                                        }
+                                                      }
+                                                    } catch (e) { console.warn('Assinatura opcional falhou, seguindo sem assinatura:', e); }
+
+                                                    return { finalBlob, filename, signedUrl };
+                                                  } catch (e) {
+                                                    console.error('Falha ao gerar PDF da solicitação de exames:', e);
+                                                    showToast && showToast('Falha ao gerar PDF da solicitação de exames', 'error');
+                                                    return null;
+                                                  } finally {
+                                                    setTimeout(cleanup, 300);
+                                                  }
+                                                }
+
+
                                                 /* ========== RECEITAS E ATESTADOS (listagem) ========== */
                                                 let documentosGerados = [];
                                                 let documentosLoaded = false;
@@ -12272,15 +13104,21 @@ let rxSelected = [];
                                     function onGdTipoChange() {
                                       const tipo = document.getElementById('gd-tipo').value;
                                       const isReceita = tipo === 'receita';
+                                      const isExame = tipo === 'solicitacao_exame';
                                       const conteudoWrap = document.getElementById('gd-conteudo-wrap');
                                       const medsWrap = document.getElementById('gd-meds-wrap');
-                                      if (conteudoWrap) conteudoWrap.style.display = isReceita ? 'none' : '';
+                                      const examesWrap = document.getElementById('gd-exames-wrap');
+                                      if (conteudoWrap) conteudoWrap.style.display = (isReceita || isExame) ? 'none' : '';
                                       if (medsWrap) medsWrap.style.display = isReceita ? '' : 'none';
+                                      if (examesWrap) examesWrap.style.display = isExame ? '' : 'none';
                                       const btn = document.getElementById('gd-submit-btn');
                                       if (!btn) return;
                                       if (isReceita) {
                                         btn.innerHTML = '<i class="ti ti-pill"></i> Selecionar medicamentos';
                                         btn.onclick = abrirSelecaoMedicamentosDocumento;
+                                      } else if (isExame) {
+                                        btn.innerHTML = '<i class="ti ti-test-pipe"></i> Selecionar exames';
+                                        btn.onclick = abrirSelecaoExamesDocumento;
                                       } else {
                                         btn.innerHTML = '<i class="ti ti-file-plus"></i> Gerar documento';
                                         btn.onclick = gerarDocumentoGenerico;
@@ -12313,6 +13151,23 @@ let rxSelected = [];
                                       };
                                       rxIsAvulsa = true;
                                       openReceita();
+                                    }
+
+                                    /* Abre o modal "Solicitar exames" — mesmo padrão de
+                                       abrirSelecaoMedicamentosDocumento(), usando os dados digitados
+                                       no modal "Gerar documento" no lugar do paciente em atendimento. */
+                                    function abrirSelecaoExamesDocumento() {
+                                      const nome = document.getElementById('gd-nome').value.trim();
+                                      if (!nome) { showToast && showToast('Informe o nome do paciente', 'warn'); return; }
+                                      exManualPatient = {
+                                        id: (gdMatchedPaciente && gdMatchedPaciente.name === nome) ? gdMatchedPaciente.id : null,
+                                        name: nome,
+                                        cpf: document.getElementById('gd-cpf').value.trim(),
+                                        nasc: document.getElementById('gd-nasc').value,
+                                        tel: document.getElementById('gd-telefone').value.trim(),
+                                      };
+                                      exIsAvulsa = true;
+                                      openExameSolicitacao();
                                     }
 
                                     async function gerarDocumentoGenerico() {
