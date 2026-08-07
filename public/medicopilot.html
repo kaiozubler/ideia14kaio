@@ -8334,6 +8334,43 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                                                           iaMostrarBubbleAgendamento(action);
                                                           return;
                                                         }
+
+                                                        // ── Solicitação de exames ────────────────────────────────────────────────
+                                                        if(action.type==='open_solicitacao_exame'){
+                                                          const exames=Array.isArray(action.exames)?action.exames:[];
+                                                          exSelected=[];
+                                                          exIsAvulsa=false;
+                                                          openExameSolicitacao();
+                                                          const caraterEl=document.getElementById('ex-carater');
+                                                          if(caraterEl)caraterEl.value=(action.carater==='urgente')?'urgente':'eletivo';
+                                                          const jejumEl=document.getElementById('ex-jejum');
+                                                          if(jejumEl)jejumEl.value=action.jejum?'sim':'nao';
+                                                          const indEl=document.getElementById('ex-indicacao');
+                                                          if(indEl&&action.indicacao_clinica)indEl.value=action.indicacao_clinica;
+                                                          const cidEl=document.getElementById('ex-cid-code');
+                                                          if(cidEl&&action.cid)cidEl.value=action.cid;
+                                                          const prepEl=document.getElementById('ex-preparo');
+                                                          if(prepEl&&action.preparo)prepEl.value=action.preparo;
+                                                          const obsEl=document.getElementById('ex-obs');
+                                                          if(obsEl&&action.observacoes)obsEl.value=action.observacoes;
+                                                          // Busca cada exame no catálogo TUSS (odontologia já vem excluída
+                                                          // por buscar_tuss) e adiciona à solicitação
+                                                          for(const e of exames){
+                                                            try{
+                                                              const term=(e.nome||'').trim();
+                                                              if(!term)continue;
+                                                              const {data,error}=await sb.rpc('buscar_tuss',{termo:term,p_limit:5});
+                                                              if(error){console.warn('buscar_tuss falhou para',term,error);continue;}
+                                                              if(data&&data.length){
+                                                                const t=data[0];
+                                                                if(exSelected.some(it=>it.codigo_tuss===t.codigo_tuss))continue;
+                                                                exSelected.push({uid:rxUid(),codigo_tuss:t.codigo_tuss,nome:t.nome,instrucoes:e.instrucoes||''});
+                                                              }
+                                                            }catch(err){console.warn('iaExecuteAction exame',err);}
+                                                          }
+                                                          exRenderSelected();
+                                                          return;
+                                                        }
                                                       }
 
                                                       // Mostra uma bolha inline no chat com os dados de agendamento sugeridos pela
@@ -8852,6 +8889,97 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                     return {rawCss: styleMatch?styleMatch[1]:'', rawBody: bodyMatch?bodyMatch[1]:html, hasLogo:!!logoDataUrl, hasSig:!!sigDataUrl};
                   }
 
+                  // Monta a solicitação de exames usando o MESMO modelo real
+                  // (/solicitacao-exames-modelo.html) que a tela Atestado e Receitas já usa.
+                  async function iaAssistBuildExameSheet(att){
+                    const items=(att.exames||[]);
+                    const examsHtml=items.map(function(it,i){
+                      return '<div class="rx-item"><div class="rx-index">'+(i+1)+'</div><div>'
+                        +'<div class="med-name">'+_rxEsc(it.nome||'')+'</div>'
+                        +'<div class="med-instructions">'+(_rxEsc(it.instrucoes||'')||'&nbsp;')+'</div>'
+                        +'</div></div>';
+                    }).join('');
+
+                    let clinic={};
+                    try{clinic=JSON.parse(localStorage.getItem(CLINICA_KEY)||'{}');}catch(e){}
+                    const u=(typeof currentUser!=='undefined')?(currentUser||{}):{};
+                    const meta=u.user_metadata||{};
+                    const doctorName=meta.full_name||meta.name||meta.name_user||(u.email||'').split('@')[0]||'Médico responsável';
+                    const doctorCrm=meta.crm||meta.CRM||'—';
+                    const doctorSpec=meta.especialidade||meta.specialty||'';
+                    const clinicName=clinic.fantasia||clinic.razao||'Clínica';
+                    const cidadeUf=[clinic.cidade,clinic.uf].filter(Boolean).join('/');
+                    const addr=[[clinic.logradouro,clinic.numero].filter(Boolean).join(', '),clinic.complemento,clinic.bairro,cidadeUf,clinic.cep?('CEP '+clinic.cep):''].filter(Boolean).join(' · ');
+
+                    let patientAge='—', patientCpf='—';
+                    if(att.paciente_idade!=null && att.paciente_idade!=='') patientAge=att.paciente_idade+' anos';
+                    if(att.paciente_cpf) patientCpf=att.paciente_cpf;
+                    if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
+                      try{
+                        const {data}=await sb.from('pacientes').select('nasc,cpf').eq('paciente_id',att.paciente_id).maybeSingle();
+                        if(data){ if(patientAge==='—'&&data.nasc)patientAge=_rxIdade(data.nasc); if(patientCpf==='—'&&data.cpf)patientCpf=data.cpf; }
+                      }catch(e){}
+                    }
+
+                    let html;
+                    try{
+                      const resp=await fetch('/solicitacao-exames-modelo.html',{cache:'no-store'});
+                      html=await resp.text();
+                    }catch(e){ return null; }
+
+                    const [logoDataUrl,sigDataUrl,qrDataUrl]=await Promise.all([
+                      _rxImgToDataUrl(clinic.logo||''),
+                      _rxImgToDataUrl(clinic.assinatura_url||''),
+                      _rxImgToDataUrl(clinic.qr_url||'')
+                    ]);
+                    const primaryColor=clinic.cor_primaria||'#0E6E5D';
+                    const urgente=att.carater==='urgente';
+
+                    const repl={
+                      '{{PRIMARY_COLOR}}':primaryColor,
+                      '{{URGENCY_COLOR}}':urgente?'#b3261e':primaryColor,
+                      '{{CLINIC_NAME}}':_rxEsc(clinicName),
+                      '{{CLINIC_ADDRESS}}':_rxEsc(addr||'—'),
+                      '{{CLINIC_PHONE}}':_rxEsc(clinic.telefone||''),
+                      '{{CLINIC_EMAIL}}':_rxEsc(clinic.email||''),
+                      '{{LOGO_URL}}':logoDataUrl,
+                      '{{DOCTOR_NAME}}':_rxEsc(doctorName),
+                      '{{DOCTOR_SPECIALTY}}':_rxEsc(doctorSpec),
+                      '{{DOCTOR_CRM}}':_rxEsc(doctorCrm),
+                      '{{PATIENT_NAME}}':_rxEsc(att.paciente_nome||'—'),
+                      '{{PATIENT_AGE}}':_rxEsc(patientAge||'—'),
+                      '{{PATIENT_CPF}}':_rxEsc(patientCpf||'—'),
+                      '{{ISSUE_DATE}}':_rxEsc(new Date().toLocaleDateString('pt-BR')),
+                      '{{DOC_TITLE}}':'Solicitação de Exame',
+                      '{{DOC_MARK}}':'',
+                      '{{CARE_TYPE}}':_rxEsc(urgente?'Urgente':'Eletivo'),
+                      '{{URGENCY_LABEL}}':_rxEsc(urgente?'Urgente':'Eletivo'),
+                      '{{FASTING_REQUIRED}}':_rxEsc(att.jejum?'Sim':'Não'),
+                      '{{VALIDITY_DAYS}}':_rxEsc('90'),
+                      '{{CLINICAL_INDICATION}}':_rxEsc(att.indicacao_clinica||'—'),
+                      '{{CID_CODE}}':_rxEsc(att.cid||''),
+                      '{{CID_DESCRIPTION}}':_rxEsc(att.cid_descricao||''),
+                      '{{EXAMS_HTML}}':examsHtml,
+                      '{{PREPARATION_NOTES}}':_rxEsc(att.preparo||'—'),
+                      '{{ADDITIONAL_NOTES}}':_rxEsc(att.observacoes||'—'),
+                      '{{SIGNATURE_DATETIME}}':_rxEsc(new Date().toLocaleString('pt-BR')),
+                      '{{SIGNATURE_CERT_ID}}':_rxEsc(clinic.cert_id||''),
+                      '{{QR_CODE_URL}}':qrDataUrl,
+                      '{{VERIFICATION_URL}}':_rxEsc(clinic.verificacao_url||''),
+                    };
+                    for(const [k,v] of Object.entries(repl)){ html=html.split(k).join(v); }
+
+                    const styleMatch=html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+                    const bodyMatch=html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+                    return {
+                      rawCss: styleMatch?styleMatch[1]:'',
+                      rawBody: bodyMatch?bodyMatch[1]:html,
+                      hasLogo:!!logoDataUrl,
+                      hasSig:!!sigDataUrl,
+                      hasCid: !!(att.cid||att.cid_descricao),
+                    };
+                  }
+
                   function iaAssistBuildAtestadoHtml(att){
                     const titulo=att.tipo==='declaracao'?'Declaração de Comparecimento':'Atestado Médico';
                     let linhas='';
@@ -8895,6 +9023,45 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                       inner.querySelectorAll('.builder-note').forEach(function(n){n.remove();});
                       if(!built.hasSig)inner.querySelectorAll('.signature-area').forEach(function(n){n.remove();});
                       if(!built.hasLogo){const ls=inner.querySelector('.logo-slot');if(ls)ls.remove();}
+                      scaleWrap.appendChild(inner);
+                      sheetEl.innerHTML='';
+                      sheetEl.appendChild(scaleWrap);
+                      sheetEl.dataset.attachId=attachId;
+
+                      requestAnimationFrame(function(){
+                        const trueH=inner.scrollHeight||inner.offsetHeight||1122;
+                        const availW=sheetEl.clientWidth||460;
+                        const scale=Math.min(1,availW/794);
+                        inner.style.transform='scale('+scale+')';
+                        scaleWrap.style.width=(794*scale)+'px';
+                        scaleWrap.style.height=(trueH*scale)+'px';
+                      });
+                    }else if(att.kind==='exame'){
+                      titleEl.textContent='Solicitação de exames';
+                      sheetEl.style.cssText='padding:0;border:none;box-shadow:none;background:transparent';
+                      sheetEl.innerHTML='<div style="padding:40px;text-align:center;color:var(--n400);font-size:12px">Montando a solicitação...</div>';
+                      const built=await iaAssistBuildExameSheet(att);
+                      if(!built){ sheetEl.innerHTML='<div style="padding:20px;color:#dc2626;font-size:12px">Não foi possível carregar o modelo de solicitação de exames (/solicitacao-exames-modelo.html).</div>'; return; }
+                      document.querySelectorAll('style[data-ia-ex-preview]').forEach(function(s){s.remove();});
+                      const scopeId='ia-ex-preview-'+Date.now();
+                      let rawCss=built.rawCss.replace(/\*\s*\{\s*box-sizing:\s*border-box;\s*margin:\s*0;\s*padding:\s*0;\s*\}/,
+                        '#'+scopeId+' * { box-sizing: border-box; margin: 0; padding: 0; }')
+                        .replace(/html,\s*body\s*\{([^}]*)\}/,function(_,decls){return '#'+scopeId+' { '+decls+' }';});
+                      const styleEl=document.createElement('style');
+                      styleEl.setAttribute('data-ia-ex-preview',scopeId);
+                      styleEl.textContent=rawCss;
+                      document.head.appendChild(styleEl);
+
+                      const scaleWrap=document.createElement('div');
+                      scaleWrap.style.cssText='position:relative;overflow:hidden;margin:0 auto;';
+                      const inner=document.createElement('div');
+                      inner.id=scopeId;
+                      inner.style.cssText='width:210mm;transform-origin:top left;';
+                      inner.innerHTML=built.rawBody;
+                      inner.querySelectorAll('.builder-note').forEach(function(n){n.remove();});
+                      if(!built.hasSig)inner.querySelectorAll('.signature-area').forEach(function(n){n.remove();});
+                      if(!built.hasLogo){const ls=inner.querySelector('.logo-slot');if(ls)ls.remove();}
+                      if(!built.hasCid)inner.querySelectorAll('.cid-box').forEach(function(n){n.remove();});
                       scaleWrap.appendChild(inner);
                       sheetEl.innerHTML='';
                       sheetEl.appendChild(scaleWrap);
@@ -8963,6 +9130,52 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                     }
                   }
 
+                  // Gera o PDF real da solicitação de exames fora da tela, mesmo padrão de
+                  // iaAssistDownloadReceitaFile, usando /solicitacao-exames-modelo.html.
+                  async function iaAssistDownloadExameFile(att){
+                    const built=await iaAssistBuildExameSheet(att);
+                    if(!built)throw new Error('Não foi possível carregar o modelo de solicitação de exames.');
+                    const scopeId='ia-ex-dl-'+Date.now();
+                    const rawCss=built.rawCss.replace(/\*\s*\{\s*box-sizing:\s*border-box;\s*margin:\s*0;\s*padding:\s*0;\s*\}/,
+                      '#'+scopeId+' * { box-sizing: border-box; margin: 0; padding: 0; }')
+                      .replace(/html,\s*body\s*\{([^}]*)\}/,function(_,decls){return '#'+scopeId+' { '+decls+' }';});
+                    const styleEl=document.createElement('style');
+                    styleEl.textContent=rawCss;
+                    document.head.appendChild(styleEl);
+
+                    const clipper=document.createElement('div');
+                    clipper.style.cssText='position:fixed;left:0;top:0;width:210mm;overflow:hidden;z-index:-1;pointer-events:none;';
+                    const holder=document.createElement('div');
+                    holder.id=scopeId;
+                    holder.style.cssText='position:relative;width:210mm;min-width:210mm;max-width:210mm;margin:0 auto;background:#fff;';
+                    holder.innerHTML=built.rawBody;
+                    clipper.appendChild(holder);
+                    document.body.appendChild(clipper);
+
+                    try{
+                      holder.querySelectorAll('.builder-note').forEach(function(n){n.remove();});
+                      if(!built.hasSig)holder.querySelectorAll('.signature-area').forEach(function(n){n.remove();});
+                      if(!built.hasLogo){const ls=holder.querySelector('.logo-slot');if(ls)ls.remove();}
+                      if(!built.hasCid)holder.querySelectorAll('.cid-box').forEach(function(n){n.remove();});
+                      try{if(document.fonts&&document.fonts.ready)await document.fonts.ready;}catch(e){}
+                      const imgs=Array.from(holder.querySelectorAll('img'));
+                      await Promise.all(imgs.map(function(img){return img.complete?Promise.resolve():new Promise(function(r){img.onload=img.onerror=r;});}));
+                      const safeName=String(att.paciente_nome||'paciente').replace(/[^\w\-]+/g,'_').toLowerCase();
+                      const filename='solicitacao_exame_'+safeName+'_'+new Date().toISOString().slice(0,10)+'.pdf';
+                      await window.html2pdf().set({
+                        margin:0,
+                        filename:filename,
+                        image:{type:'jpeg',quality:0.98},
+                        html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false},
+                        jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+                        pagebreak:{mode:['css','legacy']}
+                      }).from(holder.querySelector('.sheet')||holder).save();
+                    }finally{
+                      clipper.remove();
+                      styleEl.remove();
+                    }
+                  }
+
                   async function iaAssistDownloadPreview(){
                     const sheetEl=document.getElementById('ia-prev-sheet');
                     const att=window.iaAssistAttachments[sheetEl.dataset.attachId]||{};
@@ -8971,6 +9184,8 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                     try{
                       if(att.kind==='receita'){
                         await iaAssistDownloadReceitaFile(att);
+                      }else if(att.kind==='exame'){
+                        await iaAssistDownloadExameFile(att);
                       }else{
                         const safeName=String(att.paciente_nome||'documento').replace(/[^\w\-]+/g,'_').toLowerCase();
                         const filename='atestado_'+safeName+'_'+new Date().toISOString().slice(0,10)+'.pdf';
@@ -8994,6 +9209,9 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
   if(action.type==='gerar_receita'){
     const id=iaAssistRegisterAttachment('receita',action);
     iaAssistAppendAttachmentCard(id,'Receita — '+(action.paciente_nome||'paciente'),'Toque para visualizar');
+  }else if(action.type==='gerar_solicitacao_exame'){
+    const id=iaAssistRegisterAttachment('exame',action);
+    iaAssistAppendAttachmentCard(id,'Solicitação de exames — '+(action.paciente_nome||'paciente'),'Toque para visualizar');
   }else if(action.type==='gerar_atestado'){
     const id=iaAssistRegisterAttachment('atestado',action);
     const label=action.tipo==='declaracao'?'Declaração':'Atestado';

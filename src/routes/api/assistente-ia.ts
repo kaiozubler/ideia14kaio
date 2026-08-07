@@ -35,7 +35,7 @@ const TZ_OFFSET_MIN = -180; // America/Sao_Paulo
 const SYSTEM = `Você é o Assistente do MediCopilot, usado por médicos e secretárias FORA do contexto de uma consulta em andamento.
 Fale sempre em português do Brasil, de forma curta, objetiva e cordial.
 
-Você pode: agendar pacientes, gerar receitas, gerar atestados/declarações, responder perguntas sobre a agenda do dia, enviar mensagens/documentos ao paciente por WhatsApp, convidar um paciente a agendar sozinho pelo WhatsApp (ele conversa com uma versão restrita da IA, que só agenda/consulta/cancela o próprio atendimento dele), criar cadastro de paciente e responder dúvidas de uso do sistema.
+Você pode: agendar pacientes, gerar receitas, gerar solicitações de exames, gerar atestados/declarações, responder perguntas sobre a agenda do dia, enviar mensagens/documentos ao paciente por WhatsApp, convidar um paciente a agendar sozinho pelo WhatsApp (ele conversa com uma versão restrita da IA, que só agenda/consulta/cancela o próprio atendimento dele), criar cadastro de paciente e responder dúvidas de uso do sistema.
 
 REGRAS DE IDENTIFICAÇÃO DO PACIENTE
 - Você NÃO sabe quem é o paciente até perguntar. Sempre que uma ação precisar de um paciente ainda não identificado nesta conversa, pergunte o NOME.
@@ -52,6 +52,12 @@ DADOS OBRIGATÓRIOS PARA RECEITA
 
 INTERAÇÃO MEDICAMENTOSA
 - Ao chamar gerar_receita com 2+ medicamentos, a tool já verifica interações automaticamente. Se ela responder interacao_detectada=true, pare, explique a interação ao médico em linguagem simples e pergunte se deseja continuar mesmo assim. Só chame gerar_receita de novo, com interacao_confirmada=true, após a confirmação explícita.
+
+DADOS OBRIGATÓRIOS PARA SOLICITAÇÃO DE EXAMES
+- Toda solicitação de exames também precisa de três dados do paciente: nome, CPF e idade — mesma regra da receita. A tool gerar_solicitacao_exame exige os três.
+- Se o médico citar um exame de forma vaga, chame buscar_exame pelo nome para confirmar o exame correto (e o código TUSS) antes de incluir na solicitação.
+- NUNCA sugira, busque ou inclua exames odontológicos (radiografia dentária, avaliação odontológica, profilaxia, canal, etc.) — esse tipo de solicitação não é coberto por este sistema. Se o médico pedir um exame odontológico, explique que não está disponível aqui.
+- Caráter padrão é "eletivo" — só use "urgente" se o médico disser isso explicitamente. Jejum, indicação clínica, CID, preparo e observações são opcionais; pergunte apenas se o médico mencionar algo relacionado.
 
 APRESENTAÇÃO E POSOLOGIA DOS MEDICAMENTOS
 - Se o médico citar um medicamento sem apresentação (dosagem/forma) ou sem posologia, chame buscar_medicamento pelo nome.
@@ -214,6 +220,56 @@ const tools: ToolDef[] = [
         type: "object",
         properties: { nome: { type: "string" } },
         required: ["nome"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "buscar_exame",
+      description:
+        "Busca um exame na tabela TUSS pelo nome, para confirmar o exame correto e seu código antes de incluir numa solicitação. Nunca retorna exames odontológicos.",
+      parameters: {
+        type: "object",
+        properties: { nome: { type: "string" } },
+        required: ["nome"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "gerar_solicitacao_exame",
+      description:
+        "Gera uma solicitação de exames com um ou mais exames. Exige nome, CPF e idade do paciente. Nunca inclua exames odontológicos.",
+      parameters: {
+        type: "object",
+        properties: {
+          paciente_id: { type: "string" },
+          paciente_nome: { type: "string" },
+          paciente_cpf: { type: "string" },
+          paciente_idade: { type: "number", description: "Idade do paciente em anos" },
+          carater: { type: "string", enum: ["eletivo", "urgente"], description: "Padrão: eletivo" },
+          jejum: { type: "boolean", description: "Se o(s) exame(s) exige(m) jejum" },
+          indicacao_clinica: { type: "string" },
+          cid: { type: "string" },
+          cid_descricao: { type: "string" },
+          preparo: { type: "string" },
+          observacoes: { type: "string" },
+          exames: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                nome: { type: "string" },
+                codigo_tuss: { type: "string" },
+                instrucoes: { type: "string" },
+              },
+              required: ["nome"],
+            },
+          },
+        },
+        required: ["paciente_nome", "paciente_cpf", "paciente_idade", "exames"],
       },
     },
   },
@@ -701,6 +757,129 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
           apresentacao: m.apresentacao,
           fabricante: m.fabricante,
         })),
+      };
+    }
+
+    case "buscar_exame": {
+      const termo = String(args.nome || "").trim();
+      if (!termo) return { erro: "Informe o nome do exame." };
+      // buscar_tuss já exclui procedimentos odontológicos (grupo = 'Odontologia')
+      const { data, error } = await db.rpc("buscar_tuss", { termo, p_limit: 5 });
+      if (error) return { erro: error.message };
+      if (!data || !data.length) return { encontrado: false };
+      return {
+        encontrado: true,
+        opcoes: data.map((e: any) => ({
+          nome: e.nome,
+          codigo_tuss: e.codigo_tuss,
+          grupo: e.grupo,
+        })),
+      };
+    }
+
+    case "gerar_solicitacao_exame": {
+      const exames = Array.isArray(args.exames) ? args.exames : [];
+      if (!exames.length) return { erro: "Informe ao menos um exame." };
+      const cpfDigits = onlyDigits(args.paciente_cpf);
+      if (cpfDigits.length !== 11) {
+        return {
+          erro: "faltam_dados_paciente",
+          faltando: "cpf",
+          instrucao:
+            "O CPF informado é inválido ou está ausente. Peça o CPF completo do paciente (11 dígitos) antes de gerar a solicitação — nunca invente um número.",
+        };
+      }
+      const idadeNum = Number(args.paciente_idade);
+      if (!Number.isFinite(idadeNum) || idadeNum <= 0 || idadeNum > 120) {
+        return {
+          erro: "faltam_dados_paciente",
+          faltando: "idade",
+          instrucao:
+            "A idade informada é inválida ou está ausente. Peça a idade real do paciente antes de gerar a solicitação — nunca invente um valor.",
+        };
+      }
+
+      // Confere cada exame contra o catálogo TUSS (odontologia já vem excluída) para
+      // não deixar a IA "inventar" um exame que não existe no catálogo.
+      const examesValidados: { nome: string; codigo_tuss: string | null; instrucoes: string }[] = [];
+      const naoEncontrados: string[] = [];
+      for (const e of exames) {
+        const nome = String(e?.nome || "").trim();
+        if (!nome) continue;
+        if (e?.codigo_tuss) {
+          examesValidados.push({ nome, codigo_tuss: String(e.codigo_tuss), instrucoes: String(e?.instrucoes || "") });
+          continue;
+        }
+        const { data } = await db.rpc("buscar_tuss", { termo: nome, p_limit: 1 });
+        if (data && data.length) {
+          examesValidados.push({
+            nome: data[0].nome,
+            codigo_tuss: data[0].codigo_tuss,
+            instrucoes: String(e?.instrucoes || ""),
+          });
+        } else {
+          naoEncontrados.push(nome);
+        }
+      }
+      if (!examesValidados.length) {
+        return {
+          erro: "exames_nao_encontrados",
+          nao_encontrados: naoEncontrados,
+          instrucao:
+            "Nenhum dos exames citados foi encontrado no catálogo TUSS (ou é um exame odontológico, que não é coberto). Pergunte ao médico o nome correto do exame.",
+        };
+      }
+
+      const carater = args.carater === "urgente" ? "urgente" : "eletivo";
+      const conteudo = {
+        itens: examesValidados.map((e) => ({ codigo_tuss: e.codigo_tuss, nome: e.nome, instrucoes: e.instrucoes })),
+        carater,
+        jejum_necessario: !!args.jejum,
+        indicacao_clinica: args.indicacao_clinica || null,
+        cid_code: args.cid || null,
+        cid_description: args.cid_descricao || null,
+        preparo: args.preparo || null,
+        observacoes: args.observacoes || null,
+        paciente_cpf: args.paciente_cpf,
+        paciente_idade: args.paciente_idade,
+      };
+
+      let documentoId: string | null = null;
+      if (medicoId) {
+        const { data } = await db
+          .from("documentos_paciente")
+          .insert({
+            id_medico: medicoId,
+            paciente_id: args.paciente_id || null,
+            paciente_nome: args.paciente_nome || null,
+            tipo: "solicitacao_exame",
+            conteudo,
+          })
+          .select("id")
+          .single();
+        documentoId = data?.id ?? null;
+      }
+      ctx.pendingAction.value = {
+        type: "gerar_solicitacao_exame",
+        documento_id: documentoId,
+        paciente_id: args.paciente_id || null,
+        paciente_nome: args.paciente_nome || null,
+        paciente_cpf: args.paciente_cpf || null,
+        paciente_idade: args.paciente_idade ?? null,
+        carater,
+        jejum: !!args.jejum,
+        indicacao_clinica: args.indicacao_clinica || null,
+        cid: args.cid || null,
+        cid_descricao: args.cid_descricao || null,
+        preparo: args.preparo || null,
+        observacoes: args.observacoes || null,
+        exames: examesValidados,
+      };
+      return {
+        gerado: true,
+        documento_id: documentoId,
+        exames: examesValidados.length,
+        nao_encontrados: naoEncontrados.length ? naoEncontrados : undefined,
       };
     }
 
