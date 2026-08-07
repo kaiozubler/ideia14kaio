@@ -8363,6 +8363,32 @@ showAtendList();
                                                       async function iaExecuteAction(action){
                                                         if(!action||!action.type)return;
 
+                                                        // ── Salvar exame no cadastro do paciente ─────────────────────────────────
+                                                        if(action.type==='salvar_exame'){
+                                                          if(!currentPatient||!currentPatient.id){
+                                                            spawnBubble('ia','⚠️ Abra o cadastro de um paciente para salvar o exame.');
+                                                            return;
+                                                          }
+                                                          try{
+                                                            const {error}=await sb.from('exames').insert({
+                                                              paciente_id:currentPatient.id,
+                                                              user_id:(await sb.auth.getUser()).data.user?.id,
+                                                              nome:action.nome||'Exame',
+                                                              tipo:action.tipo||'Laboratorial',
+                                                              data:action.data||'',
+                                                              obs:action.obs||'',
+                                                              resultado:action.resultado||'',
+                                                              validade:'Indefinido'
+                                                            });
+                                                            if(error)throw error;
+                                                            spawnBubble('ia','✅ Exame salvo no cadastro de '+(currentPatient.name||'paciente')+'.');
+                                                            if(typeof loadExames==='function')loadExames();
+                                                          }catch(e){
+                                                            spawnBubble('ia','⚠️ Erro ao salvar o exame: '+(e.message||e));
+                                                          }
+                                                          return;
+                                                        }
+
                                                         // ── Receita ──────────────────────────────────────────────────────────────
                                                         if(action.type==='open_receita'){
                                                           const meds=Array.isArray(action.medicamentos)?action.medicamentos:[];
