@@ -8382,7 +8382,7 @@ showAtendList();
                                                             });
                                                             if(error)throw error;
                                                             spawnBubble('ia','✅ Exame salvo no cadastro de '+(currentPatient.name||'paciente')+'.');
-                                                            if(typeof loadExames==='function')loadExames();
+                                                            if(typeof renderExames==='function')renderExames();
                                                           }catch(e){
                                                             spawnBubble('ia','⚠️ Erro ao salvar o exame: '+(e.message||e));
                                                           }
