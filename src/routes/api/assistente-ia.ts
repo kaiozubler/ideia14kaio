@@ -1193,6 +1193,37 @@ export const Route = createFileRoute("/api/assistente-ia")({  server: {
           ...history,
         ];
 
+        // Anexo recebido no chat interno: encaminha para a IA dedicada de exames e
+        // injeta a análise no contexto, para o assistente conversar sobre ela.
+        let analiseExame: AnaliseExame | null = null;
+        if (canal === "interno" && body.anexo?.base64) {
+          try {
+            analiseExame = await analisarExameArquivo({
+              apiKey,
+              anexo: body.anexo,
+              buscarTuss: async (termo) => {
+                const { data } = await supabaseAdmin.rpc("buscar_tuss", { termo, p_limit: 1 });
+                const hit = (data as any[] | null)?.[0];
+                return hit ? { codigo_tuss: hit.codigo_tuss, nome: hit.nome } : null;
+              },
+            });
+            messages.push({
+              role: "system",
+              content:
+                `ANÁLISE DE EXAME (IA de exames) — arquivo "${body.anexo.nome || "anexo"}" enviado pelo médico:\n` +
+                JSON.stringify(analiseExame, null, 2),
+            });
+          } catch (e) {
+            messages.push({
+              role: "system",
+              content:
+                "Falha ao analisar o arquivo anexado como exame: " +
+                (e instanceof Error ? e.message : "erro desconhecido") +
+                ". Avise o médico e peça para reenviar o arquivo.",
+            });
+          }
+        }
+
         try {
           for (let step = 0; step < 8; step++) {
             const msg = await callGateway(messages, apiKey, toolset);
@@ -1208,6 +1239,7 @@ export const Route = createFileRoute("/api/assistente-ia")({  server: {
                 reply,
                 action: pendingAction.value,
                 conversa_id: conversaId,
+                analise_exame: analiseExame,
               });
             }
             for (const call of calls) {
