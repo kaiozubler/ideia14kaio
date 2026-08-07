@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { analisarExameArquivo, type AnaliseExame } from "@/lib/exames/analise.server";
 
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -21,6 +22,11 @@ type RequestBody = {
   cids_atuais?: { code?: string; description?: string }[];
   cid_opcoes?: { c?: string; d?: string }[];
   conteudo_atendimento?: string;
+  // Anexo enviado pelo médico no chat da consulta (ex.: PDF de exame).
+  anexo?: { nome?: string; mime?: string; base64?: string } | null;
+  paciente_cpf?: string | null;
+  paciente_nome?: string | null;
+  paciente_nascimento?: string | null;
 };
 
 const IC_FIELD_META: Record<string, { label: string; tipo: "texto" | "numero" | "select"; opcoes?: string[] }> = {
@@ -132,6 +138,25 @@ IMPORTANTE: NUNCA inclua exames odontológicos (radiografia dentária, avaliaç�
 canal, etc.) em "exames" — esse tipo de exame não é coberto por este sistema e não deve ser sugerido em
 nenhuma hipótese, mesmo que o médico peça. Nesse caso, responda em texto normal explicando que não está
 disponível aqui.
+
+6. Salvar no cadastro do paciente um exame que já foi analisado pela IA de exames:
+{
+  "type": "salvar_exame",
+  "nome": "Nome/título do exame",
+  "tipo": "Laboratorial | Imagem | Laudo | Documento | Outro",
+  "data": "AAAA-MM-DD",
+  "obs": "observação curta",
+  "resultado": "resultado/resumo consolidado"
+}
+
+EXAMES ANEXADOS
+Quando a conversa trouxer o bloco "ANÁLISE DE EXAME (IA de exames)", o arquivo enviado pelo médico já foi
+analisado pela IA dedicada de exames — use exclusivamente aquele conteúdo, sem inventar valores.
+Nesse caso responda informando o nome e o CPF do paciente detectados no documento (ou avise que o documento
+não traz esses dados), a data do exame, os exames identificados e os pontos de atenção. Se o exame for do
+paciente desta consulta, pergunte se o médico deseja salvar o exame no cadastro dele; só gere a ação
+"salvar_exame" depois da confirmação. Se os dados do documento indicarem outra pessoa, alerte a divergência
+e não proponha o salvamento.
 
 Se a mensagem não for um pedido de documento nem de agendamento, responda normalmente em texto puro (sem JSON).`;
 
@@ -417,11 +442,35 @@ export const Route = createFileRoute("/api/chat-ia")({
           // chat mode
           const history = Array.isArray(body.messages) ? body.messages : [];
           const resumo = (body.resumo_prontuario || "").trim();
+
+          let analiseExame: AnaliseExame | null = null;
+          if (body.anexo?.base64) {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            analiseExame = await analisarExameArquivo({
+              apiKey,
+              anexo: body.anexo,
+              paciente: {
+                nome: body.paciente_nome ?? null,
+                cpf: body.paciente_cpf ?? null,
+                data_nascimento: body.paciente_nascimento ?? null,
+              },
+              buscarTuss: async (termo) => {
+                const { data } = await supabaseAdmin.rpc("buscar_tuss", { termo, p_limit: 1 });
+                const hit = (data as any[] | null)?.[0];
+                return hit ? { codigo_tuss: hit.codigo_tuss, nome: hit.nome } : null;
+              },
+            });
+          }
+
           const systemContent =
             SYSTEM_CHAT +
             (resumo
               ? "\n\n=== RESUMO DO PRONTUÁRIO DO PACIENTE ===\n" + resumo
-              : "\n\n(Sem resumo de prontuário disponível.)");
+              : "\n\n(Sem resumo de prontuário disponível.)") +
+            (analiseExame
+              ? `\n\n=== ANÁLISE DE EXAME (IA de exames) — arquivo "${body.anexo?.nome || "anexo"}" ===\n` +
+                JSON.stringify(analiseExame, null, 2)
+              : "");
           const messages: ChatMessage[] = [
             { role: "system", content: systemContent },
             ...history.filter(
@@ -429,7 +478,7 @@ export const Route = createFileRoute("/api/chat-ia")({
             ),
           ];
           const text = await callGateway(messages, apiKey);
-          return Response.json({ reply: text });
+          return Response.json({ reply: text, analise_exame: analiseExame });
         } catch (err) {
           if (err instanceof Response) return err;
           const msg = err instanceof Error ? err.message : "Unknown error";
