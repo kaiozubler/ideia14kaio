@@ -8677,7 +8677,7 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                                                               fetch('/api/chat-ia',{
                                                                 method:'POST',
                                                                 headers:{'Content-Type':'application/json'},
-                                                                body:JSON.stringify({mode:'chat',messages:aiChatHistory,resumo_prontuario:currentResumoProntuario||''})
+                                                                body:JSON.stringify(Object.assign({mode:'chat',messages:aiChatHistory,resumo_prontuario:currentResumoProntuario||'',anexo:iaTakeAnexo('ai')},(function(){const p=iaExamePacienteCtx();return p?{paciente_nome:p.nome,paciente_cpf:p.cpf,paciente_nascimento:p.data_nascimento}:{};})()))
                                                               })
                                                               .then(async r=>{if(!r.ok)throw new Error(await r.text());return r.json();})
                                                               .then(d=>{
