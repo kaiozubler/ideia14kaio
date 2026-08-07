@@ -158,6 +158,13 @@ paciente desta consulta, pergunte se o médico deseja salvar o exame no cadastro
 "salvar_exame" depois da confirmação. Se os dados do documento indicarem outra pessoa, alerte a divergência
 e não proponha o salvamento.
 
+MÚLTIPLAS AÇÕES NA MESMA MENSAGEM
+Se o médico pedir mais de uma coisa na mesma mensagem (ex.: "gere a receita e agende retorno em 30 dias"),
+gere um objeto JSON COMPLETO E INDEPENDENTE para CADA ação, um logo em seguida do outro, cada um no
+formato exato {"reply": "...", "action": {...}} — nunca misture os campos de ações diferentes dentro de
+um único objeto, e nunca envolva vários objetos em um array. Cada "reply" deve ser curto e falar só
+daquela ação específica (ex.: um para a receita, outro para o agendamento).
+
 Se a mensagem não for um pedido de documento nem de agendamento, responda normalmente em texto puro (sem JSON).`;
 
 const SYSTEM_RESUMO = `Você é um assistente clínico. Gere um RESUMO ESTRUTURADO do prontuário
