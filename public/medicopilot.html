@@ -2896,6 +2896,21 @@
                           placeholder="Mensagem para a IA..."
                           onkeydown="if(event.key==='Enter')sendAIMsg()"
                         />
+                        <input
+                          type="file"
+                          id="ai-anexo-inp"
+                          style="display:none"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onchange="iaSetAnexo('ai',this)"
+                        />
+                        <button
+                          class="ai-sbtn"
+                          id="ai-anexo-btn"
+                          title="Anexar exame (PDF ou imagem)"
+                          onclick="document.getElementById('ai-anexo-inp').click()"
+                        >
+                          <i class="ti ti-paperclip"></i>
+                        </button>
                         <button class="ai-sbtn" onclick="sendAIMsg()"><i class="ti ti-send"></i></button>
                       </div>
                     </div>
