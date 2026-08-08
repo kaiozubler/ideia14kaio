@@ -3495,50 +3495,153 @@
 
           <!-- SCREEN: COPILOTO -->
           <div id="s-copiloto" style="display:none">
-            <div style="margin-bottom:14px">
-              <div style="font-size:14px;font-weight:600;color:var(--n700)">Copiloto de consulta</div>
-              <div style="font-size:11.5px;color:var(--n400);margin-top:2px">
-                Configure o comportamento do copiloto durante o atendimento.
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px">
+              <div class="cop-ico-box" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)">
+                <i class="ti ti-robot"></i>
+              </div>
+              <div>
+                <div style="font-size:19px;font-weight:700;color:var(--n700);letter-spacing:-.3px">Copiloto de consulta</div>
+                <div style="font-size:12px;color:var(--n400);margin-top:2px">
+                  Configure o comportamento do copiloto durante o atendimento.
+                </div>
               </div>
             </div>
-            <div
-              style="background:#fff;border:1px solid var(--n200);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:16px;max-width:640px"
-            >
-              <label style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-                <div>
-                  <div style="font-size:13px;font-weight:600;color:var(--n700)">Ativar copiloto</div>
-                  <div style="font-size:11.5px;color:var(--n400)">Liga ou desliga o copiloto durante a consulta.</div>
-                </div>
-                <input type="checkbox" id="cop-enabled" role="switch" style="width:38px;height:22px;cursor:pointer" />
-              </label>
-              <div style="border-top:1px solid var(--n200)"></div>
-              <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
-                <input type="checkbox" id="cop-voz" checked />
-                <span style="font-size:13px;color:var(--n700)">Permitir gravação de voz</span>
-              </label>
-              <div class="fld" style="margin-top:4px">
-                <label for="cop-tipo">Tipo de copiloto</label>
-                <select id="cop-tipo">
-                  <option value="ativo">Ativo</option>
-                  <option value="reativo">Reativo</option>
-                </select>
-              </div>
-              <div id="cop-freq-wrap" style="display:none">
-                <div style="border-top:1px solid var(--n200);margin-bottom:16px"></div>
-                <div>
-                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-                    <div style="font-size:13px;font-weight:600;color:var(--n700)">Frequência de atualização</div>
-                    <div style="font-size:12px;color:var(--n500)"><span id="cop-freq-lbl">2min</span></div>
+
+            <div style="display:flex;flex-direction:column;gap:16px;max-width:820px;padding-bottom:40px">
+              <!-- COMPORTAMENTO GERAL -->
+              <div class="cop-card">
+                <div class="cop-card-hd">
+                  <div class="cop-ico-box sm" style="background:linear-gradient(135deg,#34d399,#059669)">
+                    <i class="ti ti-adjustments"></i>
                   </div>
-                  <input type="range" id="cop-freq" min="15" max="600" step="5" value="120" style="width:100%" />
-                  <div
-                    style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--n400);margin-top:2px"
-                  >
-                    <span>15s</span><span>10min</span>
+                  <div style="flex:1">
+                    <div class="cop-card-title">Comportamento geral</div>
+                    <div class="cop-card-desc">Defina como o copiloto se comporta durante o atendimento.</div>
+                  </div>
+                  <input type="checkbox" id="cop-enabled" role="switch" class="cop-switch" onchange="updateCopEnabledState()" />
+                </div>
+                <div id="cop-geral-body" class="cop-card-body">
+                  <div class="cop-sep"></div>
+                  <label class="cop-chk">
+                    <input type="checkbox" id="cop-voz" onchange="updateCopEnabledState()" />
+                    <span><strong>Permitir gravação de voz</strong></span>
+                  </label>
+                  <label class="cop-chk" id="cop-voz-auto-row">
+                    <input type="checkbox" id="cop-voz-auto" />
+                    <span><strong>Iniciar gravação automaticamente</strong>
+                      <small>A gravação começa sozinha ao abrir o atendimento, sem precisar clicar em iniciar.</small>
+                    </span>
+                  </label>
+                  <div class="cop-sep"></div>
+                  <div class="fld" style="margin:0">
+                    <label for="cop-tipo" style="text-transform:uppercase;font-size:10.5px;letter-spacing:.5px">Tipo de copiloto</label>
+                    <select id="cop-tipo" onchange="updateCopTipoHint()">
+                      <option value="ativo">Ativo</option>
+                      <option value="reativo">Reativo</option>
+                    </select>
+                    <div id="cop-tipo-hint" style="font-size:11px;color:var(--n400);margin-top:5px"></div>
+                  </div>
+                  <div class="cop-sep"></div>
+                  <div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                      <div style="font-size:12.5px;font-weight:600;color:var(--n700)">Frequência de atualização</div>
+                      <div style="font-size:12.5px;font-weight:600;color:var(--g600,#059669)"><span id="cop-freq-lbl">8min</span></div>
+                    </div>
+                    <input type="range" id="cop-freq" min="5" max="20" step="1" value="8" style="width:100%;accent-color:#10b981" />
+                    <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--n400);margin-top:4px">
+                      <span>5min</span><span>20min</span>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div style="display:flex;justify-content:flex-end">
+
+              <!-- RECURSOS INTELIGENTES -->
+              <div class="cop-card">
+                <div class="cop-card-hd">
+                  <div class="cop-ico-box sm" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)">
+                    <i class="ti ti-sparkles"></i>
+                  </div>
+                  <div style="flex:1">
+                    <div class="cop-card-title">Recursos inteligentes</div>
+                    <div class="cop-card-desc">Ações automáticas que a IA pode realizar durante o atendimento.</div>
+                  </div>
+                </div>
+                <div class="cop-card-body">
+                  <div class="cop-sep"></div>
+                  <label class="cop-chk violet">
+                    <input type="checkbox" id="cop-perguntas" />
+                    <span><strong>Gerar perguntas personalizadas ao começar um atendimento</strong>
+                      <small>A IA sugere perguntas direcionadas ao perfil e histórico do paciente no início da consulta.</small>
+                    </span>
+                  </label>
+                  <label class="cop-chk violet">
+                    <input type="checkbox" id="cop-memoria" />
+                    <span><strong>Atualizar memória do paciente automaticamente</strong>
+                      <small>Novas informações ditas durante a consulta são incorporadas ao histórico do paciente sem ação manual.</small>
+                    </span>
+                  </label>
+                  <label class="cop-chk violet">
+                    <input type="checkbox" id="cop-pendencias" />
+                    <span><strong>Sinalizar pendências de protocolos assim que abrir uma consulta</strong>
+                      <small>Pendências de protocolos vinculados ao paciente aparecem automaticamente na abertura do atendimento.</small>
+                    </span>
+                  </label>
+                  <label class="cop-chk violet">
+                    <input type="checkbox" id="cop-insight" />
+                    <span><strong>Gerar insight automático da consulta por IA</strong>
+                      <small>Ao final do atendimento, a IA gera um resumo com pontos de atenção identificados na consulta.</small>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- PROTOCOLOS E RETORNO -->
+              <div class="cop-card">
+                <div class="cop-card-hd">
+                  <div class="cop-ico-box sm" style="background:linear-gradient(135deg,#fbbf24,#f59e0b)">
+                    <i class="ti ti-stethoscope"></i>
+                  </div>
+                  <div style="flex:1">
+                    <div class="cop-card-title">Protocolos e retorno</div>
+                    <div class="cop-card-desc">Automatizações vinculadas a protocolos clínicos e à continuidade do cuidado.</div>
+                  </div>
+                </div>
+                <div class="cop-card-body">
+                  <div class="cop-sep"></div>
+                  <div>
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+                      <div style="display:flex;align-items:flex-start;gap:9px">
+                        <i class="ti ti-clipboard-list" style="color:#f59e0b;font-size:15px;margin-top:1px"></i>
+                        <span style="font-size:12.5px;font-weight:600;color:var(--n700)">Inserir o paciente em um protocolo</span>
+                      </div>
+                      <input type="checkbox" id="cop-protocolo" role="switch" class="cop-switch amber" />
+                    </div>
+                    <div class="cop-note amber">
+                      Quando a IA identifica um CID com protocolo ativo durante o atendimento, ela pede a confirmação
+                      do médico antes de incluir o paciente no protocolo correspondente.
+                    </div>
+                  </div>
+                  <div class="cop-sep"></div>
+                  <div>
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+                      <div style="display:flex;align-items:flex-start;gap:9px">
+                        <i class="ti ti-calendar-clock" style="color:#f59e0b;font-size:15px;margin-top:1px"></i>
+                        <span style="font-size:12.5px;font-weight:600;color:var(--n700)">Agendar retorno</span>
+                      </div>
+                      <input type="checkbox" id="cop-retorno" role="switch" class="cop-switch amber" />
+                    </div>
+                    <div class="cop-note amber">
+                      Ao finalizar o atendimento, o copiloto pergunta ao médico se deseja agendar um retorno
+                      automaticamente. Se confirmado, a IA envia uma mensagem ao paciente para combinar o agendamento.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:flex;justify-content:flex-end;align-items:center;gap:12px">
+                <span id="cop-saved-chip" style="display:none;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#047857;background:#d1fae5;border:0.5px solid #6ee7b7;padding:7px 14px;border-radius:999px">
+                  <i class="ti ti-check"></i> Configurações salvas
+                </span>
                 <button class="btn primary" onclick="saveCopilotoCfg()">
                   <i class="ti ti-device-floppy"></i> Salvar
                 </button>
