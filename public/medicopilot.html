@@ -5853,30 +5853,69 @@
                                                               if(typeof toast==='function')toast('Dados da clínica salvos');
                                                             }
 
-                                                            function _copFmt(s){s=Number(s)||120;if(s>=60){const m=Math.floor(s/60),r=s%60;return r?`${m}min ${r}s`:`${m}min`;}return `${s}s`;}
-                                                            function updateCopFreqVisibility(){
-                                                              document.getElementById('cop-freq-wrap').style.display='block';
+                                                            function _copFmt(s){const m=Math.max(1,Math.round((Number(s)||480)/60));return m+'min';}
+                                                            function updateCopTipoHint(){
+                                                              const t=document.getElementById('cop-tipo');const h=document.getElementById('cop-tipo-hint');
+                                                              if(!t||!h)return;
+                                                              h.textContent=t.value==='ativo'
+                                                                ?'O copiloto traz sugestões e atualizações por conta própria durante a consulta.'
+                                                                :'O copiloto só responde quando o médico solicitar uma ação.';
+                                                            }
+                                                            function updateCopEnabledState(){
+                                                              const en=document.getElementById('cop-enabled');const body=document.getElementById('cop-geral-body');
+                                                              if(!en||!body)return;
+                                                              body.classList.toggle('cop-off',!en.checked);
+                                                              const voz=document.getElementById('cop-voz');const autoRow=document.getElementById('cop-voz-auto-row');
+                                                              if(voz&&autoRow){
+                                                                autoRow.classList.toggle('cop-off',!voz.checked);
+                                                                if(!voz.checked){const a=document.getElementById('cop-voz-auto');if(a)a.checked=false;}
+                                                              }
                                                             }
                                                             function loadCopilotoCfg(){
-                                                              let cfg={};try{cfg=JSON.parse(localStorage.getItem('copilotoCfg')||'{}');}catch(e){}
-                                                              const en=document.getElementById('cop-enabled');if(!en)return;
-                                                              en.checked=cfg.enabled!==false;
-                                                              document.getElementById('cop-voz').checked=cfg.voz!==false;
+                                                              const cfg=getCopilotoCfg();
+                                                              const set=(id,v)=>{const el=document.getElementById(id);if(el)el.checked=!!v;};
+                                                              if(!document.getElementById('cop-enabled'))return;
+                                                              set('cop-enabled',cfg.enabled);set('cop-voz',cfg.voz);set('cop-voz-auto',cfg.vozAuto);
+                                                              set('cop-perguntas',cfg.perguntas);set('cop-memoria',cfg.memoria);
+                                                              set('cop-pendencias',cfg.pendencias);set('cop-insight',cfg.insight);
+                                                              set('cop-protocolo',cfg.protocolo);set('cop-retorno',cfg.retorno);
                                                               document.getElementById('cop-tipo').value=cfg.tipo||'ativo';
-                                                              const f=document.getElementById('cop-freq');f.value=cfg.freq||120;
-                                                              const lbl=document.getElementById('cop-freq-lbl');lbl.textContent=_copFmt(f.value);
-                                                              f.oninput=()=>lbl.textContent=_copFmt(f.value);
-                                                              updateCopFreqVisibility();
+                                                              const f=document.getElementById('cop-freq');
+                                                              f.value=Math.min(20,Math.max(5,Math.round(cfg.freq/60)));
+                                                              const lbl=document.getElementById('cop-freq-lbl');lbl.textContent=f.value+'min';
+                                                              f.oninput=()=>lbl.textContent=f.value+'min';
+                                                              updateCopTipoHint();updateCopEnabledState();
                                                             }
                                                             function saveCopilotoCfg(){
+                                                              const chk=id=>!!document.getElementById(id)?.checked;
                                                               const cfg={
-                                                                enabled:document.getElementById('cop-enabled').checked,
-                                                                voz:document.getElementById('cop-voz').checked,
+                                                                enabled:chk('cop-enabled'),
+                                                                voz:chk('cop-voz'),
+                                                                vozAuto:chk('cop-voz-auto'),
                                                                 tipo:document.getElementById('cop-tipo').value,
-                                                                freq:Number(document.getElementById('cop-freq').value)||120,
+                                                                freq:(Number(document.getElementById('cop-freq').value)||8)*60,
+                                                                perguntas:chk('cop-perguntas'),
+                                                                memoria:chk('cop-memoria'),
+                                                                pendencias:chk('cop-pendencias'),
+                                                                insight:chk('cop-insight'),
+                                                                protocolo:chk('cop-protocolo'),
+                                                                retorno:chk('cop-retorno'),
                                                               };
                                                               localStorage.setItem('copilotoCfg',JSON.stringify(cfg));
+                                                              applyCopilotoCfgToUI();
+                                                              const chip=document.getElementById('cop-saved-chip');
+                                                              if(chip){chip.style.display='inline-flex';setTimeout(()=>{chip.style.display='none';},2200);}
                                                               if(typeof toast==='function')toast('Configurações salvas');
+                                                            }
+                                                            /* Reflete o estado do copiloto no atendimento: sem copiloto, o painel da IA
+                                                               (chat_ia) sai da tela e o prontuário ocupa a largura inteira. */
+                                                            function applyCopilotoCfgToUI(){
+                                                              const cfg=getCopilotoCfg();
+                                                              const wrap=document.querySelector('#atend-novo-view .split-wrap');
+                                                              if(!wrap)return;
+                                                              const right=wrap.querySelector('.split-right');
+                                                              if(right)right.style.display=cfg.enabled?'':'none';
+                                                              wrap.style.gridTemplateColumns=cfg.enabled?'':'1fr';
                                                             }
 
                                                             /* ========== SEARCH ========== */
