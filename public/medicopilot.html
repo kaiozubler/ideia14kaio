@@ -870,21 +870,21 @@
                                                       .cv-equipe-item b{display:block;font-size:13px;color:#111827}
                                                       .cv-equipe-item span{font-size:11px;color:#6b7280}
 
-                                                      /* ===== AGENDA ===== */
+                                                      /* ===== AGENDA — Liquid Glass calendário ===== */
                                                       .ag-wrap{padding:0}
                                                       .ag-toolbar{display:flex;gap:10px;align-items:center;background:var(--white);padding:10px 12px;border:0.5px solid var(--n150);border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.03);margin-bottom:14px;flex-wrap:wrap}
                                                       .ag-search{flex:1;min-width:220px;position:relative}
                                                       .ag-search i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--n400);font-size:14px}
-                                                      .ag-search input{width:100%;padding:9px 12px 9px 32px;border:1px solid var(--n150);border-radius:8px;font-size:13px;background:var(--n50)}
+                                                      .ag-search input{width:100%;padding:9px 12px 9px 32px;border:1px solid var(--n150);border-radius:999px;font-size:13px;background:var(--n50)}
                                                       .ag-search input:focus{outline:none;border-color:var(--g500);background:var(--white)}
-                                                      .ag-views{display:flex;gap:2px;background:var(--n75);padding:3px;border-radius:8px}
-                                                      .ag-views button{padding:6px 14px;border:none;background:transparent;color:var(--n500);border-radius:6px;font-size:12px;font-weight:500;transition:all .15s}
+                                                      .ag-views{display:flex;gap:2px;background:var(--n75);padding:3px;border-radius:999px}
+                                                      .ag-views button{padding:6px 14px;border:none;background:transparent;color:var(--n500);border-radius:999px;font-size:12px;font-weight:500;transition:all .15s}
                                                       .ag-views button.active{background:var(--white);color:var(--g600);box-shadow:0 1px 3px rgba(0,0,0,.06)}
                                                       #ag-doctor{padding:8px 10px;border:1px solid var(--n150);border-radius:8px;font-size:13px;background:var(--white);min-width:160px}
                                                       .ag-filter-wrap{position:relative}
-                                                      .ag-fbtn{width:36px;height:36px;border:1px solid var(--n150);border-radius:8px;background:var(--white);color:var(--n500);display:flex;align-items:center;justify-content:center;font-size:15px}
+                                                      .ag-fbtn{width:36px;height:36px;border:1px solid var(--n150);border-radius:999px;background:var(--white);color:var(--n500);display:flex;align-items:center;justify-content:center;font-size:15px}
                                                       .ag-fbtn.active,.ag-fbtn:hover{background:var(--g50);color:var(--g600);border-color:var(--g300)}
-                                                      .ag-adv{position:absolute;right:0;top:calc(100% + 6px);width:280px;background:var(--white);border:1px solid var(--n150);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.12);z-index:50;overflow:hidden}
+                                                      .ag-adv{position:absolute;right:0;top:calc(100% + 6px);width:280px;background:var(--white);border:1px solid var(--n150);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.12);z-index:50;overflow:hidden}
                                                       .ag-adv-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--n100)}
                                                       .ag-adv-head button{background:none;border:none;color:var(--n400);font-size:16px}
                                                       .ag-adv-body{padding:12px 14px;display:flex;flex-direction:column;gap:6px}
@@ -892,57 +892,66 @@
                                                       .ag-adv-body select{padding:8px 10px;border:1px solid var(--n150);border-radius:6px;font-size:13px;background:var(--white)}
                                                       .ag-adv-foot{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--n100);background:var(--n50)}
                                                       .ag-adv-foot button{flex:1}
-                                                      .ag-body{background:var(--white);border:0.5px solid var(--n150);border-radius:12px;overflow:auto;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+                                                      .ag-body{background:transparent;border:none;border-radius:0;overflow:visible;box-shadow:none}
 
-                                                      .ag-week-nav{display:flex;align-items:center;justify-content:center;gap:16px;padding:2px 0 12px}
-                                                      .ag-week-arrow{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:1px solid var(--n150);background:var(--white);color:var(--n600);cursor:pointer;transition:.15s;flex:none}
-                                                      .ag-week-arrow:hover{background:var(--n50);color:var(--g600);border-color:var(--n200)}
-                                                      .ag-week-label{font-size:13px;font-weight:600;color:var(--n700);min-width:180px;text-align:center;cursor:pointer;user-select:none;text-transform:capitalize}
-                                                      .ag-week-label:hover{color:var(--g600)}
-                                                      .ag-grid{display:grid;width:100%}
-                                                      .ag-h{padding:10px 8px;text-align:center;font-size:11px;font-weight:600;color:var(--n500);border-bottom:1px solid var(--n100);border-right:1px solid var(--n100);background:var(--white);position:relative}
-                                                      .ag-h:last-child{border-right:none}
-                                                      .ag-h .ag-day{font-size:13px;color:var(--n700);font-weight:600}
-                                                      .ag-h .ag-dnum{font-size:11px;color:var(--n400);margin-top:2px}
-                                                      .ag-h.today .ag-badge{position:absolute;top:4px;right:6px;background:var(--g600);color:#fff;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:700}
-                                                      .ag-hourcell{padding:14px 8px;text-align:center;font-size:11px;font-weight:600;color:var(--n400);background:var(--n50);border-right:1px solid var(--n100);border-bottom:1px solid var(--n100)}
-                                                      .ag-cell{padding:8px 6px;min-height:96px;background:var(--white);border-right:1px solid var(--n100);border-bottom:1px solid var(--n100);transition:background .15s}
-                                                      .ag-cell:hover{background:var(--g50)}
+                                                      /* navegador de semana — pílula de vidro flutuante */
+                                                      .ag-week-nav{display:flex;align-items:center;justify-content:center;gap:14px;width:fit-content;margin:0 auto 14px;padding:8px 18px;background:rgba(255,255,255,.6);backdrop-filter:blur(18px) saturate(180%);-webkit-backdrop-filter:blur(18px) saturate(180%);border:1px solid rgba(255,255,255,.85);border-radius:999px;box-shadow:0 10px 26px -14px rgba(15,42,80,.25),inset 0 1px 0 rgba(255,255,255,.8)}
+                                                      .ag-week-arrow{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;border:none;background:rgba(255,255,255,.75);color:#475569;cursor:pointer;transition:.15s;flex:none;box-shadow:0 2px 6px rgba(15,42,80,.08)}
+                                                      .ag-week-arrow:hover{background:linear-gradient(135deg,#34d399,#059669);color:#fff;transform:scale(1.07);box-shadow:0 6px 14px rgba(5,150,105,.35)}
+                                                      .ag-week-arrow:active{transform:scale(.97)}
+                                                      .ag-week-label{font-size:13px;font-weight:700;color:#1e293b;min-width:190px;text-align:center;cursor:pointer;user-select:none;text-transform:capitalize}
+                                                      .ag-week-label:hover{color:#059669}
+
+                                                      /* grade — painel de vidro único, divisórias suaves, sem caixa dupla */
+                                                      .ag-grid{display:grid;width:100%;background:rgba(255,255,255,.55) !important;backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border:1px solid rgba(255,255,255,.9) !important;border-radius:24px !important;box-shadow:0 16px 40px -22px rgba(15,42,80,.28),inset 0 1px 0 rgba(255,255,255,.9);overflow:hidden}
+                                                      .ag-h{padding:14px 8px 12px;text-align:center;font-size:11px;font-weight:600;color:#64748b;border:none;border-bottom:1px solid rgba(15,42,80,.08);background:transparent;position:relative}
+                                                      .ag-h .ag-day{font-size:11.5px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+                                                      .ag-h .ag-dnum{font-size:16px;color:#1e293b;font-weight:700;margin:5px auto 0;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:.15s}
+                                                      .ag-h .ag-h-spec{font-size:10.5px;color:#94a3b8;font-weight:600;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+                                                      .ag-h.today{background:linear-gradient(180deg,rgba(16,185,129,.12),transparent)}
+                                                      .ag-h.today .ag-dnum{background:linear-gradient(135deg,#34d399,#059669);color:#fff;box-shadow:0 4px 10px -2px rgba(5,150,105,.45)}
+                                                      .ag-h.today .ag-badge{position:absolute;top:8px;right:10px;background:linear-gradient(135deg,#34d399,#059669);color:#fff;padding:2px 8px;border-radius:999px;font-size:9px;font-weight:700;box-shadow:0 3px 8px rgba(5,150,105,.35)}
+                                                      .ag-hourcell{padding:16px 8px;text-align:center;font-size:10.5px;font-weight:600;color:#94a3b8;background:rgba(15,42,80,.02);border-right:1px solid rgba(15,42,80,.06);border-bottom:1px solid rgba(15,42,80,.06)}
+                                                      .ag-cell{padding:7px 6px;min-height:92px;background:transparent;border-right:1px solid rgba(15,42,80,.06);border-bottom:1px solid rgba(15,42,80,.06);transition:background .15s;cursor:pointer;position:relative}
+                                                      .ag-cell:hover{background:rgba(16,185,129,.07)}
                                                       .ag-cell:last-child{border-right:none}
+                                                      .ag-cell:empty:hover::after{content:'+ Agendar';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#059669;letter-spacing:.02em;pointer-events:none}
 
-                                                      .ag-card{position:relative;background:#f4f6f4;border-left:4px solid var(--g500);border-radius:8px;padding:9px 11px;margin-bottom:6px;cursor:pointer;transition:all .18s}
-                                                      .ag-card:hover{box-shadow:0 6px 16px rgba(0,0,0,.1);transform:translateY(-1px)}
-                                                      .ag-card.overdue{background:rgba(244,67,54,.08);border-left-color:#F44336}
+                                                      /* cards de agendamento — chips de vidro, cor por médico via CSS var */
+                                                      .ag-card{position:relative;background:var(--dc-bg,#f4f6f4);border:1px solid rgba(255,255,255,.7);border-left:3px solid var(--dc,#059669);border-radius:12px;padding:8px 10px;margin-bottom:6px;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}
+                                                      .ag-card:hover{box-shadow:0 10px 22px -10px rgba(15,42,80,.32);transform:translateY(-2px)}
+                                                      .ag-card.overdue{box-shadow:0 2px 10px -2px rgba(244,67,54,.3)}
                                                       .ag-card-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-                                                      .ag-card-name{font-size:12px;font-weight:600;color:var(--n700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-                                                      .ag-card-sub{font-size:11px;color:var(--n500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-                                                      .ag-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px}
+                                                      .ag-card-name{font-size:12px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+                                                      .ag-card-sub{font-size:10.5px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+                                                      .ag-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:3px}
                                                       .ag-dot.confirmed{background:#4CAF50;box-shadow:0 0 0 2px #E8F5E9}
                                                       .ag-dot.pending{background:#FFC107;box-shadow:0 0 0 2px #FFF8E1}
                                                       .ag-dot.unconfirmed{background:#F44336;box-shadow:0 0 0 2px #FFEBEE}
                                                       .ag-mbtn{background:none;border:none;color:var(--n300);font-size:14px;padding:0 4px;line-height:1}
                                                       .ag-mbtn:hover{color:var(--n500)}
-                                                      .ag-menu{position:absolute;right:6px;top:30px;background:var(--white);border:1px solid var(--n150);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.18);z-index:200;min-width:180px;overflow:hidden}
+                                                      .ag-menu{position:absolute;right:6px;top:30px;background:var(--white);border:1px solid var(--n150);border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.18);z-index:200;min-width:180px;overflow:hidden}
                                                       .ag-menu button{display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;border:none;background:transparent;text-align:left;font-size:12px;color:var(--n700);border-bottom:1px solid var(--n100)}
                                                       .ag-menu button:last-child{border-bottom:none}
                                                       .ag-menu button:hover{background:var(--n50)}
 
                                                       .ag-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;padding:14px;background:transparent;border:none;box-shadow:none}
-                                                      .ag-card-full{background:var(--white);border:1px solid var(--n150);border-radius:10px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.05);position:relative}
-                                                      .ag-card-full.overdue{border-color:#F44336;border-width:2px}
-                                                      .ag-card-full .ovr{position:absolute;top:-10px;left:14px;background:#F44336;color:#fff;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:600}
-                                                      .ag-card-full h4{margin:0 0 2px;font-size:14px;font-weight:600;color:var(--n700)}
-                                                      .ag-card-full .spec{font-size:11px;color:var(--n400);margin-bottom:10px}
-                                                      .ag-doc-badge{display:inline-block;color:#fff;padding:5px 11px;border-radius:6px;font-size:11px;font-weight:600;margin:8px 0}
-                                                      .ag-card-full .row-bot{display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--n100);margin-top:8px}
-                                                      .ag-card-full .time{font-size:15px;font-weight:600;color:var(--g600)}
+                                                      .ag-card-full{background:rgba(255,255,255,.62);backdrop-filter:blur(18px) saturate(180%);-webkit-backdrop-filter:blur(18px) saturate(180%);border:1px solid rgba(255,255,255,.85);border-radius:18px;padding:16px;box-shadow:0 10px 26px -16px rgba(15,42,80,.25);position:relative}
+                                                      .ag-card-full.overdue{border-color:rgba(244,67,54,.55);border-width:2px}
+                                                      .ag-card-full .ovr{position:absolute;top:-10px;left:14px;background:#F44336;color:#fff;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:600}
+                                                      .ag-card-full h4{margin:0 0 2px;font-size:14px;font-weight:700;color:#1e293b}
+                                                      .ag-card-full .spec{font-size:11px;color:#94a3b8;margin-bottom:10px}
+                                                      .ag-doc-badge{display:inline-block;color:#fff;padding:5px 11px;border-radius:999px;font-size:11px;font-weight:600;margin:8px 0}
+                                                      .ag-card-full .row-bot{display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid rgba(15,42,80,.08);margin-top:8px}
+                                                      .ag-card-full .time{font-size:15px;font-weight:700;color:#059669}
                                                       .ag-card-full .time.late{color:#F44336}
                                                       .ag-tags{display:flex;gap:5px;flex-wrap:wrap}
-                                                      .ag-tag{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600}
+                                                      .ag-tag{padding:3px 8px;border-radius:999px;font-size:10px;font-weight:600}
                                                       .ag-tag.ret{background:#E3F2FD;color:#1976D2}
                                                       .ag-tag.res{background:#FFF3E0;color:#F57C00}
                                                       .ag-empty{text-align:center;padding:60px 20px;color:var(--n400)}
                                                       .ag-empty p{font-size:13px;margin-top:10px}
+
 
                                                       /* ============================================================
                                                          LIQUID GLASS — aba Atendimentos (novo visual)
@@ -1567,14 +1576,14 @@
                                                       }
 
                                                       /* Agenda widgets */
-                                                      .ag-wrap,.ag-card,.ag-card-full,.ag-toolbar,.ag-grid,.ag-menu,.ag-adv{
+                                                      .ag-wrap,.ag-toolbar,.ag-menu,.ag-adv{
                                                         background:rgba(255,255,255,.62) !important;
                                                         backdrop-filter:blur(22px) saturate(180%);
                                                         border:1px solid rgba(255,255,255,.85) !important;
                                                         border-radius:20px !important;
                                                         box-shadow:0 10px 30px -12px rgba(15,42,80,.18),inset 0 1px 0 rgba(255,255,255,.9);
                                                       }
-                                                      .ag-day,.ag-hourcell,.ag-cell{background:transparent}
+                                                      /* .ag-grid, .ag-card e .ag-card-full têm estilo próprio — ver bloco "AGENDA — Liquid Glass calendário" */
 
                                                       /* Conversas screen — keep its own layout, soften surfaces */
                                                       #s-conversas{background:transparent}
@@ -14858,10 +14867,10 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                             function agCardHtml(a){
                                                               const c=agDocColor(a.doctorId);
                                                               const ov=agIsOverdue(a);
-                                                              const bg=ov?'rgba(244,67,54,.08)':(c+'18');
+                                                              const bg=ov?'rgba(244,67,54,.10)':(c+'18');
                                                               const menuOpen=AG_STATE.openMenu===a.id;
                                                               const menu=menuOpen?`<div class="ag-menu">${AG_MENU.map(m=>`<button onclick="agAction('${m.label}',${a.id})"><i class="ti ${m.icon}"></i>${m.label}</button>`).join('')}</div>`:'';
-                                                              return `<div class="ag-card ${ov?'overdue':''}" style="background:${bg};border-left-color:${ov?'#F44336':c}" title="${a.patient} • ${a.doctor} • ${a.time} — ${agConfLabel(a.confirmation)}">
+                                                              return `<div class="ag-card ${ov?'overdue':''}" style="--dc:${ov?'#F44336':c};--dc-bg:${bg}" title="${a.patient} • ${a.doctor} • ${a.time} — ${agConfLabel(a.confirmation)}" onclick="event.stopPropagation()">
                                                                 <div class="ag-card-row">
                                                                   <div style="flex:1;min-width:0">
                                                                     <div class="ag-card-name">${a.patient}</div>
@@ -14874,6 +14883,10 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                 </div>
                                                                 ${menu}
                                                               </div>`;
+                                                            }
+                                                            function agCellClick(dateStr,hourStr,ev){
+                                                              if(ev)ev.stopPropagation();
+                                                              openNovoAgendamentoModal({dia:dateStr,hora:hourStr});
                                                             }
                                                             function renderAgenda(){
                                                               const body=document.getElementById('ag-body');if(!body)return;
@@ -14902,7 +14915,7 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               week.forEach((d,i)=>{html+=`<div class="ag-h ${d.isToday?'today':''}">${d.isToday?'<span class="ag-badge">Hoje</span>':''}<div class="ag-day">${d.dayName}</div><div class="ag-dnum">${String(d.dayNum).padStart(2,'0')}</div></div>`;});
                                                               hours.forEach(h=>{
                                                                 html+=`<div class="ag-hourcell">${h}</div>`;
-                                                                week.forEach(d=>{const list=byKey[d.date+'-'+h]||[];html+=`<div class="ag-cell">${list.map(agCardHtml).join('')}</div>`;});
+                                                                week.forEach(d=>{const list=byKey[d.date+'-'+h]||[];html+=`<div class="ag-cell" onclick="agCellClick('${d.date}','${h}',event)">${list.map(agCardHtml).join('')}</div>`;});
                                                               });
                                                               html+='</div>';body.innerHTML=navHtml+html;
                                                             }
@@ -14917,10 +14930,10 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               const cols='80px '+docs.map(()=>'minmax(180px,1fr)').join(' ');
                                                               let html=`<div class="ag-grid" style="grid-template-columns:${cols}">`;
                                                               html+=`<div class="ag-h"></div>`;
-                                                              docs.forEach(d=>{html+=`<div class="ag-h"><div class="ag-day" style="color:${d.color}">${d.name}</div><div class="ag-dnum">${d.specialty}</div></div>`;});
+                                                              docs.forEach(d=>{html+=`<div class="ag-h"><div class="ag-day" style="color:${d.color}">${d.name}</div><div class="ag-h-spec">${d.specialty}</div></div>`;});
                                                               hours.forEach(h=>{
                                                                 html+=`<div class="ag-hourcell">${h}</div>`;
-                                                                docs.forEach(d=>{const list=(byDT[d.id]||{})[h]||[];html+=`<div class="ag-cell">${list.map(agCardHtml).join('')}</div>`;});
+                                                                docs.forEach(d=>{const list=(byDT[d.id]||{})[h]||[];html+=`<div class="ag-cell" onclick="agCellClick('${todayKey}','${h}',event)">${list.map(agCardHtml).join('')}</div>`;});
                                                               });
                                                               html+='</div>';body.innerHTML=html;
                                                             }
