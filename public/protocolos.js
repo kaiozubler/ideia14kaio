@@ -16,6 +16,7 @@
     search: "", psearch: "", zoom: 1, loading: true,
     modal: null, editingAction: null, showActionEditor: false, cidInput: "",
     aiModal: null,
+    newRegraFor: null, editingRegra: null, newBranchActionFor: null, editingBranchAction: null, _batype: null,
     filters: { protocols: [], doctors: [], specialties: [], actions: [], statuses: [], patient: "", cid: "" },
     showFilter: false, dd: null,
   };
@@ -37,7 +38,7 @@
     const sb = sbc(); if (!sb) return;
     S.loading = true; render();
     const [{ data: prot }, { data: rep }] = await Promise.all([
-      sb.from("protocolos").select("id,titulo,ativo,protocolo_cids(cid_code),protocolo_acoes(*)").order("created_at"),
+      sb.from("protocolos").select("id,titulo,ativo,protocolo_cids(cid_code),protocolo_acoes(*),protocolo_regras(*)").order("created_at"),
       sb.rpc("relatorio_protocolos"),
     ]);
     S.rows = (rep || []).map((r) => ({ ...r, due: brDate(r.due) }));
@@ -51,6 +52,11 @@
         actions: (p.protocolo_acoes || []).map((a) => ({
           id: a.id, type: a.tipo, name: a.nome, startDay: a.start_day, frequency: a.frequency,
           recurrent: a.recurrent, autoRestart: a.auto_restart, specialty: a.especialidade || "", desc: a.descricao || "",
+          regraPaiId: a.regra_id || null, startDayRef: a.start_day_referencia || "inicio_protocolo",
+        })),
+        regras: (p.protocolo_regras || []).map((r) => ({
+          id: r.id, gatilhoId: r.acao_gatilho_id, descricao: r.descricao || "", condicao: r.condicao,
+          ordem: r.ordem || 0, isDefault: !!r.is_default, repeteGatilhoApos: r.repete_gatilho_apos_dias ?? null,
         })),
         patients: pts,
         late: rows.length ? Math.round((late / rows.length) * 100) : 0,
@@ -74,22 +80,67 @@
     } catch (e) { console.error("sincronizar_protocolo", e); }
   }
 
+  function actionRow(protocoloId, a) {
+    return {
+      protocolo_id: protocoloId, tipo: a.type, nome: a.name, start_day: a.startDay, frequency: a.frequency,
+      recurrent: !!a.recurrent, auto_restart: !!a.autoRestart, especialidade: a.specialty || null, descricao: a.desc || null,
+      start_day_referencia: a.regraPaiId ? "resultado_regra" : "inicio_protocolo",
+    };
+  }
+
   async function saveProtocol(form) {
     const sb = sbc(); if (!sb) return;
     let id = form.id;
     if (id) {
       await sb.from("protocolos").update({ titulo: form.title }).eq("id", id);
       await sb.from("protocolo_cids").delete().eq("protocolo_id", id);
+      // ações de ramo referenciam regras via FK; apagar ações antes de regras
       await sb.from("protocolo_acoes").delete().eq("protocolo_id", id);
+      await sb.from("protocolo_regras").delete().eq("protocolo_id", id);
     } else {
       const { data } = await sb.from("protocolos").insert({ titulo: form.title }).select("id").single();
       id = data && data.id; if (!id) return;
     }
     if (form.cids.length) await sb.from("protocolo_cids").insert(form.cids.map((c) => ({ protocolo_id: id, cid_code: c })));
-    if (form.actions.length) await sb.from("protocolo_acoes").insert(form.actions.map((a) => ({
-      protocolo_id: id, tipo: a.type, nome: a.name, start_day: a.startDay, frequency: a.frequency,
-      recurrent: !!a.recurrent, auto_restart: !!a.autoRestart, especialidade: a.specialty || null, descricao: a.desc || null,
-    })));
+
+    const regras = form.regras || [];
+    const rootActions = form.actions.filter((a) => !a.regraPaiId);
+    const branchActions = form.actions.filter((a) => a.regraPaiId);
+    const idMap = {}; // id local (uid()) -> uuid real
+
+    if (rootActions.length) {
+      const { data: inserted, error } = await sb.from("protocolo_acoes")
+        .insert(rootActions.map((a) => actionRow(id, a))).select("id");
+      if (error) { console.error("save acoes raiz", error); return; }
+      (inserted || []).forEach((row, i) => { idMap[rootActions[i].id] = row.id; });
+    }
+
+    const regraIdMap = {}; // id local da regra -> uuid real
+    if (regras.length) {
+      const rows = regras.map((r) => ({
+        protocolo_id: id,
+        acao_gatilho_id: idMap[r.gatilhoId] || r.gatilhoId,
+        descricao: r.descricao || "",
+        condicao: r.isDefault ? null : r.condicao,
+        ordem: r.ordem || 0,
+        is_default: !!r.isDefault,
+        repete_gatilho_apos_dias: r.repeteGatilhoApos || null,
+      }));
+      const { data: insertedR, error } = await sb.from("protocolo_regras").insert(rows).select("id");
+      if (error) { console.error("save regras", error); return; }
+      (insertedR || []).forEach((row, i) => { regraIdMap[regras[i].id] = row.id; });
+    }
+
+    if (branchActions.length) {
+      const rows = branchActions
+        .filter((a) => regraIdMap[a.regraPaiId]) // ignora ações órfãs de regra não salva
+        .map((a) => ({ ...actionRow(id, a), regra_id: regraIdMap[a.regraPaiId] }));
+      if (rows.length) {
+        const { error } = await sb.from("protocolo_acoes").insert(rows);
+        if (error) console.error("save acoes de ramo", error);
+      }
+    }
+
     await sincronizarProtocolo(id);
     await load();
   }
@@ -315,9 +366,104 @@
     </div>`;
   }
 
+  function condicaoLabel(c) {
+    if (!c) return "";
+    const campoTxt = c.campo === "texto" ? "resultado" : "resultado";
+    if (c.operador === "maior_que") return `${campoTxt} > ${c.numero}`;
+    if (c.operador === "menor_que") return `${campoTxt} < ${c.numero}`;
+    if (c.operador === "entre") return `${campoTxt} entre ${c.numero_min} e ${c.numero_max}`;
+    if (c.operador === "igual") return `${campoTxt} = ${c.campo === "texto" ? c.texto : c.numero}`;
+    if (c.operador === "contem") return `${campoTxt} contém "${c.texto}"`;
+    return "";
+  }
+
+  function branchActionRowHtml(a) {
+    return `<div style="display:flex;align-items:center;gap:8px;margin-top:6px;padding:6px 8px;background:#f8fafc;border-radius:6px">
+      <div class="pt-icon ${a.type}" style="width:24px;height:24px;font-size:12px">${AT[a.type].icon}</div>
+      <div style="flex:1;min-width:0;font-size:12px;color:#334155">${esc(a.name)}
+        <span style="color:#94a3b8">— ${a.startDay}d após o resultado${a.specialty ? " · " + esc(a.specialty) : ""}</span></div>
+      <button class="pt-btn ghost" style="padding:1px 6px;font-size:10px" data-baedit="${a.id}">✏️</button>
+      <button class="pt-btn ghost" style="padding:1px 6px;font-size:10px" data-badel="${a.id}">×</button></div>`;
+  }
+
+  function regraCardHtml(r) {
+    const acts = (S.modal.actions || []).filter((a) => a.regraPaiId === r.id);
+    if (S.editingRegra === r.id) return regraEditorHtml(r.gatilhoId, r);
+    return `<div style="margin-bottom:8px;padding:8px 10px;background:#fff;border:1px solid #e2e8f0;border-radius:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:12px;font-weight:600;color:#334155">${r.isDefault ? "Caso padrão (nenhuma condição bate)" : "Se " + esc(condicaoLabel(r.condicao))}</span>
+        <span style="flex:1"></span>
+        <button class="pt-btn ghost" style="padding:2px 6px;font-size:11px" data-redit="${r.id}">✏️</button>
+        <button class="pt-btn ghost" style="padding:2px 6px;font-size:11px" data-rdel="${r.id}">×</button></div>
+      ${r.descricao ? `<div style="font-size:11px;color:#64748b;margin:4px 0">${esc(r.descricao)}</div>` : ""}
+      ${r.repeteGatilhoApos ? `<div style="font-size:11px;color:#7c3aed;margin:4px 0">↺ repete este exame a cada ${r.repeteGatilhoApos} dias</div>` : ""}
+      ${acts.map((a) => S.editingBranchAction === a.id ? branchActionEditorHtml(r.id, a) : branchActionRowHtml(a)).join("")}
+      ${S.newBranchActionFor === r.id ? branchActionEditorHtml(r.id, null) : `<button class="pt-btn ghost" style="padding:2px 8px;font-size:11px;margin-top:6px" data-banew="${r.id}">+ Ação neste ramo</button>`}
+    </div>`;
+  }
+
+  function regrasBlockHtml(action) {
+    const regras = (S.modal.regras || []).filter((r) => r.gatilhoId === action.id);
+    return `<div style="margin:4px 0 12px 48px;padding:10px 12px;border-left:2px solid #c7d2fe;background:rgba(99,102,241,.04);border-radius:0 8px 8px 0">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:11px;font-weight:600;color:#6366f1;text-transform:uppercase;letter-spacing:.05em">Ramificações por resultado</span>
+        ${S.newRegraFor === action.id ? "" : `<button class="pt-btn ghost" style="padding:2px 8px;font-size:11px" data-rnew="${action.id}">+ Regra</button>`}</div>
+      ${regras.map((r) => regraCardHtml(r)).join("")}
+      ${S.newRegraFor === action.id ? regraEditorHtml(action.id, null) : (!regras.length ? `<div style="font-size:11px;color:#94a3b8">Nenhuma regra — resultado não altera o fluxo.</div>` : "")}
+    </div>`;
+  }
+
+  function regraEditorHtml(gatilhoId, r) {
+    const f = r || { id: "", descricao: "", condicao: { campo: "numero", operador: "maior_que" }, ordem: 0, isDefault: false, repeteGatilhoApos: null };
+    const c = f.condicao || {};
+    return `<div class="pt-card" style="padding:12px;margin-bottom:8px;border:1px dashed #a5b4fc" id="pt-reditor" data-redid="${esc(f.id)}" data-rgat="${esc(gatilhoId)}">
+      <div style="margin-bottom:8px"><span class="pt-lbl">Descrição da regra</span>
+        <input class="pt-in" id="pt-r-desc" value="${esc(f.descricao || "")}" placeholder="Ex: TSH elevado — ajustar dose"></div>
+      <label style="display:flex;gap:6px;align-items:center;font-size:12px;color:#475569;margin-bottom:8px">
+        <input type="checkbox" class="pt-check" id="pt-r-default" ${f.isDefault ? "checked" : ""}> Caso padrão (quando nenhuma outra condição bater)</label>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <select class="pt-in" id="pt-r-campo" style="flex:1">
+          <option value="numero" ${c.campo !== "texto" ? "selected" : ""}>Resultado numérico</option>
+          <option value="texto" ${c.campo === "texto" ? "selected" : ""}>Resultado em texto</option></select>
+        <select class="pt-in" id="pt-r-op" style="flex:1">
+          ${["maior_que", "menor_que", "entre", "igual", "contem"].map((op) => `<option value="${op}" ${c.operador === op ? "selected" : ""}>${{ maior_que: "maior que", menor_que: "menor que", entre: "entre", igual: "igual a", contem: "contém" }[op]}</option>`).join("")}
+        </select></div>
+      <div style="font-size:10px;color:#94a3b8;margin-bottom:4px">Preencha só os campos relevantes ao operador escolhido acima:</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input class="pt-in" id="pt-r-num" type="number" step="any" value="${c.numero ?? ""}" placeholder="Valor (maior/menor/igual)">
+        <input class="pt-in" id="pt-r-nummin" type="number" step="any" value="${c.numero_min ?? ""}" placeholder="Mínimo (entre)">
+        <input class="pt-in" id="pt-r-nummax" type="number" step="any" value="${c.numero_max ?? ""}" placeholder="Máximo (entre)">
+        <input class="pt-in" id="pt-r-texto" value="${esc(c.texto || "")}" placeholder="Texto (igual/contém)"></div>
+      <div style="margin-bottom:12px"><span class="pt-lbl">Repetir este exame a cada quantos dias, dentro deste ramo? (opcional)</span>
+        <input class="pt-in" type="number" min="0" id="pt-r-repete" value="${f.repeteGatilhoApos ?? ""}" placeholder="Ex: 30 — deixe vazio se não repete"></div>
+      <div style="display:flex;gap:12px"><button class="pt-btn ghost" style="flex:1" data-rcancel="1">Cancelar</button>
+      <button class="pt-btn indigo" style="flex:1" data-rsave="1">Salvar regra</button></div>
+    </div>`;
+  }
+
+  function branchActionEditorHtml(regraId, a) {
+    const base = { type: S._batype || "Receita", name: "", startDay: 0, specialty: "", desc: "" };
+    const f = a || { ...base, id: "" };
+    return `<div class="pt-card" style="padding:12px;margin:6px 0;border:1px dashed #c4b5fd" id="pt-baeditor" data-baid="${esc(f.id)}" data-baregra="${esc(regraId)}">
+      <div style="margin-bottom:8px"><span class="pt-lbl">Tipo</span>
+        <div style="display:flex;gap:6px">${["Consulta", "Exame", "Receita"].map((t) => `<button class="pt-btn" style="flex:1;padding:4px;font-size:11px;${(f.type || "Receita") === t ? "color:#fff;border:none;background:#7c3aed" : ""}" data-batype="${t}">${AT[t].icon} ${t}</button>`).join("")}</div></div>
+      <div style="margin-bottom:8px"><span class="pt-lbl">Nome</span>
+        <input class="pt-in" id="pt-ba-name" value="${esc(f.name)}" placeholder="Ex: Ajustar Levotiroxina / TSH (reavaliação)"></div>
+      <div style="margin-bottom:8px"><span class="pt-lbl">Dias após o resultado</span>
+        <input class="pt-in" type="number" min="0" id="pt-ba-start" value="${f.startDay || 0}"></div>
+      <div style="margin-bottom:8px"><span class="pt-lbl">Especialidade (opcional)</span>
+        <input class="pt-in" id="pt-ba-spec" value="${esc(f.specialty || "")}"></div>
+      <div style="margin-bottom:8px"><span class="pt-lbl">Descrição (opcional)</span>
+        <textarea class="pt-in" rows="2" id="pt-ba-desc" style="resize:none">${esc(f.desc || "")}</textarea></div>
+      <div style="display:flex;gap:12px"><button class="pt-btn ghost" style="flex:1" data-bacancel="1">Cancelar</button>
+      <button class="pt-btn indigo" style="flex:1" data-basave="1">Salvar ação</button></div>
+    </div>`;
+  }
+
   function modalHtml() {
     const m = S.modal; if (!m) return "";
-    const sorted = [...m.actions].sort((a, b) => a.startDay - b.startDay);
+    const rootActions = m.actions.filter((a) => !a.regraPaiId);
+    const sorted = [...rootActions].sort((a, b) => a.startDay - b.startDay);
     return `<div class="pt-modal-bg" data-mbg="1"><div class="pt-modal">
       <div class="pt-modal-h"><h2>${m.id ? "Editar protocolo" : "Novo protocolo"}</h2>
         <div style="display:flex;gap:8px;align-items:center">
@@ -336,13 +482,16 @@
             <button class="pt-btn indigo" style="padding:5px 12px;font-size:11px" data-anew="1">+ Adicionar ação</button></div>
           ${S.showActionEditor && !S.editingAction ? actionEditorHtml(null) : ""}
           ${sorted.length ? `<div class="pt-card" style="padding:14px;margin-bottom:12px">${timelineHtml(sorted)}</div>` : ""}
-          ${sorted.map((a) => S.editingAction === a.id ? actionEditorHtml(a) : `<div class="pt-card" style="padding:10px;display:flex;gap:12px;align-items:center;margin-bottom:8px">
-            <div class="pt-icon ${a.type}">${AT[a.type].icon}</div>
-            <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:#1e293b">${esc(a.name)}</div>
-              <div style="font-size:11px;color:#64748b">Início: dia ${a.startDay} · ${a.frequency}d · ${a.recurrent ? "Recorrente" : "1x"}${a.specialty ? " · " + esc(a.specialty) : ""}</div></div>
-            <span class="pt-tag ${a.type}">${a.type}</span>
-            <button class="pt-btn ghost" style="padding:2px 8px" data-aedit="${a.id}">✏️</button>
-            <button class="pt-btn ghost" style="padding:2px 8px" data-adel="${a.id}">×</button></div>`).join("")}
+          ${sorted.map((a) => S.editingAction === a.id ? actionEditorHtml(a) : `<div>
+            <div class="pt-card" style="padding:10px;display:flex;gap:12px;align-items:center;margin-bottom:8px">
+              <div class="pt-icon ${a.type}">${AT[a.type].icon}</div>
+              <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:#1e293b">${esc(a.name)}</div>
+                <div style="font-size:11px;color:#64748b">Início: dia ${a.startDay} · ${a.frequency}d · ${a.recurrent ? "Recorrente" : "1x"}${a.specialty ? " · " + esc(a.specialty) : ""}</div></div>
+              <span class="pt-tag ${a.type}">${a.type}</span>
+              <button class="pt-btn ghost" style="padding:2px 8px" data-aedit="${a.id}">✏️</button>
+              <button class="pt-btn ghost" style="padding:2px 8px" data-adel="${a.id}">×</button></div>
+            ${a.type === "Exame" ? regrasBlockHtml(a) : ""}
+          </div>`).join("")}
         </div>
       </div>
       <div class="pt-modal-f"><button class="pt-btn ghost" data-mclose="1">Cancelar</button>
@@ -382,14 +531,40 @@
       });
       if (!res.ok) throw new Error(await res.text());
       const d = await res.json();
-      S.modal = S.modal || { title: "", cids: [], actions: [] };
+      S.modal = S.modal || { title: "", cids: [], actions: [], regras: [] };
+      if (!S.modal.regras) S.modal.regras = [];
       if (d.titulo) S.modal.title = d.titulo;
       if (Array.isArray(d.cids)) S.modal.cids = [...new Set([...S.modal.cids, ...d.cids.map((c) => String(c).toUpperCase())])];
-      (d.acoes || []).forEach((x) => S.modal.actions.push({
-        id: uid(), type: AT[x.tipo] ? x.tipo : "Exame", name: String(x.nome || ""),
-        specialty: x.especialidade || "", startDay: +x.start_day || 0, frequency: +x.frequency || 90,
-        recurrent: x.recurrent !== false, autoRestart: !!x.auto_restart, desc: x.descricao || "",
-      }));
+
+      const tempToLocal = {}; // temp_id da IA -> id local (uid())
+      (d.acoes || []).forEach((x) => {
+        const localId = uid();
+        if (x.temp_id) tempToLocal[x.temp_id] = localId;
+        S.modal.actions.push({
+          id: localId, type: AT[x.tipo] ? x.tipo : "Exame", name: String(x.nome || ""),
+          specialty: x.especialidade || "", startDay: +x.start_day || 0, frequency: +x.frequency || 90,
+          recurrent: x.recurrent !== false, autoRestart: !!x.auto_restart, desc: x.descricao || "",
+          regraPaiId: null, // resolvido abaixo depois que todas as ações têm id local
+          _regraPaiTemp: x.regra_pai_temp_id || null,
+        });
+      });
+      const regraTempToLocal = {};
+      (d.regras || []).forEach((r) => {
+        const localId = uid();
+        if (r.temp_id) regraTempToLocal[r.temp_id] = localId;
+        S.modal.regras.push({
+          id: localId, gatilhoId: tempToLocal[r.acao_gatilho_temp_id] || null,
+          descricao: r.descricao || "", condicao: r.is_default ? null : (r.condicao || null),
+          ordem: +r.ordem || 0, isDefault: !!r.is_default,
+          repeteGatilhoApos: r.repete_gatilho_apos_dias != null ? +r.repete_gatilho_apos_dias : null,
+        });
+      });
+      // resolve regraPaiId das ações agora que os ids locais das regras existem
+      S.modal.actions.forEach((a) => {
+        if (a._regraPaiTemp) a.regraPaiId = regraTempToLocal[a._regraPaiTemp] || null;
+        delete a._regraPaiTemp;
+      });
+
       S.aiModal = null; render();
     } catch (err) {
       a.loading = false; a.error = String((err && err.message) || err); render();
@@ -465,7 +640,7 @@
   document.addEventListener("click", (e) => {
     const root = document.getElementById("s-protocolos");
     if (!root || root.style.display === "none") return;
-    const t = e.target.closest("[data-menu],[data-act],[data-dd],[data-group],[data-bulk],[data-clear],[data-goprot],[data-back],[data-new],[data-edit],[data-toggle],[data-mclose],[data-msave],[data-mbg],[data-cidadd],[data-cidrm],[data-anew],[data-aedit],[data-adel],[data-asave],[data-acancel],[data-atype],[data-afreq],[data-zoom],[data-gact],[data-fclear],[data-fapply],[data-tladd],[data-aiopen],[data-aiclose],[data-aigen],[data-aibg]");
+    const t = e.target.closest("[data-menu],[data-act],[data-dd],[data-group],[data-bulk],[data-clear],[data-goprot],[data-back],[data-new],[data-edit],[data-toggle],[data-mclose],[data-msave],[data-mbg],[data-cidadd],[data-cidrm],[data-anew],[data-aedit],[data-adel],[data-asave],[data-acancel],[data-atype],[data-afreq],[data-zoom],[data-gact],[data-fclear],[data-fapply],[data-tladd],[data-aiopen],[data-aiclose],[data-aigen],[data-aibg],[data-rnew],[data-redit],[data-rdel],[data-rcancel],[data-rsave],[data-banew],[data-baedit],[data-badel],[data-bacancel],[data-basave],[data-batype]");
     if (!t) { if (S.dd) { S.dd = null; render(); } return; }
     const d = t.dataset;
     if (d.aiopen) { S.aiModal = { obs: "", pdf: null, filename: "", loading: false, error: "" }; return render(); }
@@ -483,8 +658,8 @@
     if (d.fapply) { S.dd = null; return render(); }
     if (d.goprot) { S.screen = "protocols"; return render(); }
     if (d.back) { S.screen = "report"; return render(); }
-    if (d.new) { S.modal = { title: "", cids: [], actions: [] }; S.showActionEditor = false; S.editingAction = null; S._draft = null; return render(); }
-    if (d.edit) { const p = S.protocols.find((x) => x.id === d.edit); S.modal = { id: p.id, title: p.title, cids: [...p.cids], actions: p.actions.map((a) => ({ ...a })) }; return render(); }
+    if (d.new) { S.modal = { title: "", cids: [], actions: [], regras: [] }; S.showActionEditor = false; S.editingAction = null; S._draft = null; return render(); }
+    if (d.edit) { const p = S.protocols.find((x) => x.id === d.edit); S.modal = { id: p.id, title: p.title, cids: [...p.cids], actions: p.actions.map((a) => ({ ...a })), regras: (p.regras || []).map((r) => ({ ...r })) }; return render(); }
     if (d.toggle) return toggleActive(d.toggle);
     if (d.mbg && e.target === t) { S.modal = null; return render(); }
     if (d.mclose) { S.modal = null; S.showActionEditor = false; S.editingAction = null; return render(); }
@@ -493,7 +668,12 @@
     if (d.cidrm) { S.modal.cids = S.modal.cids.filter((c) => c !== d.cidrm); return render(); }
     if (d.anew || d.tladd) { S.editingAction = null; S.showActionEditor = true; S._atype = "Exame"; S._draft = null; return render(); }
     if (d.aedit) { S.editingAction = d.aedit; S.showActionEditor = false; S._atype = (S.modal.actions.find((a) => a.id === d.aedit) || {}).type; return render(); }
-    if (d.adel) { S.modal.actions = S.modal.actions.filter((a) => a.id !== d.adel); return render(); }
+    if (d.adel) {
+      const regrasDoGatilho = (S.modal.regras || []).filter((r) => r.gatilhoId === d.adel).map((r) => r.id);
+      S.modal.regras = (S.modal.regras || []).filter((r) => r.gatilhoId !== d.adel);
+      S.modal.actions = S.modal.actions.filter((a) => a.id !== d.adel && !regrasDoGatilho.includes(a.regraPaiId));
+      return render();
+    }
     if (d.acancel) { S.editingAction = null; S.showActionEditor = false; S._draft = null; return render(); }
     if (d.atype) { const cur = collectAction(); S._atype = d.atype; if (cur) { cur.type = d.atype; S._draft = cur; } return renderDraft(cur, d.atype); }
     if (d.afreq) { document.getElementById("pt-a-freq").value = d.afreq; return; }
@@ -504,7 +684,76 @@
       if (i >= 0) S.modal.actions[i] = a; else S.modal.actions.push(a);
       S.editingAction = null; S.showActionEditor = false; S._draft = null; return render();
     }
+    // ---- ramificações (regras) ----
+    if (d.rnew) { S.newRegraFor = d.rnew; S.editingRegra = null; return render(); }
+    if (d.redit) { S.editingRegra = d.redit; S.newRegraFor = null; return render(); }
+    if (d.rcancel) { S.editingRegra = null; S.newRegraFor = null; return render(); }
+    if (d.rdel) {
+      S.modal.actions = S.modal.actions.filter((a) => a.regraPaiId !== d.rdel);
+      S.modal.regras = (S.modal.regras || []).filter((r) => r.id !== d.rdel);
+      return render();
+    }
+    if (d.rsave) {
+      const r = collectRegra(); if (!r) return;
+      if (!r.isDefault && (!r.condicao || !r.condicao.operador)) return alert("Defina a condição ou marque como caso padrão.");
+      const i = (S.modal.regras || []).findIndex((x) => x.id === r.id);
+      if (i >= 0) S.modal.regras[i] = r; else (S.modal.regras = S.modal.regras || []).push(r);
+      S.editingRegra = null; S.newRegraFor = null; return render();
+    }
+    // ---- ações dentro de um ramo ----
+    if (d.banew) { S.newBranchActionFor = d.banew; S.editingBranchAction = null; S._batype = "Receita"; return render(); }
+    if (d.baedit) {
+      const a = S.modal.actions.find((x) => x.id === d.baedit);
+      S.editingBranchAction = d.baedit; S.newBranchActionFor = null; S._batype = a ? a.type : "Receita";
+      return render();
+    }
+    if (d.bacancel) { S.editingBranchAction = null; S.newBranchActionFor = null; return render(); }
+    if (d.badel) { S.modal.actions = S.modal.actions.filter((a) => a.id !== d.badel); return render(); }
+    if (d.batype) { S._batype = d.batype; return render(); }
+    if (d.basave) {
+      const a = collectBranchAction(); if (!a || !a.name) return alert("Informe o nome da ação.");
+      const i = S.modal.actions.findIndex((x) => x.id === a.id);
+      if (i >= 0) S.modal.actions[i] = a; else S.modal.actions.push(a);
+      S.editingBranchAction = null; S.newBranchActionFor = null; return render();
+    }
   });
+
+  function collectRegra() {
+    const box = document.getElementById("pt-reditor"); if (!box) return null;
+    const isDefault = document.getElementById("pt-r-default").checked;
+    const campo = document.getElementById("pt-r-campo").value;
+    const operador = document.getElementById("pt-r-op").value;
+    const condicao = isDefault ? null : {
+      campo, operador,
+      numero: document.getElementById("pt-r-num").value !== "" ? +document.getElementById("pt-r-num").value : undefined,
+      numero_min: document.getElementById("pt-r-nummin").value !== "" ? +document.getElementById("pt-r-nummin").value : undefined,
+      numero_max: document.getElementById("pt-r-nummax").value !== "" ? +document.getElementById("pt-r-nummax").value : undefined,
+      texto: document.getElementById("pt-r-texto").value || undefined,
+    };
+    const repeteVal = document.getElementById("pt-r-repete").value;
+    return {
+      id: box.dataset.redid || uid(),
+      gatilhoId: box.dataset.rgat,
+      descricao: document.getElementById("pt-r-desc").value.trim(),
+      condicao, isDefault,
+      ordem: (S.modal.regras || []).length,
+      repeteGatilhoApos: repeteVal !== "" ? +repeteVal : null,
+    };
+  }
+
+  function collectBranchAction() {
+    const box = document.getElementById("pt-baeditor"); if (!box) return null;
+    return {
+      id: box.dataset.baid || uid(),
+      regraPaiId: box.dataset.baregra,
+      type: S._batype || "Receita",
+      name: document.getElementById("pt-ba-name").value.trim(),
+      specialty: document.getElementById("pt-ba-spec").value.trim(),
+      startDay: +document.getElementById("pt-ba-start").value || 0,
+      frequency: 0, recurrent: false, autoRestart: false,
+      desc: document.getElementById("pt-ba-desc").value.trim(),
+    };
+  }
 
   function renderDraft(cur, type) {
     if (!cur) return;
