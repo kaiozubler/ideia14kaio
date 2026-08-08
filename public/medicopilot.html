@@ -888,6 +888,11 @@
                                                       .ag-adv-foot button{flex:1}
                                                       .ag-body{background:var(--white);border:0.5px solid var(--n150);border-radius:12px;overflow:auto;box-shadow:0 1px 2px rgba(0,0,0,.03)}
 
+                                                      .ag-week-nav{display:flex;align-items:center;justify-content:center;gap:16px;padding:2px 0 12px}
+                                                      .ag-week-arrow{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:1px solid var(--n150);background:var(--white);color:var(--n600);cursor:pointer;transition:.15s;flex:none}
+                                                      .ag-week-arrow:hover{background:var(--n50);color:var(--g600);border-color:var(--n200)}
+                                                      .ag-week-label{font-size:13px;font-weight:600;color:var(--n700);min-width:180px;text-align:center;cursor:pointer;user-select:none;text-transform:capitalize}
+                                                      .ag-week-label:hover{color:var(--g600)}
                                                       .ag-grid{display:grid;width:100%}
                                                       .ag-h{padding:10px 8px;text-align:center;font-size:11px;font-weight:600;color:var(--n500);border-bottom:1px solid var(--n100);border-right:1px solid var(--n100);background:var(--white);position:relative}
                                                       .ag-h:last-child{border-right:none}
@@ -14763,7 +14768,7 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               }catch(e){console.error('agendamentos',e);AGENDAMENTOS=[];AG_APTS=[];}
                                                               return AG_APTS;
                                                             }
-                                                            const AG_STATE={view:'weekly',doctor:'all',spec:'all',status:'all',conf:'all',openMenu:null,inited:false};
+                                                            const AG_STATE={view:'weekly',doctor:'all',spec:'all',status:'all',conf:'all',openMenu:null,inited:false,weekOffset:0};
                                                             const AG_MENU=[
                                                               {label:'Dar entrada',icon:'ti-login'},
                                                               {label:'Editar etiqueta',icon:'ti-tag'},
@@ -14786,15 +14791,28 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                             function agToday(){const t=new Date();t.setHours(0,0,0,0);return t;}
                                                             function agDateKey(d){const pad=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
                                                             function agWeek(){
-                                                              const t=agToday();const day=t.getDay();
+                                                              const todayKey=agDateKey(agToday());
+                                                              const t=agToday();t.setDate(t.getDate()+(AG_STATE.weekOffset||0)*7);
+                                                              const day=t.getDay();
                                                               const first=new Date(t);first.setDate(t.getDate()-day); // domingo
-                                                              const todayKey=agDateKey(t);const w=[];
+                                                              const w=[];
                                                               for(let i=0;i<7;i++){
                                                                 const dt=new Date(first);dt.setDate(first.getDate()+i);
                                                                 w.push({date:agDateKey(dt),dayName:['Dom','Seg','Ter','Qua','Qui','Sex','Sab'][dt.getDay()],dayNum:dt.getDate(),isToday:agDateKey(dt)===todayKey});
                                                               }
                                                               return w;
                                                             }
+                                                            function agWeekRangeLabel(week){
+                                                              const months=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+                                                              const d1=new Date(week[0].date+'T00:00:00'),d2=new Date(week[6].date+'T00:00:00');
+                                                              const p=n=>String(n).padStart(2,'0');
+                                                              const label=d1.getMonth()===d2.getMonth()
+                                                                ?`${p(d1.getDate())} – ${p(d2.getDate())} de ${months[d1.getMonth()]}`
+                                                                :`${p(d1.getDate())} ${months[d1.getMonth()]} – ${p(d2.getDate())} ${months[d2.getMonth()]}`;
+                                                              return (AG_STATE.weekOffset||0)===0?`Semana atual · ${label}`:label;
+                                                            }
+                                                            function agShiftWeek(delta){AG_STATE.weekOffset=(AG_STATE.weekOffset||0)+delta;renderAgenda();}
+                                                            function agGoToCurrentWeek(){if((AG_STATE.weekOffset||0)===0)return;AG_STATE.weekOffset=0;renderAgenda();}
                                                             function initAgenda(){
                                                               if(!AG_STATE.inited){
                                                                 const ds=document.getElementById('ag-doctor');
@@ -14861,8 +14879,13 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               const week=agWeek();
                                                               const days=week.map(d=>d.date);
                                                               apts=apts.filter(a=>days.includes(a.date)).sort((a,b)=>a.dateObj-b.dateObj);
+                                                              const navHtml=`<div class="ag-week-nav">
+                                                                <button class="ag-week-arrow" onclick="agShiftWeek(-1)" title="Semana anterior"><i class="ti ti-chevron-left"></i></button>
+                                                                <span class="ag-week-label" onclick="agGoToCurrentWeek()" title="Voltar para a semana atual">${agWeekRangeLabel(week)}</span>
+                                                                <button class="ag-week-arrow" onclick="agShiftWeek(1)" title="Próxima semana"><i class="ti ti-chevron-right"></i></button>
+                                                              </div>`;
+                                                              if(!apts.length){body.innerHTML=navHtml+`<div class="ag-empty"><i class="ti ti-calendar-off" style="font-size:32px"></i><p>Nenhum agendamento nesta semana</p></div>`;return;}
                                                               const hours=agHours(apts);
-                                                              if(!apts.length){body.innerHTML=`<div class="ag-empty"><i class="ti ti-calendar-off" style="font-size:32px"></i><p>Nenhum agendamento nesta semana</p></div>`;return;}
                                                               const byKey={};apts.forEach(a=>{const k=a.date+'-'+a.hourSlot;(byKey[k]=byKey[k]||[]).push(a);});
                                                               const cols='80px '+week.map(()=>'1fr').join(' ');
                                                               let html=`<div class="ag-grid" style="grid-template-columns:${cols}">`;
@@ -14872,7 +14895,7 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                 html+=`<div class="ag-hourcell">${h}</div>`;
                                                                 week.forEach(d=>{const list=byKey[d.date+'-'+h]||[];html+=`<div class="ag-cell">${list.map(agCardHtml).join('')}</div>`;});
                                                               });
-                                                              html+='</div>';body.innerHTML=html;
+                                                              html+='</div>';body.innerHTML=navHtml+html;
                                                             }
                                                             function renderAgDaily(body,apts){
                                                               const todayKey=agDateKey(agToday());
