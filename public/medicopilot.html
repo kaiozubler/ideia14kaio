@@ -8266,7 +8266,26 @@ showAtendList();
                                                               window._idConsultaAtual=null;
                                                               if(!currentPatient||!currentUser)return;
                                                               // Garante resumo do prontuário conforme regra; a consulta só é gravada no salvamento manual.
-                                                              ensureResumoProntuario(currentPatient.id).catch(e=>console.error('resumo erro',e));
+                                                              try{
+                                                                await ensureResumoProntuario(currentPatient.id);
+                                                              }catch(e){
+                                                                console.error('resumo erro',e);
+                                                              }
+                                                              // Reaproveita o resumo já gerado/carregado acima (currentResumoProntuario) para
+                                                              // postar como mensagem no chat da IA — não faz nenhuma chamada extra à IA aqui,
+                                                              // evitando consumo adicional de tokens.
+                                                              postarResumoComoMensagemChat();
+                                                            }
+
+                                                            function postarResumoComoMensagemChat(){
+                                                              const resumo=(currentResumoProntuario||'').trim();
+                                                              const nomePaciente=(currentPatient&&currentPatient.name)||'o paciente';
+                                                              const instrucoes='Posso ajudar durante o atendimento: gerar receita, enviar orientações ao paciente, solicitar exames, agendar retorno ou salvar exames analisados. É só pedir em texto (ex.: "gere a receita de...", "agende retorno em 30 dias").';
+                                                              const msg=resumo
+                                                                ?('📋 **Resumo do prontuário de '+nomePaciente+'**\n\n'+resumo+'\n\n---\n'+instrucoes)
+                                                                :('Ainda não há um resumo de prontuário disponível para '+nomePaciente+'. '+instrucoes);
+                                                              aiChatHistory.push({role:'assistant',content:msg});
+                                                              spawnBubble('ia',msg);
                                                             }
 
                                                             async function ensureResumoProntuario(idPaciente,opts){
