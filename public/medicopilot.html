@@ -7825,7 +7825,8 @@ showAtendList();
                                         const cidsSugeridos=(Array.isArray(data.cids_sugeridos)?data.cids_sugeridos:[])
                                           .filter(c=>c&&c.code&&!cidsAtuais.some(x=>String(x.code).toUpperCase()===String(c.code).toUpperCase()))
                                           .map(c=>({code:String(c.code).toUpperCase(),description:c.description||''}));
-                                        const ag=data.agendamento_sugerido;
+                                        // "Agendar retorno" desligado no copiloto → não propõe agendamento ao finalizar.
+                                        const ag=getCopilotoCfg().retorno?data.agendamento_sugerido:null;
                                         const agendamentoSugerido=(ag&&typeof ag==='object')?{
                                           prazoTexto:(ag.prazo_texto||'').trim(),
                                           data:(ag.data||'').trim(),
