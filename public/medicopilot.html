@@ -411,6 +411,7 @@
                                                       .dm-item:hover{background:var(--n50)}
                                                       .dm-item .ti{font-size:14px;color:var(--n400)}
                                                       .dm-item.green .ti{color:var(--g500)}
+                                                      .dm-item.blue .ti{color:#2563eb}
 
                                                       /* AI RIGHT — TRANSCRIPTION */
                                                       .trans-bar{margin:0 4px 8px 4px;border-radius:10px;border:0.5px solid var(--n150);background:var(--n50);backdrop-filter:none;box-shadow:0 1px 2px rgba(0,0,0,.03);flex-shrink:0;overflow:hidden;transition:max-height .28s cubic-bezier(.4,0,.2,1);max-height:46px;position:relative;z-index:5}
@@ -839,6 +840,11 @@
                                                       .cv-btn-row button{flex:1;padding:6px;font-size:11px;font-weight:500;border-radius:6px;border:none;cursor:pointer}
                                                       .cv-btn-out{border:1px solid #16a34a !important;color:#16a34a;background:#fff !important}
                                                       .cv-btn-blue{background:#2563eb !important;color:#fff}
+                                                      /* Liquid Glass — botão "Novo agendamento" (cadastro do paciente) */
+                                                      .lg-btn-agendar{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border:1px solid rgba(255,255,255,.55);border-radius:999px;background:linear-gradient(135deg,#38bdf8 0%,#3b82f6 100%);color:#fff;font-size:12.5px;font-weight:600;letter-spacing:.1px;cursor:pointer;box-shadow:0 8px 20px -8px rgba(37,99,235,.6),inset 0 1px 0 rgba(255,255,255,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:transform .15s ease,box-shadow .15s ease,filter .15s ease}
+                                                      .lg-btn-agendar i{font-size:14px}
+                                                      .lg-btn-agendar:hover{transform:translateY(-1px);filter:brightness(1.05);box-shadow:0 10px 24px -8px rgba(37,99,235,.7),inset 0 1px 0 rgba(255,255,255,.4)}
+                                                      .lg-btn-agendar:active{transform:translateY(0);filter:brightness(.96)}
                                                       .cv-ag{padding:8px;border:1px solid #e5e7eb;border-radius:6px;font-size:11px;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center}
                                                       .cv-ag .pill{background:#f0fdf4;color:#16a34a;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600}
                                                       .cv-ia-box{background:#eff6ff;padding:14px 18px;border-bottom:1px solid #dbeafe}
@@ -2742,6 +2748,9 @@
                             <div class="dm-item" onclick="closeDropdown()">
                               <i class="ti ti-paperclip"></i> Anexar arquivo
                             </div>
+                            <div class="dm-item blue" onclick="closeDropdown();openNovoAgendamentoFromPatient()">
+                              <i class="ti ti-calendar-plus"></i> Agendar paciente
+                            </div>
                             <div class="dm-item" onclick="closeDropdown();openModal('resumo')">
                               <i class="ti ti-file-check"></i> Gerar resumo IA
                             </div>
@@ -2945,8 +2954,8 @@
                   <div style="font-size:13px;font-weight:700;color:#0f172a">Histórico de agendamentos</div>
                   <div style="font-size:11px;color:#64748b">Consultas e retornos deste paciente</div>
                 </div>
-                <button class="cv-btn-blue" onclick="openNovoAgendamentoFromPatient()" style="display:inline-flex;align-items:center;gap:6px">
-                  <i class="ti ti-plus"></i> Novo agendamento
+                <button class="lg-btn-agendar" onclick="openNovoAgendamentoFromPatient()">
+                  <i class="ti ti-calendar-plus"></i> Novo agendamento
                 </button>
               </div>
               <div id="pat-agenda-list"></div>
