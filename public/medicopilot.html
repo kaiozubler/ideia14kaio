@@ -5765,8 +5765,15 @@
                                                               return {
                                                                 enabled: cfg.enabled!==false,
                                                                 voz: cfg.voz!==false,
+                                                                vozAuto: cfg.vozAuto===true,
                                                                 tipo: cfg.tipo||'ativo',
-                                                                freq: Number(cfg.freq)||120,
+                                                                freq: Number(cfg.freq)||480,
+                                                                perguntas: cfg.perguntas!==false,
+                                                                memoria: cfg.memoria!==false,
+                                                                pendencias: cfg.pendencias!==false,
+                                                                insight: cfg.insight!==false,
+                                                                protocolo: cfg.protocolo!==false,
+                                                                retorno: cfg.retorno!==false,
                                                               };
                                                             }
 
