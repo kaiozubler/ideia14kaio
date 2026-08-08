@@ -1944,6 +1944,29 @@
 .dialer-end-btn{width:calc(100%);height:42px;border-radius:999px;border:none;background:linear-gradient(135deg,#fb7185,#e11d48);color:#fff;font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;box-shadow:0 8px 20px -6px rgba(225,29,72,.45);transition:all .14s}
 .dialer-end-btn:hover{filter:brightness(1.07)}
 .dialer-end-btn .ti{font-size:15px}
+      /* ===== COPILOTO — CONFIGURAÇÕES ===== */
+      .cop-ico-box{width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 6px 16px -6px rgba(0,0,0,.28)}
+      .cop-ico-box i{font-size:23px;color:#fff}
+      .cop-ico-box.sm{width:38px;height:38px;border-radius:12px}
+      .cop-ico-box.sm i{font-size:17px}
+      .cop-card{background:rgba(255,255,255,.82);backdrop-filter:blur(14px) saturate(180%);border:0.5px solid var(--n150);border-radius:18px;padding:18px;box-shadow:0 4px 18px -12px rgba(15,23,42,.18)}
+      .cop-card-hd{display:flex;align-items:flex-start;gap:12px}
+      .cop-card-title{font-size:14px;font-weight:700;color:var(--n700);letter-spacing:-.2px}
+      .cop-card-desc{font-size:11.5px;color:var(--n400);margin-top:2px;line-height:1.45}
+      .cop-card-body{display:flex;flex-direction:column;gap:12px;transition:opacity .2s}
+      .cop-card-body.cop-off{opacity:.42;pointer-events:none}
+      .cop-sep{border-top:1px solid var(--n150);margin:2px 0}
+      .cop-switch{width:40px;height:23px;cursor:pointer;accent-color:#10b981;flex-shrink:0;margin-top:6px}
+      .cop-switch.amber{accent-color:#f59e0b}
+      .cop-chk{display:flex;align-items:flex-start;gap:10px;cursor:pointer;user-select:none}
+      .cop-chk input[type=checkbox]{width:17px;height:17px;margin-top:1px;flex-shrink:0;accent-color:#10b981;cursor:pointer}
+      .cop-chk.violet input[type=checkbox]{accent-color:#7c3aed}
+      .cop-chk span{font-size:12.5px;color:var(--n700);line-height:1.45}
+      .cop-chk span strong{font-weight:500}
+      .cop-chk span small{display:block;font-size:11px;color:var(--n400);margin-top:3px;line-height:1.45}
+      .cop-chk.cop-off{opacity:.45;pointer-events:none}
+      .cop-note{margin-top:10px;border-radius:14px;padding:10px 13px;font-size:11px;line-height:1.6}
+      .cop-note.amber{background:#fffbeb;border:0.5px solid #fde68a;color:#92400e}
     </style>
   </head>
   <body>
@@ -3495,50 +3518,153 @@
 
           <!-- SCREEN: COPILOTO -->
           <div id="s-copiloto" style="display:none">
-            <div style="margin-bottom:14px">
-              <div style="font-size:14px;font-weight:600;color:var(--n700)">Copiloto de consulta</div>
-              <div style="font-size:11.5px;color:var(--n400);margin-top:2px">
-                Configure o comportamento do copiloto durante o atendimento.
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px">
+              <div class="cop-ico-box" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)">
+                <i class="ti ti-robot"></i>
+              </div>
+              <div>
+                <div style="font-size:19px;font-weight:700;color:var(--n700);letter-spacing:-.3px">Copiloto de consulta</div>
+                <div style="font-size:12px;color:var(--n400);margin-top:2px">
+                  Configure o comportamento do copiloto durante o atendimento.
+                </div>
               </div>
             </div>
-            <div
-              style="background:#fff;border:1px solid var(--n200);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:16px;max-width:640px"
-            >
-              <label style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-                <div>
-                  <div style="font-size:13px;font-weight:600;color:var(--n700)">Ativar copiloto</div>
-                  <div style="font-size:11.5px;color:var(--n400)">Liga ou desliga o copiloto durante a consulta.</div>
-                </div>
-                <input type="checkbox" id="cop-enabled" role="switch" style="width:38px;height:22px;cursor:pointer" />
-              </label>
-              <div style="border-top:1px solid var(--n200)"></div>
-              <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
-                <input type="checkbox" id="cop-voz" checked />
-                <span style="font-size:13px;color:var(--n700)">Permitir gravação de voz</span>
-              </label>
-              <div class="fld" style="margin-top:4px">
-                <label for="cop-tipo">Tipo de copiloto</label>
-                <select id="cop-tipo">
-                  <option value="ativo">Ativo</option>
-                  <option value="reativo">Reativo</option>
-                </select>
-              </div>
-              <div id="cop-freq-wrap" style="display:none">
-                <div style="border-top:1px solid var(--n200);margin-bottom:16px"></div>
-                <div>
-                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-                    <div style="font-size:13px;font-weight:600;color:var(--n700)">Frequência de atualização</div>
-                    <div style="font-size:12px;color:var(--n500)"><span id="cop-freq-lbl">2min</span></div>
+
+            <div style="display:flex;flex-direction:column;gap:16px;max-width:820px;padding-bottom:40px">
+              <!-- COMPORTAMENTO GERAL -->
+              <div class="cop-card">
+                <div class="cop-card-hd">
+                  <div class="cop-ico-box sm" style="background:linear-gradient(135deg,#34d399,#059669)">
+                    <i class="ti ti-adjustments"></i>
                   </div>
-                  <input type="range" id="cop-freq" min="15" max="600" step="5" value="120" style="width:100%" />
-                  <div
-                    style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--n400);margin-top:2px"
-                  >
-                    <span>15s</span><span>10min</span>
+                  <div style="flex:1">
+                    <div class="cop-card-title">Comportamento geral</div>
+                    <div class="cop-card-desc">Defina como o copiloto se comporta durante o atendimento.</div>
+                  </div>
+                  <input type="checkbox" id="cop-enabled" role="switch" class="cop-switch" onchange="updateCopEnabledState()" />
+                </div>
+                <div id="cop-geral-body" class="cop-card-body">
+                  <div class="cop-sep"></div>
+                  <label class="cop-chk">
+                    <input type="checkbox" id="cop-voz" onchange="updateCopEnabledState()" />
+                    <span><strong>Permitir gravação de voz</strong></span>
+                  </label>
+                  <label class="cop-chk" id="cop-voz-auto-row">
+                    <input type="checkbox" id="cop-voz-auto" />
+                    <span><strong>Iniciar gravação automaticamente</strong>
+                      <small>A gravação começa sozinha ao abrir o atendimento, sem precisar clicar em iniciar.</small>
+                    </span>
+                  </label>
+                  <div class="cop-sep"></div>
+                  <div class="fld" style="margin:0">
+                    <label for="cop-tipo" style="text-transform:uppercase;font-size:10.5px;letter-spacing:.5px">Tipo de copiloto</label>
+                    <select id="cop-tipo" onchange="updateCopTipoHint()">
+                      <option value="ativo">Ativo</option>
+                      <option value="reativo">Reativo</option>
+                    </select>
+                    <div id="cop-tipo-hint" style="font-size:11px;color:var(--n400);margin-top:5px"></div>
+                  </div>
+                  <div class="cop-sep"></div>
+                  <div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                      <div style="font-size:12.5px;font-weight:600;color:var(--n700)">Frequência de atualização</div>
+                      <div style="font-size:12.5px;font-weight:600;color:var(--g600,#059669)"><span id="cop-freq-lbl">8min</span></div>
+                    </div>
+                    <input type="range" id="cop-freq" min="5" max="20" step="1" value="8" style="width:100%;accent-color:#10b981" />
+                    <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--n400);margin-top:4px">
+                      <span>5min</span><span>20min</span>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div style="display:flex;justify-content:flex-end">
+
+              <!-- RECURSOS INTELIGENTES -->
+              <div class="cop-card">
+                <div class="cop-card-hd">
+                  <div class="cop-ico-box sm" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)">
+                    <i class="ti ti-sparkles"></i>
+                  </div>
+                  <div style="flex:1">
+                    <div class="cop-card-title">Recursos inteligentes</div>
+                    <div class="cop-card-desc">Ações automáticas que a IA pode realizar durante o atendimento.</div>
+                  </div>
+                </div>
+                <div class="cop-card-body">
+                  <div class="cop-sep"></div>
+                  <label class="cop-chk violet">
+                    <input type="checkbox" id="cop-perguntas" />
+                    <span><strong>Gerar perguntas personalizadas ao começar um atendimento</strong>
+                      <small>A IA sugere perguntas direcionadas ao perfil e histórico do paciente no início da consulta.</small>
+                    </span>
+                  </label>
+                  <label class="cop-chk violet">
+                    <input type="checkbox" id="cop-memoria" />
+                    <span><strong>Atualizar memória do paciente automaticamente</strong>
+                      <small>Novas informações ditas durante a consulta são incorporadas ao histórico do paciente sem ação manual.</small>
+                    </span>
+                  </label>
+                  <label class="cop-chk violet">
+                    <input type="checkbox" id="cop-pendencias" />
+                    <span><strong>Sinalizar pendências de protocolos assim que abrir uma consulta</strong>
+                      <small>Pendências de protocolos vinculados ao paciente aparecem automaticamente na abertura do atendimento.</small>
+                    </span>
+                  </label>
+                  <label class="cop-chk violet">
+                    <input type="checkbox" id="cop-insight" />
+                    <span><strong>Gerar insight automático da consulta por IA</strong>
+                      <small>Ao final do atendimento, a IA gera um resumo com pontos de atenção identificados na consulta.</small>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- PROTOCOLOS E RETORNO -->
+              <div class="cop-card">
+                <div class="cop-card-hd">
+                  <div class="cop-ico-box sm" style="background:linear-gradient(135deg,#fbbf24,#f59e0b)">
+                    <i class="ti ti-stethoscope"></i>
+                  </div>
+                  <div style="flex:1">
+                    <div class="cop-card-title">Protocolos e retorno</div>
+                    <div class="cop-card-desc">Automatizações vinculadas a protocolos clínicos e à continuidade do cuidado.</div>
+                  </div>
+                </div>
+                <div class="cop-card-body">
+                  <div class="cop-sep"></div>
+                  <div>
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+                      <div style="display:flex;align-items:flex-start;gap:9px">
+                        <i class="ti ti-clipboard-list" style="color:#f59e0b;font-size:15px;margin-top:1px"></i>
+                        <span style="font-size:12.5px;font-weight:600;color:var(--n700)">Inserir o paciente em um protocolo</span>
+                      </div>
+                      <input type="checkbox" id="cop-protocolo" role="switch" class="cop-switch amber" />
+                    </div>
+                    <div class="cop-note amber">
+                      Quando a IA identifica um CID com protocolo ativo durante o atendimento, ela pede a confirmação
+                      do médico antes de incluir o paciente no protocolo correspondente.
+                    </div>
+                  </div>
+                  <div class="cop-sep"></div>
+                  <div>
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+                      <div style="display:flex;align-items:flex-start;gap:9px">
+                        <i class="ti ti-calendar-clock" style="color:#f59e0b;font-size:15px;margin-top:1px"></i>
+                        <span style="font-size:12.5px;font-weight:600;color:var(--n700)">Agendar retorno</span>
+                      </div>
+                      <input type="checkbox" id="cop-retorno" role="switch" class="cop-switch amber" />
+                    </div>
+                    <div class="cop-note amber">
+                      Ao finalizar o atendimento, o copiloto pergunta ao médico se deseja agendar um retorno
+                      automaticamente. Se confirmado, a IA envia uma mensagem ao paciente para combinar o agendamento.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:flex;justify-content:flex-end;align-items:center;gap:12px">
+                <span id="cop-saved-chip" style="display:none;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#047857;background:#d1fae5;border:0.5px solid #6ee7b7;padding:7px 14px;border-radius:999px">
+                  <i class="ti ti-check"></i> Configurações salvas
+                </span>
                 <button class="btn primary" onclick="saveCopilotoCfg()">
                   <i class="ti ti-device-floppy"></i> Salvar
                 </button>
@@ -5639,8 +5765,15 @@
                                                               return {
                                                                 enabled: cfg.enabled!==false,
                                                                 voz: cfg.voz!==false,
+                                                                vozAuto: cfg.vozAuto===true,
                                                                 tipo: cfg.tipo||'ativo',
-                                                                freq: Number(cfg.freq)||120,
+                                                                freq: Number(cfg.freq)||480,
+                                                                perguntas: cfg.perguntas!==false,
+                                                                memoria: cfg.memoria!==false,
+                                                                pendencias: cfg.pendencias!==false,
+                                                                insight: cfg.insight!==false,
+                                                                protocolo: cfg.protocolo!==false,
+                                                                retorno: cfg.retorno!==false,
                                                               };
                                                             }
 
@@ -5727,30 +5860,69 @@
                                                               if(typeof toast==='function')toast('Dados da clínica salvos');
                                                             }
 
-                                                            function _copFmt(s){s=Number(s)||120;if(s>=60){const m=Math.floor(s/60),r=s%60;return r?`${m}min ${r}s`:`${m}min`;}return `${s}s`;}
-                                                            function updateCopFreqVisibility(){
-                                                              document.getElementById('cop-freq-wrap').style.display='block';
+                                                            function _copFmt(s){const m=Math.max(1,Math.round((Number(s)||480)/60));return m+'min';}
+                                                            function updateCopTipoHint(){
+                                                              const t=document.getElementById('cop-tipo');const h=document.getElementById('cop-tipo-hint');
+                                                              if(!t||!h)return;
+                                                              h.textContent=t.value==='ativo'
+                                                                ?'O copiloto traz sugestões e atualizações por conta própria durante a consulta.'
+                                                                :'O copiloto só responde quando o médico solicitar uma ação.';
+                                                            }
+                                                            function updateCopEnabledState(){
+                                                              const en=document.getElementById('cop-enabled');const body=document.getElementById('cop-geral-body');
+                                                              if(!en||!body)return;
+                                                              body.classList.toggle('cop-off',!en.checked);
+                                                              const voz=document.getElementById('cop-voz');const autoRow=document.getElementById('cop-voz-auto-row');
+                                                              if(voz&&autoRow){
+                                                                autoRow.classList.toggle('cop-off',!voz.checked);
+                                                                if(!voz.checked){const a=document.getElementById('cop-voz-auto');if(a)a.checked=false;}
+                                                              }
                                                             }
                                                             function loadCopilotoCfg(){
-                                                              let cfg={};try{cfg=JSON.parse(localStorage.getItem('copilotoCfg')||'{}');}catch(e){}
-                                                              const en=document.getElementById('cop-enabled');if(!en)return;
-                                                              en.checked=cfg.enabled!==false;
-                                                              document.getElementById('cop-voz').checked=cfg.voz!==false;
+                                                              const cfg=getCopilotoCfg();
+                                                              const set=(id,v)=>{const el=document.getElementById(id);if(el)el.checked=!!v;};
+                                                              if(!document.getElementById('cop-enabled'))return;
+                                                              set('cop-enabled',cfg.enabled);set('cop-voz',cfg.voz);set('cop-voz-auto',cfg.vozAuto);
+                                                              set('cop-perguntas',cfg.perguntas);set('cop-memoria',cfg.memoria);
+                                                              set('cop-pendencias',cfg.pendencias);set('cop-insight',cfg.insight);
+                                                              set('cop-protocolo',cfg.protocolo);set('cop-retorno',cfg.retorno);
                                                               document.getElementById('cop-tipo').value=cfg.tipo||'ativo';
-                                                              const f=document.getElementById('cop-freq');f.value=cfg.freq||120;
-                                                              const lbl=document.getElementById('cop-freq-lbl');lbl.textContent=_copFmt(f.value);
-                                                              f.oninput=()=>lbl.textContent=_copFmt(f.value);
-                                                              updateCopFreqVisibility();
+                                                              const f=document.getElementById('cop-freq');
+                                                              f.value=Math.min(20,Math.max(5,Math.round(cfg.freq/60)));
+                                                              const lbl=document.getElementById('cop-freq-lbl');lbl.textContent=f.value+'min';
+                                                              f.oninput=()=>lbl.textContent=f.value+'min';
+                                                              updateCopTipoHint();updateCopEnabledState();
                                                             }
                                                             function saveCopilotoCfg(){
+                                                              const chk=id=>!!document.getElementById(id)?.checked;
                                                               const cfg={
-                                                                enabled:document.getElementById('cop-enabled').checked,
-                                                                voz:document.getElementById('cop-voz').checked,
+                                                                enabled:chk('cop-enabled'),
+                                                                voz:chk('cop-voz'),
+                                                                vozAuto:chk('cop-voz-auto'),
                                                                 tipo:document.getElementById('cop-tipo').value,
-                                                                freq:Number(document.getElementById('cop-freq').value)||120,
+                                                                freq:(Number(document.getElementById('cop-freq').value)||8)*60,
+                                                                perguntas:chk('cop-perguntas'),
+                                                                memoria:chk('cop-memoria'),
+                                                                pendencias:chk('cop-pendencias'),
+                                                                insight:chk('cop-insight'),
+                                                                protocolo:chk('cop-protocolo'),
+                                                                retorno:chk('cop-retorno'),
                                                               };
                                                               localStorage.setItem('copilotoCfg',JSON.stringify(cfg));
+                                                              applyCopilotoCfgToUI();
+                                                              const chip=document.getElementById('cop-saved-chip');
+                                                              if(chip){chip.style.display='inline-flex';setTimeout(()=>{chip.style.display='none';},2200);}
                                                               if(typeof toast==='function')toast('Configurações salvas');
+                                                            }
+                                                            /* Reflete o estado do copiloto no atendimento: sem copiloto, o painel da IA
+                                                               (chat_ia) sai da tela e o prontuário ocupa a largura inteira. */
+                                                            function applyCopilotoCfgToUI(){
+                                                              const cfg=getCopilotoCfg();
+                                                              const wrap=document.querySelector('#atend-novo-view .split-wrap');
+                                                              if(!wrap)return;
+                                                              const right=wrap.querySelector('.split-right');
+                                                              if(right)right.style.display=cfg.enabled?'':'none';
+                                                              wrap.style.gridTemplateColumns=cfg.enabled?'':'1fr';
                                                             }
 
                                                             /* ========== SEARCH ========== */
@@ -6721,6 +6893,7 @@
                                                               document.getElementById('atend-detail-view').style.display='none';
                                                               const nv=document.getElementById('atend-novo-view');
                                                               nv.style.display='flex';
+                                                              applyCopilotoCfgToUI();
                                                               if(!restore){
                                                                 resetAI();
                                                                 const novoSessionId=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():('sess-'+Date.now()+'-'+Math.random().toString(36).slice(2));
@@ -6734,6 +6907,11 @@
                                                                 const npta=document.getElementById('nota-personal-ta');if(npta)npta.value=atendEmAndamento.notaPessoal;
                                                               }
                                                               startAtendAutoSave();
+                                                              // "Iniciar gravação automaticamente": dispara a escuta sozinha ao abrir o atendimento.
+                                                              const _cpc=getCopilotoCfg();
+                                                              if(!restore&&_cpc.enabled&&_cpc.voz&&_cpc.vozAuto&&!listening){
+                                                                setTimeout(()=>{if(!listening&&typeof toggleListen==='function')toggleListen();},600);
+                                                              }
                                                             }
                                                             async function saveAtendFromProgress(){const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;await saveAtendInternal({finalize:true});}
                                                             /* ========== IDENTIFICAÇÃO DO PACIENTE AO SALVAR ==========
@@ -7647,7 +7825,8 @@ showAtendList();
                                         const cidsSugeridos=(Array.isArray(data.cids_sugeridos)?data.cids_sugeridos:[])
                                           .filter(c=>c&&c.code&&!cidsAtuais.some(x=>String(x.code).toUpperCase()===String(c.code).toUpperCase()))
                                           .map(c=>({code:String(c.code).toUpperCase(),description:c.description||''}));
-                                        const ag=data.agendamento_sugerido;
+                                        // "Agendar retorno" desligado no copiloto → não propõe agendamento ao finalizar.
+                                        const ag=getCopilotoCfg().retorno?data.agendamento_sugerido:null;
                                         const agendamentoSugerido=(ag&&typeof ag==='object')?{
                                           prazoTexto:(ag.prazo_texto||'').trim(),
                                           data:(ag.data||'').trim(),
@@ -8216,7 +8395,9 @@ showAtendList();
                                                               copBusy=true;
                                                               const cursorAtSend=transcriptLog.length;
                                                               try{
-                                                                const payload={mode:'copiloto', manual, solicitacao: kind||'geral', primeiro_processamento: copFirstRun, trecho_transcricao: novo};
+                                                                const cfgCop=getCopilotoCfg();
+                                                                const primeiro=copFirstRun;
+                                                                const payload={mode:'copiloto', manual, solicitacao: kind||'geral', primeiro_processamento: copFirstRun, trecho_transcricao: novo, atualizar_memoria: cfgCop.memoria};
                                                                 if(copFirstRun){
                                                                   // primeiro processamento: envia todo o contexto disponível
                                                                   let infoComp=null; try{infoComp=loadInfoComp();}catch{}
@@ -8238,7 +8419,8 @@ showAtendList();
                                                                   const perguntas=Array.isArray(data.perguntas_sugeridas)?data.perguntas_sugeridas:[];
                                                                   const condutas=Array.isArray(data.condutas_sugeridas)?data.condutas_sugeridas:[];
                                                                   const pontos=Array.isArray(data.pontos_atencao)?data.pontos_atencao:[];
-                                                                  const showPerg = !kind || kind==='duvida';
+                                                                  // Perguntas personalizadas no início do atendimento seguem a configuração do copiloto.
+                                                                  const showPerg = (!kind || kind==='duvida') && (!primeiro || manual || cfgCop.perguntas);
                                                                   const showCond = !kind || kind==='conduta';
                                                                   const showPontos = !kind; // pontos de atenção apenas no fluxo automático/geral
                                                                   let pushed=0;
