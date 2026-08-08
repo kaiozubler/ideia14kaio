@@ -6893,6 +6893,7 @@
                                                               document.getElementById('atend-detail-view').style.display='none';
                                                               const nv=document.getElementById('atend-novo-view');
                                                               nv.style.display='flex';
+                                                              applyCopilotoCfgToUI();
                                                               if(!restore){
                                                                 resetAI();
                                                                 const novoSessionId=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():('sess-'+Date.now()+'-'+Math.random().toString(36).slice(2));
@@ -6906,6 +6907,11 @@
                                                                 const npta=document.getElementById('nota-personal-ta');if(npta)npta.value=atendEmAndamento.notaPessoal;
                                                               }
                                                               startAtendAutoSave();
+                                                              // "Iniciar gravação automaticamente": dispara a escuta sozinha ao abrir o atendimento.
+                                                              const _cpc=getCopilotoCfg();
+                                                              if(!restore&&_cpc.enabled&&_cpc.voz&&_cpc.vozAuto&&!listening){
+                                                                setTimeout(()=>{if(!listening&&typeof toggleListen==='function')toggleListen();},600);
+                                                              }
                                                             }
                                                             async function saveAtendFromProgress(){const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;await saveAtendInternal({finalize:true});}
                                                             /* ========== IDENTIFICAÇÃO DO PACIENTE AO SALVAR ==========
