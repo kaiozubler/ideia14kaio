@@ -6586,7 +6586,7 @@
                                                             let _parentescos=[];
                                                             function getParentescosPayload(){
                                                               return (_parentescos||[])
-                                                                .map(p=>({nome:(p.nome||'').trim(),cpf:(p.cpf||'').trim(),parentesco:p.parentesco||'',grau:grauDoParentesco(p.parentesco||''),paciente_id:p.paciente_id||null}))
+                                                                .map(p=>({nome:(p.nome||'').trim(),cpf:(p.cpf||'').trim(),parentesco:p.parentesco||'',grau:grauDoParentesco(p.parentesco||''),paciente_id:p.paciente_id||null,auto:!!p.auto}))
                                                                 .filter(p=>p.nome||p.cpf||p.parentesco);
                                                             }
                                                             function parentescoOptions(sel){
@@ -6608,7 +6608,7 @@
                                                               box.innerHTML=_parentescos.map((p,i)=>`
                                                                 <div style="display:grid;grid-template-columns:1fr 150px 170px auto;gap:8px;align-items:end">
                                                                   <div class="fld" style="position:relative">
-                                                                    <label>Nome do parente</label>
+                                                                    <label>Nome do parente${p.auto?' <span style="font-weight:400;color:var(--n400);font-style:italic">(vínculo automático)</span>':''}</label>
                                                                     <input type="text" id="par-nome-${i}" value="${(p.nome||'').replace(/"/g,'&quot;')}" placeholder="Buscar paciente por nome" autocomplete="off"
                                                                       oninput="parInput(${i},'nome',this.value)"
                                                                       onblur="setTimeout(()=>parHideSuggest(${i}),160)" />
@@ -6650,6 +6650,7 @@
                                                               if(!_parentescos[i])return;
                                                               if(field==='cpf')value=formatCPF(value);
                                                               _parentescos[i][field]=value;
+                                                              _parentescos[i].auto=false;
                                                               if(field!=='parentesco')_parentescos[i].paciente_id=null;
                                                               if(field==='cpf'){const el=document.getElementById('par-cpf-'+i);if(el)el.value=value;}
                                                               if(field==='parentesco')return;
