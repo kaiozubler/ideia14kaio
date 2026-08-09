@@ -6425,6 +6425,10 @@
                                                         const op=document.getElementById('d-ocup');if(op)op.value=currentPatient.ocup||'';
                                                         const gs=document.getElementById('d-grupo');if(gs){populateGrupoSelect(gs);gs.value=getPatientGrupo(currentPatient.id)||'';}
                                                         const dc=document.getElementById('dados-clinicos-ta');if(dc){dc.value=currentPatient.dadosClinicos||'';updateDcPreview();}
+                                                        _parentescos=Array.isArray(currentPatient.parentescos)?JSON.parse(JSON.stringify(currentPatient.parentescos)):[];
+                                                        renderParentescos();
+                                                        loadParentescoSugestoes();
+                                                        loadHistoricoFamiliarCids();
                                                         openTab('cadastro',document.querySelector('.tab'));
                                                         renderAtendimentos();renderExames();renderTimeline();updateAtendProgress();
                                                       }
