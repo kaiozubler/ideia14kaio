@@ -2627,6 +2627,23 @@
                   <i class="ti ti-plus" style="color:var(--n400)"></i> Adicionar
                 </div>
               </div>
+
+              <div class="sec-hd">Parentesco</div>
+              <div
+                id="par-sugest"
+                style="display:none;border:0.5px solid #bfdbfe;background:#eff6ff;border-radius:var(--r8);padding:9px 11px;margin-bottom:10px"
+              >
+                <div style="font-size:11.5px;font-weight:600;color:#1d4ed8;margin-bottom:6px">
+                  <i class="ti ti-users-group" style="font-size:12px"></i> Possíveis parentes (mesmo sobrenome)
+                </div>
+                <div id="par-sugest-list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+              </div>
+              <div id="par-rows" style="display:flex;flex-direction:column;gap:8px"></div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:9px">
+                <button class="btn sm" onclick="addParentescoRow()"><i class="ti ti-plus"></i> Adicionar parente</button>
+                <span style="font-size:11px;color:var(--n400)" id="par-fam-hint"></span>
+              </div>
+              <div id="par-familiar-cids" style="margin-top:10px"></div>
               <div style="height:64px"></div>
             </div>
 
