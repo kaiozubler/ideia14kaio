@@ -6569,6 +6569,145 @@
                                                               showToast('Dados do paciente salvos com sucesso','success');
                                                             }
                                                             function cadastroExtraKey(){return 'cadastroExtra_'+((currentPatient&&currentPatient.id)||'anon');}
+                                                            /* ================= PARENTESCO / HISTÓRICO FAMILIAR ================= */
+                                                            const PARENTESCO_GRUPOS=[
+                                                              {grau:'1º grau',itens:['Pai','Mãe','Filho','Filha']},
+                                                              {grau:'2º grau',itens:['Irmão','Irmã','Avô','Avó','Neto','Neta']},
+                                                              {grau:'3º grau',itens:['Tio','Tia','Sobrinho','Sobrinha','Bisavô','Bisavó','Bisneto','Bisneta','Primo','Prima']}
+                                                            ];
+                                                            function grauDoParentesco(v){
+                                                              const g=PARENTESCO_GRUPOS.find(g=>g.itens.includes(v));
+                                                              return g?g.grau:'';
+                                                            }
+                                                            let _parentescos=[];
+                                                            function getParentescosPayload(){
+                                                              return (_parentescos||[])
+                                                                .map(p=>({nome:(p.nome||'').trim(),cpf:(p.cpf||'').trim(),parentesco:p.parentesco||'',grau:grauDoParentesco(p.parentesco||''),paciente_id:p.paciente_id||null}))
+                                                                .filter(p=>p.nome||p.cpf||p.parentesco);
+                                                            }
+                                                            function parentescoOptions(sel){
+                                                              let h='<option value="">— Parentesco —</option>';
+                                                              PARENTESCO_GRUPOS.forEach(g=>{
+                                                                h+='<optgroup label="'+g.grau+'">';
+                                                                g.itens.forEach(i=>{h+='<option value="'+i+'"'+(sel===i?' selected':'')+'>'+i+'</option>';});
+                                                                h+='</optgroup>';
+                                                              });
+                                                              return h;
+                                                            }
+                                                            function renderParentescos(){
+                                                              const box=document.getElementById('par-rows');
+                                                              if(!box)return;
+                                                              if(!_parentescos.length){
+                                                                box.innerHTML='<div style="font-size:11.5px;color:var(--n400);font-style:italic">Nenhum parente vinculado. Use "Adicionar parente" para incluir.</div>';
+                                                                return;
+                                                              }
+                                                              box.innerHTML=_parentescos.map((p,i)=>`
+                                                                <div style="display:grid;grid-template-columns:1fr 150px 170px auto;gap:8px;align-items:end">
+                                                                  <div class="fld" style="position:relative">
+                                                                    <label>Nome do parente</label>
+                                                                    <input type="text" id="par-nome-${i}" value="${(p.nome||'').replace(/"/g,'&quot;')}" placeholder="Buscar paciente por nome" autocomplete="off"
+                                                                      oninput="parInput(${i},'nome',this.value)"
+                                                                      onblur="setTimeout(()=>parHideSuggest(${i}),160)" />
+                                                                    <div id="par-suggest-${i}" style="display:none;position:absolute;z-index:60;background:#fff;border:0.5px solid var(--n200);border-radius:var(--r6);max-height:200px;overflow:auto;left:0;right:0;top:100%;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,.08)"></div>
+                                                                  </div>
+                                                                  <div class="fld">
+                                                                    <label>CPF</label>
+                                                                    <input type="text" id="par-cpf-${i}" value="${(p.cpf||'').replace(/"/g,'&quot;')}" placeholder="000.000.000-00" maxlength="14" autocomplete="off"
+                                                                      oninput="parInput(${i},'cpf',this.value)"
+                                                                      onblur="setTimeout(()=>parHideSuggest(${i}),160)" />
+                                                                  </div>
+                                                                  <div class="fld">
+                                                                    <label>Grau de parentesco</label>
+                                                                    <select onchange="parInput(${i},'parentesco',this.value)">${parentescoOptions(p.parentesco||'')}</select>
+                                                                  </div>
+                                                                  <div style="display:flex;gap:5px;padding-bottom:2px">
+                                                                    ${p.paciente_id?`<button class="ib" title="Abrir cadastro do parente" onclick="openParenteCadastro('${p.paciente_id}')" style="width:28px;height:28px;border-radius:var(--r6);border:0.5px solid var(--n200);background:#fff;display:flex;align-items:center;justify-content:center"><i class="ti ti-external-link" style="font-size:13px"></i></button>`:''}
+                                                                    <button class="ib" title="Remover parente" onclick="removeParentescoRow(${i})" style="width:28px;height:28px;border-radius:var(--r6);border:0.5px solid #fecaca;color:#b91c1c;background:#fef2f2;display:flex;align-items:center;justify-content:center"><i class="ti ti-trash" style="font-size:13px"></i></button>
+                                                                    <button class="ib" title="Adicionar mais um parente" onclick="addParentescoRow()" style="width:28px;height:28px;border-radius:var(--r6);border:0.5px solid var(--n200);background:#fff;display:flex;align-items:center;justify-content:center"><i class="ti ti-plus" style="font-size:13px"></i></button>
+                                                                  </div>
+                                                                </div>`).join('');
+                                                            }
+                                                            function addParentescoRow(){
+                                                              _parentescos.push({nome:'',cpf:'',parentesco:'',paciente_id:null});
+                                                              renderParentescos();
+                                                              const el=document.getElementById('par-nome-'+(_parentescos.length-1));if(el)el.focus();
+                                                            }
+                                                            function removeParentescoRow(i){
+                                                              _parentescos.splice(i,1);renderParentescos();loadParentescoSugestoes();
+                                                            }
+                                                            function openParenteCadastro(pid){
+                                                              if(pid&&typeof openPatient==='function')openPatient(pid);
+                                                            }
+                                                            function parHideSuggest(i){
+                                                              const s=document.getElementById('par-suggest-'+i);if(s){s.style.display='none';s.innerHTML='';}
+                                                            }
+                                                            let _parSearchTimer=null;
+                                                            function parInput(i,field,value){
+                                                              if(!_parentescos[i])return;
+                                                              if(field==='cpf')value=formatCPF(value);
+                                                              _parentescos[i][field]=value;
+                                                              if(field!=='parentesco')_parentescos[i].paciente_id=null;
+                                                              if(field==='cpf'){const el=document.getElementById('par-cpf-'+i);if(el)el.value=value;}
+                                                              if(field==='parentesco')return;
+                                                              clearTimeout(_parSearchTimer);
+                                                              _parSearchTimer=setTimeout(()=>parBuscarPacientes(i,value),260);
+                                                            }
+                                                            async function parBuscarPacientes(i,termo){
+                                                              const sg=document.getElementById('par-suggest-'+i);
+                                                              if(!sg)return;
+                                                              const t=String(termo||'').trim();
+                                                              if(t.length<3){parHideSuggest(i);return;}
+                                                              const {data,error}=await sb.rpc('buscar_pacientes',{termo:t,p_limit:12});
+                                                              if(error||!Array.isArray(data)||!data.length){parHideSuggest(i);return;}
+                                                              const rows=data.filter(r=>!currentPatient||r.paciente_id!==currentPatient.id);
+                                                              if(!rows.length){parHideSuggest(i);return;}
+                                                              sg.innerHTML=rows.map(r=>`<div onmousedown="parPick(${i},'${r.paciente_id}',${JSON.stringify(r.name||'').replace(/"/g,'&quot;')},${JSON.stringify(r.cpf||'').replace(/"/g,'&quot;')})" style="padding:6px 9px;cursor:pointer;font-size:12px;border-bottom:0.5px solid var(--n100)"><b>${r.name||''}</b>${r.cpf?' <span style="color:var(--n400)">· '+r.cpf+'</span>':''}</div>`).join('');
+                                                              sg.style.display='block';
+                                                            }
+                                                            function parPick(i,pid,nome,cpf){
+                                                              if(!_parentescos[i])return;
+                                                              _parentescos[i].nome=nome||'';
+                                                              _parentescos[i].cpf=formatCPF(cpf||'');
+                                                              _parentescos[i].paciente_id=pid||null;
+                                                              parHideSuggest(i);
+                                                              renderParentescos();
+                                                              loadParentescoSugestoes();
+                                                            }
+                                                            function parAddSugestao(pid,nome,cpf){
+                                                              _parentescos.push({nome:nome||'',cpf:formatCPF(cpf||''),parentesco:'',paciente_id:pid||null});
+                                                              renderParentescos();
+                                                              loadParentescoSugestoes();
+                                                            }
+                                                            async function loadParentescoSugestoes(){
+                                                              const wrap=document.getElementById('par-sugest');
+                                                              const list=document.getElementById('par-sugest-list');
+                                                              if(!wrap||!list||!currentPatient)return;
+                                                              const {data,error}=await sb.rpc('buscar_parentes_possiveis',{p_paciente_id:currentPatient.id,p_limit:12});
+                                                              const vinculados=new Set(_parentescos.map(p=>p.paciente_id).filter(Boolean));
+                                                              const rows=(error||!Array.isArray(data)?[]:data).filter(r=>!vinculados.has(r.paciente_id));
+                                                              if(!rows.length){wrap.style.display='none';list.innerHTML='';return;}
+                                                              list.innerHTML=rows.map(r=>`<button class="btn sm" onclick="parAddSugestao('${r.paciente_id}',${JSON.stringify(r.name||'').replace(/"/g,'&quot;')},${JSON.stringify(r.cpf||'').replace(/"/g,'&quot;')})"><i class="ti ti-plus"></i> ${r.name||''}</button>`).join('');
+                                                              wrap.style.display='block';
+                                                            }
+                                                            async function loadHistoricoFamiliarCids(){
+                                                              const box=document.getElementById('par-familiar-cids');
+                                                              const hint=document.getElementById('par-fam-hint');
+                                                              if(!box||!currentPatient)return;
+                                                              const {data,error}=await sb.rpc('historico_familiar_cids',{p_paciente_id:currentPatient.id});
+                                                              const rows=(error||!Array.isArray(data)?[]:data).filter(r=>r.cid_code);
+                                                              if(hint)hint.textContent=rows.length?rows.length+' diagnóstico(s) no histórico familiar':'';
+                                                              if(!rows.length){box.innerHTML='';return;}
+                                                              const porParente={};
+                                                              rows.forEach(r=>{const k=r.parente_nome+'||'+(r.parentesco||'')+'||'+(r.grau||'');(porParente[k]=porParente[k]||[]).push(r);});
+                                                              box.innerHTML='<div style="border:0.5px solid #fde68a;background:#fffbeb;border-radius:var(--r8);padding:9px 11px">'
+                                                                +'<div style="font-size:11.5px;font-weight:600;color:#92400e;margin-bottom:6px"><i class="ti ti-dna-2" style="font-size:12px"></i> Histórico familiar (CIDs dos parentes)</div>'
+                                                                +Object.keys(porParente).map(k=>{
+                                                                  const [nome,par,grau]=k.split('||');
+                                                                  const cids=porParente[k].map(r=>r.cid_code+(r.cid_descricao?' — '+r.cid_descricao:'')).join('; ');
+                                                                  return '<div style="font-size:11.5px;color:#78350f;margin-bottom:3px"><b>'+nome+'</b>'+(par?' ('+par+(grau?' · '+grau:'')+')':'')+': '+cids+'</div>';
+                                                                }).join('')
+                                                                +'</div>';
+                                                            }
                                                             function memoriaPacienteKey(){return 'memoriaPaciente_'+((currentPatient&&currentPatient.id)||'anon');}
                                                             const MEMORIA_SECTIONS=[
                                                               {k:'perfil',       label:'Perfil e preferências',        icon:'ti-user-heart',    desc:'Como o paciente gosta de ser tratado, apelido, idioma, tom de comunicação preferido.', ph:'Ex: Prefere ser chamado de "Seu João". Comunicação direta e objetiva. Não gosta de termos médicos complexos.'},
