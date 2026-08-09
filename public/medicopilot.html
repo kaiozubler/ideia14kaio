@@ -6678,8 +6678,8 @@
                                                               renderParentescos();
                                                               loadParentescoSugestoes();
                                                             }
-                                                            function parAddSugestao(pid,nome,cpf){
-                                                              _parentescos.push({nome:nome||'',cpf:formatCPF(cpf||''),parentesco:'',paciente_id:pid||null});
+                                                            function parAddSugestao(pid,nome,cpf,parentesco){
+                                                              _parentescos.push({nome:nome||'',cpf:formatCPF(cpf||''),parentesco:parentesco||'',paciente_id:pid||null});
                                                               renderParentescos();
                                                               loadParentescoSugestoes();
                                                             }
@@ -6691,7 +6691,7 @@
                                                               const vinculados=new Set(_parentescos.map(p=>p.paciente_id).filter(Boolean));
                                                               const rows=(error||!Array.isArray(data)?[]:data).filter(r=>!vinculados.has(r.paciente_id));
                                                               if(!rows.length){wrap.style.display='none';list.innerHTML='';return;}
-                                                              list.innerHTML=rows.map(r=>`<button class="btn sm" onclick="parAddSugestao('${r.paciente_id}',${JSON.stringify(r.name||'').replace(/"/g,'&quot;')},${JSON.stringify(r.cpf||'').replace(/"/g,'&quot;')})"><i class="ti ti-plus"></i> ${r.name||''}</button>`).join('');
+                                                              list.innerHTML=rows.map(r=>`<button class="btn sm" title="${(r.motivo||'').replace(/"/g,'&quot;')}" onclick="parAddSugestao('${r.paciente_id}',${JSON.stringify(r.name||'').replace(/"/g,'&quot;')},${JSON.stringify(r.cpf||'').replace(/"/g,'&quot;')},${JSON.stringify(r.parentesco_sugerido||'').replace(/"/g,'&quot;')})"><i class="ti ti-plus"></i> ${r.name||''}${r.parentesco_sugerido?' <span style="opacity:.7">('+r.parentesco_sugerido+'?)</span>':''}</button>`).join('');
                                                               wrap.style.display='block';
                                                             }
                                                             async function loadHistoricoFamiliarCids(){
