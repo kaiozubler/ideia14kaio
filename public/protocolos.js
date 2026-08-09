@@ -38,7 +38,7 @@
     const sb = sbc(); if (!sb) return;
     S.loading = true; render();
     const [{ data: prot }, { data: rep }] = await Promise.all([
-      sb.from("protocolos").select("id,titulo,ativo,protocolo_cids(cid_code),protocolo_acoes(*),protocolo_regras(*)").order("created_at"),
+      sb.from("protocolos").select("id,titulo,ativo,protocolo_cids(cid_code),protocolo_acoes(*,tuss_procedimentos(codigo_tuss)),protocolo_regras(*)").order("created_at"),
       sb.rpc("relatorio_protocolos"),
     ]);
     S.rows = (rep || []).map((r) => ({ ...r, due: brDate(r.due) }));
@@ -53,6 +53,9 @@
           id: a.id, type: a.tipo, name: a.nome, startDay: a.start_day, frequency: a.frequency,
           recurrent: a.recurrent, autoRestart: a.auto_restart, specialty: a.especialidade || "", desc: a.descricao || "",
           regraPaiId: a.regra_id || null, startDayRef: a.start_day_referencia || "inicio_protocolo",
+          tussId: a.tuss_procedimento_id || null, codigoTuss: (a.tuss_procedimentos && a.tuss_procedimentos.codigo_tuss) || null,
+          idSubstancia: a.id_substancia || null, medicamentoId: a.medicamento_id || null,
+          catalogStatus: a.catalogo_status || "nao_aplicavel",
         })),
         regras: (p.protocolo_regras || []).map((r) => ({
           id: r.id, gatilhoId: r.acao_gatilho_id, descricao: r.descricao || "", condicao: r.condicao,
@@ -85,6 +88,10 @@
       protocolo_id: protocoloId, tipo: a.type, nome: a.name, start_day: a.startDay, frequency: a.frequency,
       recurrent: !!a.recurrent, auto_restart: !!a.autoRestart, especialidade: a.specialty || null, descricao: a.desc || null,
       start_day_referencia: a.regraPaiId ? "resultado_regra" : "inicio_protocolo",
+      tuss_procedimento_id: a.type === "Exame" ? a.tussId || null : null,
+      id_substancia: a.type === "Receita" ? a.idSubstancia || null : null,
+      medicamento_id: a.type === "Receita" ? a.medicamentoId || null : null,
+      catalogo_status: a.type === "Consulta" ? "nao_aplicavel" : (a.tussId || a.idSubstancia ? "vinculado" : (a.catalogStatus || "pendente_cadastro")),
     };
   }
 
@@ -344,13 +351,14 @@
 
   /* ---------- MODAL ---------- */
   function actionEditorHtml(a) {
-    const base = { type: "Exame", name: "", startDay: 0, frequency: 90, recurrent: true, autoRestart: false, specialty: "", desc: "" };
+    const base = { type: "Exame", name: "", startDay: 0, frequency: 90, recurrent: true, autoRestart: false, specialty: "", desc: "", tussId: null, codigoTuss: null, idSubstancia: null, catalogStatus: "pendente_cadastro" };
     const f = a || { ...base, ...(S._draft || {}), id: "", type: S._atype || (S._draft && S._draft.type) || "Exame" };
     return `<div class="pt-card" style="padding:16px;margin-bottom:12px" id="pt-aeditor" data-editid="${esc(f.id || "")}">
       <div style="margin-bottom:12px"><span class="pt-lbl">Tipo da ação</span>
         <div style="display:flex;gap:8px">${["Consulta", "Exame", "Receita"].map((t) => `<button class="pt-btn" style="flex:1;${f.type === t ? "color:#fff;border:none;background:" + (t === "Consulta" ? "linear-gradient(135deg,#60a5fa,#6366f1)" : t === "Exame" ? "linear-gradient(135deg,#a78bfa,#7c3aed)" : "linear-gradient(135deg,#34d399,#0d9488)") : ""}" data-atype="${t}">${AT[t].icon} ${t}</button>`).join("")}</div></div>
       <div style="margin-bottom:12px"><span class="pt-lbl">${f.type === "Exame" ? "Nome do exame" : f.type === "Receita" ? "Medicamento(s)" : "Tipo de consulta"}</span>
-        <input class="pt-in" id="pt-a-name" value="${esc(f.name)}" placeholder="${f.type === "Exame" ? "Ex: Hemograma completo" : f.type === "Receita" ? "Ex: Losartana 50mg" : "Ex: Acompanhamento cardiológico"}"></div>
+        <input class="pt-in" id="pt-a-name" value="${esc(f.name)}" placeholder="${f.type === "Exame" ? "Ex: Hemograma completo" : f.type === "Receita" ? "Ex: Losartana" : "Ex: Acompanhamento cardiológico"}"></div>
+      ${catalogPickerHtml(f, "pt-a")}
       <div style="margin-bottom:12px"><span class="pt-lbl">Especialidade (opcional)</span><input class="pt-in" id="pt-a-spec" value="${esc(f.specialty || "")}" placeholder="Ex: Cardiologia"></div>
       <div style="margin-bottom:12px"><span class="pt-lbl">Início após o protocolo começar</span>
         <input class="pt-in" type="number" min="0" id="pt-a-start" value="${f.startDay}"><span style="font-size:10px;color:#94a3b8">dias a partir do início do protocolo</span></div>
@@ -363,6 +371,68 @@
       <div style="margin-bottom:12px"><span class="pt-lbl">Descrição (opcional)</span><textarea class="pt-in" rows="2" id="pt-a-desc" style="resize:none">${esc(f.desc || "")}</textarea></div>
       <div style="display:flex;gap:12px"><button class="pt-btn ghost" style="flex:1" data-acancel="1">Cancelar</button>
       <button class="pt-btn indigo" style="flex:1" data-asave="1">Salvar</button></div>
+    </div>`;
+  }
+
+  /* ---------- VÍNCULO COM CATÁLOGO (TUSS / substâncias) ----------
+     Exames vinculam-se a public.tuss_procedimentos; medicamentos (Receita)
+     vinculam-se a public.substancias. O nome digitado continua sendo salvo
+     em protocolo_acoes.nome, mas agora também gravamos o id do catálogo
+     (protocolo_acoes.tuss_procedimento_id / id_substancia), então a ação
+     deixa de ser só texto solto. Se o médico não vincular, a ação é salva
+     com catalogo_status = 'pendente_cadastro' e pode ser revisada depois. */
+  let _catTmr = null;
+  function catalogDropdownShow(prefix, html) {
+    const dd = document.getElementById(prefix + "-catdd"); if (!dd) return;
+    dd.innerHTML = html; dd.style.display = html ? "" : "none";
+  }
+  async function catalogSearchRun(prefix, term) {
+    if (!term || term.trim().length < 2) return catalogDropdownShow(prefix, "");
+    const type = prefix === "pt-ba" ? (S._batype || "Receita") : (S._atype || "Exame");
+    if (type !== "Exame" && type !== "Receita") return catalogDropdownShow(prefix, "");
+    catalogDropdownShow(prefix, `<div class="pt-cat-empty">Buscando…</div>`);
+    const sb = sbc();
+    let token = "";
+    try {
+      const { data: sess } = await sb.auth.getSession();
+      token = (sess && sess.session && sess.session.access_token) || "";
+    } catch { /* segue sem token; endpoint responde 401 e cai no catch abaixo */ }
+    const url = type === "Exame"
+      ? "/api/tuss/buscar?q=" + encodeURIComponent(term)
+      : "/api/medicamentos/buscar?q=" + encodeURIComponent(term);
+    try {
+      const res = await fetch(url, { headers: token ? { authorization: "Bearer " + token } : {} });
+      const d = await res.json();
+      const items = (d.items || []).slice(0, 12).map((it) => type === "Exame"
+        ? { id: it.id, label: it.nome, code: it.codigo_tuss }
+        : { id: it.id_substancia, label: it.nome_exibicao, code: "" });
+      if (!items.length) return catalogDropdownShow(prefix, `<div class="pt-cat-empty">Nenhum resultado — a ação ficará pendente de vínculo</div>`);
+      catalogDropdownShow(prefix, items.map((it) =>
+        `<div class="pt-cat-item" data-catpick="${prefix}" data-catid="${esc(it.id)}" data-catlabel="${esc(it.label)}" data-catcode="${esc(it.code || "")}">${esc(it.label)}${it.code ? ` <span>${esc(it.code)}</span>` : ""}</div>`
+      ).join(""));
+    } catch {
+      catalogDropdownShow(prefix, `<div class="pt-cat-empty">Falha na busca — tente novamente</div>`);
+    }
+  }
+  function catalogBadgeHtml(f) {
+    if (f.type === "Exame" && f.tussId) return `<span class="pt-tag vinculado">✓ ${f.codigoTuss ? "TUSS " + esc(f.codigoTuss) : "Vinculado ao catálogo"}</span>`;
+    if (f.type === "Receita" && f.idSubstancia) return `<span class="pt-tag vinculado">✓ Vinculado ao catálogo</span>`;
+    if (f.type === "Exame" || f.type === "Receita") return `<span class="pt-tag pendente">⚠ Sem vínculo — busque e selecione abaixo</span>`;
+    return "";
+  }
+  function catalogPickerHtml(f, prefix) {
+    if (f.type !== "Exame" && f.type !== "Receita") return "";
+    return `<div class="pt-catlink">
+      <span class="pt-lbl">Vincular ao catálogo (${f.type === "Exame" ? "procedimentos TUSS" : "substâncias"})</span>
+      <div style="position:relative">
+        <input class="pt-in pt-cat-q" id="${prefix}-catq" placeholder="Buscar ${f.type === "Exame" ? "exame/procedimento" : "substância (nome genérico)"}…" autocomplete="off">
+        <div class="pt-cat-dd" id="${prefix}-catdd" style="display:none"></div>
+      </div>
+      <input type="hidden" id="${prefix}-tussid" value="${esc(f.tussId || "")}">
+      <input type="hidden" id="${prefix}-tusscode" value="${esc(f.codigoTuss || "")}">
+      <input type="hidden" id="${prefix}-substid" value="${esc(f.idSubstancia || "")}">
+      <input type="hidden" id="${prefix}-catstatus" value="${esc(f.catalogStatus || "pendente_cadastro")}">
+      <div id="${prefix}-catbadge">${catalogBadgeHtml(f)}</div>
     </div>`;
   }
 
@@ -442,13 +512,14 @@
   }
 
   function branchActionEditorHtml(regraId, a) {
-    const base = { type: S._batype || "Receita", name: "", startDay: 0, specialty: "", desc: "" };
+    const base = { type: S._batype || "Receita", name: "", startDay: 0, specialty: "", desc: "", tussId: null, codigoTuss: null, idSubstancia: null, catalogStatus: "pendente_cadastro" };
     const f = a || { ...base, id: "" };
     return `<div class="pt-card" style="padding:12px;margin:6px 0;border:1px dashed #c4b5fd" id="pt-baeditor" data-baid="${esc(f.id)}" data-baregra="${esc(regraId)}">
       <div style="margin-bottom:8px"><span class="pt-lbl">Tipo</span>
         <div style="display:flex;gap:6px">${["Consulta", "Exame", "Receita"].map((t) => `<button class="pt-btn" style="flex:1;padding:4px;font-size:11px;${(f.type || "Receita") === t ? "color:#fff;border:none;background:#7c3aed" : ""}" data-batype="${t}">${AT[t].icon} ${t}</button>`).join("")}</div></div>
       <div style="margin-bottom:8px"><span class="pt-lbl">Nome</span>
         <input class="pt-in" id="pt-ba-name" value="${esc(f.name)}" placeholder="Ex: Ajustar Levotiroxina / TSH (reavaliação)"></div>
+      ${catalogPickerHtml(f, "pt-ba")}
       <div style="margin-bottom:8px"><span class="pt-lbl">Dias após o resultado</span>
         <input class="pt-in" type="number" min="0" id="pt-ba-start" value="${f.startDay || 0}"></div>
       <div style="margin-bottom:8px"><span class="pt-lbl">Especialidade (opcional)</span>
@@ -470,6 +541,10 @@
           <button class="pt-btn ai" data-aiopen="1">✨ Criar com IA</button>
           <button class="pt-btn ghost" data-mclose="1" style="padding:2px 10px">×</button></div></div>
       <div class="pt-modal-b">
+        ${(m.pendencias || []).length ? `<div class="pt-cat-warn">
+          <strong>${m.pendencias.length} ${m.pendencias.length === 1 ? "item precisa" : "itens precisam"} de revisão antes de salvar:</strong>
+          <ul>${m.pendencias.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>
+        </div>` : ""}
         <div style="margin-bottom:16px"><span class="pt-lbl">Nome do protocolo</span>
           <input class="pt-in" id="pt-m-title" value="${esc(m.title)}" placeholder="Ex: Hipertensão Arterial"></div>
         <div style="margin-bottom:16px"><span class="pt-lbl">CIDs contemplados</span>
@@ -488,6 +563,7 @@
               <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:#1e293b">${esc(a.name)}</div>
                 <div style="font-size:11px;color:#64748b">Início: dia ${a.startDay} · ${a.frequency}d · ${a.recurrent ? "Recorrente" : "1x"}${a.specialty ? " · " + esc(a.specialty) : ""}</div></div>
               <span class="pt-tag ${a.type}">${a.type}</span>
+              ${a.type !== "Consulta" && a.catalogStatus === "pendente_cadastro" ? `<span class="pt-tag pendente" data-tip="Esta ação foi salva apenas com o nome em texto. Edite-a e vincule ao catálogo para habilitar buscas/relatórios pelo item real." data-tipt="Sem vínculo de catálogo">⚠ pendente</span>` : ""}
               <button class="pt-btn ghost" style="padding:2px 8px" data-aedit="${a.id}">✏️</button>
               <button class="pt-btn ghost" style="padding:2px 8px" data-adel="${a.id}">×</button></div>
             ${a.type === "Exame" ? regrasBlockHtml(a) : ""}
@@ -531,7 +607,7 @@
       });
       if (!res.ok) throw new Error(await res.text());
       const d = await res.json();
-      S.modal = S.modal || { title: "", cids: [], actions: [], regras: [] };
+      S.modal = S.modal || { title: "", cids: [], actions: [], regras: [], pendencias: [] };
       if (!S.modal.regras) S.modal.regras = [];
       if (d.titulo) S.modal.title = d.titulo;
       if (Array.isArray(d.cids)) S.modal.cids = [...new Set([...S.modal.cids, ...d.cids.map((c) => String(c).toUpperCase())])];
@@ -546,6 +622,13 @@
           recurrent: x.recurrent !== false, autoRestart: !!x.auto_restart, desc: x.descricao || "",
           regraPaiId: null, // resolvido abaixo depois que todas as ações têm id local
           _regraPaiTemp: x.regra_pai_temp_id || null,
+          // vínculo com o catálogo real (TUSS/substâncias), já resolvido no servidor —
+          // a IA nunca inventa o id, só o nome; o servidor cruzou com o catálogo.
+          tussId: x.tuss_procedimento_id || null,
+          codigoTuss: x.codigo_tuss || null,
+          idSubstancia: x.id_substancia || null,
+          medicamentoId: null,
+          catalogStatus: x.catalogo_status || "pendente_cadastro",
         });
       });
       const regraTempToLocal = {};
@@ -565,6 +648,7 @@
         delete a._regraPaiTemp;
       });
 
+      S.modal.pendencias = [...(S.modal.pendencias || []), ...(Array.isArray(d.pendencias) ? d.pendencias : [])];
       S.aiModal = null; render();
     } catch (err) {
       a.loading = false; a.error = String((err && err.message) || err); render();
@@ -624,9 +708,12 @@
   /* ---------- EVENTS ---------- */
   function collectAction() {
     const box = document.getElementById("pt-aeditor"); if (!box) return null;
+    const type = S._atype || (S.editingAction ? (S.modal.actions.find((a) => a.id === S.editingAction) || {}).type : null) || "Exame";
+    const tussIdEl = document.getElementById("pt-a-tussid"), tussCodeEl = document.getElementById("pt-a-tusscode");
+    const substIdEl = document.getElementById("pt-a-substid"), statusEl = document.getElementById("pt-a-catstatus");
     return {
       id: box.dataset.editid || uid(),
-      type: S._atype || (S.editingAction ? (S.modal.actions.find((a) => a.id === S.editingAction) || {}).type : null) || "Exame",
+      type,
       name: document.getElementById("pt-a-name").value.trim(),
       specialty: document.getElementById("pt-a-spec").value.trim(),
       startDay: +document.getElementById("pt-a-start").value || 0,
@@ -634,13 +721,18 @@
       recurrent: document.getElementById("pt-a-rec").checked,
       autoRestart: document.getElementById("pt-a-auto").checked,
       desc: document.getElementById("pt-a-desc").value.trim(),
+      tussId: type === "Exame" ? ((tussIdEl && tussIdEl.value) || null) : null,
+      codigoTuss: type === "Exame" ? ((tussCodeEl && tussCodeEl.value) || null) : null,
+      idSubstancia: type === "Receita" ? ((substIdEl && substIdEl.value) || null) : null,
+      medicamentoId: null,
+      catalogStatus: type === "Consulta" ? "nao_aplicavel" : ((statusEl && statusEl.value) || "pendente_cadastro"),
     };
   }
 
   document.addEventListener("click", (e) => {
     const root = document.getElementById("s-protocolos");
     if (!root || root.style.display === "none") return;
-    const t = e.target.closest("[data-menu],[data-act],[data-dd],[data-group],[data-bulk],[data-clear],[data-goprot],[data-back],[data-new],[data-edit],[data-toggle],[data-mclose],[data-msave],[data-mbg],[data-cidadd],[data-cidrm],[data-anew],[data-aedit],[data-adel],[data-asave],[data-acancel],[data-atype],[data-afreq],[data-zoom],[data-gact],[data-fclear],[data-fapply],[data-tladd],[data-aiopen],[data-aiclose],[data-aigen],[data-aibg],[data-rnew],[data-redit],[data-rdel],[data-rcancel],[data-rsave],[data-banew],[data-baedit],[data-badel],[data-bacancel],[data-basave],[data-batype]");
+    const t = e.target.closest("[data-menu],[data-act],[data-dd],[data-group],[data-bulk],[data-clear],[data-goprot],[data-back],[data-new],[data-edit],[data-toggle],[data-mclose],[data-msave],[data-mbg],[data-cidadd],[data-cidrm],[data-anew],[data-aedit],[data-adel],[data-asave],[data-acancel],[data-atype],[data-afreq],[data-zoom],[data-gact],[data-fclear],[data-fapply],[data-tladd],[data-aiopen],[data-aiclose],[data-aigen],[data-aibg],[data-rnew],[data-redit],[data-rdel],[data-rcancel],[data-rsave],[data-banew],[data-baedit],[data-badel],[data-bacancel],[data-basave],[data-batype],[data-catpick]");
     if (!t) { if (S.dd) { S.dd = null; render(); } return; }
     const d = t.dataset;
     if (d.aiopen) { S.aiModal = { obs: "", pdf: null, filename: "", loading: false, error: "" }; return render(); }
@@ -658,8 +750,8 @@
     if (d.fapply) { S.dd = null; return render(); }
     if (d.goprot) { S.screen = "protocols"; return render(); }
     if (d.back) { S.screen = "report"; return render(); }
-    if (d.new) { S.modal = { title: "", cids: [], actions: [], regras: [] }; S.showActionEditor = false; S.editingAction = null; S._draft = null; return render(); }
-    if (d.edit) { const p = S.protocols.find((x) => x.id === d.edit); S.modal = { id: p.id, title: p.title, cids: [...p.cids], actions: p.actions.map((a) => ({ ...a })), regras: (p.regras || []).map((r) => ({ ...r })) }; return render(); }
+    if (d.new) { S.modal = { title: "", cids: [], actions: [], regras: [], pendencias: [] }; S.showActionEditor = false; S.editingAction = null; S._draft = null; return render(); }
+    if (d.edit) { const p = S.protocols.find((x) => x.id === d.edit); S.modal = { id: p.id, title: p.title, cids: [...p.cids], actions: p.actions.map((a) => ({ ...a })), regras: (p.regras || []).map((r) => ({ ...r })), pendencias: [] }; return render(); }
     if (d.toggle) return toggleActive(d.toggle);
     if (d.mbg && e.target === t) { S.modal = null; return render(); }
     if (d.mclose) { S.modal = null; S.showActionEditor = false; S.editingAction = null; return render(); }
@@ -677,6 +769,34 @@
     if (d.acancel) { S.editingAction = null; S.showActionEditor = false; S._draft = null; return render(); }
     if (d.atype) { const cur = collectAction(); S._atype = d.atype; if (cur) { cur.type = d.atype; S._draft = cur; } return renderDraft(cur, d.atype); }
     if (d.afreq) { document.getElementById("pt-a-freq").value = d.afreq; return; }
+    if (d.catpick) {
+      const prefix = d.catpick;
+      const type = prefix === "pt-ba" ? (S._batype || "Receita") : (S._atype || "Exame");
+      const nameEl = document.getElementById(prefix + "-name"); if (nameEl) nameEl.value = d.catlabel || nameEl.value;
+      const qEl = document.getElementById(prefix + "-catq"); if (qEl) qEl.value = d.catlabel || "";
+      const tussIdEl = document.getElementById(prefix + "-tussid");
+      const tussCodeEl = document.getElementById(prefix + "-tusscode");
+      const substIdEl = document.getElementById(prefix + "-substid");
+      const statusEl = document.getElementById(prefix + "-catstatus");
+      if (type === "Exame") {
+        if (tussIdEl) tussIdEl.value = d.catid || "";
+        if (tussCodeEl) tussCodeEl.value = d.catcode || "";
+        if (substIdEl) substIdEl.value = "";
+      } else {
+        if (substIdEl) substIdEl.value = d.catid || "";
+        if (tussIdEl) tussIdEl.value = "";
+        if (tussCodeEl) tussCodeEl.value = "";
+      }
+      if (statusEl) statusEl.value = "vinculado";
+      catalogDropdownShow(prefix, "");
+      const badge = document.getElementById(prefix + "-catbadge");
+      if (badge) {
+        badge.innerHTML = type === "Exame"
+          ? `<span class="pt-tag vinculado">✓ ${d.catcode ? "TUSS " + esc(d.catcode) : "Vinculado ao catálogo"}</span>`
+          : `<span class="pt-tag vinculado">✓ Vinculado ao catálogo</span>`;
+      }
+      return;
+    }
     if (d.zoom) { S.zoom = +d.zoom; return render(); }
     if (d.asave) {
       const a = collectAction(); if (!a || !a.name) return alert("Informe o nome da ação.");
@@ -743,15 +863,23 @@
 
   function collectBranchAction() {
     const box = document.getElementById("pt-baeditor"); if (!box) return null;
+    const type = S._batype || "Receita";
+    const tussIdEl = document.getElementById("pt-ba-tussid"), tussCodeEl = document.getElementById("pt-ba-tusscode");
+    const substIdEl = document.getElementById("pt-ba-substid"), statusEl = document.getElementById("pt-ba-catstatus");
     return {
       id: box.dataset.baid || uid(),
       regraPaiId: box.dataset.baregra,
-      type: S._batype || "Receita",
+      type,
       name: document.getElementById("pt-ba-name").value.trim(),
       specialty: document.getElementById("pt-ba-spec").value.trim(),
       startDay: +document.getElementById("pt-ba-start").value || 0,
       frequency: 0, recurrent: false, autoRestart: false,
       desc: document.getElementById("pt-ba-desc").value.trim(),
+      tussId: type === "Exame" ? ((tussIdEl && tussIdEl.value) || null) : null,
+      codigoTuss: type === "Exame" ? ((tussCodeEl && tussCodeEl.value) || null) : null,
+      idSubstancia: type === "Receita" ? ((substIdEl && substIdEl.value) || null) : null,
+      medicamentoId: null,
+      catalogStatus: type === "Consulta" ? "nao_aplicavel" : ((statusEl && statusEl.value) || "pendente_cadastro"),
     };
   }
 
@@ -776,6 +904,13 @@
     if (e.target.id === "pt-q") { S.search = e.target.value; const p = e.target.selectionStart; render(); const n = document.getElementById("pt-q"); if (n) { n.focus(); n.setSelectionRange(p, p); } }
     if (e.target.id === "pt-pq") { S.psearch = e.target.value; const p = e.target.selectionStart; render(); const n = document.getElementById("pt-pq"); if (n) { n.focus(); n.setSelectionRange(p, p); } }
     if (e.target.dataset && e.target.dataset.ftext) S.filters[e.target.dataset.ftext] = e.target.value;
+    if (e.target.classList && e.target.classList.contains("pt-cat-q")) {
+      // busca no catálogo (TUSS/substâncias) sem re-render — evita perder o foco/cursor
+      const prefix = e.target.id.replace(/-catq$/, "");
+      const term = e.target.value;
+      clearTimeout(_catTmr);
+      _catTmr = setTimeout(() => catalogSearchRun(prefix, term), 300);
+    }
   });
 
   document.addEventListener("change", (e) => {

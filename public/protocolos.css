@@ -74,3 +74,19 @@
 .pt-metric.green{background:rgba(236,253,245,.5);border-color:rgba(167,243,208,.5)}.pt-metric.green .n{color:#047857}.pt-metric.green .t{color:#10b981}
 .pt-metric.red{background:rgba(254,242,242,.5);border-color:rgba(254,202,202,.5)}.pt-metric.red .n{color:#b91c1c}.pt-metric.red .t{color:#ef4444}
 .pt-check{width:15px;height:15px;accent-color:#6366f1;cursor:pointer}
+
+/* ---------- VÍNCULO COM CATÁLOGO (TUSS / substâncias) ---------- */
+.pt-catlink{margin-bottom:12px;padding:10px 12px;border-radius:12px;background:rgba(99,102,241,.05);border:1px solid rgba(199,210,254,.7)}
+.pt-cat-q{margin-bottom:0}
+.pt-cat-dd{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:40;max-height:220px;overflow-y:auto;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(15,23,42,.12)}
+.pt-cat-item{padding:8px 12px;font-size:12.5px;color:#334155;cursor:pointer;border-bottom:1px solid #f1f5f9}
+.pt-cat-item:last-child{border-bottom:none}
+.pt-cat-item:hover{background:#eef2ff}
+.pt-cat-item span{float:right;color:#94a3b8;font-size:11px}
+.pt-cat-empty{padding:10px 12px;font-size:12px;color:#94a3b8}
+.pt-tag.vinculado{background:rgba(236,253,245,.8);color:#047857;border-color:rgba(167,243,208,.8)}
+.pt-tag.pendente{background:rgba(255,251,235,.9);color:#92400e;border-color:rgba(253,230,138,.9)}
+.pt-cat-warn{margin-bottom:16px;padding:12px 14px;border-radius:12px;background:rgba(255,251,235,.9);border:1px solid rgba(253,230,138,.9);color:#92400e;font-size:12px}
+.pt-cat-warn strong{display:block;margin-bottom:4px;font-size:12.5px}
+.pt-cat-warn ul{margin:0;padding-left:18px}
+.pt-cat-warn li{margin-bottom:2px}
