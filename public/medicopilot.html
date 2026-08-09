@@ -872,7 +872,7 @@
 
                                                       /* ===== AGENDA — Liquid Glass calendário ===== */
                                                       .ag-wrap{padding:0}
-                                                      .ag-toolbar{display:flex;gap:10px;align-items:center;background:var(--white);padding:10px 12px;border:0.5px solid var(--n150);border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.03);margin-bottom:14px;flex-wrap:wrap}
+                                                      .ag-toolbar{display:flex;gap:10px;align-items:center;background:var(--white);padding:10px 12px;border:0.5px solid var(--n150);border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.03);margin-bottom:12px;flex-wrap:wrap}
                                                       .ag-search{flex:1;min-width:220px;position:relative}
                                                       .ag-search i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--n400);font-size:14px}
                                                       .ag-search input{width:100%;padding:9px 12px 9px 32px;border:1px solid var(--n150);border-radius:999px;font-size:13px;background:var(--n50)}
@@ -894,49 +894,78 @@
                                                       .ag-adv-foot button{flex:1}
                                                       .ag-body{background:transparent;border:none;border-radius:0;overflow:visible;box-shadow:none}
 
-                                                      /* navegador de semana — pílula de vidro flutuante */
-                                                      .ag-week-nav{display:flex;align-items:center;justify-content:center;gap:14px;width:fit-content;margin:0 auto 14px;padding:8px 18px;background:rgba(255,255,255,.6);backdrop-filter:blur(18px) saturate(180%);-webkit-backdrop-filter:blur(18px) saturate(180%);border:1px solid rgba(255,255,255,.85);border-radius:999px;box-shadow:0 10px 26px -14px rgba(15,42,80,.25),inset 0 1px 0 rgba(255,255,255,.8)}
-                                                      .ag-week-arrow{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;border:none;background:rgba(255,255,255,.75);color:#475569;cursor:pointer;transition:.15s;flex:none;box-shadow:0 2px 6px rgba(15,42,80,.08)}
-                                                      .ag-week-arrow:hover{background:linear-gradient(135deg,#34d399,#059669);color:#fff;transform:scale(1.07);box-shadow:0 6px 14px rgba(5,150,105,.35)}
-                                                      .ag-week-arrow:active{transform:scale(.97)}
-                                                      .ag-week-label{font-size:13px;font-weight:700;color:#1e293b;min-width:190px;text-align:center;cursor:pointer;user-select:none;text-transform:capitalize}
-                                                      .ag-week-label:hover{color:#059669}
+                                                      /* legenda da semana — linha discreta, sem ocupar espaço extra */
+                                                      .ag-week-label{display:block;width:fit-content;margin:0 auto 8px;font-size:12px;font-weight:700;color:#1e293b;text-align:center;cursor:pointer;user-select:none;text-transform:capitalize;padding:3px 12px;border-radius:999px;transition:.15s}
+                                                      .ag-week-label:hover{color:#059669;background:rgba(16,185,129,.08)}
 
-                                                      /* grade — painel de vidro único, divisórias suaves, sem caixa dupla */
-                                                      .ag-grid{display:grid;width:100%;background:rgba(255,255,255,.55) !important;backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border:1px solid rgba(255,255,255,.9) !important;border-radius:24px !important;box-shadow:0 16px 40px -22px rgba(15,42,80,.28),inset 0 1px 0 rgba(255,255,255,.9);overflow:hidden}
-                                                      .ag-h{padding:14px 8px 12px;text-align:center;font-size:11px;font-weight:600;color:#64748b;border:none;border-bottom:1px solid rgba(15,42,80,.08);background:transparent;position:relative}
-                                                      .ag-h .ag-day{font-size:11.5px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
-                                                      .ag-h .ag-dnum{font-size:16px;color:#1e293b;font-weight:700;margin:5px auto 0;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:.15s}
+                                                      /* painel único de vidro: cabeçalho fixo (setas nas laterais) + corpo com rolagem própria */
+                                                      .ag-cal{position:relative;background:rgba(255,255,255,.55) !important;backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border:1px solid rgba(255,255,255,.9) !important;border-radius:24px !important;box-shadow:0 16px 40px -22px rgba(15,42,80,.28),inset 0 1px 0 rgba(255,255,255,.9);overflow:hidden}
+                                                      .ag-cal-head{position:relative;display:grid;border-bottom:1px solid rgba(15,42,80,.08)}
+                                                      .ag-cal-scroll{position:relative;overflow-y:auto;overflow-x:hidden;max-height:calc(100vh - 300px);min-height:360px;scrollbar-width:thin}
+                                                      .ag-cal-scroll::-webkit-scrollbar{width:8px}
+                                                      .ag-cal-scroll::-webkit-scrollbar-thumb{background:rgba(15,42,80,.15);border-radius:8px}
+                                                      .ag-cal-scroll::-webkit-scrollbar-thumb:hover{background:rgba(15,42,80,.28)}
+                                                      .ag-cal-body{display:grid}
+
+                                                      /* setas de semana — laterais do cabeçalho, degradê translúcido colorido */
+                                                      .ag-side-arrow{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;font-size:14px;z-index:5;background:linear-gradient(135deg,rgba(52,211,153,.85),rgba(37,99,235,.85));box-shadow:0 6px 16px -6px rgba(16,73,163,.55),inset 0 1px 0 rgba(255,255,255,.4);backdrop-filter:blur(6px);transition:.15s}
+                                                      .ag-side-arrow:hover{transform:translateY(-50%) scale(1.08);box-shadow:0 8px 20px -6px rgba(16,73,163,.7),inset 0 1px 0 rgba(255,255,255,.5)}
+                                                      .ag-side-arrow:active{transform:translateY(-50%) scale(.96)}
+                                                      .ag-side-arrow.left{left:4px}
+                                                      .ag-side-arrow.right{right:4px}
+                                                      .ag-cell-gutter{cursor:default}
+                                                      .ag-cell-gutter:hover{background:transparent}
+
+                                                      .ag-h{padding:9px 6px 8px;text-align:center;font-size:11px;font-weight:600;color:#64748b;border:none;background:transparent;position:relative}
+                                                      .ag-h .ag-day{font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+                                                      .ag-h .ag-dnum{font-size:14px;color:#1e293b;font-weight:700;margin:3px auto 0;width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:.15s}
                                                       .ag-h .ag-h-spec{font-size:10.5px;color:#94a3b8;font-weight:600;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
                                                       .ag-h.today{background:linear-gradient(180deg,rgba(16,185,129,.12),transparent)}
                                                       .ag-h.today .ag-dnum{background:linear-gradient(135deg,#34d399,#059669);color:#fff;box-shadow:0 4px 10px -2px rgba(5,150,105,.45)}
-                                                      .ag-h.today .ag-badge{position:absolute;top:8px;right:10px;background:linear-gradient(135deg,#34d399,#059669);color:#fff;padding:2px 8px;border-radius:999px;font-size:9px;font-weight:700;box-shadow:0 3px 8px rgba(5,150,105,.35)}
+                                                      .ag-h.today .ag-badge{position:absolute;top:4px;right:6px;background:linear-gradient(135deg,#34d399,#059669);color:#fff;padding:2px 7px;border-radius:999px;font-size:8.5px;font-weight:700;box-shadow:0 3px 8px rgba(5,150,105,.35)}
                                                       .ag-hourcell{padding:16px 8px;text-align:center;font-size:10.5px;font-weight:600;color:#94a3b8;background:rgba(15,42,80,.02);border-right:1px solid rgba(15,42,80,.06);border-bottom:1px solid rgba(15,42,80,.06)}
-                                                      .ag-cell{padding:7px 6px;min-height:92px;background:transparent;border-right:1px solid rgba(15,42,80,.06);border-bottom:1px solid rgba(15,42,80,.06);transition:background .15s;cursor:pointer;position:relative}
+                                                      .ag-cell{padding:6px 6px;min-height:64px;background:transparent;border-right:1px solid rgba(15,42,80,.06);border-bottom:1px solid rgba(15,42,80,.06);transition:background .15s;cursor:pointer;position:relative}
                                                       .ag-cell:hover{background:rgba(16,185,129,.07)}
                                                       .ag-cell:last-child{border-right:none}
                                                       .ag-cell:empty:hover::after{content:'+ Agendar';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#059669;letter-spacing:.02em;pointer-events:none}
 
                                                       /* cards de agendamento — chips de vidro, cor por médico via CSS var */
-                                                      .ag-card{position:relative;background:var(--dc-bg,#f4f6f4);border:1px solid rgba(255,255,255,.7);border-left:3px solid var(--dc,#059669);border-radius:12px;padding:8px 10px;margin-bottom:6px;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}
+                                                      .ag-card{position:relative;background:var(--dc-bg,#f4f6f4);border:1px solid rgba(255,255,255,.7);border-left:3px solid var(--dc,#059669);border-radius:12px;padding:7px 9px;margin-bottom:6px;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}
                                                       .ag-card:hover{box-shadow:0 10px 22px -10px rgba(15,42,80,.32);transform:translateY(-2px)}
                                                       .ag-card.overdue{box-shadow:0 2px 10px -2px rgba(244,67,54,.3)}
                                                       .ag-card-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
                                                       .ag-card-name{font-size:12px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
                                                       .ag-card-sub{font-size:10.5px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+                                                      .ag-card-spec{font-size:9.5px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
                                                       .ag-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:3px}
-                                                      .ag-dot.confirmed{background:#4CAF50;box-shadow:0 0 0 2px #E8F5E9}
-                                                      .ag-dot.pending{background:#FFC107;box-shadow:0 0 0 2px #FFF8E1}
-                                                      .ag-dot.unconfirmed{background:#F44336;box-shadow:0 0 0 2px #FFEBEE}
+                                                      .ag-dot.confirmado{background:#16a34a;box-shadow:0 0 0 2px #dcfce7}
+                                                      .ag-dot.nao_confirmado{background:#ef4444;box-shadow:0 0 0 2px #fee2e2}
+                                                      .ag-dot.confirmacao_enviada{background:#f59e0b;box-shadow:0 0 0 2px #fef3c7}
+                                                      .ag-dot.compareceu{background:#0ea5e9;box-shadow:0 0 0 2px #e0f2fe}
+                                                      .ag-dot.faltoso{background:#64748b;box-shadow:0 0 0 2px #e2e8f0}
                                                       .ag-mbtn{background:none;border:none;color:var(--n300);font-size:14px;padding:0 4px;line-height:1}
                                                       .ag-mbtn:hover{color:var(--n500)}
-                                                      .ag-menu{position:absolute;right:6px;top:30px;background:var(--white);border:1px solid var(--n150);border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.18);z-index:200;min-width:180px;overflow:hidden}
+                                                      .ag-menu{position:absolute;right:6px;top:30px;background:var(--white);border:1px solid var(--n150);border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.18);z-index:200;min-width:170px;overflow:hidden}
                                                       .ag-menu button{display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;border:none;background:transparent;text-align:left;font-size:12px;color:var(--n700);border-bottom:1px solid var(--n100)}
                                                       .ag-menu button:last-child{border-bottom:none}
                                                       .ag-menu button:hover{background:var(--n50)}
+                                                      .ag-menu button.danger{color:#dc2626}
+                                                      .ag-menu button.danger i{color:#dc2626}
+
+                                                      /* tooltip de detalhes do agendamento */
+                                                      .ag-tooltip{position:fixed;z-index:999;display:none;width:270px;background:rgba(255,255,255,.9);backdrop-filter:blur(22px) saturate(180%);-webkit-backdrop-filter:blur(22px) saturate(180%);border:1px solid rgba(255,255,255,.9);border-radius:16px;box-shadow:0 20px 45px -18px rgba(15,42,80,.4);padding:14px 16px;pointer-events:none}
+                                                      .ag-tt-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:7px;padding-bottom:8px;border-bottom:1px solid rgba(15,42,80,.08)}
+                                                      .ag-tt-name{font-size:13px;font-weight:700;color:#0f172a}
+                                                      .ag-tt-time{font-size:11px;color:#64748b;white-space:nowrap;flex-shrink:0}
+                                                      .ag-tt-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;color:#475569;font-size:11.5px}
+                                                      .ag-tt-row i{font-size:12px;color:#94a3b8;flex-shrink:0;width:14px;text-align:center}
+                                                      .ag-tt-status{display:inline-block;margin-top:6px;padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:700}
+                                                      .ag-tt-status-desc{margin-top:5px;color:#64748b;font-size:10.5px;line-height:1.55}
+                                                      .ag-tt-habit{margin-top:9px;padding-top:9px;border-top:1px solid rgba(15,42,80,.08);color:#64748b;font-size:10.5px;line-height:1.65}
 
                                                       .ag-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;padding:14px;background:transparent;border:none;box-shadow:none}
-                                                      .ag-card-full{background:rgba(255,255,255,.62);backdrop-filter:blur(18px) saturate(180%);-webkit-backdrop-filter:blur(18px) saturate(180%);border:1px solid rgba(255,255,255,.85);border-radius:18px;padding:16px;box-shadow:0 10px 26px -16px rgba(15,42,80,.25);position:relative}
+                                                      .ag-card-full{background:rgba(255,255,255,.62);backdrop-filter:blur(18px) saturate(180%);-webkit-backdrop-filter:blur(18px) saturate(180%);border:1px solid rgba(255,255,255,.85);border-radius:18px;padding:16px;box-shadow:0 10px 26px -16px rgba(15,42,80,.25);position:relative;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}
+                                                      .ag-card-full:hover{transform:translateY(-2px);box-shadow:0 16px 34px -16px rgba(15,42,80,.35)}
                                                       .ag-card-full.overdue{border-color:rgba(244,67,54,.55);border-width:2px}
                                                       .ag-card-full .ovr{position:absolute;top:-10px;left:14px;background:#F44336;color:#fff;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:600}
                                                       .ag-card-full h4{margin:0 0 2px;font-size:14px;font-weight:700;color:#1e293b}
@@ -1583,7 +1612,7 @@
                                                         border-radius:20px !important;
                                                         box-shadow:0 10px 30px -12px rgba(15,42,80,.18),inset 0 1px 0 rgba(255,255,255,.9);
                                                       }
-                                                      /* .ag-grid, .ag-card e .ag-card-full têm estilo próprio — ver bloco "AGENDA — Liquid Glass calendário" */
+                                                      /* .ag-cal, .ag-card e .ag-card-full têm estilo próprio — ver bloco "AGENDA — Liquid Glass calendário" */
 
                                                       /* Conversas screen — keep its own layout, soften surfaces */
                                                       #s-conversas{background:transparent}
@@ -3179,18 +3208,13 @@
                         <option value="all">Todas</option>
                       </select>
                       <label>Status</label>
-                      <select id="ag-status">
-                        <option value="all">Todos</option>
-                        <option value="agendado">Agendado</option>
-                        <option value="realizado">Realizado</option>
-                        <option value="faltou">Faltou</option>
-                      </select>
-                      <label>Confirmação</label>
                       <select id="ag-conf">
-                        <option value="all">Todas</option>
-                        <option value="confirmed">Confirmados</option>
-                        <option value="pending">Aguardando</option>
-                        <option value="unconfirmed">Não confirmados</option>
+                        <option value="all">Todos</option>
+                        <option value="confirmado">Confirmado</option>
+                        <option value="nao_confirmado">Não confirmado</option>
+                        <option value="confirmacao_enviada">Confirmação enviada</option>
+                        <option value="compareceu">Compareceu</option>
+                        <option value="faltoso">Faltoso</option>
                       </select>
                     </div>
                     <div class="ag-adv-foot">
@@ -14945,18 +14969,22 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                 id:r.id,
                                                                 paciente_id:r.paciente_id||null,
                                                                 patient:(pac&&pac.name)||r.paciente_nome||'Paciente',
-                                                                specialty:r.motivo||'',
+                                                                specialty:r.especialidade||'',
+                                                                motivo:r.motivo||'',
+                                                                duracao:r.duracao_min||30,
                                                                 doctor:agDoctorName(),
                                                                 doctorId:1,
                                                                 date:d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),
                                                                 dateObj:d,
                                                                 time:pad(d.getHours())+':'+pad(d.getMinutes()),
                                                                 hourSlot:pad(d.getHours())+':00',
-                                                                confirmation:st==='confirmado'?'confirmed':(st==='agendado'?'pending':'unconfirmed'),
+                                                                rawStatus:st,
+                                                                confirmation:agConfirmationKey(st),
                                                                 presence:st==='atendido'?'recebido':(st==='faltou'?'faltoso':'nao_recebido'),
                                                                 status:st==='atendido'?'realizado':st,
-                                                                isReturn:false,isRescheduled:false,
-                                                                hasEntry:st==='atendido'
+                                                                isReturn:false,isRescheduled:st==='reagendado',
+                                                                hasEntry:st==='atendido',
+                                                                hiddenFromGrid:st==='cancelado'||st==='reagendado'
                                                               };
                                                             }
                                                             async function loadAgendamentos(){
@@ -14968,26 +14996,128 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               }catch(e){console.error('agendamentos',e);AGENDAMENTOS=[];AG_APTS=[];}
                                                               return AG_APTS;
                                                             }
-                                                            const AG_STATE={view:'weekly',doctor:'all',spec:'all',status:'all',conf:'all',openMenu:null,inited:false,weekOffset:0};
+                                                            const AG_STATE={view:'weekly',doctor:'all',spec:'all',conf:'all',openMenu:null,inited:false,weekOffset:0};
                                                             const AG_MENU=[
-                                                              {label:'Dar entrada',icon:'ti-login'},
-                                                              {label:'Editar etiqueta',icon:'ti-tag'},
-                                                              {label:'Reagendar (IA)',icon:'ti-refresh'},
-                                                              {label:'Confirmar agenda',icon:'ti-check'},
-                                                              {label:'Enviar mensagem',icon:'ti-message'},
-                                                              {label:'Transferir agenda',icon:'ti-arrow-right'}
+                                                              {label:'Confirmar',action:'confirmar',icon:'ti-check'},
+                                                              {label:'Reagendar',action:'reagendar',icon:'ti-calendar-event'},
+                                                              {label:'Cancelar',action:'cancelar',icon:'ti-x',danger:true}
                                                             ];
                                                             function agDocColor(id){return (AG_DOCTORS.find(d=>d.id===id)||{}).color||'#999';}
-                                                            function agConfLabel(c){return {confirmed:'Confirmado',pending:'Aguardando confirmação',unconfirmed:'Não confirmado'}[c]||c;}
+                                                            /* Vocabulário único de status exibido na Agenda:
+                                                               confirmado · não confirmado · confirmação enviada · compareceu · faltoso.
+                                                               Cancelado/reagendado não aparecem como "status visual" — o agendamento sai da grade. */
+                                                            const AG_STATUS_META={
+                                                              confirmado:{label:'Confirmado',color:'#16a34a',bg:'#dcfce7',desc:'O paciente confirmou presença nesta consulta.'},
+                                                              nao_confirmado:{label:'Não confirmado',color:'#ef4444',bg:'#fee2e2',desc:'Ainda não há confirmação do paciente para esta consulta.'},
+                                                              confirmacao_enviada:{label:'Confirmação enviada',color:'#f59e0b',bg:'#fef3c7',desc:'Uma solicitação de confirmação foi enviada ao paciente e aguarda resposta.'},
+                                                              compareceu:{label:'Compareceu',color:'#0ea5e9',bg:'#e0f2fe',desc:'O paciente compareceu a este atendimento.'},
+                                                              faltoso:{label:'Faltoso',color:'#64748b',bg:'#e2e8f0',desc:'O paciente não compareceu a este atendimento.'}
+                                                            };
+                                                            function agConfirmationKey(st){
+                                                              if(st==='compareceu'||st==='atendido')return 'compareceu';
+                                                              if(st==='faltou')return 'faltoso';
+                                                              if(st==='confirmado')return 'confirmado';
+                                                              if(st==='confirmacao_enviada')return 'confirmacao_enviada';
+                                                              return 'nao_confirmado';
+                                                            }
+                                                            function agConfLabel(c){return (AG_STATUS_META[c]&&AG_STATUS_META[c].label)||c;}
                                                             function agIsOverdue(a){
                                                               const t=a.dateObj?new Date(a.dateObj):null;
                                                               if(!t)return false;
                                                               return new Date()>t && !a.hasEntry && a.status==='agendado';
                                                             }
-                                                            function agHours(apts){
-                                                              let min=8,max=18;
-                                                              (apts||[]).forEach(a=>{const h=parseInt(a.hourSlot);if(h<min)min=h;if(h+1>max)max=h+1;});
-                                                              const h=[];for(let i=min;i<max;i++)h.push(String(i).padStart(2,'0')+':00');return h;}
+                                                            function agHours(){
+                                                              const h=[];for(let i=0;i<24;i++)h.push(String(i).padStart(2,'0')+':00');return h;
+                                                            }
+                                                            function agToggleMenu(id,ev){ev&&ev.stopPropagation();AG_STATE.openMenu=AG_STATE.openMenu===id?null:id;agHideTooltip();renderAgenda();}
+                                                            async function agUpdateStatus(id,status){
+                                                              try{
+                                                                const{error}=await sb.from('agendamentos').update({status}).eq('id',id);
+                                                                if(error)throw error;
+                                                                const raw=AGENDAMENTOS.find(r=>String(r.id)===String(id));if(raw)raw.status=status;
+                                                              }catch(e){
+                                                                console.error('agUpdateStatus',e);
+                                                                showToast('Não foi possível atualizar o agendamento');
+                                                              }
+                                                            }
+                                                            async function agAction(action,id,ev){
+                                                              ev&&ev.stopPropagation();
+                                                              AG_STATE.openMenu=null;
+                                                              const a=AG_APTS.find(x=>String(x.id)===String(id));
+                                                              if(!a)return;
+                                                              if(action==='confirmar'){
+                                                                await agUpdateStatus(id,'confirmado');
+                                                                showToast('Agendamento confirmado');
+                                                              }else if(action==='cancelar'){
+                                                                if(!confirm('Cancelar o agendamento de '+a.patient+'?'))return renderAgenda();
+                                                                await agUpdateStatus(id,'cancelado');
+                                                                showToast('Agendamento cancelado');
+                                                              }else if(action==='reagendar'){
+                                                                await agUpdateStatus(id,'reagendado');
+                                                                showToast('Escolha a nova data e horário para reagendar');
+                                                                openNovoAgendamentoModal({nome:a.patient,patientId:a.paciente_id||null});
+                                                              }
+                                                              AG_APTS=AGENDAMENTOS.map(agMapRow).sort((x,y)=>x.dateObj-y.dateObj);
+                                                              renderAgenda();
+                                                            }
+                                                            /* ===== Tooltip de detalhes do agendamento ===== */
+                                                            function agEnsureTooltipEl(){
+                                                              let el=document.getElementById('ag-tooltip');
+                                                              if(!el){el=document.createElement('div');el.id='ag-tooltip';el.className='ag-tooltip';document.body.appendChild(el);}
+                                                              return el;
+                                                            }
+                                                            function agHideTooltip(){const el=document.getElementById('ag-tooltip');if(el)el.style.display='none';}
+                                                            function agPatientHabitsHtml(a){
+                                                              if(!a.paciente_id)return '<div class="ag-tt-habit">Agendamento sem paciente cadastrado vinculado.</div>';
+                                                              const hist=(AGENDAMENTOS||[]).filter(r=>r.paciente_id===a.paciente_id&&String(r.id)!==String(a.id));
+                                                              if(!hist.length)return '<div class="ag-tt-habit">Primeira consulta registrada para este paciente.</div>';
+                                                              const total=hist.length;
+                                                              const faltas=hist.filter(r=>(r.status||'').toLowerCase()==='faltou').length;
+                                                              const reagendamentos=hist.filter(r=>(r.status||'').toLowerCase()==='reagendado');
+                                                              const lines=[];
+                                                              lines.push(`Histórico: ${total} consulta${total>1?'s':''} anterior${total>1?'es':''}${faltas?`, ${faltas} falta${faltas>1?'s':''}`:', sem faltas registradas'}.`);
+                                                              if(reagendamentos.length){
+                                                                const deltas=reagendamentos.map(r=>{
+                                                                  const dh=new Date(r.data_hora),up=new Date(r.updated_at);
+                                                                  const hrs=(dh-up)/3600000;
+                                                                  return (hrs>0&&isFinite(hrs))?hrs:null;
+                                                                }).filter(v=>v!==null);
+                                                                const media=deltas.length?Math.round(deltas.reduce((s,v)=>s+v,0)/deltas.length):null;
+                                                                lines.push(`Costuma remarcar: já remarcou ${reagendamentos.length} vez${reagendamentos.length>1?'es':''}${media!==null?`, em média com ${media}h de antecedência`:''}.`);
+                                                              }
+                                                              if(a.isRescheduled)lines.push('Este agendamento é resultado de uma remarcação.');
+                                                              return `<div class="ag-tt-habit">${lines.join('<br>')}</div>`;
+                                                            }
+                                                            function agTooltipHtml(a){
+                                                              const key=a.confirmation;
+                                                              const meta=AG_STATUS_META[key]||{label:key,color:'#64748b',bg:'#e2e8f0',desc:''};
+                                                              return `<div class="ag-tt-head">
+                                                                  <div class="ag-tt-name">${a.patient}</div>
+                                                                  <div class="ag-tt-time">${a.time}${a.duracao?` · ${a.duracao} min`:''}</div>
+                                                                </div>
+                                                                <div class="ag-tt-row"><i class="ti ti-stethoscope"></i> ${a.doctor}</div>
+                                                                ${a.specialty?`<div class="ag-tt-row"><i class="ti ti-heartbeat"></i> ${a.specialty}</div>`:''}
+                                                                ${a.motivo?`<div class="ag-tt-row"><i class="ti ti-notes"></i> ${a.motivo}</div>`:''}
+                                                                <div class="ag-tt-status" style="color:${meta.color};background:${meta.bg}">${meta.label}</div>
+                                                                <div class="ag-tt-status-desc">${meta.desc}</div>
+                                                                ${agPatientHabitsHtml(a)}`;
+                                                            }
+                                                            function agShowTooltip(cardEl,id){
+                                                              if(AG_STATE.openMenu)return; // não sobrepor o menu de ações aberto
+                                                              const a=AG_APTS.find(x=>String(x.id)===String(id));
+                                                              if(!a)return;
+                                                              const el=agEnsureTooltipEl();
+                                                              el.innerHTML=agTooltipHtml(a);
+                                                              el.style.display='block';
+                                                              const r=cardEl.getBoundingClientRect();
+                                                              const tw=el.offsetWidth||270,th=el.offsetHeight||160;
+                                                              let x=r.right+10,y=r.top;
+                                                              if(x+tw>window.innerWidth-10)x=r.left-tw-10;
+                                                              if(x<10)x=Math.min(window.innerWidth-tw-10,Math.max(10,r.left));
+                                                              if(y+th>window.innerHeight-10)y=window.innerHeight-th-10;
+                                                              if(y<10)y=10;
+                                                              el.style.left=x+'px';el.style.top=y+'px';
+                                                            }
                                                             function agToday(){const t=new Date();t.setHours(0,0,0,0);return t;}
                                                             function agDateKey(d){const pad=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
                                                             function agWeek(){
@@ -15030,37 +15160,44 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                             }
                                                             function setAgendaView(v){AG_STATE.view=v;document.querySelectorAll('.ag-views button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));renderAgenda();}
                                                             function agToggleAdv(e){e&&e.stopPropagation();const a=document.getElementById('ag-adv');const open=a.style.display==='none';a.style.display=open?'block':'none';document.getElementById('ag-fbtn').classList.toggle('active',open);}
-                                                            function agClearAdv(){AG_STATE.spec='all';AG_STATE.status='all';AG_STATE.conf='all';document.getElementById('ag-spec').value='all';document.getElementById('ag-status').value='all';document.getElementById('ag-conf').value='all';renderAgenda();}
-                                                            function agApplyAdv(){AG_STATE.spec=document.getElementById('ag-spec').value;AG_STATE.status=document.getElementById('ag-status').value;AG_STATE.conf=document.getElementById('ag-conf').value;document.getElementById('ag-adv').style.display='none';document.getElementById('ag-fbtn').classList.remove('active');renderAgenda();}
-                                                            function agToggleMenu(id,ev){ev&&ev.stopPropagation();AG_STATE.openMenu=AG_STATE.openMenu===id?null:id;renderAgenda();}
-                                                            function agAction(label,id){showToast(label+' #'+id);AG_STATE.openMenu=null;renderAgenda();}
+                                                            function agClearAdv(){AG_STATE.spec='all';AG_STATE.conf='all';document.getElementById('ag-spec').value='all';document.getElementById('ag-conf').value='all';renderAgenda();}
+                                                            function agApplyAdv(){AG_STATE.spec=document.getElementById('ag-spec').value;AG_STATE.conf=document.getElementById('ag-conf').value;document.getElementById('ag-adv').style.display='none';document.getElementById('ag-fbtn').classList.remove('active');renderAgenda();}
                                                             function agFiltered(){
                                                               const q=(document.getElementById('ag-search')?.value||'').toLowerCase();
                                                               const doc=document.getElementById('ag-doctor')?.value||'all';
                                                               return AG_APTS.filter(a=>{
+                                                                if(a.hiddenFromGrid)return false; // cancelado/reagendado saem da grade
                                                                 const mq=!q||(a.patient||'').toLowerCase().includes(q)||(a.specialty||'').toLowerCase().includes(q)||(a.doctor||'').toLowerCase().includes(q);
                                                                 const md=doc==='all';
                                                                 const ms=AG_STATE.spec==='all'||a.specialty===AG_STATE.spec;
-                                                                const mt=AG_STATE.status==='all'||a.status===AG_STATE.status;
                                                                 const mc=AG_STATE.conf==='all'||a.confirmation===AG_STATE.conf;
-                                                                return mq&&md&&ms&&mt&&mc;
+                                                                return mq&&md&&ms&&mc;
                                                               });
+                                                            }
+                                                            function agCardClick(ev,id){
+                                                              ev.stopPropagation();
+                                                              agHideTooltip();
+                                                              const a=AG_APTS.find(x=>String(x.id)===String(id));
+                                                              if(!a)return;
+                                                              if(a.paciente_id)openPatient(a.paciente_id);
+                                                              else showToast('Este agendamento não está vinculado a um paciente cadastrado');
                                                             }
                                                             function agCardHtml(a){
                                                               const c=agDocColor(a.doctorId);
                                                               const ov=agIsOverdue(a);
                                                               const bg=ov?'rgba(244,67,54,.10)':(c+'18');
                                                               const menuOpen=AG_STATE.openMenu===a.id;
-                                                              const menu=menuOpen?`<div class="ag-menu">${AG_MENU.map(m=>`<button onclick="agAction('${m.label}',${a.id})"><i class="ti ${m.icon}"></i>${m.label}</button>`).join('')}</div>`:'';
-                                                              return `<div class="ag-card ${ov?'overdue':''}" style="--dc:${ov?'#F44336':c};--dc-bg:${bg}" title="${a.patient} • ${a.doctor} • ${a.time} — ${agConfLabel(a.confirmation)}" onclick="event.stopPropagation()">
+                                                              const menu=menuOpen?`<div class="ag-menu">${AG_MENU.map(m=>`<button class="${m.danger?'danger':''}" onclick="agAction('${m.action}','${a.id}',event)"><i class="ti ${m.icon}"></i>${m.label}</button>`).join('')}</div>`:'';
+                                                              return `<div class="ag-card ${ov?'overdue':''}" style="--dc:${ov?'#F44336':c};--dc-bg:${bg}" onclick="agCardClick(event,'${a.id}')" onmouseenter="agShowTooltip(this,'${a.id}')" onmouseleave="agHideTooltip()">
                                                                 <div class="ag-card-row">
                                                                   <div style="flex:1;min-width:0">
                                                                     <div class="ag-card-name">${a.patient}</div>
                                                                     <div class="ag-card-sub">${a.doctor}</div>
+                                                                    ${a.specialty?`<div class="ag-card-spec">${a.specialty}</div>`:''}
                                                                   </div>
                                                                   <div style="display:flex;gap:6px;align-items:center">
                                                                     <span class="ag-dot ${a.confirmation}"></span>
-                                                                    <button class="ag-mbtn" onclick="agToggleMenu(${a.id},event)">⋮</button>
+                                                                    <button class="ag-mbtn" onclick="agToggleMenu('${a.id}',event)">⋮</button>
                                                                   </div>
                                                                 </div>
                                                                 ${menu}
@@ -15068,68 +15205,82 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                             }
                                                             function agCellClick(dateStr,hourStr,ev){
                                                               if(ev)ev.stopPropagation();
+                                                              agHideTooltip();
                                                               openNovoAgendamentoModal({dia:dateStr,hora:hourStr});
                                                             }
                                                             function renderAgenda(){
                                                               const body=document.getElementById('ag-body');if(!body)return;
-                                                              body.style.background='';body.style.border='';body.style.boxShadow='';
+                                                              agHideTooltip();
                                                               const apts=agFiltered();
                                                               if(!apts.length){body.innerHTML=`<div class="ag-empty"><i class="ti ti-calendar-off" style="font-size:32px"></i><p>Nenhum agendamento encontrado com os filtros selecionados</p></div>`;return;}
                                                               if(AG_STATE.view==='weekly')return renderAgWeekly(body,apts);
                                                               if(AG_STATE.view==='daily')return renderAgDaily(body,apts);
                                                               return renderAgCards(body,apts);
                                                             }
+                                                            function agScrollToHour(hour){
+                                                              const sc=document.getElementById('ag-scroll');
+                                                              const row=sc&&sc.querySelector(`[data-hour="${hour}"]`);
+                                                              if(sc&&row)sc.scrollTop=row.offsetTop;
+                                                            }
                                                             function renderAgWeekly(body,apts){
                                                               const week=agWeek();
                                                               const days=week.map(d=>d.date);
                                                               apts=apts.filter(a=>days.includes(a.date)).sort((a,b)=>a.dateObj-b.dateObj);
-                                                              const navHtml=`<div class="ag-week-nav">
-                                                                <button class="ag-week-arrow" onclick="agShiftWeek(-1)" title="Semana anterior"><i class="ti ti-chevron-left"></i></button>
-                                                                <span class="ag-week-label" onclick="agGoToCurrentWeek()" title="Voltar para a semana atual">${agWeekRangeLabel(week)}</span>
-                                                                <button class="ag-week-arrow" onclick="agShiftWeek(1)" title="Próxima semana"><i class="ti ti-chevron-right"></i></button>
-                                                              </div>`;
-                                                              if(!apts.length){body.innerHTML=navHtml+`<div class="ag-empty"><i class="ti ti-calendar-off" style="font-size:32px"></i><p>Nenhum agendamento nesta semana</p></div>`;return;}
-                                                              const hours=agHours(apts);
+                                                              const cols='80px '+week.map(()=>'1fr').join(' ')+' 30px';
+                                                              const label=`<span class="ag-week-label" onclick="agGoToCurrentWeek()" title="Voltar para a semana atual">${agWeekRangeLabel(week)}</span>`;
+                                                              let headHtml=`<div class="ag-cal-head" style="grid-template-columns:${cols}">
+                                                                <button class="ag-side-arrow left" onclick="agShiftWeek(-1)" title="Semana anterior"><i class="ti ti-chevron-left"></i></button>
+                                                                <button class="ag-side-arrow right" onclick="agShiftWeek(1)" title="Próxima semana"><i class="ti ti-chevron-right"></i></button>
+                                                                <div class="ag-h"></div>`;
+                                                              week.forEach((d,i)=>{headHtml+=`<div class="ag-h ${d.isToday?'today':''}">${d.isToday?'<span class="ag-badge">Hoje</span>':''}<div class="ag-day">${d.dayName}</div><div class="ag-dnum">${String(d.dayNum).padStart(2,'0')}</div></div>`;});
+                                                              headHtml+='<div class="ag-h"></div></div>';
+                                                              if(!apts.length){
+                                                                body.innerHTML=`<div class="ag-cal">${label}${headHtml}<div class="ag-empty"><i class="ti ti-calendar-off" style="font-size:32px"></i><p>Nenhum agendamento nesta semana</p></div></div>`;
+                                                                return;
+                                                              }
+                                                              const hours=agHours();
                                                               const byKey={};apts.forEach(a=>{const k=a.date+'-'+a.hourSlot;(byKey[k]=byKey[k]||[]).push(a);});
-                                                              const cols='80px '+week.map(()=>'1fr').join(' ');
-                                                              let html=`<div class="ag-grid" style="grid-template-columns:${cols}">`;
-                                                              html+=`<div class="ag-h"></div>`;
-                                                              week.forEach((d,i)=>{html+=`<div class="ag-h ${d.isToday?'today':''}">${d.isToday?'<span class="ag-badge">Hoje</span>':''}<div class="ag-day">${d.dayName}</div><div class="ag-dnum">${String(d.dayNum).padStart(2,'0')}</div></div>`;});
+                                                              let bodyHtml=`<div class="ag-cal-body" style="grid-template-columns:${cols}">`;
                                                               hours.forEach(h=>{
-                                                                html+=`<div class="ag-hourcell">${h}</div>`;
-                                                                week.forEach(d=>{const list=byKey[d.date+'-'+h]||[];html+=`<div class="ag-cell" onclick="agCellClick('${d.date}','${h}',event)">${list.map(agCardHtml).join('')}</div>`;});
+                                                                bodyHtml+=`<div class="ag-hourcell" data-hour="${h}">${h}</div>`;
+                                                                week.forEach(d=>{const list=byKey[d.date+'-'+h]||[];bodyHtml+=`<div class="ag-cell" onclick="agCellClick('${d.date}','${h}',event)">${list.map(agCardHtml).join('')}</div>`;});
+                                                                bodyHtml+='<div class="ag-cell ag-cell-gutter"></div>';
                                                               });
-                                                              html+='</div>';body.innerHTML=navHtml+html;
+                                                              bodyHtml+='</div>';
+                                                              body.innerHTML=`<div class="ag-cal">${label}${headHtml}<div class="ag-cal-scroll" id="ag-scroll">${bodyHtml}</div></div>`;
+                                                              agScrollToHour('08:00');
                                                             }
                                                             function renderAgDaily(body,apts){
                                                               const todayKey=agDateKey(agToday());
                                                               apts=apts.filter(a=>a.date===todayKey).sort((a,b)=>a.dateObj-b.dateObj);
                                                               if(!apts.length){body.innerHTML=`<div class="ag-empty"><i class="ti ti-calendar-off" style="font-size:32px"></i><p>Nenhum agendamento para hoje</p></div>`;return;}
-                                                              const hours=agHours(apts);
+                                                              const hours=agHours();
                                                               const byDT={};apts.forEach(a=>{(byDT[a.doctorId]=byDT[a.doctorId]||{});(byDT[a.doctorId][a.hourSlot]=byDT[a.doctorId][a.hourSlot]||[]).push(a);});
                                                               const docs=Object.keys(byDT).map(id=>AG_DOCTORS.find(d=>d.id===parseInt(id))||{id:parseInt(id),name:agDoctorName(),color:'#2E7D32',specialty:''});
                                                               if(!docs.length){body.innerHTML=`<div class="ag-empty"><p>Nenhum médico com agendamentos</p></div>`;return;}
                                                               const cols='80px '+docs.map(()=>'minmax(180px,1fr)').join(' ');
-                                                              let html=`<div class="ag-grid" style="grid-template-columns:${cols}">`;
-                                                              html+=`<div class="ag-h"></div>`;
-                                                              docs.forEach(d=>{html+=`<div class="ag-h"><div class="ag-day" style="color:${d.color}">${d.name}</div><div class="ag-h-spec">${d.specialty}</div></div>`;});
+                                                              let headHtml=`<div class="ag-cal-head" style="grid-template-columns:${cols}"><div class="ag-h"></div>`;
+                                                              docs.forEach(d=>{headHtml+=`<div class="ag-h"><div class="ag-day" style="color:${d.color}">${d.name}</div><div class="ag-h-spec">${d.specialty}</div></div>`;});
+                                                              headHtml+='</div>';
+                                                              let bodyHtml=`<div class="ag-cal-body" style="grid-template-columns:${cols}">`;
                                                               hours.forEach(h=>{
-                                                                html+=`<div class="ag-hourcell">${h}</div>`;
-                                                                docs.forEach(d=>{const list=(byDT[d.id]||{})[h]||[];html+=`<div class="ag-cell" onclick="agCellClick('${todayKey}','${h}',event)">${list.map(agCardHtml).join('')}</div>`;});
+                                                                bodyHtml+=`<div class="ag-hourcell" data-hour="${h}">${h}</div>`;
+                                                                docs.forEach(d=>{const list=(byDT[d.id]||{})[h]||[];bodyHtml+=`<div class="ag-cell" onclick="agCellClick('${todayKey}','${h}',event)">${list.map(agCardHtml).join('')}</div>`;});
                                                               });
-                                                              html+='</div>';body.innerHTML=html;
+                                                              bodyHtml+='</div>';
+                                                              body.innerHTML=`<div class="ag-cal">${headHtml}<div class="ag-cal-scroll" id="ag-scroll">${bodyHtml}</div></div>`;
+                                                              agScrollToHour('08:00');
                                                             }
                                                             function renderAgCards(body,apts){
                                                               const now=new Date();const pref=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
                                                               apts=apts.filter(a=>a.date.startsWith(pref)).sort((a,b)=>a.dateObj-b.dateObj);
                                                               if(!apts.length){body.innerHTML=`<div class="ag-empty"><i class="ti ti-calendar-off" style="font-size:32px"></i><p>Nenhum agendamento neste mês</p></div>`;return;}
-                                                              body.style.background='transparent';body.style.border='none';body.style.boxShadow='none';
                                                               const html=`<div class="ag-cards">`+apts.map(a=>{
                                                                 const ov=agIsOverdue(a);const col=agDocColor(a.doctorId);
-                                                                return `<div class="ag-card-full ${ov?'overdue':''}">
+                                                                return `<div class="ag-card-full ${ov?'overdue':''}" onclick="agCardClick(event,'${a.id}')" onmouseenter="agShowTooltip(this,'${a.id}')" onmouseleave="agHideTooltip()">
                                                                   ${ov?'<div class="ovr">Horário expirado</div>':''}
                                                                   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-                                                                    <div style="flex:1"><h4>${a.patient}</h4><div class="spec">${a.specialty}</div></div>
+                                                                    <div style="flex:1"><h4>${a.patient}</h4><div class="spec">${a.specialty||a.doctor}</div></div>
                                                                     <div style="display:flex;gap:8px;align-items:center"><span class="ag-dot ${a.confirmation}"></span></div>
                                                                   </div>
                                                                   <div class="ag-doc-badge" style="background:${col}">${a.doctor}</div>
@@ -15140,7 +15291,6 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                 </div>`;
                                                               }).join('')+`</div>`;
                                                               body.innerHTML=html;
-                                                              // restore frame styles when leaving cards view next time via renderAgenda
                                                             }
 
                                                             /* ================================================================
