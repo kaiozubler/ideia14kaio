@@ -21,7 +21,6 @@ export type Database = {
           data_hora: string
           duracao_min: number
           especialidade: string | null
-          horario_entrada: string | null
           id: string
           id_medico: string
           medico_nome: string | null
@@ -41,7 +40,6 @@ export type Database = {
           data_hora: string
           duracao_min?: number
           especialidade?: string | null
-          horario_entrada?: string | null
           id?: string
           id_medico: string
           medico_nome?: string | null
@@ -61,7 +59,6 @@ export type Database = {
           data_hora?: string
           duracao_min?: number
           especialidade?: string | null
-          horario_entrada?: string | null
           id?: string
           id_medico?: string
           medico_nome?: string | null
@@ -1015,6 +1012,7 @@ export type Database = {
           ocupacao: string | null
           paciente_id: string
           pai: string | null
+          parentescos: Json
           sexo: string | null
           sus: string | null
           telefone: string | null
@@ -1045,6 +1043,7 @@ export type Database = {
           ocupacao?: string | null
           paciente_id?: string
           pai?: string | null
+          parentescos?: Json
           sexo?: string | null
           sus?: string | null
           telefone?: string | null
@@ -1075,6 +1074,7 @@ export type Database = {
           ocupacao?: string | null
           paciente_id?: string
           pai?: string | null
+          parentescos?: Json
           sexo?: string | null
           sus?: string | null
           telefone?: string | null
@@ -1629,6 +1629,27 @@ export type Database = {
           qtd_fabricantes: number
         }[]
       }
+      buscar_pacientes: {
+        Args: { p_limit?: number; termo: string }
+        Returns: {
+          cpf: string
+          data_nascimento: string
+          name: string
+          paciente_id: string
+          sobrenome: string
+        }[]
+      }
+      buscar_parentes_possiveis: {
+        Args: { p_limit?: number; p_paciente_id: string }
+        Returns: {
+          cpf: string
+          data_nascimento: string
+          motivo: string
+          name: string
+          paciente_id: string
+          sobrenome: string
+        }[]
+      }
       buscar_tuss: {
         Args: { p_limit?: number; p_tabela?: string; termo: string }
         Returns: {
@@ -1647,6 +1668,17 @@ export type Database = {
         Returns: undefined
       }
       grupo_busca_substancia: { Args: { nome_dcb: string }; Returns: string }
+      historico_familiar_cids: {
+        Args: { p_paciente_id: string }
+        Returns: {
+          cid_code: string
+          cid_descricao: string
+          grau: string
+          parente_id: string
+          parente_nome: string
+          parentesco: string
+        }[]
+      }
       listar_apresentacoes_comercial: {
         Args: { p_fabricante?: string; p_nome_comercial: string }
         Returns: {
@@ -1697,6 +1729,7 @@ export type Database = {
         Args: { p_paciente_id: string }
         Returns: undefined
       }
+      sobrenome_paciente: { Args: { nome: string }; Returns: string }
       unaccent: { Args: { "": string }; Returns: string }
       verificar_interacoes: {
         Args: { p_termos: string[] }
