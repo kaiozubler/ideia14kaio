@@ -21,7 +21,6 @@ export type Database = {
           data_hora: string
           duracao_min: number
           especialidade: string | null
-          horario_entrada: string | null
           id: string
           id_medico: string
           medico_nome: string | null
@@ -41,7 +40,6 @@ export type Database = {
           data_hora: string
           duracao_min?: number
           especialidade?: string | null
-          horario_entrada?: string | null
           id?: string
           id_medico: string
           medico_nome?: string | null
@@ -61,7 +59,6 @@ export type Database = {
           data_hora?: string
           duracao_min?: number
           especialidade?: string | null
-          horario_entrada?: string | null
           id?: string
           id_medico?: string
           medico_nome?: string | null

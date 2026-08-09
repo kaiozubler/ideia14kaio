@@ -22,6 +22,7 @@ import { Route as ApiBryCancelEnvelopeRouteImport } from './routes/api/bry/cance
 import { Route as ApiBryCreateEnvelopeRouteImport } from './routes/api/bry/create-envelope'
 import { Route as ApiBryDownloadDocumentRouteImport } from './routes/api/bry/download-document'
 import { Route as ApiBryGetEnvelopeRouteImport } from './routes/api/bry/get-envelope'
+import { Route as ApiMedicamentosBuscarRouteImport } from './routes/api/medicamentos/buscar'
 import { Route as ApiProtocolosGerarIaRouteImport } from './routes/api/protocolos/gerar-ia'
 import { Route as ApiProtocolosSincronizarRouteImport } from './routes/api/protocolos/sincronizar'
 import { Route as ApiSignatureAuthenticateRouteImport } from './routes/api/signature/authenticate'
@@ -100,6 +101,11 @@ const ApiBryGetEnvelopeRoute = ApiBryGetEnvelopeRouteImport.update({
   path: '/api/bry/get-envelope',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMedicamentosBuscarRoute = ApiMedicamentosBuscarRouteImport.update({
+  id: '/api/medicamentos/buscar',
+  path: '/api/medicamentos/buscar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiProtocolosGerarIaRoute = ApiProtocolosGerarIaRouteImport.update({
   id: '/api/protocolos/gerar-ia',
   path: '/api/protocolos/gerar-ia',
@@ -175,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
+  '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
@@ -201,6 +208,7 @@ export interface FileRoutesByTo {
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
+  '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
@@ -228,6 +236,7 @@ export interface FileRoutesById {
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
+  '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
@@ -256,6 +265,7 @@ export interface FileRouteTypes {
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
     | '/api/bry/get-envelope'
+    | '/api/medicamentos/buscar'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
     | '/api/signature/authenticate'
@@ -282,6 +292,7 @@ export interface FileRouteTypes {
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
     | '/api/bry/get-envelope'
+    | '/api/medicamentos/buscar'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
     | '/api/signature/authenticate'
@@ -308,6 +319,7 @@ export interface FileRouteTypes {
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
     | '/api/bry/get-envelope'
+    | '/api/medicamentos/buscar'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
     | '/api/signature/authenticate'
@@ -335,6 +347,7 @@ export interface RootRouteChildren {
   ApiBryCreateEnvelopeRoute: typeof ApiBryCreateEnvelopeRoute
   ApiBryDownloadDocumentRoute: typeof ApiBryDownloadDocumentRoute
   ApiBryGetEnvelopeRoute: typeof ApiBryGetEnvelopeRoute
+  ApiMedicamentosBuscarRoute: typeof ApiMedicamentosBuscarRoute
   ApiProtocolosGerarIaRoute: typeof ApiProtocolosGerarIaRoute
   ApiProtocolosSincronizarRoute: typeof ApiProtocolosSincronizarRoute
   ApiSignatureAuthenticateRoute: typeof ApiSignatureAuthenticateRoute
@@ -441,6 +454,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBryGetEnvelopeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/medicamentos/buscar': {
+      id: '/api/medicamentos/buscar'
+      path: '/api/medicamentos/buscar'
+      fullPath: '/api/medicamentos/buscar'
+      preLoaderRoute: typeof ApiMedicamentosBuscarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/protocolos/gerar-ia': {
       id: '/api/protocolos/gerar-ia'
       path: '/api/protocolos/gerar-ia'
@@ -535,6 +555,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBryCreateEnvelopeRoute: ApiBryCreateEnvelopeRoute,
   ApiBryDownloadDocumentRoute: ApiBryDownloadDocumentRoute,
   ApiBryGetEnvelopeRoute: ApiBryGetEnvelopeRoute,
+  ApiMedicamentosBuscarRoute: ApiMedicamentosBuscarRoute,
   ApiProtocolosGerarIaRoute: ApiProtocolosGerarIaRoute,
   ApiProtocolosSincronizarRoute: ApiProtocolosSincronizarRoute,
   ApiSignatureAuthenticateRoute: ApiSignatureAuthenticateRoute,
