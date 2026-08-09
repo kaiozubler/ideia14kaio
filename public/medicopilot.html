@@ -15148,8 +15148,8 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                 motivo:r.motivo||'',
                                                                 duracao:r.duracao_min||30,
                                                                 horarioEntrada:r.horario_entrada||null,
-                                                                doctor:agDoctorName(),
-                                                                doctorId:1,
+                                                                doctor:r.medico_nome||'Médico não informado',
+                                                                doctorId:r.id_medico||'sem-medico',
                                                                 date:d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),
                                                                 dateObj:d,
                                                                 time:pad(d.getHours())+':'+pad(d.getMinutes()),
@@ -15178,7 +15178,13 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               {label:'Reagendar',action:'reagendar',icon:'ti-calendar-event'},
                                                               {label:'Cancelar',action:'cancelar',icon:'ti-x',danger:true}
                                                             ];
-                                                            function agDocColor(id){return (AG_DOCTORS.find(d=>d.id===id)||{}).color||'#999';}
+                                                            const AG_COLOR_PALETTE=['#2E7D32','#1976D2','#D32F2F','#F57C00','#7B1FA2','#0097A7','#5D4037','#C2185B'];
+                                                            function agHashColor(idStr){
+                                                              let h=0;const s=String(idStr||'');
+                                                              for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;
+                                                              return AG_COLOR_PALETTE[h%AG_COLOR_PALETTE.length];
+                                                            }
+                                                            function agDocColor(id){const m=AG_DOCTORS.find(d=>String(d.id)===String(id));return m?m.color:agHashColor(id);}
                                                             /* Vocabulário único de status exibido na Agenda:
                                                                confirmado · não confirmado · confirmação enviada · compareceu · faltoso.
                                                                Cancelado/reagendado não aparecem como "status visual" — o agendamento sai da grade. */
@@ -15408,7 +15414,30 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               const row=sc&&sc.querySelector(`[data-hour="${hour}"]`);
                                                               if(sc&&row)sc.scrollTop=row.offsetTop;
                                                             }
+                                                            function agScrollbarWidth(){
+                                                              if(agScrollbarWidth._w!=null)return agScrollbarWidth._w;
+                                                              const div=document.createElement('div');
+                                                              div.className='ag-cal-scroll';
+                                                              div.style.cssText='position:absolute;top:-9999px;left:-9999px;width:100px;height:100px;max-height:100px;';
+                                                              div.innerHTML='<div style="height:220px"></div>';
+                                                              document.body.appendChild(div);
+                                                              agScrollbarWidth._w=div.offsetWidth-div.clientWidth;
+                                                              document.body.removeChild(div);
+                                                              return agScrollbarWidth._w;
+                                                            }
+                                                            function agFinalizeCalScroll(prevTop,defaultHour){
+                                                              // Reserva no cabeçalho (fixo) exatamente a mesma largura que a barra
+                                                              // de rolagem consome no corpo, para as colunas continuarem alinhadas.
+                                                              const head=document.querySelector('#ag-body .ag-cal-head');
+                                                              if(head)head.style.paddingRight=agScrollbarWidth()+'px';
+                                                              const sc=document.getElementById('ag-scroll');
+                                                              if(!sc)return;
+                                                              if(prevTop!=null)sc.scrollTop=prevTop;
+                                                              else agScrollToHour(defaultHour);
+                                                            }
                                                             function renderAgWeekly(body,apts){
+                                                              const prevScroll=document.getElementById('ag-scroll');
+                                                              const prevTop=prevScroll?prevScroll.scrollTop:null;
                                                               const week=agWeek();
                                                               const days=week.map(d=>d.date);
                                                               apts=apts.filter(a=>days.includes(a.date)).sort((a,b)=>a.dateObj-b.dateObj);
@@ -15434,15 +15463,22 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               });
                                                               bodyHtml+='</div>';
                                                               body.innerHTML=`<div class="ag-cal">${label}${headHtml}<div class="ag-cal-scroll" id="ag-scroll">${bodyHtml}</div></div>`;
-                                                              agScrollToHour('08:00');
+                                                              agFinalizeCalScroll(prevTop,'08:00');
                                                             }
                                                             function renderAgDaily(body,apts){
+                                                              const prevScroll=document.getElementById('ag-scroll');
+                                                              const prevTop=prevScroll?prevScroll.scrollTop:null;
                                                               const todayKey=agDateKey(agToday());
                                                               apts=apts.filter(a=>a.date===todayKey).sort((a,b)=>a.dateObj-b.dateObj);
                                                               if(!apts.length){body.innerHTML=`<div class="ag-empty"><i class="ti ti-calendar-off" style="font-size:32px"></i><p>Nenhum agendamento para hoje</p></div>`;return;}
                                                               const hours=agHours();
                                                               const byDT={};apts.forEach(a=>{(byDT[a.doctorId]=byDT[a.doctorId]||{});(byDT[a.doctorId][a.hourSlot]=byDT[a.doctorId][a.hourSlot]||[]).push(a);});
-                                                              const docs=Object.keys(byDT).map(id=>AG_DOCTORS.find(d=>d.id===parseInt(id))||{id:parseInt(id),name:agDoctorName(),color:'#2E7D32',specialty:''});
+                                                              const docs=Object.keys(byDT).map(id=>{
+                                                                const mock=AG_DOCTORS.find(d=>String(d.id)===String(id));
+                                                                if(mock)return mock;
+                                                                const sample=(Object.values(byDT[id])[0]||[])[0];
+                                                                return {id,name:(sample&&sample.doctor)||'Médico não informado',color:agDocColor(id),specialty:(sample&&sample.specialty)||''};
+                                                              });
                                                               if(!docs.length){body.innerHTML=`<div class="ag-empty"><p>Nenhum médico com agendamentos</p></div>`;return;}
                                                               const cols='80px '+docs.map(()=>'minmax(180px,1fr)').join(' ');
                                                               let headHtml=`<div class="ag-cal-head" style="grid-template-columns:${cols}"><div class="ag-h"></div>`;
@@ -15455,7 +15491,7 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               });
                                                               bodyHtml+='</div>';
                                                               body.innerHTML=`<div class="ag-cal">${headHtml}<div class="ag-cal-scroll" id="ag-scroll">${bodyHtml}</div></div>`;
-                                                              agScrollToHour('08:00');
+                                                              agFinalizeCalScroll(prevTop,'08:00');
                                                             }
                                                             function renderAgCards(body,apts){
                                                               const now=new Date();const pref=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
