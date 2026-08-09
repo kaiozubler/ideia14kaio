@@ -12,6 +12,7 @@
     />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
     <script src="https://unpkg.com/@daily-co/daily-js"></script>
     <link rel="stylesheet" href="equipe.css" />
@@ -2116,6 +2117,9 @@
           <div class="sb-item" id="nav-indicadores" onclick="goScreen('indicadores')">
             <i class="ti ti-chart-line"></i><span class="sb-lbl">Indicadores</span>
           </div>
+          <div class="sb-item" id="nav-mapa-familiar" onclick="openMapaFamiliar(null)">
+            <i class="ti ti-affiliate"></i><span class="sb-lbl">Mapa Familiar</span>
+          </div>
           <div class="sb-group" id="grp-ia">
             <div class="sb-item" onclick="toggleIAGroup()">
               <i class="ti ti-robot"></i><span class="sb-lbl">Minhas IA's</span
@@ -2628,13 +2632,16 @@
                 </div>
               </div>
 
-              <div class="sec-hd">Parentesco</div>
+              <div class="sec-hd" style="display:flex;align-items:center;justify-content:space-between">
+                <span>Parentesco</span>
+                <button class="btn sm" onclick="openMapaFamiliar(currentPatient&&currentPatient.id)"><i class="ti ti-affiliate"></i> Ver mapa familiar</button>
+              </div>
               <div
                 id="par-sugest"
                 style="display:none;border:0.5px solid #bfdbfe;background:#eff6ff;border-radius:var(--r8);padding:9px 11px;margin-bottom:10px"
               >
                 <div style="font-size:11.5px;font-weight:600;color:#1d4ed8;margin-bottom:6px">
-                  <i class="ti ti-users-group" style="font-size:12px"></i> Possíveis parentes (mesmo sobrenome)
+                  <i class="ti ti-users-group" style="font-size:12px"></i> Possíveis parentes
                 </div>
                 <div id="par-sugest-list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
               </div>
@@ -4125,6 +4132,33 @@
       </div>
 
       <!-- CONFIGURAÇÕES DA ETAPA (KANBAN) -->
+      <!-- MAPA FAMILIAR -->
+      <div class="modal wide" id="m-mapa-familiar" style="display:none;width:94vw;max-width:1240px;height:88vh">
+        <div class="mhd">
+          <span class="mhd-title"><i class="ti ti-affiliate"></i> Mapa familiar</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="display:flex;border:0.5px solid var(--n200);border-radius:var(--r8);overflow:hidden">
+              <button class="btn sm primary" id="mf-btn-mapa" onclick="mfSetView('mapa')" style="border-radius:0;border:none">Mapa mental</button>
+              <button class="btn sm" id="mf-btn-arvore" onclick="mfSetView('arvore')" style="border-radius:0;border:none;border-left:0.5px solid var(--n200)">Árvore genealógica</button>
+            </div>
+            <label class="lg-toggle" style="margin:0">
+              <input type="checkbox" id="mf-show-cids" onchange="mfRender()" />
+              <span class="lg-toggle-track"><span class="lg-toggle-thumb"></span></span>
+              <span class="lg-toggle-text" style="font-size:11.5px">Mostrar CIDs no nó</span>
+            </label>
+            <button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+          </div>
+        </div>
+        <div class="mbody" style="padding:0;position:relative;flex:1;overflow:hidden;background:var(--n50,#fafaf9)">
+          <div id="mf-empty" style="display:none;height:100%;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--n400)">
+            <i class="ti ti-affiliate" style="font-size:32px"></i>
+            <span style="font-size:13px">Nenhum parente vinculado ainda.</span>
+          </div>
+          <svg id="mf-svg" style="width:100%;height:100%;display:block"></svg>
+          <div id="mf-tooltip" style="position:absolute;display:none;max-width:260px;background:#1a1917;color:#fff;font-size:11.5px;line-height:1.5;padding:8px 10px;border-radius:8px;pointer-events:none;z-index:20;box-shadow:0 8px 24px rgba(0,0,0,.25)"></div>
+        </div>
+      </div>
+
       <div class="modal" id="m-kcol-cfg" style="display:none">
         <div class="mhd">
           <div class="lg-hicon"><i class="ti ti-adjustments"></i></div>
@@ -6713,6 +6747,179 @@
                                                                 }).join('')
                                                                 +'</div>';
                                                             }
+
+                                                            /* ========== MAPA FAMILIAR (mapa mental + árvore genealógica) ========== */
+                                                            let _mfData=null;
+                                                            let _mfView='mapa';
+                                                            let _mfSim=null;
+                                                            let _mfFocoId=null;
+
+                                                            async function openMapaFamiliar(pacienteId){
+                                                              _mfFocoId=pacienteId||null;
+                                                              document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
+                                                              document.getElementById('modal-overlay').classList.add('open');
+                                                              const m=document.getElementById('m-mapa-familiar');
+                                                              if(m)m.style.display='flex';
+                                                              const svg=document.getElementById('mf-svg');
+                                                              document.getElementById('mf-empty').style.display='none';
+                                                              if(svg)svg.innerHTML='<text x="50%" y="50%" text-anchor="middle" fill="var(--n400)" font-size="12">Carregando...</text>';
+                                                              const {data,error}=await sb.rpc('grafo_familiar',{p_paciente_id:_mfFocoId});
+                                                              if(error||!data){
+                                                                if(svg)svg.innerHTML='';
+                                                                document.getElementById('mf-empty').style.display='flex';
+                                                                if(typeof toast==='function')toast('Não foi possível carregar o mapa familiar');
+                                                                return;
+                                                              }
+                                                              _mfData=data;
+                                                              if(!data.nodes||!data.nodes.length){
+                                                                if(svg)svg.innerHTML='';
+                                                                document.getElementById('mf-empty').style.display='flex';
+                                                                return;
+                                                              }
+                                                              mfSetView('mapa');
+                                                            }
+
+                                                            function mfSetView(v){
+                                                              _mfView=v;
+                                                              const bm=document.getElementById('mf-btn-mapa'), ba=document.getElementById('mf-btn-arvore');
+                                                              if(bm)bm.classList.toggle('primary',v==='mapa');
+                                                              if(ba)ba.classList.toggle('primary',v==='arvore');
+                                                              mfRender();
+                                                            }
+
+                                                            function mfNumCids(n){return Array.isArray(n.cids)?n.cids.length:0;}
+                                                            function mfCorSexo(s){return s==='Masculino'?'#3b82f6':s==='Feminino'?'#ec4899':'#a8a29e';}
+                                                            function mfCidResumo(cids){
+                                                              if(!Array.isArray(cids)||!cids.length)return '<i style="opacity:.7">Sem CIDs registrados</i>';
+                                                              return cids.map(c=>{
+                                                                const cod=c.code||c.codigo||'';
+                                                                const desc=c.description||c.descricao||'';
+                                                                return cod+(desc?' — '+desc:'');
+                                                              }).filter(Boolean).join('<br>');
+                                                            }
+
+                                                            function mfRender(){
+                                                              if(!_mfData)return;
+                                                              const svgEl=document.getElementById('mf-svg');
+                                                              if(!svgEl||typeof d3==='undefined')return;
+                                                              svgEl.innerHTML='';
+                                                              if(_mfSim){_mfSim.stop();_mfSim=null;}
+                                                              const wrapEl=svgEl.parentElement;
+                                                              const box=wrapEl.getBoundingClientRect();
+                                                              const W=box.width||900, H=box.height||600;
+                                                              svgEl.setAttribute('viewBox',`0 0 ${W} ${H}`);
+                                                              const svg=d3.select(svgEl);
+                                                              const g=svg.append('g');
+                                                              svg.call(d3.zoom().scaleExtent([0.3,2.5]).on('zoom',ev=>g.attr('transform',ev.transform)));
+
+                                                              const showCids=document.getElementById('mf-show-cids').checked;
+                                                              const tooltip=document.getElementById('mf-tooltip');
+                                                              const nodes=(_mfData.nodes||[]).map(n=>({...n}));
+                                                              const edges=(_mfData.edges||[]).map(e=>({...e,source:e.origem,target:e.destino}));
+                                                              const byId={};nodes.forEach(n=>byId[n.id]=n);
+
+                                                              function mostrarTooltip(ev,n){
+                                                                tooltip.innerHTML=`<b>${n.nome||''}</b>${n.nascimento?' · '+new Date(n.nascimento+'T00:00:00').toLocaleDateString('pt-BR'):''}<br>${mfCidResumo(n.cids)}`;
+                                                                tooltip.style.display='block';
+                                                                const r=wrapEl.getBoundingClientRect();
+                                                                tooltip.style.left=Math.min(ev.clientX-r.left+12,r.width-270)+'px';
+                                                                tooltip.style.top=(ev.clientY-r.top+12)+'px';
+                                                              }
+                                                              function esconderTooltip(){tooltip.style.display='none';}
+                                                              function irParaPaciente(d){closeModal();if(typeof openPatient==='function')openPatient(d.id);}
+
+                                                              if(_mfView==='mapa'){
+                                                                const linkSel=g.append('g').attr('stroke','var(--n200)').attr('stroke-width',1.3)
+                                                                  .selectAll('line').data(edges).join('line');
+                                                                const linkLabel=g.append('g').selectAll('text').data(edges).join('text')
+                                                                  .attr('font-size',9.5).attr('fill','var(--n400)').attr('text-anchor','middle').text(d=>d.parentesco||'');
+                                                                const nodeG=g.append('g').selectAll('g').data(nodes).join('g')
+                                                                  .style('cursor','pointer')
+                                                                  .call(d3.drag()
+                                                                    .on('start',(ev,d)=>{if(!ev.active)_mfSim.alphaTarget(0.25).restart();d.fx=d.x;d.fy=d.y;})
+                                                                    .on('drag',(ev,d)=>{d.fx=ev.x;d.fy=ev.y;})
+                                                                    .on('end',(ev,d)=>{if(!ev.active)_mfSim.alphaTarget(0);d.fx=null;d.fy=null;}))
+                                                                  .on('mouseenter',mostrarTooltip).on('mousemove',mostrarTooltip).on('mouseleave',esconderTooltip)
+                                                                  .on('click',(ev,d)=>irParaPaciente(d));
+                                                                nodeG.append('circle').attr('r',d=>d.id===_mfFocoId?20:16)
+                                                                  .attr('fill',d=>mfCorSexo(d.sexo))
+                                                                  .attr('stroke',d=>d.id===_mfFocoId?'#1a1917':'#fff')
+                                                                  .attr('stroke-width',d=>d.id===_mfFocoId?2.5:1.5);
+                                                                nodeG.filter(d=>mfNumCids(d)>0).append('circle')
+                                                                  .attr('r',7).attr('cx',12).attr('cy',-12).attr('fill','#dc2626').attr('stroke','#fff').attr('stroke-width',1.5);
+                                                                nodeG.filter(d=>mfNumCids(d)>0).append('text')
+                                                                  .attr('x',12).attr('y',-9).attr('text-anchor','middle').attr('font-size',8.5).attr('fill','#fff').attr('font-weight',700)
+                                                                  .text(d=>mfNumCids(d));
+                                                                nodeG.append('text').attr('y',30).attr('text-anchor','middle').attr('font-size',10.5).attr('fill','var(--n700)')
+                                                                  .text(d=>(d.nome||'').split(' ').slice(0,2).join(' '));
+                                                                if(showCids){
+                                                                  nodeG.filter(d=>mfNumCids(d)>0).append('text').attr('y',43).attr('text-anchor','middle').attr('font-size',8.5).attr('fill','#dc2626')
+                                                                    .text(d=>d.cids.slice(0,3).map(c=>c.code||c.codigo).filter(Boolean).join(', ')+(d.cids.length>3?'…':''));
+                                                                }
+                                                                _mfSim=d3.forceSimulation(nodes)
+                                                                  .force('link',d3.forceLink(edges).id(d=>d.id).distance(115).strength(0.7))
+                                                                  .force('charge',d3.forceManyBody().strength(-260))
+                                                                  .force('center',d3.forceCenter(W/2,H/2))
+                                                                  .force('collide',d3.forceCollide(42))
+                                                                  .on('tick',()=>{
+                                                                    linkSel.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+                                                                    linkLabel.attr('x',d=>(d.source.x+d.target.x)/2).attr('y',d=>(d.source.y+d.target.y)/2);
+                                                                    nodeG.attr('transform',d=>`translate(${d.x},${d.y})`);
+                                                                  });
+                                                              } else {
+                                                                const focoId=(_mfFocoId&&byId[_mfFocoId])?_mfFocoId:(nodes[0]&&nodes[0].id);
+                                                                const OFFSET={parent:-1,child:1,grandparent:-2,grandchild:2,great_grandparent:-3,great_grandchild:3,uncle_aunt:-1,nephew_niece:1,sibling:0,cousin:0};
+                                                                const PAPEL={Pai:'parent',Mãe:'parent',Filho:'child',Filha:'child',Avô:'grandparent',Avó:'grandparent',Neto:'grandchild',Neta:'grandchild',Bisavô:'great_grandparent',Bisavó:'great_grandparent',Bisneto:'great_grandchild',Bisneta:'great_grandchild',Tio:'uncle_aunt',Tia:'uncle_aunt',Sobrinho:'nephew_niece',Sobrinha:'nephew_niece',Irmão:'sibling',Irmã:'sibling',Primo:'cousin',Prima:'cousin'};
+                                                                const adj={};nodes.forEach(n=>adj[n.id]=[]);
+                                                                edges.forEach(e=>{
+                                                                  const papel=PAPEL[e.parentesco]||null;
+                                                                  const off=papel?OFFSET[papel]:0;
+                                                                  if(adj[e.origem])adj[e.origem].push({to:e.destino,off});
+                                                                  if(adj[e.destino])adj[e.destino].push({to:e.origem,off:-off});
+                                                                });
+                                                                const geracao={};
+                                                                if(focoId){
+                                                                  geracao[focoId]=0;
+                                                                  const fila=[focoId];
+                                                                  while(fila.length){
+                                                                    const atual=fila.shift();
+                                                                    (adj[atual]||[]).forEach(v=>{
+                                                                      if(geracao[v.to]===undefined){geracao[v.to]=geracao[atual]+v.off;fila.push(v.to);}
+                                                                    });
+                                                                  }
+                                                                }
+                                                                nodes.forEach(n=>{if(geracao[n.id]===undefined)geracao[n.id]=0;});
+                                                                const porGeracao={};
+                                                                nodes.forEach(n=>{(porGeracao[geracao[n.id]]=porGeracao[geracao[n.id]]||[]).push(n);});
+                                                                const geracoes=Object.keys(porGeracao).map(Number).sort((a,b)=>a-b);
+                                                                const alturaLinha=Math.min(140,(H-90)/Math.max(geracoes.length,1));
+                                                                geracoes.forEach((ger,gi)=>{
+                                                                  const lista=porGeracao[ger];
+                                                                  const larguraCol=W/(lista.length+1);
+                                                                  lista.forEach((n,i)=>{n.x=larguraCol*(i+1);n.y=55+gi*alturaLinha;});
+                                                                });
+                                                                g.append('g').attr('stroke','var(--n200)').attr('stroke-width',1.3)
+                                                                  .selectAll('line').data(edges.filter(e=>byId[e.origem]&&byId[e.destino])).join('line')
+                                                                  .attr('x1',d=>byId[d.origem].x).attr('y1',d=>byId[d.origem].y)
+                                                                  .attr('x2',d=>byId[d.destino].x).attr('y2',d=>byId[d.destino].y);
+                                                                const nodeG=g.append('g').selectAll('g').data(nodes).join('g')
+                                                                  .attr('transform',d=>`translate(${d.x},${d.y})`)
+                                                                  .style('cursor','pointer')
+                                                                  .on('mouseenter',mostrarTooltip).on('mousemove',mostrarTooltip).on('mouseleave',esconderTooltip)
+                                                                  .on('click',(ev,d)=>irParaPaciente(d));
+                                                                nodeG.append('rect').attr('x',-46).attr('y',-16).attr('width',92).attr('height',32).attr('rx',8)
+                                                                  .attr('fill',d=>mfCorSexo(d.sexo)).attr('opacity',0.14)
+                                                                  .attr('stroke',d=>mfCorSexo(d.sexo)).attr('stroke-width',d=>d.id===focoId?2.5:1.2);
+                                                                nodeG.filter(d=>mfNumCids(d)>0).append('circle').attr('cx',40).attr('cy',-14).attr('r',7).attr('fill','#dc2626').attr('stroke','#fff').attr('stroke-width',1.5);
+                                                                nodeG.filter(d=>mfNumCids(d)>0).append('text').attr('x',40).attr('y',-11).attr('text-anchor','middle').attr('font-size',8.5).attr('fill','#fff').attr('font-weight',700).text(d=>mfNumCids(d));
+                                                                nodeG.append('text').attr('y',4).attr('text-anchor','middle').attr('font-size',10).attr('fill','var(--n700)').text(d=>(d.nome||'').split(' ').slice(0,2).join(' '));
+                                                                if(showCids){
+                                                                  nodeG.filter(d=>mfNumCids(d)>0).append('text').attr('y',24).attr('text-anchor','middle').attr('font-size',8).attr('fill','#dc2626')
+                                                                    .text(d=>d.cids.slice(0,2).map(c=>c.code||c.codigo).filter(Boolean).join(', ')+(d.cids.length>2?'…':''));
+                                                                }
+                                                              }
+                                                            }
+
                                                             function memoriaPacienteKey(){return 'memoriaPaciente_'+((currentPatient&&currentPatient.id)||'anon');}
                                                             const MEMORIA_SECTIONS=[
                                                               {k:'perfil',       label:'Perfil e preferências',        icon:'ti-user-heart',    desc:'Como o paciente gosta de ser tratado, apelido, idioma, tom de comunicação preferido.', ph:'Ex: Prefere ser chamado de "Seu João". Comunicação direta e objetiva. Não gosta de termos médicos complexos.'},
