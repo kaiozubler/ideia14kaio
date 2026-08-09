@@ -14598,10 +14598,23 @@ let rxSelected = [];
                                                               }
                                                               closeModal();kConfirmarEntrada(id);
                                                             }
-                                                            function kConfirmarEntrada(id){
+                                                            async function kConfirmarEntrada(id){
                                                               kSetMeta(id,{enteredAt:new Date().toISOString()});
                                                               kMoveCard(id,'aguardando',true);
                                                               showToast('Entrada registrada','success');
+                                                              // Se o card corresponde a um agendamento real (Supabase), registra
+                                                              // o horário de entrada para permitir comparar com o horário agendado
+                                                              // (usado depois para calcular hábitos de pontualidade na Agenda).
+                                                              const raw=(AGENDAMENTOS||[]).find(r=>String(r.id)===String(id));
+                                                              if(raw){
+                                                                try{
+                                                                  const nowIso=new Date().toISOString();
+                                                                  const{error}=await sb.from('agendamentos').update({horario_entrada:nowIso}).eq('id',id);
+                                                                  if(error)throw error;
+                                                                  raw.horario_entrada=nowIso;
+                                                                  if(typeof agMapRow==='function')AG_APTS=AGENDAMENTOS.map(agMapRow).sort((a,b)=>a.dateObj-b.dateObj);
+                                                                }catch(e){console.error('registrar horario_entrada',e);}
+                                                              }
                                                             }
                                                             function pendenciaDarEntrada(){const id=_kCurrent.id;closeModal();if(id)kConfirmarEntrada(id);}
                                                             function pendenciaCobrar(){const id=_kCurrent.id;closeModal();if(id)kCobrar(id);}
@@ -14972,6 +14985,7 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                 specialty:r.especialidade||'',
                                                                 motivo:r.motivo||'',
                                                                 duracao:r.duracao_min||30,
+                                                                horarioEntrada:r.horario_entrada||null,
                                                                 doctor:agDoctorName(),
                                                                 doctorId:1,
                                                                 date:d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),
@@ -15076,6 +15090,16 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               const reagendamentos=hist.filter(r=>(r.status||'').toLowerCase()==='reagendado');
                                                               const lines=[];
                                                               lines.push(`Histórico: ${total} consulta${total>1?'s':''} anterior${total>1?'es':''}${faltas?`, ${faltas} falta${faltas>1?'s':''}`:', sem faltas registradas'}.`);
+                                                              // Pontualidade real: horario_entrada (check-in no kanban de Atendimentos) x data_hora agendada
+                                                              const comEntrada=hist.filter(r=>r.horario_entrada);
+                                                              if(comEntrada.length){
+                                                                const deltasMin=comEntrada.map(r=>(new Date(r.horario_entrada)-new Date(r.data_hora))/60000);
+                                                                const mediaMin=Math.round(deltasMin.reduce((s,v)=>s+v,0)/deltasMin.length);
+                                                                const n=comEntrada.length;
+                                                                if(mediaMin>4)lines.push(`Costuma atrasar: em média ${mediaMin} min após o horário agendado (${n} entrada${n>1?'s':''} registrada${n>1?'s':''}).`);
+                                                                else if(mediaMin<-4)lines.push(`Costuma chegar adiantado: em média ${Math.abs(mediaMin)} min antes do horário agendado (${n} entrada${n>1?'s':''} registrada${n>1?'s':''}).`);
+                                                                else lines.push(`Costuma chegar no horário (${n} entrada${n>1?'s':''} registrada${n>1?'s':''}).`);
+                                                              }
                                                               if(reagendamentos.length){
                                                                 const deltas=reagendamentos.map(r=>{
                                                                   const dh=new Date(r.data_hora),up=new Date(r.updated_at);
