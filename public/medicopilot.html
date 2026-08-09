@@ -6553,7 +6553,8 @@
                                                                 medico:document.getElementById('d-medico')?.value||null,
                                                                 grupo:document.getElementById('d-grupo')?.value||null,
                                                                 ocupacao:document.getElementById('d-ocup')?.value.trim()||null
-                                                              };
+                                                               ,parentescos:getParentescosPayload()
+                                                               };
                                                               const {data,error}=await sb.from('pacientes').update(payload).eq('paciente_id',currentPatient.id).select('*').single();
                                                               if(error){showToast('Erro ao salvar paciente: '+error.message,'error');return;}
                                                               const updated=mapPatientRow(data);
