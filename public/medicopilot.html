@@ -6764,16 +6764,22 @@
                                                               document.getElementById('mf-empty').style.display='none';
                                                               if(svg)svg.innerHTML='<text x="50%" y="50%" text-anchor="middle" fill="var(--n400)" font-size="12">Carregando...</text>';
                                                               const {data,error}=await sb.rpc('grafo_familiar',{p_paciente_id:_mfFocoId});
-                                                              if(error||!data){
+                                                              const emptyEl=document.getElementById('mf-empty');
+                                                              if(error){
+                                                                console.error('grafo_familiar:',error);
                                                                 if(svg)svg.innerHTML='';
-                                                                document.getElementById('mf-empty').style.display='flex';
+                                                                emptyEl.innerHTML='<i class="ti ti-alert-triangle" style="font-size:32px;color:#dc2626"></i>'
+                                                                  +'<span style="font-size:13px;color:#dc2626;max-width:440px;text-align:center">Não foi possível carregar o mapa familiar.<br>'
+                                                                  +'<span style="font-family:monospace;font-size:11px">'+((error.message||'').replace(/</g,'&lt;'))+'</span></span>';
+                                                                emptyEl.style.display='flex';
                                                                 if(typeof toast==='function')toast('Não foi possível carregar o mapa familiar');
                                                                 return;
                                                               }
-                                                              _mfData=data;
-                                                              if(!data.nodes||!data.nodes.length){
+                                                              _mfData=data||{nodes:[],edges:[]};
+                                                              if(!_mfData.nodes||!_mfData.nodes.length){
                                                                 if(svg)svg.innerHTML='';
-                                                                document.getElementById('mf-empty').style.display='flex';
+                                                                emptyEl.innerHTML='<i class="ti ti-affiliate" style="font-size:32px"></i><span style="font-size:13px">Nenhum parente vinculado ainda.</span>';
+                                                                emptyEl.style.display='flex';
                                                                 return;
                                                               }
                                                               mfSetView('mapa');
