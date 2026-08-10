@@ -12918,25 +12918,11 @@ let rxSelected = [];
                                                           r.onerror = reject;
                                                           r.readAsDataURL(pdfBlob);
                                                         });
-                                                        const resp = await fetch('/api/signature/sign', {
-                                                          method: 'POST',
-                                                          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-                                                          body: JSON.stringify({
-                                                            pdfBase64,
-                                                            filename,
-                                                            contentDescription: contentDescription || `Documento para ${patientName || 'paciente'}`,
-                                                          }),
-                                                        });
-                                                        if (resp.ok) {
-                                                          const j = await resp.json();
-                                                          signedUrl = j.signedPdfUrl;
+                                                        const _sg = await _assinarPdfBase64(token, { pdfBase64, filename, contentDescription: contentDescription || `Documento para ${patientName || 'paciente'}` });
+                                                        if (_sg && _sg.signedPdfUrl) {
+                                                          signedUrl = _sg.signedPdfUrl;
                                                           const dl = await fetch(signedUrl);
                                                           if (dl.ok) finalBlob = await dl.blob();
-                                                        } else {
-                                                          const j = await resp.json().catch(() => ({}));
-                                                          if (j.error && j.error !== 'not_configured' && j.error !== 'credential_expired') {
-                                                            console.warn('Assinatura ICP falhou:', j);
-                                                          }
                                                         }
                                                       }
                                                     } catch (e) { console.warn('Assinatura opcional falhou, seguindo sem assinatura:', e); }
@@ -13116,25 +13102,11 @@ let rxSelected = [];
                                                           r.onerror = reject;
                                                           r.readAsDataURL(pdfBlob);
                                                         });
-                                                        const resp = await fetch('/api/signature/sign', {
-                                                          method: 'POST',
-                                                          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-                                                          body: JSON.stringify({
-                                                            pdfBase64,
-                                                            filename,
-                                                            contentDescription: contentDescription || `Documento para ${patientName || 'paciente'}`,
-                                                          }),
-                                                        });
-                                                        if (resp.ok) {
-                                                          const j = await resp.json();
-                                                          signedUrl = j.signedPdfUrl;
+                                                        const _sg = await _assinarPdfBase64(token, { pdfBase64, filename, contentDescription: contentDescription || `Documento para ${patientName || 'paciente'}` });
+                                                        if (_sg && _sg.signedPdfUrl) {
+                                                          signedUrl = _sg.signedPdfUrl;
                                                           const dl = await fetch(signedUrl);
                                                           if (dl.ok) finalBlob = await dl.blob();
-                                                        } else {
-                                                          const j = await resp.json().catch(() => ({}));
-                                                          if (j.error && j.error !== 'not_configured' && j.error !== 'credential_expired') {
-                                                            console.warn('Assinatura ICP falhou:', j);
-                                                          }
                                                         }
                                                       }
                                                     } catch (e) { console.warn('Assinatura opcional falhou, seguindo sem assinatura:', e); }
@@ -13904,25 +13876,11 @@ let rxSelected = [];
                                                           r.onerror = reject;
                                                           r.readAsDataURL(pdfBlob);
                                                         });
-                                                        const resp = await fetch('/api/signature/sign', {
-                                                          method: 'POST',
-                                                          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-                                                          body: JSON.stringify({
-                                                            pdfBase64,
-                                                            filename,
-                                                            contentDescription: `Solicitação de exames para ${patientName || 'paciente'}`,
-                                                          }),
-                                                        });
-                                                        if (resp.ok) {
-                                                          const j = await resp.json();
-                                                          signedUrl = j.signedPdfUrl;
+                                                        const _sg = await _assinarPdfBase64(token, { pdfBase64, filename, contentDescription: `Solicitação de exames para ${patientName || 'paciente'}` });
+                                                        if (_sg && _sg.signedPdfUrl) {
+                                                          signedUrl = _sg.signedPdfUrl;
                                                           const dl = await fetch(signedUrl);
                                                           if (dl.ok) finalBlob = await dl.blob();
-                                                        } else {
-                                                          const j = await resp.json().catch(() => ({}));
-                                                          if (j.error && j.error !== 'not_configured' && j.error !== 'credential_expired') {
-                                                            console.warn('Assinatura ICP falhou:', j);
-                                                          }
                                                         }
                                                       }
                                                     } catch (e) { console.warn('Assinatura opcional falhou, seguindo sem assinatura:', e); }
