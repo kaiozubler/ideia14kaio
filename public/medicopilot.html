@@ -7668,8 +7668,24 @@ showAtendList();
                                                               if(exs.length){
                                                                 h+='<div style="margin-top:6px"><strong>Exames identificados ('+exs.length+'):</strong><ul style="margin:4px 0 0 16px;padding:0">';
                                                                 exs.forEach(function(e){
-                                                                  h+='<li>'+esc(e.nome)+(e.codigo_tuss?(' <span style="color:#64748b">(TUSS '+esc(e.codigo_tuss)+')</span>'):'')
-                                                                    +(e.resultado?(' — '+esc(e.resultado)):'')+'</li>';
+                                                                  const tuss=e.codigo_tuss
+                                                                    ? ' <span style="color:#64748b">(TUSS '+esc(e.codigo_tuss)+')</span>'
+                                                                    : ' <span style="color:#b45309">(TUSS nao localizado - vincular manualmente)</span>';
+                                                                  h+='<li>'+esc(e.nome)+tuss+(e.resultado?(' — '+esc(e.resultado)):'');
+                                                                  const vals=Array.isArray(e.valores)?e.valores:[];
+                                                                  if(vals.length){
+                                                                    h+='<ul style="margin:2px 0 0 14px;padding:0;color:#475569">';
+                                                                    vals.forEach(function(v){
+                                                                      const sit=String(v.situacao||'');
+                                                                      const cor=(sit==='acima'||sit==='abaixo')?'#b91c1c':(sit==='normal'?'#047857':'#64748b');
+                                                                      const rot=sit==='nao_informada'?'referencia nao informada':sit;
+                                                                      h+='<li>'+esc(v.analito)+': <strong>'+esc(v.valor)+'</strong>'
+                                                                        +(v.referencia?(' <span style="color:#94a3b8">(ref. '+esc(v.referencia)+')</span>'):'')
+                                                                        +' <span style="color:'+cor+';font-weight:600">'+esc(rot)+'</span></li>';
+                                                                    });
+                                                                    h+='</ul>';
+                                                                  }
+                                                                  h+='</li>';
                                                                 });
                                                                 h+='</ul></div>';
                                                               }
