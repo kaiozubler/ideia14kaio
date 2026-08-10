@@ -12953,15 +12953,21 @@ let rxSelected = [];
                                                       j = await resp.json().catch(() => ({}));
                                                     }
                                                     if (!resp.ok) {
-                                                      if (j.error && j.error !== 'not_configured' && j.error !== 'credential_expired') {
-                                                        console.warn('Assinatura ICP falhou:', j);
-                                                        showToast && showToast('Erro ao assinar: ' + (j.message || j.error), 'error');
-                                                      }
+                                                      console.warn('Assinatura ICP falhou:', resp.status, j);
+                                                      const _msg = j.message || j.error || ('HTTP ' + resp.status);
+                                                      showToast && showToast('PDF gerado SEM assinatura digital — ' + _msg, 'error');
                                                       return null;
                                                     }
+                                                    if (!j.signedPdfUrl) {
+                                                      console.warn('Assinatura ICP retornou sem URL do PDF assinado:', j);
+                                                      showToast && showToast('PDF gerado SEM assinatura digital — resposta inválida do provedor', 'error');
+                                                      return null;
+                                                    }
+                                                    showToast && showToast('Documento assinado digitalmente (ICP-Brasil)', 'success');
                                                     return j;
                                                   } catch (e) {
-                                                    console.warn('Assinatura opcional falhou:', e);
+                                                    console.warn('Assinatura falhou:', e);
+                                                    showToast && showToast('PDF gerado SEM assinatura digital — falha de comunicação', 'error');
                                                     return null;
                                                   }
                                                 }
