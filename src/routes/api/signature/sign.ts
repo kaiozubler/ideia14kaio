@@ -22,8 +22,14 @@ function errorResponse(err: unknown) {
     const e = err as { message: string; status?: number };
     const status = e.status && e.status >= 400 && e.status < 600 ? e.status : 502;
     console.error("[signature/sign] bry_error", status, e.message);
+    const code =
+      status === 401 || status === 403
+        ? "provider_unauthorized"
+        : status === 409
+          ? "cloud_certificate_not_found"
+          : "provider_unavailable";
     return Response.json(
-      { error: status === 401 || status === 403 ? "provider_unauthorized" : "provider_unavailable", message: e.message },
+      { error: code, message: e.message },
       { status },
     );
   }
