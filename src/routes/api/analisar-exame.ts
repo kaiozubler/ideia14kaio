@@ -5,6 +5,8 @@ type Body = {
   arquivo?: AnexoExame;
   texto?: string;
   paciente?: { nome?: string | null; cpf?: string | null; data_nascimento?: string | null } | null;
+  /** Médico logado — usado só para priorizar os aliases de exame dele na busca TUSS. */
+  user_id?: string | null;
 };
 
 export const Route = createFileRoute("/api/analisar-exame")({
@@ -31,9 +33,14 @@ export const Route = createFileRoute("/api/analisar-exame")({
             texto: body.texto,
             paciente: body.paciente ?? null,
             buscarTuss: async (termo) => {
-              const { data } = await supabaseAdmin.rpc("buscar_tuss", { termo, p_limit: 1 });
+              const { data } = await supabaseAdmin.rpc("buscar_tuss", {
+                termo,
+                p_limit: 1,
+                p_usar_alias: true,
+                p_user_id: body.user_id ?? null,
+              });
               const hit = (data as any[] | null)?.[0];
-              return hit ? { codigo_tuss: hit.codigo_tuss, nome: hit.nome } : null;
+              return hit ? { id: hit.id, codigo_tuss: hit.codigo_tuss, nome: hit.nome } : null;
             },
           });
           return Response.json(analise);

@@ -462,9 +462,13 @@ export const Route = createFileRoute("/api/chat-ia")({
                 data_nascimento: body.paciente_nascimento ?? null,
               },
               buscarTuss: async (termo) => {
-                const { data } = await supabaseAdmin.rpc("buscar_tuss", { termo, p_limit: 1 });
+                const { data } = await supabaseAdmin.rpc("buscar_tuss", {
+                  termo,
+                  p_limit: 1,
+                  p_usar_alias: true,
+                });
                 const hit = (data as any[] | null)?.[0];
-                return hit ? { codigo_tuss: hit.codigo_tuss, nome: hit.nome } : null;
+                return hit ? { id: hit.id, codigo_tuss: hit.codigo_tuss, nome: hit.nome } : null;
               },
             });
           }

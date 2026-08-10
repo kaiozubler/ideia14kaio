@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.sync_parentescos_reciprocos() FROM PUBLIC, anon, authenticated;
