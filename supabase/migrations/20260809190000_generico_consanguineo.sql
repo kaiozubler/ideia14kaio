@@ -167,7 +167,8 @@ END;
 $$;
 
 -- Sugestão por parente em comum: mesma lógica, agora com termo genérico.
-CREATE OR REPLACE FUNCTION public.buscar_parentes_possiveis(p_paciente_id uuid, p_limit integer DEFAULT 20)
+DROP FUNCTION IF EXISTS public.buscar_parentes_possiveis(uuid, integer);
+CREATE FUNCTION public.buscar_parentes_possiveis(p_paciente_id uuid, p_limit integer DEFAULT 20)
 RETURNS TABLE(paciente_id uuid, name text, cpf text, data_nascimento date, parentesco_sugerido text, motivo text)
 LANGUAGE sql
 STABLE
