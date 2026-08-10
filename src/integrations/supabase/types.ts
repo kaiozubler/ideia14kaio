@@ -1886,7 +1886,7 @@ export type Database = {
           motivo: string
           name: string
           paciente_id: string
-          sobrenome: string
+          parentesco_sugerido: string
         }[]
       }
       buscar_tuss:
@@ -1959,15 +1959,13 @@ export type Database = {
       }
       normaliza_substancia: { Args: { t: string }; Returns: string }
       parentesco_papel: { Args: { termo: string }; Returns: string }
+      parentesco_papel_composto: {
+        Args: { papel1: string; papel2: string }
+        Returns: string
+      }
       parentesco_papel_oposto: { Args: { papel: string }; Returns: string }
-      parentesco_reciproco: {
-        Args: { sexo_origem: string; termo: string }
-        Returns: string
-      }
-      parentesco_termo_por_papel: {
-        Args: { papel: string; sexo: string }
-        Returns: string
-      }
+      parentesco_reciproco: { Args: { termo: string }; Returns: string }
+      parentesco_termo_por_papel: { Args: { papel: string }; Returns: string }
       relatorio_protocolos: {
         Args: never
         Returns: {
