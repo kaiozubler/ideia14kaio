@@ -99,6 +99,16 @@ export const BryKmsApi = {
       } catch {
         /* keep default */
       }
+      // Erro típico: o token do HUB pertence a uma conta sem certificado em nuvem
+      // vinculado, ou o CPF informado não possui certificado no BRyKMS.
+      if (/não possui certificado em nuvem|certificado em nuvem/i.test(message)) {
+        throw new BryError(
+          "O CPF vinculado não possui certificado ICP-Brasil em nuvem ativo na BRy. " +
+            "Verifique o CPF/UUID do certificado em Configurações > Assinatura digital, " +
+            "ou use um certificado local (.pfx/.p12).",
+          409,
+        );
+      }
       throw new BryError(message, res.status >= 400 && res.status < 500 ? res.status : 502);
     }
 
