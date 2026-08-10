@@ -1,6 +1,9 @@
 /* ============================================================
    MINHA EQUIPE — módulo standalone (adaptação de GestaoUsuarios.jsx)
-   Renderiza dentro de #s-equipe. Estado em memória (mock).
+   Renderiza dentro de #s-equipe. Estado em memória: o perfil é
+   preenchido com os dados do usuário logado (via Supabase Auth);
+   a listagem de usuários e os grupos ficam vazios até a estruturação
+   de equipes/convites ser implementada.
    ============================================================ */
 (function () {
   const WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
@@ -51,98 +54,24 @@
     "TO",
   ];
 
+  // Estado inicial: sem usuário/equipe/grupos ainda — será preenchido com os
+  // dados reais do usuário logado assim que a tela abrir (ver loadRealProfile()).
   const S = {
     profile: {
-      id: "me",
-      name: "Dra. Camila Andrade",
-      email: "camila.andrade@clinicasaude.com",
-      role: "Administradora",
-      phone: "(47) 99999-1234",
-      crm: { uf: "SC", number: "" },
+      id: null,
+      name: "",
+      email: "",
+      role: "Você",
+      phone: "",
+      crm: { uf: "", number: "" },
       notifications: { novoPaciente: true, agendaAlterada: true, mensagens: false, faturamento: true },
-      scheduleRules: [
-        { id: "rme1", kind: "recorrente", days: [0, 1, 2, 3, 4], startTime: "08:00", duration: 9, intervalWeeks: 1 },
-      ],
+      scheduleRules: [],
     },
-    users: [
-      {
-        id: "u1",
-        name: "Ana Costa",
-        email: "ana.costa@clinicasaude.com",
-        role: "Médica",
-        group: "g1",
-        phone: "(47) 98888-1111",
-        status: "active",
-        weeklyHours: 30,
-        crm: { uf: "SC", number: "123456" },
-        services: [
-          { id: 1, name: "Consulta", percent: 60 },
-          { id: 2, name: "Retorno", percent: 40 },
-        ],
-        scheduleRules: [
-          { id: "r1", kind: "recorrente", days: [4], startTime: "08:00", duration: 24, intervalWeeks: 1 },
-        ],
-      },
-      {
-        id: "u2",
-        name: "João Pereira",
-        email: "joao.pereira@clinicasaude.com",
-        role: "Recepcionista",
-        group: "g2",
-        phone: "(47) 97777-2222",
-        status: "active",
-        weeklyHours: 40,
-        services: [],
-        scheduleRules: [
-          { id: "r2", kind: "recorrente", days: [0, 1, 2, 3, 4], startTime: "08:00", duration: 10, intervalWeeks: 1 },
-        ],
-      },
-      {
-        id: "u3",
-        name: "Rafael Mendes",
-        email: "rafael.mendes@clinicasaude.com",
-        role: "Médico",
-        group: "g1",
-        phone: "(47) 96666-3333",
-        status: "inactive",
-        weeklyHours: 20,
-        crm: { uf: "SC", number: "654321" },
-        services: [{ id: 3, name: "Cirurgia", percent: 55 }],
-        scheduleRules: [],
-      },
-      {
-        id: "u4",
-        name: "Beatriz Melo",
-        email: "beatriz.melo@clinicasaude.com",
-        role: "Médica",
-        group: "g1",
-        phone: "(47) 95555-4444",
-        status: "active",
-        weeklyHours: 24,
-        crm: { uf: "SC", number: "987654" },
-        services: [{ id: 4, name: "Procedimento", percent: 45 }],
-        scheduleRules: [
-          { id: "r3", kind: "recorrente", days: [1], startTime: "07:00", duration: 12, intervalWeeks: 2 },
-        ],
-      },
-    ],
-    groups: [
-      {
-        id: "g1",
-        name: "Médicos",
-        color: "emerald",
-        permissions: ["agenda_ver", "prontuario", "financeiro_proprio"],
-        members: ["u1", "u3", "u4"],
-      },
-      { id: "g2", name: "Recepção", color: "sky", permissions: ["agenda_ver", "cadastro_paciente"], members: ["u2"] },
-      {
-        id: "g3",
-        name: "Administração",
-        color: "amber",
-        permissions: ["financeiro_total", "usuarios", "agenda_ver", "agenda_editar"],
-        members: [],
-      },
-    ],
+    // A listagem de membros da equipe e os grupos de acesso ainda não têm
+    // fonte de dados real (não há convites/estrutura de equipe implementados).
+    // Permanecem vazios até essa estruturação existir.
+    users: [],
+    groups: [],
     search: "",
     profileOpen: false,
     canEditRestricted: true,
@@ -314,15 +243,42 @@
       bind("eq-p-crm-num", (e) => {
         p.crm = { ...p.crm, number: e.target.value.replace(/\D/g, "").slice(0, 6) };
       });
-      document.getElementById("eq-p-save").onclick = () => {
+      document.getElementById("eq-p-save").onclick = async () => {
+        const btn = document.getElementById("eq-p-save");
         const s = document.getElementById("eq-p-saved");
+        const newMeta = {
+          full_name: p.name,
+          telefone: p.phone,
+          crm_uf: p.crm?.uf || "",
+          crm_numero: p.crm?.number || "",
+        };
+        if (window.sb?.auth?.updateUser) {
+          btn.disabled = true;
+          try {
+            await window.sb.auth.updateUser({ data: newMeta });
+            if (window.currentUser) {
+              window.currentUser.user_metadata = { ...(window.currentUser.user_metadata || {}), ...newMeta };
+            }
+          } catch (e) {
+            console.error("Falha ao salvar perfil", e);
+          } finally {
+            btn.disabled = false;
+          }
+        }
         s.style.display = "";
         setTimeout(() => (s.style.display = "none"), 1600);
         renderProfile();
       };
-      document.getElementById("eq-p-reset").onclick = () => {
-        document.getElementById("eq-p-reset-msg").innerHTML =
-          '<b style="color:#059669">Link enviado para o seu e-mail ✓</b>';
+      document.getElementById("eq-p-reset").onclick = async () => {
+        const msgEl = document.getElementById("eq-p-reset-msg");
+        if (!p.email || !window.sb?.auth?.resetPasswordForEmail) return;
+        try {
+          await window.sb.auth.resetPasswordForEmail(p.email, { redirectTo: window.location.origin });
+          msgEl.innerHTML = '<b style="color:#059669">Link enviado para o seu e-mail ✓</b>';
+        } catch (e) {
+          console.error("Falha ao solicitar redefinição de senha", e);
+          msgEl.innerHTML = '<b style="color:#dc2626">Não foi possível enviar o link. Tente novamente.</b>';
+        }
         setTimeout(() => {
           const m = document.getElementById("eq-p-reset-msg");
           if (m) m.textContent = "Redefina sua senha por e-mail.";
@@ -1264,8 +1220,31 @@
     draw();
   }
 
+  /* ---------- perfil real (usuário logado) ---------- */
+  async function loadRealProfile() {
+    let u = window.currentUser;
+    if (!u && window.sb) {
+      try {
+        const { data } = await window.sb.auth.getSession();
+        u = data?.session?.user || null;
+        if (u) window.currentUser = u;
+      } catch (e) {
+        console.error("Falha ao obter sessão do usuário", e);
+      }
+    }
+    if (!u) return;
+    const meta = u.user_metadata || {};
+    S.profile.id = u.id;
+    S.profile.name = meta.full_name || meta.name || meta.name_user || (u.email || "").split("@")[0] || "Usuário";
+    S.profile.email = u.email || "";
+    S.profile.phone = meta.telefone || meta.phone || "";
+    S.profile.crm = { uf: meta.crm_uf || "", number: meta.crm_numero || "" };
+    renderProfile();
+  }
+
   /* ---------- init ---------- */
   window.initEquipe = function () {
     render();
+    loadRealProfile();
   };
 })();
