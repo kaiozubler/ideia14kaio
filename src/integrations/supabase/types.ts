@@ -1667,6 +1667,8 @@ export type Database = {
         Args: { p_vinculo_id: string }
         Returns: undefined
       }
+      grafo_familiar: { Args: { p_paciente_id?: string }; Returns: Json }
+      grau_do_parentesco: { Args: { termo: string }; Returns: string }
       grupo_busca_substancia: { Args: { nome_dcb: string }; Returns: string }
       historico_familiar_cids: {
         Args: { p_paciente_id: string }
@@ -1698,6 +1700,16 @@ export type Database = {
         }[]
       }
       normaliza_substancia: { Args: { t: string }; Returns: string }
+      parentesco_papel: { Args: { termo: string }; Returns: string }
+      parentesco_papel_oposto: { Args: { papel: string }; Returns: string }
+      parentesco_reciproco: {
+        Args: { sexo_origem: string; termo: string }
+        Returns: string
+      }
+      parentesco_termo_por_papel: {
+        Args: { papel: string; sexo: string }
+        Returns: string
+      }
       relatorio_protocolos: {
         Args: never
         Returns: {
