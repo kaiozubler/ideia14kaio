@@ -187,6 +187,39 @@ export type Database = {
           },
         ]
       }
+      conceitos_clinicos: {
+        Row: {
+          ativo: boolean
+          codigo: string
+          created_at: string
+          descricao: string | null
+          id: string
+          rotulo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          codigo: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          rotulo: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          ativo?: boolean
+          codigo?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          rotulo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       consulta: {
         Row: {
           acao: string | null
@@ -377,6 +410,47 @@ export type Database = {
           },
         ]
       }
+      exame_alias: {
+        Row: {
+          ativo: boolean
+          confianca: number | null
+          created_at: string
+          id: string
+          origem: string
+          texto_original: string
+          tuss_procedimento_id: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          confianca?: number | null
+          created_at?: string
+          id?: string
+          origem?: string
+          texto_original: string
+          tuss_procedimento_id: string
+          user_id?: string
+        }
+        Update: {
+          ativo?: boolean
+          confianca?: number | null
+          created_at?: string
+          id?: string
+          origem?: string
+          texto_original?: string
+          tuss_procedimento_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exame_alias_tuss_procedimento_id_fkey"
+            columns: ["tuss_procedimento_id"]
+            isOneToOne: false
+            referencedRelation: "tuss_procedimentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exame_modelos: {
         Row: {
           carater: string
@@ -429,8 +503,14 @@ export type Database = {
           nome: string
           obs: string | null
           paciente_id: string
+          protocolo_tarefa_id: string | null
           resultado: string | null
+          resultado_estruturado: Json | null
+          resultado_original: string | null
+          status_protocolo: string
+          status_tuss: string
           tipo: string | null
+          tuss_procedimento_id: string | null
           updated_at: string
           user_id: string
           validade: string | null
@@ -445,8 +525,14 @@ export type Database = {
           nome: string
           obs?: string | null
           paciente_id: string
+          protocolo_tarefa_id?: string | null
           resultado?: string | null
+          resultado_estruturado?: Json | null
+          resultado_original?: string | null
+          status_protocolo?: string
+          status_tuss?: string
           tipo?: string | null
+          tuss_procedimento_id?: string | null
           updated_at?: string
           user_id?: string
           validade?: string | null
@@ -461,8 +547,14 @@ export type Database = {
           nome?: string
           obs?: string | null
           paciente_id?: string
+          protocolo_tarefa_id?: string | null
           resultado?: string | null
+          resultado_estruturado?: Json | null
+          resultado_original?: string | null
+          status_protocolo?: string
+          status_tuss?: string
           tipo?: string | null
+          tuss_procedimento_id?: string | null
           updated_at?: string
           user_id?: string
           validade?: string | null
@@ -475,6 +567,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "pacientes"
             referencedColumns: ["paciente_id"]
+          },
+          {
+            foreignKeyName: "exames_protocolo_tarefa_id_fkey"
+            columns: ["protocolo_tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "protocolo_tarefas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exames_tuss_procedimento_id_fkey"
+            columns: ["tuss_procedimento_id"]
+            isOneToOne: false
+            referencedRelation: "tuss_procedimentos"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1087,55 +1193,88 @@ export type Database = {
       protocolo_acoes: {
         Row: {
           auto_restart: boolean
+          catalogo_status: string
           created_at: string
           descricao: string | null
           especialidade: string | null
           frequency: number
           id: string
+          id_substancia: string | null
           nome: string
           protocolo_id: string
           recurrent: boolean
+          regra_pai_id: string | null
           start_day: number
           tipo: string
+          tuss_procedimento_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           auto_restart?: boolean
+          catalogo_status?: string
           created_at?: string
           descricao?: string | null
           especialidade?: string | null
           frequency?: number
           id?: string
+          id_substancia?: string | null
           nome: string
           protocolo_id: string
           recurrent?: boolean
+          regra_pai_id?: string | null
           start_day?: number
           tipo?: string
+          tuss_procedimento_id?: string | null
           updated_at?: string
           user_id?: string
         }
         Update: {
           auto_restart?: boolean
+          catalogo_status?: string
           created_at?: string
           descricao?: string | null
           especialidade?: string | null
           frequency?: number
           id?: string
+          id_substancia?: string | null
           nome?: string
           protocolo_id?: string
           recurrent?: boolean
+          regra_pai_id?: string | null
           start_day?: number
           tipo?: string
+          tuss_procedimento_id?: string | null
           updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
+            foreignKeyName: "protocolo_acoes_id_substancia_fkey"
+            columns: ["id_substancia"]
+            isOneToOne: false
+            referencedRelation: "substancias"
+            referencedColumns: ["id_substancia"]
+          },
+          {
             foreignKeyName: "protocolo_acoes_protocolo_id_fkey"
             columns: ["protocolo_id"]
             isOneToOne: false
             referencedRelation: "protocolos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "protocolo_acoes_regra_pai_fkey"
+            columns: ["regra_pai_id"]
+            isOneToOne: false
+            referencedRelation: "protocolo_regras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "protocolo_acoes_tuss_procedimento_id_fkey"
+            columns: ["tuss_procedimento_id"]
+            isOneToOne: false
+            referencedRelation: "tuss_procedimentos"
             referencedColumns: ["id"]
           },
         ]
@@ -1172,6 +1311,63 @@ export type Database = {
           },
         ]
       }
+      protocolo_regras: {
+        Row: {
+          acao_gatilho_id: string
+          condicao: Json | null
+          created_at: string
+          descricao: string | null
+          id: string
+          is_default: boolean
+          ordem: number
+          protocolo_id: string
+          repete_gatilho_apos_dias: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          acao_gatilho_id: string
+          condicao?: Json | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          is_default?: boolean
+          ordem?: number
+          protocolo_id: string
+          repete_gatilho_apos_dias?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          acao_gatilho_id?: string
+          condicao?: Json | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          is_default?: boolean
+          ordem?: number
+          protocolo_id?: string
+          repete_gatilho_apos_dias?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "protocolo_regras_acao_gatilho_id_fkey"
+            columns: ["acao_gatilho_id"]
+            isOneToOne: false
+            referencedRelation: "protocolo_acoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "protocolo_regras_protocolo_id_fkey"
+            columns: ["protocolo_id"]
+            isOneToOne: false
+            referencedRelation: "protocolos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       protocolo_tarefas: {
         Row: {
           acao_id: string
@@ -1185,6 +1381,9 @@ export type Database = {
           paciente_id: string
           paciente_protocolo_id: string
           protocolo_id: string
+          regra_origem_id: string | null
+          resultado_registrado_em: string | null
+          resultado_valor: Json | null
           status: string
           updated_at: string
           user_id: string
@@ -1201,6 +1400,9 @@ export type Database = {
           paciente_id: string
           paciente_protocolo_id: string
           protocolo_id: string
+          regra_origem_id?: string | null
+          resultado_registrado_em?: string | null
+          resultado_valor?: Json | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -1217,6 +1419,9 @@ export type Database = {
           paciente_id?: string
           paciente_protocolo_id?: string
           protocolo_id?: string
+          regra_origem_id?: string | null
+          resultado_registrado_em?: string | null
+          resultado_valor?: Json | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -1248,6 +1453,13 @@ export type Database = {
             columns: ["protocolo_id"]
             isOneToOne: false
             referencedRelation: "protocolos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "protocolo_tarefas_regra_origem_id_fkey"
+            columns: ["regra_origem_id"]
+            isOneToOne: false
+            referencedRelation: "protocolo_regras"
             referencedColumns: ["id"]
           },
         ]
@@ -1611,6 +1823,33 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      avaliar_condicao: {
+        Args: { p_condicao: Json; p_resultado: Json }
+        Returns: boolean
+      }
+      avaliar_resultado_exame: {
+        Args: {
+          p_exame_id: string
+          p_paciente_id: string
+          p_resultado: Json
+          p_tuss_procedimento_id: string
+        }
+        Returns: {
+          protocolo_id: string
+          protocolo_titulo: string
+          regra_id: string
+          status_protocolo: string
+          tarefa_id: string
+        }[]
+      }
+      avaliar_resultado_tarefa: {
+        Args: { p_resultado: Json; p_tarefa_id: string }
+        Returns: {
+          regra_id: string
+          status: string
+          tarefas_criadas: number
+        }[]
+      }
       buscar_comerciais: {
         Args: { termo: string }
         Returns: {
@@ -1650,18 +1889,37 @@ export type Database = {
           sobrenome: string
         }[]
       }
-      buscar_tuss: {
-        Args: { p_limit?: number; p_tabela?: string; termo: string }
-        Returns: {
-          classe: string
-          codigo_tuss: string
-          descricao: string
-          grupo: string
-          id: string
-          nome: string
-          subgrupo: string
-        }[]
-      }
+      buscar_tuss:
+        | {
+            Args: { p_limit?: number; p_tabela?: string; termo: string }
+            Returns: {
+              classe: string
+              codigo_tuss: string
+              descricao: string
+              grupo: string
+              id: string
+              nome: string
+              subgrupo: string
+            }[]
+          }
+        | {
+            Args: {
+              p_limit?: number
+              p_tabela?: string
+              p_usar_alias?: boolean
+              p_user_id?: string
+              termo: string
+            }
+            Returns: {
+              classe: string
+              codigo_tuss: string
+              descricao: string
+              grupo: string
+              id: string
+              nome: string
+              subgrupo: string
+            }[]
+          }
       consolidar_interacoes_crfmg: { Args: never; Returns: number }
       gerar_tarefas_protocolo: {
         Args: { p_vinculo_id: string }

@@ -604,6 +604,10 @@
                                                       .exame-icon .ti{font-size:17px;color:var(--g500)}
                                                       .exame-body{flex:1;min-width:0}
                                                       .exame-name{font-size:12.5px;font-weight:500;color:var(--n700)}
+                                                      .ex-badge{display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:600;padding:1px 6px;border-radius:999px;background:rgba(100,116,139,.12);color:#475569;vertical-align:middle}
+                                                      .ex-badge-warn{background:rgba(245,158,11,.16);color:#b45309}
+                                                      .ex-badge-ok{background:rgba(16,185,129,.16);color:#047857}
+                                                      .ex-badge-info{background:rgba(59,130,246,.16);color:#1d4ed8}
                                                       .exame-obs{font-size:11px;color:var(--n400);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
                                                       .exame-date{font-size:11px;color:var(--n400);flex-shrink:0}
                                                       .exame-acts{display:flex;gap:3px;opacity:0;transition:opacity .12s}
@@ -6377,7 +6381,7 @@
                                                               const timeStr=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
                                                               return {id:a.id,id_medico:a.id_medico||null,title:a.title||('Consulta — '+dateStr),date:dateStr,hora:timeStr,startedAt:a.started_at||d.toISOString(),acao:a.acao||'Consulta',resumo:a.resumo||'Atendimento registrado.',notas:a.notas||'Sem anotações.',notaPersonal:a.nota_personal||'',anamneseIa:a.anamnese_ia||''};
                                                             }
-                                                            function mapExameRow(e){return {id:e.id,nome:e.nome,tipo:e.tipo||'Outro',data:e.data||'',obs:e.obs||'',resultado:e.resultado||'',arquivoPath:e.arquivo_path||null,file:e.file_name||'—',validade:e.validade||'',validadeDias:e.validade_dias||null};}
+                                                            function mapExameRow(e){return {id:e.id,nome:e.nome,tipo:e.tipo||'Outro',data:e.data||'',obs:e.obs||'',resultado:e.resultado||'',arquivoPath:e.arquivo_path||null,file:e.file_name||'—',validade:e.validade||'',validadeDias:e.validade_dias||null,tussId:e.tuss_procedimento_id||null,statusTuss:e.status_tuss||'nao_aplicavel',resultadoOriginal:e.resultado_original||'',resultadoEstruturado:e.resultado_estruturado||null,protocoloTarefaId:e.protocolo_tarefa_id||null,statusProtocolo:e.status_protocolo||'sem_protocolo'};}
                                                             function mapTimelineRow(ev){return {id:ev.id,date:ev.event_date,type:ev.type,icon:ev.icon,title:ev.title,sub:ev.sub||''};}
                                                             async function loadPatientRecords(id){
                                                               const [atRes,exRes,tlRes]=await Promise.all([
@@ -7547,10 +7551,10 @@ showAtendList();
                                                               list.innerHTML=exames.map(e=>`
                                                                 <div class="exame-item">
                                                                   <div class="exame-icon"><i class="ti ${iconMap[e.tipo]||'ti-file'}"></i></div>
-                                                                  <div class="exame-body"><div class="exame-name">${e.nome}</div><div class="exame-obs">${e.obs}${e.validade?' \u00b7 Validade IA: '+e.validade:''}</div></div>
+                                                                  <div class="exame-body"><div class="exame-name">${e.nome} ${exameStatusBadges(e)}</div><div class="exame-obs">${e.obs}${e.validade?' \u00b7 Validade IA: '+e.validade:''}</div></div>
                                                                   <span class="exame-date">${e.data}</span>
                                                                   <div class="exame-acts">
-                                                                    <button class="ra-btn" title="Visualizar" onclick="viewExame('${e.id}')"><i class="ti ti-eye"></i></button>
+                                                                    ${e.statusTuss==='nao_localizado'?`<button class="ra-btn" title="Corrigir vinculo TUSS" onclick="corrigirTussExame('${e.id}')"><i class="ti ti-link"></i></button>`:''}<button class="ra-btn" title="Visualizar" onclick="viewExame('${e.id}')"><i class="ti ti-eye"></i></button>
                                                                     <button class="ra-btn" title="Baixar" onclick="downloadExame('${e.id}')"><i class="ti ti-download"></i></button>
                                                                     <button class="ra-btn" title="Excluir" onclick="deleteExame('${e.id}')"><i class="ti ti-trash"></i></button>
                                                                   </div>
@@ -7580,6 +7584,15 @@ showAtendList();
                                                                 validade=map[durVal]||(validadeDias+' dias');
                                                               }
                                                               const examePayload={paciente_id:currentPatient.id,user_id:currentUser.id,nome,tipo:document.getElementById('exame-tipo').value,data:document.getElementById('exame-data').value||new Date().toLocaleDateString('pt-BR'),obs:document.getElementById('exame-obs').value,resultado:document.getElementById('exame-resultado').value,file_name:fn?fn.textContent:'—',validade,validade_dias:validadeDias};
+                                                              // Vínculo TUSS + resultado estruturado vindos da IA de exames (quando houve análise).
+                                                              const iaCs=(window.exameIaAnalise&&window.exameIaAnalise.cadastro_sugerido)||null;
+                                                              if(iaCs){
+                                                                examePayload.tuss_procedimento_id=iaCs.tuss_procedimento_id||null;
+                                                                examePayload.codigo_tuss=iaCs.codigo_tuss||null;
+                                                                examePayload.status_tuss=iaCs.status_tuss||'nao_aplicavel';
+                                                                examePayload.resultado_original=iaCs.resultado_original||examePayload.resultado||null;
+                                                                examePayload.resultado_estruturado=iaCs.resultado_estruturado||null;
+                                                              }
                                                               const {data,error}=await sb.from('exames').insert(examePayload).select('*').single();
                                                               if(error){showToast('Erro ao salvar exame: '+error.message,'error');return;}
                                                               const fileInput=document.getElementById('file-input');
@@ -7595,6 +7608,7 @@ showAtendList();
                                                                 }
                                                               }
                                                               exames.unshift(mapExameRow(data));
+                                                              await avaliarExameNoMotor(data.id);
                                                               await addTimelineEvent({date:new Date().toLocaleDateString('pt-BR'),type:'exame',icon:'ti-flask',title:'Exame adicionado: '+nome,sub:document.getElementById('exame-obs').value||''});
                                                               renderExames();renderTimeline();clearFile();
                                                               document.getElementById('exame-nome').value='';document.getElementById('exame-obs').value='';document.getElementById('exame-resultado').value='';
@@ -7613,7 +7627,7 @@ showAtendList();
                                                               const icon=document.getElementById('file-icon');
                                                               if(input.files.length){const f=input.files[0];name.textContent=f.name;icon.className='ti '+(f.type.includes('image')?'ti-photo':'ti-file-text');wrap.style.display='block';}
                                                             }
-                                                            function clearFile(){document.getElementById('file-input').value='';document.getElementById('file-preview-wrap').style.display='none';const r=document.getElementById('exame-ia-report');if(r){r.style.display='none';r.innerHTML='';}}
+                                                            function clearFile(){window.exameIaAnalise=null;document.getElementById('file-input').value='';document.getElementById('file-preview-wrap').style.display='none';const r=document.getElementById('exame-ia-report');if(r){r.style.display='none';r.innerHTML='';}}
                                                             // ── IA de análise de exames ──────────────────────────────────────────────
                                                             function iaFileToBase64(file){
                                                               return new Promise(function(res,rej){
@@ -7632,7 +7646,7 @@ showAtendList();
                                                               const base64=await iaFileToBase64(file);
                                                               const r=await fetch('/api/analisar-exame',{
                                                                 method:'POST',headers:{'Content-Type':'application/json'},
-                                                                body:JSON.stringify({arquivo:{nome:file.name,mime:file.type||'application/pdf',base64},paciente:paciente||null})
+                                                                body:JSON.stringify({arquivo:{nome:file.name,mime:file.type||'application/pdf',base64},paciente:paciente||null,user_id:(currentUser&&currentUser.id)||null})
                                                               });
                                                               if(!r.ok)throw new Error(await r.text());
                                                               return r.json();
@@ -7688,7 +7702,8 @@ showAtendList();
                                                                 if(tipoSel&&cs.tipo){
                                                                   Array.from(tipoSel.options).forEach(function(o){if(o.text===cs.tipo)tipoSel.value=o.value;});
                                                                 }
-                                                                if(box){box.innerHTML=iaExameReportHtml(a);box.style.display='block';}
+                                                                window.exameIaAnalise=a;
+                                                                 if(box){box.innerHTML=iaExameReportHtml(a);box.style.display='block';}
                                                                 if(a.paciente_confere===false){
                                                                   showToast('Atenção: o exame parece ser de outro paciente','error');
                                                                 }else{
@@ -7717,6 +7732,70 @@ showAtendList();
                                                               const a=window.iaAnexoPend[scope];
                                                               window.iaAnexoPend[scope]=null;
                                                               return a;
+                                                            }
+                                                            /* ===== Motor de protocolos x IA de exames ===== */
+                                                            function exameStatusBadges(e){
+                                                              const b=[];
+                                                              if(e.statusTuss==='nao_localizado'){
+                                                                b.push('<span class="ex-badge ex-badge-warn" title="A IA nao encontrou este exame no catalogo TUSS"><i class="ti ti-link-off"></i> TUSS pendente</span>');
+                                                              }
+                                                              if(e.statusProtocolo==='regra_atingida'){
+                                                                b.push('<span class="ex-badge ex-badge-ok" title="O resultado atendeu a uma regra de protocolo"><i class="ti ti-git-branch"></i> Regra atingida</span>');
+                                                              }else if(e.statusProtocolo==='sugestao_vinculo'){
+                                                                b.push('<span class="ex-badge ex-badge-info" title="Ha protocolo ativo que utiliza este exame"><i class="ti ti-plug-connected"></i> Vinculo sugerido</span>');
+                                                              }else if(e.statusProtocolo==='sem_regra'){
+                                                                b.push('<span class="ex-badge" title="Exame vinculado a protocolo, sem regra correspondente ao resultado"><i class="ti ti-git-branch"></i> Sem regra</span>');
+                                                              }
+                                                              return b.join(' ');
+                                                            }
+                                                            /** Envia o resultado estruturado do exame ao motor deterministico de protocolos. */
+                                                            async function avaliarExameNoMotor(id){
+                                                              const e=exames.find(x=>x.id===id);
+                                                              if(!e)return null;
+                                                              if(!e.tussId||!e.resultadoEstruturado)return null;
+                                                              const {data,error}=await sb.rpc('avaliar_resultado_exame',{
+                                                                p_exame_id:id,
+                                                                p_paciente_id:currentPatient.id,
+                                                                p_tuss_procedimento_id:e.tussId,
+                                                                p_resultado:e.resultadoEstruturado
+                                                              });
+                                                              if(error){console.warn('Motor de protocolos',error);return null;}
+                                                              const rows=data||[];
+                                                              const {data:row}=await sb.from('exames').select('*').eq('id',id).single();
+                                                              if(row){const i=exames.findIndex(x=>x.id===id);if(i>=0)exames[i]=mapExameRow(row);}
+                                                              renderExames();
+                                                              const hit=rows.find(r=>r.status_protocolo==='regra_atingida');
+                                                              if(hit){
+                                                                showToast('Protocolo "'+(hit.protocolo_titulo||'')+'": o resultado atendeu a uma regra - conduta sugerida gerada.','success');
+                                                              }else if(rows.some(r=>r.status_protocolo==='sugestao_vinculo')){
+                                                                showToast('Existe protocolo ativo que utiliza este exame - confira o vinculo sugerido.','info');
+                                                              }
+                                                              return rows;
+                                                            }
+                                                            /** Correcao humana do vinculo TUSS: grava alias (aprendizado) e reavalia no motor. */
+                                                            async function corrigirTussExame(id){
+                                                              const e=exames.find(x=>x.id===id);
+                                                              if(!e)return;
+                                                              const termo=prompt('Buscar procedimento no catalogo TUSS para "'+e.nome+'":',e.nome||'');
+                                                              if(termo===null)return;
+                                                              const {data,error}=await sb.rpc('buscar_tuss',{termo:termo.trim(),p_limit:10});
+                                                              if(error){showToast('Erro na busca TUSS: '+error.message,'error');return;}
+                                                              const items=data||[];
+                                                              if(!items.length){showToast('Nenhum procedimento encontrado para esse termo','error');return;}
+                                                              const lista=items.map((it,i)=>(i+1)+') '+it.codigo_tuss+' - '+it.nome).join('\n');
+                                                              const escolha=prompt('Escolha o procedimento (digite o numero):\n\n'+lista,'1');
+                                                              const idx=parseInt(escolha,10)-1;
+                                                              if(!(idx>=0&&idx<items.length))return;
+                                                              const alvo=items[idx];
+                                                              const nomeOriginal=(e.nome||termo).trim();
+                                                              const {error:upErr}=await sb.from('exames').update({tuss_procedimento_id:alvo.id,codigo_tuss:alvo.codigo_tuss,nome:alvo.nome,status_tuss:'vinculado'}).eq('id',id);
+                                                              if(upErr){showToast('Erro ao vincular: '+upErr.message,'error');return;}
+                                                              await sb.from('exame_alias').upsert({user_id:currentUser.id,texto_original:nomeOriginal,tuss_procedimento_id:alvo.id},{onConflict:'user_id,texto_original'});
+                                                              const i=exames.findIndex(x=>x.id===id);
+                                                              if(i>=0){exames[i].tussId=alvo.id;exames[i].codigoTuss=alvo.codigo_tuss;exames[i].nome=alvo.nome;exames[i].statusTuss='vinculado';}
+                                                              renderExames();
+                                                              showToast('Exame vinculado ao TUSS '+alvo.codigo_tuss,'success');
+                                                              await avaliarExameNoMotor(id);
                                                             }
                                                             async function viewExame(id){
                                                               const e=exames.find(x=>x.id===id);
