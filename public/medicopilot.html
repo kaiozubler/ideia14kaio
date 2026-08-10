@@ -12936,6 +12936,36 @@ let rxSelected = [];
                                                     setTimeout(cleanup, 300);
                                                   }
                                                 }
+                                                /* Envia o PDF para assinatura ICP-Brasil; se o certificado exigir PIN, solicita ao usuário e repete. */
+                                                async function _assinarPdfBase64(token, payload) {
+                                                  const post = (pin) => fetch('/api/signature/sign', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                                                    body: JSON.stringify(pin ? { ...payload, certificatePassword: pin } : payload),
+                                                  });
+                                                  try {
+                                                    let resp = await post(null);
+                                                    let j = await resp.json().catch(() => ({}));
+                                                    if (resp.status === 428 || j.error === 'password_required') {
+                                                      const pin = prompt('Informe o PIN/senha do seu certificado digital para assinar:');
+                                                      if (!pin) { showToast && showToast('Documento gerado sem assinatura digital', 'warn'); return null; }
+                                                      resp = await post(pin);
+                                                      j = await resp.json().catch(() => ({}));
+                                                    }
+                                                    if (!resp.ok) {
+                                                      if (j.error && j.error !== 'not_configured' && j.error !== 'credential_expired') {
+                                                        console.warn('Assinatura ICP falhou:', j);
+                                                        showToast && showToast('Erro ao assinar: ' + (j.message || j.error), 'error');
+                                                      }
+                                                      return null;
+                                                    }
+                                                    return j;
+                                                  } catch (e) {
+                                                    console.warn('Assinatura opcional falhou:', e);
+                                                    return null;
+                                                  }
+                                                }
+
 
                                                 /* Dispara o download de um blob no navegador */
                                                 function _baixarBlob(blob, filename) {
