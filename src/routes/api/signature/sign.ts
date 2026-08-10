@@ -17,6 +17,16 @@ function errorResponse(err: unknown) {
       { status: err.status },
     );
   }
+  // Erros do provedor BRy (HUB/KMS) já trazem status e mensagem tratada.
+  if (err && typeof err === "object" && (err as { name?: string }).name === "BryError") {
+    const e = err as { message: string; status?: number };
+    const status = e.status && e.status >= 400 && e.status < 600 ? e.status : 502;
+    console.error("[signature/sign] bry_error", status, e.message);
+    return Response.json(
+      { error: status === 401 || status === 403 ? "provider_unauthorized" : "provider_unavailable", message: e.message },
+      { status },
+    );
+  }
   console.error("[signature/sign]", err);
   return Response.json({ error: "internal_error", message: String(err) }, { status: 500 });
 }

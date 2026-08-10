@@ -6,9 +6,10 @@ import { BryError } from "./bry.server";
 const DEFAULT_HUB = "https://hub2.bry.com.br";
 
 function getHubConfig() {
-  const token = process.env.BRY_API_TOKEN;
+  // O HUB (BRyKMS) usa um token próprio; se não houver, tenta o token do EasySign.
+  const token = process.env.BRY_HUB_TOKEN || process.env.BRY_API_TOKEN;
   if (!token) {
-    throw new BryError("Integração BRy não configurada (BRY_API_TOKEN ausente).", 503);
+    throw new BryError("Integração BRy não configurada (BRY_HUB_TOKEN ausente).", 503);
   }
   const baseUrl = (process.env.BRY_HUB_BASE_URL || DEFAULT_HUB).replace(/\/+$/, "");
   return { token, baseUrl };
