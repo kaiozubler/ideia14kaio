@@ -62,9 +62,10 @@
                                                       .sidebar:hover .sb-lbl{opacity:1}
                                                       .sb-footer{padding:6px 0;border-top:0.5px solid var(--n100);flex-shrink:0}
                                                       .sb-footer .sb-item{position:relative;overflow:visible}
-                                                      .sb-logout-badge{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#dc2626;color:#fff;display:flex;align-items:center;justify-content:center;border:2px solid var(--white);box-shadow:0 2px 6px rgba(220,38,38,.4);cursor:pointer;z-index:2;padding:0}
-                                                      .sb-logout-badge .ti{font-size:11px;color:#fff}
-                                                      .sb-logout-badge:hover{background:#b91c1c}
+                                                      .sb-logout-badge{position:absolute;top:50%;right:6px;transform:translateY(-50%);width:30px;height:30px;border-radius:8px;background:transparent;border:none;color:#dc2626;display:none;align-items:center;justify-content:center;cursor:pointer;padding:0;z-index:2}
+                                                      .sb-logout-badge .ti{font-size:19px;color:#dc2626}
+                                                      .sb-logout-badge:hover .ti{color:#b91c1c}
+                                                      .sidebar:hover .sb-logout-badge{display:flex}
                                                       .sb-group{overflow:hidden}
                                                       .sb-sub{max-height:0;overflow:hidden;transition:max-height .2s ease}
                                                       .sb-group.open .sb-sub{max-height:240px}
