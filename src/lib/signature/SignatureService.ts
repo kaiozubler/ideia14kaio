@@ -4,7 +4,8 @@
 import { CertificateProviderFactory } from "./CertificateProviderFactory";
 import { CredentialRepository } from "./CredentialRepository";
 import { IntegraICPProvider } from "./IntegraICPProvider";
-import { SignatureErrors } from "./errors";
+import { SignatureErrors, SignatureError } from "./errors";
+import { AuditRepository, sha256Hex } from "./AuditRepository";
 import type { StoredCertificate } from "./CertificateProvider";
 import type { AuthenticateInput, AuthenticateResult } from "./types";
 
@@ -83,16 +84,49 @@ export const SignatureService = {
     filename?: string;
     certificatePassword?: string | null;
   }): Promise<{ signedPdfUrl: string; signaturePath: string; signatureTimestamp: string | null }> {
+    // Hash do documento ORIGINAL (antes de assinar) — usado só na auditoria,
+    // nunca exposto ao usuário. Não é a senha/PIN nem o certificado.
+    const documentHash = await sha256Hex(req.pdfBuffer.slice().buffer);
+
     const cert = await CredentialRepository.getActiveCertificate(req.doctorId);
-    if (!cert) throw SignatureErrors.CredentialExpired("Nenhum certificado ativo.");
-    const provider = await CertificateProviderFactory.get(cert as StoredCertificate);
-    const signed = await provider.signDocument({
-      certificate: cert as StoredCertificate,
-      documentId: req.documentId,
-      pdfBuffer: req.pdfBuffer,
-      contentDescription: req.contentDescription ?? "Assinatura ICP-Brasil",
-      secret: req.certificatePassword ?? null,
-    });
+    if (!cert) {
+      await AuditRepository.log({
+        userId: req.doctorId,
+        documentId: req.documentId,
+        documentHash,
+        signatureStatus: "failed",
+        errorCode: "credential_expired",
+        errorMessage: "Nenhum certificado ativo.",
+      });
+      throw SignatureErrors.CredentialExpired("Nenhum certificado ativo.");
+    }
+    const storedCert = cert as StoredCertificate;
+    const provider = await CertificateProviderFactory.get(storedCert);
+
+    let signed: Awaited<ReturnType<typeof provider.signDocument>>;
+    try {
+      signed = await provider.signDocument({
+        certificate: storedCert,
+        documentId: req.documentId,
+        pdfBuffer: req.pdfBuffer,
+        contentDescription: req.contentDescription ?? "Assinatura ICP-Brasil",
+        secret: req.certificatePassword ?? null,
+      });
+    } catch (err) {
+      const e = err as SignatureError & { name?: string; status?: number; message?: string };
+      await AuditRepository.log({
+        userId: req.doctorId,
+        documentId: req.documentId,
+        certificateId: storedCert.id ?? null,
+        certificateType: storedCert.certificate_type ?? null,
+        provider: storedCert.provider ?? null,
+        documentHash,
+        signatureStatus: "failed",
+        errorCode: e?.code ?? (e?.name === "BryError" ? "bry_error" : "unknown_error"),
+        errorMessage: e?.message,
+      });
+      throw err;
+    }
 
     // Upload the signed PDF to Storage (private bucket, per-doctor folder).
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -104,12 +138,37 @@ export const SignatureService = {
         contentType: "application/pdf",
         upsert: false,
       });
-    if (upErr) throw upErr;
+    if (upErr) {
+      await AuditRepository.log({
+        userId: req.doctorId,
+        documentId: req.documentId,
+        certificateId: storedCert.id ?? null,
+        certificateType: storedCert.certificate_type ?? null,
+        provider: storedCert.provider ?? null,
+        documentHash,
+        signatureStatus: "failed",
+        errorCode: "storage_upload_failed",
+        errorMessage: upErr.message,
+      });
+      throw upErr;
+    }
 
     const { data: signedUrl, error: urlErr } = await supabaseAdmin.storage
       .from("signed-documents")
       .createSignedUrl(path, 60 * 60 * 24 * 7); // 7 days
     if (urlErr) throw urlErr;
+
+    await AuditRepository.log({
+      userId: req.doctorId,
+      documentId: req.documentId,
+      certificateId: storedCert.id ?? null,
+      certificateType: storedCert.certificate_type ?? null,
+      provider: storedCert.provider ?? null,
+      documentHash,
+      signatureStatus: "success",
+      signedDocumentPath: path,
+    });
+    if (storedCert.id) await AuditRepository.touchLastUsed(storedCert.id);
 
     return {
       signedPdfUrl: signedUrl.signedUrl,

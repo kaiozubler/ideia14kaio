@@ -10367,6 +10367,35 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                     document.getElementById('ia-prev-modal').classList.remove('open');
                   }
 
+                  // Assina digitalmente (ICP-Brasil) o PDF gerado pelo Copiloto de IA antes de
+                  // baixar, reaproveitando o MESMO caminho de assinatura usado pela tela de
+                  // receita normal (_assinarPdfBase64 -> /api/signature/sign). Se não houver
+                  // certificado configurado ou a assinatura falhar, cai para o PDF sem assinar
+                  // (comportamento antigo) em vez de travar o download do médico.
+                  async function _iaAssistSignAndDownload(pdfBlob, filename, contentDescription){
+                    let finalBlob = pdfBlob;
+                    let assinado = false;
+                    try{
+                      const { data: sess } = await sb.auth.getSession();
+                      const token = sess?.session?.access_token;
+                      if (token){
+                        const pdfBase64 = await new Promise((resolve, reject) => {
+                          const r = new FileReader();
+                          r.onload = () => resolve(String(r.result).split(',')[1] || '');
+                          r.onerror = reject;
+                          r.readAsDataURL(pdfBlob);
+                        });
+                        const sg = await _assinarPdfBase64(token, { pdfBase64, filename, contentDescription });
+                        if (sg && sg.signedPdfUrl){
+                          const dl = await fetch(sg.signedPdfUrl);
+                          if (dl.ok){ finalBlob = await dl.blob(); assinado = true; }
+                        }
+                      }
+                    }catch(e){ console.warn('Assinatura do anexo do Copiloto falhou, seguindo sem assinatura:', e); }
+                    _baixarBlob(finalBlob, filename);
+                    return assinado;
+                  }
+
                   // Gera o PDF real da receita fora da tela, exatamente como openReceitaPDF já
                   // faz na tela de receita do Copiloto — reaproveita o mesmo modelo/arquivo.
                   async function iaAssistDownloadReceitaFile(att){
@@ -10398,14 +10427,16 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                       await Promise.all(imgs.map(function(img){return img.complete?Promise.resolve():new Promise(function(r){img.onload=img.onerror=r;});}));
                       const safeName=String(att.paciente_nome||'paciente').replace(/[^\w\-]+/g,'_').toLowerCase();
                       const filename='receita_'+safeName+'_'+new Date().toISOString().slice(0,10)+'.pdf';
-                      await window.html2pdf().set({
+                      const pdfBlob=await window.html2pdf().set({
                         margin:0,
                         filename:filename,
                         image:{type:'jpeg',quality:0.98},
                         html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false},
                         jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
                         pagebreak:{mode:['css','legacy']}
-                      }).from(holder.querySelector('.sheet')||holder).save();
+                      }).from(holder.querySelector('.sheet')||holder).outputPdf('blob');
+                      const assinado=await _iaAssistSignAndDownload(pdfBlob, filename, 'Receita para '+(att.paciente_nome||'paciente'));
+                      showToast && showToast(assinado?'Receita assinada digitalmente ✓':'Receita gerada com sucesso','success');
                     }finally{
                       clipper.remove();
                       styleEl.remove();
@@ -10444,14 +10475,16 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                       await Promise.all(imgs.map(function(img){return img.complete?Promise.resolve():new Promise(function(r){img.onload=img.onerror=r;});}));
                       const safeName=String(att.paciente_nome||'paciente').replace(/[^\w\-]+/g,'_').toLowerCase();
                       const filename='solicitacao_exame_'+safeName+'_'+new Date().toISOString().slice(0,10)+'.pdf';
-                      await window.html2pdf().set({
+                      const pdfBlob=await window.html2pdf().set({
                         margin:0,
                         filename:filename,
                         image:{type:'jpeg',quality:0.98},
                         html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false},
                         jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
                         pagebreak:{mode:['css','legacy']}
-                      }).from(holder.querySelector('.sheet')||holder).save();
+                      }).from(holder.querySelector('.sheet')||holder).outputPdf('blob');
+                      const assinado=await _iaAssistSignAndDownload(pdfBlob, filename, 'Solicitação de exames para '+(att.paciente_nome||'paciente'));
+                      showToast && showToast(assinado?'Solicitação assinada digitalmente ✓':'Solicitação gerada com sucesso','success');
                     }finally{
                       clipper.remove();
                       styleEl.remove();
@@ -10471,13 +10504,15 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                       }else{
                         const safeName=String(att.paciente_nome||'documento').replace(/[^\w\-]+/g,'_').toLowerCase();
                         const filename='atestado_'+safeName+'_'+new Date().toISOString().slice(0,10)+'.pdf';
-                        await window.html2pdf().set({
+                        const pdfBlob=await window.html2pdf().set({
                           margin:10,
                           filename:filename,
                           image:{type:'jpeg',quality:0.98},
                           html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
                           jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
-                        }).from(sheetEl).save();
+                        }).from(sheetEl).outputPdf('blob');
+                        const assinado=await _iaAssistSignAndDownload(pdfBlob, filename, (att.tipo==='declaracao'?'Declaração':'Atestado')+' para '+(att.paciente_nome||'paciente'));
+                        showToast && showToast(assinado?'Documento assinado digitalmente ✓':'Documento gerado com sucesso','success');
                       }
                     }catch(e){
                       alert('Não foi possível gerar o PDF: '+(e.message||e));
