@@ -14070,6 +14070,493 @@ let rxSelected = [];
                                                 /* Renderiza o PDF da solicitação de exames a partir de
                                                    /solicitacao-exames-modelo.html — mesmo motor de _renderDocumentoPdf,
                                                    mas com os placeholders extras do template de exames. */
+                                                /* ================= LME (Componente Especializado da Assistência Farmacêutica) =================
+                                                   Formulário interno espelhando o PDF oficial do LME, com preenchimento
+                                                   automático a partir do cadastro/prontuário, complemento por IA, chat de
+                                                   preenchimento em linguagem natural, emissão assinada e anexo no atendimento. */
+                                                let lmeMeds = [];
+                                                let lmeChatHistory = [];
+                                                let lmeBusy = false;
+
+                                                const LME_CAMPOS = {
+                                                  cnes: 'lme-cnes', estabelecimento: 'lme-estab', paciente_nome: 'lme-nome',
+                                                  paciente_mae: 'lme-mae', peso: 'lme-peso', altura: 'lme-altura',
+                                                  cid_code: 'lme-cid', cid_descricao: null, diagnostico: 'lme-diagnostico',
+                                                  anamnese: 'lme-anamnese', tratamento_previo: 'lme-trat',
+                                                  tratamento_previo_relato: 'lme-trat-relato', incapaz: 'lme-incapaz',
+                                                  responsavel_nome: 'lme-resp', medico_nome: 'lme-medico', medico_cns: 'lme-cns',
+                                                  data_solicitacao: 'lme-data', preenchido_por: 'lme-preenchido',
+                                                  outro_nome: 'lme-outro-nome', outro_cpf: 'lme-outro-cpf', raca: 'lme-raca',
+                                                  etnia: 'lme-etnia', telefone: 'lme-tel', documento_numero: 'lme-doc-num',
+                                                  documento_tipo: 'lme-doc-tipo', email: 'lme-email',
+                                                };
+                                                const LME_OBRIGATORIOS = [
+                                                  ['cnes', 'CNES'], ['paciente_nome', 'Nome do paciente'], ['paciente_mae', 'Nome da mãe'],
+                                                  ['peso', 'Peso'], ['altura', 'Altura'], ['cid_code', 'CID-10'], ['anamnese', 'Anamnese'],
+                                                  ['medico_nome', 'Médico solicitante'], ['medico_cns', 'CNS do médico'],
+                                                  ['data_solicitacao', 'Data da solicitação'], ['raca', 'Raça/Cor/Etnia'],
+                                                ];
+
+                                                function _lmeSet(id, v) { const el = document.getElementById(id); if (el) el.value = v == null ? '' : String(v); }
+                                                function _lmeGet(id) { const el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; }
+
+                                                function lmeCollect() {
+                                                  const f = {};
+                                                  for (const [k, id] of Object.entries(LME_CAMPOS)) if (id) f[k] = _lmeGet(id);
+                                                  f.cid_descricao = window.__lmeCidDesc || '';
+                                                  f.medicamentos = lmeMeds
+                                                    .filter(m => (m.nome || '').trim())
+                                                    .map(m => ({ nome: m.nome, quantidades: (m.quantidades || []).slice(0, 6) }));
+                                                  return f;
+                                                }
+
+                                                function lmeApply(patch) {
+                                                  if (!patch || typeof patch !== 'object') return;
+                                                  for (const [k, id] of Object.entries(LME_CAMPOS)) {
+                                                    if (!id) continue;
+                                                    const v = patch[k];
+                                                    if (v == null || v === '') continue;
+                                                    const el = document.getElementById(id);
+                                                    if (!el) continue;
+                                                    if (el.tagName === 'SELECT') { el.value = String(v).toLowerCase(); }
+                                                    else if (!String(el.value || '').trim()) { el.value = String(v); }
+                                                    else if (k === 'anamnese' || k === 'diagnostico') { el.value = String(v); }
+                                                  }
+                                                  if (patch.cid_descricao) window.__lmeCidDesc = String(patch.cid_descricao);
+                                                  if (Array.isArray(patch.medicamentos) && patch.medicamentos.length) {
+                                                    patch.medicamentos.forEach(m => {
+                                                      const nome = (m && (m.nome || m.medicamento)) || '';
+                                                      if (!nome) return;
+                                                      const existente = lmeMeds.find(x => (x.nome || '').toLowerCase() === String(nome).toLowerCase());
+                                                      const qts = Array.isArray(m.quantidades) ? m.quantidades.map(q => q == null ? '' : String(q)) : [];
+                                                      while (qts.length < 6) qts.push('');
+                                                      if (existente) { existente.quantidades = qts; }
+                                                      else lmeMeds.push({ nome: String(nome), quantidades: qts });
+                                                    });
+                                                    lmeRenderMeds();
+                                                  }
+                                                  lmeRenderCidChips();
+                                                }
+
+                                                /* ---- Medicamentos (vinculados às substâncias do app, com edição manual) ---- */
+                                                function lmeAddMed(nome) {
+                                                  lmeMeds.push({ nome: nome || '', quantidades: ['', '', '', '', '', ''] });
+                                                  lmeRenderMeds();
+                                                }
+                                                function lmeRemoveMed(i) { lmeMeds.splice(i, 1); lmeRenderMeds(); }
+                                                function lmeMedNome(i, v) { if (lmeMeds[i]) lmeMeds[i].nome = v; }
+                                                function lmeMedQtd(i, m, v) { if (lmeMeds[i]) lmeMeds[i].quantidades[m] = v; }
+                                                function lmeRenderMeds() {
+                                                  const box = document.getElementById('lme-meds');
+                                                  if (!box) return;
+                                                  if (!lmeMeds.length) {
+                                                    box.innerHTML = '<div style="border:1px dashed var(--n200);border-radius:10px;padding:12px;font-size:12px;color:var(--n400);text-align:center">Nenhum medicamento adicionado.</div>';
+                                                    return;
+                                                  }
+                                                  box.innerHTML = lmeMeds.map((m, i) => `
+                                                    <div style="border:0.5px solid var(--n200);border-radius:10px;padding:8px;position:relative">
+                                                      <div style="display:flex;gap:6px;align-items:center">
+                                                        <span style="font-size:11px;color:var(--n400);width:14px">${i + 1}</span>
+                                                        <div style="flex:1;position:relative">
+                                                          <input type="text" value="${_rxEsc(m.nome || '')}" placeholder="Medicamento (princípio ativo, concentração e forma)"
+                                                            autocomplete="off"
+                                                            oninput="lmeMedNome(${i}, this.value); lmeMedSuggest(${i}, this.value)"
+                                                            onblur="setTimeout(()=>{const s=document.getElementById('lme-med-sg-${i}');if(s)s.style.display='none'},150)"
+                                                            style="width:100%;border:0.5px solid var(--n200);border-radius:8px;padding:6px 9px;font-size:12.5px;outline:none;font-family:inherit" />
+                                                          <div id="lme-med-sg-${i}" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:40;background:#fff;border:0.5px solid var(--n200);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,.08);max-height:180px;overflow-y:auto"></div>
+                                                        </div>
+                                                        <button class="btn sm" onclick="lmeRemoveMed(${i})" title="Remover"><i class="ti ti-trash"></i></button>
+                                                      </div>
+                                                      <div style="display:flex;gap:5px;margin-top:6px">
+                                                        ${(m.quantidades || []).slice(0, 6).map((q, mi) => `
+                                                          <div style="flex:1">
+                                                            <label style="font-size:9.5px;color:var(--n400);display:block">${mi + 1}º mês</label>
+                                                            <input type="text" value="${_rxEsc(q || '')}" oninput="lmeMedQtd(${i},${mi},this.value)"
+                                                              style="width:100%;border:0.5px solid var(--n200);border-radius:6px;padding:4px 6px;font-size:12px;text-align:center;outline:none;font-family:inherit" />
+                                                          </div>`).join('')}
+                                                      </div>
+                                                    </div>`).join('');
+                                                }
+                                                let _lmeMedTimer = null;
+                                                function lmeMedSuggest(i, term) {
+                                                  clearTimeout(_lmeMedTimer);
+                                                  const sg = document.getElementById('lme-med-sg-' + i);
+                                                  if (!sg) return;
+                                                  const t = String(term || '').trim();
+                                                  if (t.length < 3) { sg.style.display = 'none'; return; }
+                                                  _lmeMedTimer = setTimeout(async () => {
+                                                    try {
+                                                      const { data } = await sb.rpc('buscar_genericos', { termo: t });
+                                                      const rows = (data || []).slice(0, 8);
+                                                      if (!rows.length) { sg.style.display = 'none'; return; }
+                                                      sg.innerHTML = rows.map(r => `<div onmousedown="lmeMedPick(${i}, '${_rxEsc(r.nome_exibicao).replace(/'/g, "\\'")}')"
+                                                        style="padding:6px 9px;font-size:12px;cursor:pointer;border-bottom:0.5px solid var(--n150)">${_rxEsc(r.nome_exibicao)}</div>`).join('');
+                                                      sg.style.display = 'block';
+                                                    } catch (e) { sg.style.display = 'none'; }
+                                                  }, 300);
+                                                }
+                                                function lmeMedPick(i, nome) {
+                                                  if (lmeMeds[i]) lmeMeds[i].nome = nome;
+                                                  lmeRenderMeds();
+                                                }
+
+                                                /* ---- CID-10 (catálogo do app + CIDs do cadastro do paciente) ---- */
+                                                function lmeCidSuggest() {
+                                                  const inp = document.getElementById('lme-cid');
+                                                  const sg = document.getElementById('lme-cid-suggest');
+                                                  if (!inp || !sg) return;
+                                                  const t = String(inp.value || '').trim().toLowerCase();
+                                                  if (t.length < 2) { sg.style.display = 'none'; return; }
+                                                  const hits = (typeof CID10_DB !== 'undefined' ? CID10_DB : [])
+                                                    .filter(c => c.c.toLowerCase().includes(t) || c.d.toLowerCase().includes(t)).slice(0, 10);
+                                                  if (!hits.length) { sg.style.display = 'none'; return; }
+                                                  sg.innerHTML = hits.map(c => `<div onmousedown="lmeCidPick('${c.c}','${_rxEsc(c.d).replace(/'/g, "\\'")}')"
+                                                    style="padding:6px 9px;font-size:12px;cursor:pointer;border-bottom:0.5px solid var(--n150)"><b>${c.c}</b> — ${_rxEsc(c.d)}</div>`).join('');
+                                                  sg.style.display = 'block';
+                                                }
+                                                function lmeCidPick(code, desc) {
+                                                  _lmeSet('lme-cid', code);
+                                                  window.__lmeCidDesc = desc || '';
+                                                  if (!_lmeGet('lme-diagnostico')) _lmeSet('lme-diagnostico', desc || '');
+                                                  const sg = document.getElementById('lme-cid-suggest'); if (sg) sg.style.display = 'none';
+                                                }
+                                                function lmeRenderCidChips() {
+                                                  const box = document.getElementById('lme-cid-chips');
+                                                  if (!box) return;
+                                                  const cids = Array.isArray(currentPatient && currentPatient.cids) ? currentPatient.cids : [];
+                                                  box.innerHTML = cids.length
+                                                    ? '<span style="font-size:10.5px;color:var(--n400);margin-right:4px">Do cadastro:</span>' + cids.map(c =>
+                                                        `<span onclick="lmeCidPick('${c.code}','${_rxEsc(c.description || '').replace(/'/g, "\\'")}')"
+                                                          style="cursor:pointer;font-size:11px;padding:3px 8px;border-radius:999px;background:#eff6ff;color:#1d4ed8">${c.code}${c.description ? ' — ' + _rxEsc(c.description) : ''}</span>`).join('')
+                                                    : '';
+                                                }
+
+                                                /* ---- Abertura do modal + preenchimento automático pelo cadastro ---- */
+                                                function openLmeModal() {
+                                                  if (!currentPatient) { showToast && showToast('Abra o cadastro de um paciente para gerar o LME', 'error'); return; }
+                                                  let clinic = {}; try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
+                                                  let info = {}; try { info = loadInfoComp() || {}; } catch (e) {}
+                                                  const u = currentUser || {};
+                                                  const meta = u.user_metadata || {};
+
+                                                  lmeMeds = [];
+                                                  lmeChatHistory = [];
+                                                  window.__lmeCidDesc = '';
+                                                  Object.values(LME_CAMPOS).forEach(id => { if (id) _lmeSet(id, ''); });
+
+                                                  _lmeSet('lme-cnes', clinic.cnes || '');
+                                                  _lmeSet('lme-estab', clinic.fantasia || clinic.razao || '');
+                                                  _lmeSet('lme-nome', currentPatient.name || '');
+                                                  _lmeSet('lme-mae', currentPatient.mae || '');
+                                                  _lmeSet('lme-peso', info.peso || '');
+                                                  _lmeSet('lme-altura', info.altura || '');
+                                                  _lmeSet('lme-medico', meta.full_name || meta.name || (u.email || '').split('@')[0] || '');
+                                                  _lmeSet('lme-cns', meta.cns || meta.CNS || '');
+                                                  _lmeSet('lme-data', new Date().toISOString().slice(0, 10));
+                                                  _lmeSet('lme-tel', currentPatient.tel && currentPatient.tel !== '—' ? currentPatient.tel : '');
+                                                  _lmeSet('lme-email', currentPatient.email && currentPatient.email !== '—' ? currentPatient.email : '');
+                                                  if (currentPatient.cpf) { _lmeSet('lme-doc-num', currentPatient.cpf); _lmeSet('lme-doc-tipo', 'cpf'); }
+                                                  else if (currentPatient.sus && currentPatient.sus !== '—') { _lmeSet('lme-doc-num', currentPatient.sus); _lmeSet('lme-doc-tipo', 'cns'); }
+                                                  const cid0 = (Array.isArray(currentPatient.cids) ? currentPatient.cids : [])[0];
+                                                  if (cid0) lmeCidPick(cid0.code, cid0.description || '');
+                                                  _lmeSet('lme-preenchido', 'medico');
+                                                  const chatWrap = document.getElementById('lme-chat-wrap'); if (chatWrap) chatWrap.style.display = 'none';
+                                                  const log = document.getElementById('lme-chat-log'); if (log) log.innerHTML = '';
+                                                  const pend = document.getElementById('lme-pendencias'); if (pend) pend.style.display = 'none';
+
+                                                  lmeRenderMeds();
+                                                  lmeRenderCidChips();
+                                                  openModal('lme');
+                                                  // Chamada automática da IA para extrair o restante do cadastro/prontuário.
+                                                  lmeAutofill(true);
+                                                }
+
+                                                function lmeContexto() {
+                                                  let info = null; try { info = loadInfoComp(); } catch (e) {}
+                                                  let clinic = {}; try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
+                                                  const pront = (document.getElementById('pront-area') || {}).value || '';
+                                                  return {
+                                                    paciente: currentPatient || null,
+                                                    info_complementar: info,
+                                                    cids_paciente: Array.isArray(currentPatient && currentPatient.cids) ? currentPatient.cids : [],
+                                                    resumo_prontuario: (typeof currentResumoProntuario !== 'undefined' && currentResumoProntuario) || '',
+                                                    dados_clinicos: (currentPatient && currentPatient.dadosClinicos) || '',
+                                                    atendimento_atual: pront,
+                                                    clinica: { nome: clinic.fantasia || clinic.razao || '', cnes: clinic.cnes || '' },
+                                                    medico: { nome: _lmeGet('lme-medico'), cns: _lmeGet('lme-cns') },
+                                                  };
+                                                }
+
+                                                function lmeShowPendencias(list) {
+                                                  const box = document.getElementById('lme-pendencias');
+                                                  if (!box) return;
+                                                  const items = (list || []).filter(Boolean);
+                                                  if (!items.length) { box.style.display = 'none'; return; }
+                                                  box.innerHTML = '<b>Ainda faltam dados:</b> ' + items.map(t => _rxEsc(String(t))).join(' · ');
+                                                  box.style.display = 'block';
+                                                }
+
+                                                async function lmeAutofill(silent) {
+                                                  if (lmeBusy) return;
+                                                  lmeBusy = true;
+                                                  const st = document.getElementById('lme-status');
+                                                  if (st) st.textContent = 'IA analisando cadastro e prontuário...';
+                                                  try {
+                                                    const r = await fetch('/api/lme-ia', {
+                                                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                                      body: JSON.stringify({ action: 'autofill', form: lmeCollect(), contexto: lmeContexto() }),
+                                                    });
+                                                    if (!r.ok) throw new Error(await r.text());
+                                                    const data = await r.json();
+                                                    lmeApply(data.form || {});
+                                                    lmeShowPendencias(data.pendencias);
+                                                    if (st) st.textContent = 'Campos preenchidos pela IA — revise antes de emitir.';
+                                                    if (!silent) showToast && showToast('LME preenchido pela IA', 'success');
+                                                  } catch (e) {
+                                                    if (st) st.textContent = '';
+                                                    if (!silent) showToast && showToast('Falha no preenchimento por IA', 'error');
+                                                    console.warn('lmeAutofill', e);
+                                                  } finally { lmeBusy = false; }
+                                                }
+
+                                                /* ---- Chat interno de preenchimento (linguagem natural) ---- */
+                                                function lmeToggleChat() {
+                                                  const w = document.getElementById('lme-chat-wrap');
+                                                  if (!w) return;
+                                                  const abrindo = w.style.display === 'none';
+                                                  w.style.display = abrindo ? 'block' : 'none';
+                                                  if (abrindo && !lmeChatHistory.length) lmeChatSend('__inicio__');
+                                                }
+                                                function lmeChatBubble(role, text) {
+                                                  const log = document.getElementById('lme-chat-log');
+                                                  if (!log) return;
+                                                  const div = document.createElement('div');
+                                                  div.style.cssText = role === 'user'
+                                                    ? 'align-self:flex-end;max-width:80%;background:#1d4ed8;color:#fff;padding:6px 10px;border-radius:10px'
+                                                    : 'align-self:flex-start;max-width:85%;background:#fff;border:0.5px solid var(--n200);padding:6px 10px;border-radius:10px';
+                                                  div.textContent = text;
+                                                  log.appendChild(div);
+                                                  log.scrollTop = log.scrollHeight;
+                                                }
+                                                async function lmeChatSend(auto) {
+                                                  const inp = document.getElementById('lme-chat-input');
+                                                  const texto = auto === '__inicio__'
+                                                    ? 'Quais dados obrigatórios ainda faltam para emitir este LME?'
+                                                    : String((inp && inp.value) || '').trim();
+                                                  if (!texto) return;
+                                                  if (auto !== '__inicio__') { lmeChatBubble('user', texto); if (inp) inp.value = ''; }
+                                                  lmeChatHistory.push({ role: 'user', content: texto });
+                                                  try {
+                                                    const r = await fetch('/api/lme-ia', {
+                                                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                                      body: JSON.stringify({ action: 'chat', messages: lmeChatHistory, form: lmeCollect(), contexto: lmeContexto() }),
+                                                    });
+                                                    if (!r.ok) throw new Error(await r.text());
+                                                    const data = await r.json();
+                                                    const reply = data.reply || 'Não consegui interpretar. Pode reformular?';
+                                                    lmeChatHistory.push({ role: 'assistant', content: reply });
+                                                    lmeChatBubble('ia', reply);
+                                                    if (data.patch && Object.keys(data.patch).length) {
+                                                      Object.entries(data.patch).forEach(([k, v]) => {
+                                                        const id = LME_CAMPOS[k];
+                                                        if (id && v != null && v !== '') _lmeSet(id, v);
+                                                      });
+                                                      if (Array.isArray(data.patch.medicamentos)) lmeApply({ medicamentos: data.patch.medicamentos });
+                                                      if (data.patch.cid_descricao) window.__lmeCidDesc = String(data.patch.cid_descricao);
+                                                    }
+                                                    lmeShowPendencias(data.pendencias);
+                                                  } catch (e) {
+                                                    lmeChatBubble('ia', 'Falha ao falar com a assistente. Tente novamente.');
+                                                    console.warn('lmeChatSend', e);
+                                                  }
+                                                }
+
+                                                /* ---- Renderização do PDF do LME a partir de /lme-modelo.html ---- */
+                                                const LME_RACAS = { branca: 'RC_BRANCA', preta: 'RC_PRETA', parda: 'RC_PARDA', amarela: 'RC_AMARELA', indigena: 'RC_INDIGENA' };
+                                                const LME_PREENCHIDO = { paciente: 'PP_PACIENTE', mae: 'PP_MAE', responsavel: 'PP_RESP', medico: 'PP_MEDICO', outro: 'PP_OUTRO' };
+
+                                                async function _renderLmePdf(form) {
+                                                  let clinic = {}; try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
+                                                  const u = currentUser || {};
+                                                  const meta = u.user_metadata || {};
+                                                  const doctorCrm = meta.crm || meta.CRM || '';
+                                                  const cidadeUf = [clinic.cidade, clinic.uf].filter(Boolean).join('/');
+                                                  const addr = [
+                                                    [clinic.logradouro, clinic.numero].filter(Boolean).join(', '),
+                                                    clinic.bairro, cidadeUf, clinic.cep ? 'CEP ' + clinic.cep : ''
+                                                  ].filter(Boolean).join(' · ');
+
+                                                  let html;
+                                                  try {
+                                                    const resp = await fetch('/lme-modelo.html', { cache: 'no-store' });
+                                                    html = await resp.text();
+                                                  } catch (e) { showToast && showToast('Falha ao carregar modelo do LME', 'error'); return null; }
+
+                                                  const [logoDataUrl, sigDataUrl] = await Promise.all([
+                                                    _rxImgToDataUrl(clinic.logo || ''),
+                                                    _rxImgToDataUrl(clinic.assinatura_url || ''),
+                                                  ]);
+
+                                                  const meds = (form.medicamentos || []);
+                                                  const linhas = [];
+                                                  for (let i = 0; i < Math.max(6, meds.length); i++) {
+                                                    const m = meds[i] || { nome: '', quantidades: [] };
+                                                    const qs = [];
+                                                    for (let j = 0; j < 6; j++) qs.push('<td class="qt">' + _rxEsc((m.quantidades || [])[j] || '') + '</td>');
+                                                    linhas.push('<tr><td class="idx">' + (i + 1) + '</td><td>' + _rxEsc(m.nome || '') + '</td>' + qs.join('') + '</tr>');
+                                                  }
+
+                                                  const mark = (on) => on ? 'X' : '';
+                                                  const repl = {
+                                                    '{{PRIMARY_COLOR}}': clinic.cor_primaria || '#0E6E5D',
+                                                    '{{LOGO_URL}}': logoDataUrl,
+                                                    '{{CLINIC_NAME}}': _rxEsc(form.estabelecimento || clinic.fantasia || clinic.razao || ''),
+                                                    '{{CLINIC_ADDRESS}}': _rxEsc(addr || ''),
+                                                    '{{CNES}}': _rxEsc(form.cnes || ''),
+                                                    '{{ESTABELECIMENTO}}': _rxEsc(form.estabelecimento || ''),
+                                                    '{{PACIENTE_NOME}}': _rxEsc(form.paciente_nome || ''),
+                                                    '{{PACIENTE_MAE}}': _rxEsc(form.paciente_mae || ''),
+                                                    '{{PESO}}': _rxEsc(form.peso || ''),
+                                                    '{{ALTURA}}': _rxEsc(form.altura || ''),
+                                                    '{{MEDICAMENTOS_ROWS}}': linhas.join(''),
+                                                    '{{CID_CODE}}': _rxEsc(form.cid_code || ''),
+                                                    '{{DIAGNOSTICO}}': _rxEsc(form.diagnostico || form.cid_descricao || ''),
+                                                    '{{ANAMNESE}}': _rxEsc(form.anamnese || ''),
+                                                    '{{TRAT_NAO}}': mark(form.tratamento_previo !== 'sim'),
+                                                    '{{TRAT_SIM}}': mark(form.tratamento_previo === 'sim'),
+                                                    '{{TRATAMENTO_RELATO}}': _rxEsc(form.tratamento_previo_relato || ''),
+                                                    '{{INCAPAZ_NAO}}': mark(form.incapaz !== 'sim'),
+                                                    '{{INCAPAZ_SIM}}': mark(form.incapaz === 'sim'),
+                                                    '{{RESPONSAVEL_NOME}}': _rxEsc(form.responsavel_nome || ''),
+                                                    '{{MEDICO_NOME}}': _rxEsc(form.medico_nome || ''),
+                                                    '{{MEDICO_CRM}}': doctorCrm ? ' — CRM ' + _rxEsc(doctorCrm) : '',
+                                                    '{{MEDICO_CRM_PLAIN}}': doctorCrm ? 'CRM ' + _rxEsc(doctorCrm) : '',
+                                                    '{{MEDICO_CNS}}': _rxEsc(form.medico_cns || ''),
+                                                    '{{DATA_SOLICITACAO}}': _rxEsc(form.data_solicitacao ? new Date(form.data_solicitacao + 'T00:00:00').toLocaleDateString('pt-BR') : ''),
+                                                    '{{SIGNATURE_IMAGE_URL}}': sigDataUrl,
+                                                    '{{ASSINATURA_DIGITAL}}': '',
+                                                    '{{OUTRO_NOME}}': _rxEsc(form.outro_nome || ''),
+                                                    '{{OUTRO_CPF}}': _rxEsc(form.outro_cpf || ''),
+                                                    '{{ETNIA}}': _rxEsc(form.etnia || ''),
+                                                    '{{TELEFONE}}': _rxEsc(form.telefone || ''),
+                                                    '{{DOCUMENTO_NUMERO}}': _rxEsc(form.documento_numero || ''),
+                                                    '{{DOCUMENTO_TIPO}}': (form.documento_tipo === 'cns' ? 'CNS' : 'CPF'),
+                                                    '{{EMAIL}}': _rxEsc(form.email || ''),
+                                                    '{{ISSUE_DATETIME}}': _rxEsc(new Date().toLocaleString('pt-BR')),
+                                                  };
+                                                  Object.entries(LME_RACAS).forEach(([k, ph]) => { repl['{{' + ph + '}}'] = mark(form.raca === k); });
+                                                  Object.entries(LME_PREENCHIDO).forEach(([k, ph]) => { repl['{{' + ph + '}}'] = mark((form.preenchido_por || 'medico') === k); });
+                                                  for (const [k, v] of Object.entries(repl)) html = html.split(k).join(v);
+
+                                                  const scopeId = 'lme-scope-' + Date.now();
+                                                  const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+                                                  const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+                                                  let rawCss = styleMatch ? styleMatch[1] : '';
+                                                  const rawBody = bodyMatch ? bodyMatch[1] : html;
+                                                  rawCss = rawCss
+                                                    .replace(/\*\s*\{\s*box-sizing:\s*border-box;\s*margin:\s*0;\s*padding:\s*0;\s*\}/, `#${scopeId} * { box-sizing: border-box; margin: 0; padding: 0; }`)
+                                                    .replace(/html,\s*body\s*\{([^}]*)\}/, (_, decls) => `#${scopeId} { ${decls} }`);
+
+                                                  const styleEl = document.createElement('style');
+                                                  styleEl.textContent = rawCss;
+                                                  document.head.appendChild(styleEl);
+
+                                                  const clipper = document.createElement('div');
+                                                  clipper.style.cssText = 'position:fixed;left:0;top:0;width:210mm;overflow:hidden;z-index:-1;pointer-events:none';
+                                                  const holder = document.createElement('div');
+                                                  holder.id = scopeId;
+                                                  holder.style.cssText = 'position:relative;width:210mm;min-width:210mm;max-width:210mm;margin:0 auto;background:#fff';
+                                                  holder.innerHTML = rawBody;
+                                                  clipper.appendChild(holder);
+                                                  document.body.appendChild(clipper);
+                                                  const cleanup = () => { try { clipper.remove(); } catch (_) {} try { styleEl.remove(); } catch (_) {} };
+
+                                                  try {
+                                                    if (!logoDataUrl) { const ls = holder.querySelector('.logo-slot'); if (ls) ls.remove(); }
+                                                    try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
+                                                    const imgs = Array.from(holder.querySelectorAll('img'));
+                                                    await Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; })));
+
+                                                    const safeName = (form.paciente_nome || 'paciente').replace(/[^\w\-]+/g, '_').toLowerCase();
+                                                    const filename = `lme_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+                                                    const pdfBlob = await window.html2pdf().set({
+                                                      margin: 0, filename,
+                                                      image: { type: 'jpeg', quality: 0.98 },
+                                                      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
+                                                      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                                                      pagebreak: { mode: ['css', 'legacy'] },
+                                                    }).from(holder.querySelector('.sheet') || holder).outputPdf('blob');
+
+                                                    let finalBlob = pdfBlob;
+                                                    let assinado = false;
+                                                    try {
+                                                      const { data: sess } = await sb.auth.getSession();
+                                                      const token = sess?.session?.access_token;
+                                                      if (token) {
+                                                        const pdfBase64 = await new Promise((resolve, reject) => {
+                                                          const r = new FileReader();
+                                                          r.onload = () => resolve(String(r.result).split(',')[1] || '');
+                                                          r.onerror = reject;
+                                                          r.readAsDataURL(pdfBlob);
+                                                        });
+                                                        const _sg = await _assinarPdfBase64(token, {
+                                                          pdfBase64, filename,
+                                                          contentDescription: `LME — ${form.paciente_nome || 'paciente'}`,
+                                                        });
+                                                        if (_sg && _sg.signedPdfUrl) {
+                                                          const dl = await fetch(_sg.signedPdfUrl);
+                                                          if (dl.ok) { finalBlob = await dl.blob(); assinado = true; }
+                                                        }
+                                                      }
+                                                    } catch (e) { console.warn('Assinatura do LME falhou:', e); }
+
+                                                    return { finalBlob, filename, assinado };
+                                                  } catch (e) {
+                                                    console.error('Falha ao gerar PDF do LME:', e);
+                                                    showToast && showToast('Falha ao gerar PDF do LME', 'error');
+                                                    return null;
+                                                  } finally { setTimeout(cleanup, 300); }
+                                                }
+
+                                                /* ---- Emissão: gera, assina, baixa e anexa ao atendimento ---- */
+                                                async function emitirLME() {
+                                                  const form = lmeCollect();
+                                                  const faltando = LME_OBRIGATORIOS.filter(([k]) => !String(form[k] || '').trim()).map(([, l]) => l);
+                                                  if (!form.medicamentos.length) faltando.push('Medicamento(s)');
+                                                  if (faltando.length) {
+                                                    lmeShowPendencias(faltando);
+                                                    showToast && showToast('Preencha os campos obrigatórios: ' + faltando.join(', '), 'error');
+                                                    return;
+                                                  }
+                                                  const btn = document.getElementById('lme-emitir-btn');
+                                                  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> Emitindo...'; }
+                                                  try {
+                                                    const res = await _renderLmePdf(form);
+                                                    if (!res) return;
+                                                    _baixarBlob(res.finalBlob, res.filename);
+                                                    await salvarDocumentoGerado({
+                                                      tipo: 'laudo',
+                                                      pacienteNome: form.paciente_nome,
+                                                      pacienteCpf: form.documento_tipo === 'cpf' ? form.documento_numero : null,
+                                                      pacienteId: (currentPatient && currentPatient.id) || null,
+                                                      conteudo: { documento: 'LME', ...form },
+                                                      blob: res.finalBlob,
+                                                      filename: res.filename,
+                                                      assinado: res.assinado,
+                                                    });
+                                                    const ta = document.getElementById('pront-area');
+                                                    if (ta) {
+                                                      ta.value = (ta.value ? ta.value + '\n\n' : '') + 'LME EMITIDO (' + (form.cid_code || '') + '): ' +
+                                                        form.medicamentos.map(m => m.nome).join('; ');
+                                                      if (typeof markAtendDirty === 'function') markAtendDirty();
+                                                    }
+                                                    showToast && showToast('LME emitido e anexado ao atendimento', 'success');
+                                                    closeModal();
+                                                  } finally {
+                                                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-file-download"></i> Emitir LME'; }
+                                                  }
+                                                }
                                                 async function _renderSolicitacaoExamesPdf({ patientName, patientAge, patientCpf, examsHtml, careType, urgente, fastingRequired, validityDays, clinicalIndication, cidCode, cidDescription, preparationNotes, additionalNotes }) {
                                                   let clinic = {};
                                                   try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
