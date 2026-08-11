@@ -63,6 +63,7 @@
       email: "",
       role: "Você",
       phone: "",
+      cpf: "",
       crm: { uf: "", number: "" },
       notifications: { novoPaciente: true, agendaAlterada: true, mensagens: false, faturamento: true },
       scheduleRules: [],
@@ -91,6 +92,13 @@
       .join("")
       .toUpperCase();
   const isDoctor = (r) => (r || "").toLowerCase().includes("médic");
+  const maskCPF = (v) =>
+    String(v || "")
+      .replace(/\D/g, "")
+      .slice(0, 11)
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
   function roleTone(r) {
     r = (r || "").toLowerCase();
     if (r.includes("médic")) return "emerald";
@@ -188,6 +196,7 @@
           <div><label class="eq-label">Nome completo</label><input class="eq-input" id="eq-p-name" value="${esc(p.name)}"></div>
           <div><label class="eq-label">Telefone</label><input class="eq-input" id="eq-p-phone" value="${esc(p.phone)}"></div>
           <div><label class="eq-label">E-mail</label><input class="eq-input disabled" value="${esc(p.email)}" disabled></div>
+          <div><label class="eq-label"><i class="ti ti-id"></i> CPF</label><input class="eq-input" id="eq-p-cpf" maxlength="14" placeholder="000.000.000-00" value="${esc(maskCPF(p.cpf))}"></div>
           <div>
             <label class="eq-label"><i class="ti ti-stethoscope"></i> CRM</label>
             <div class="eq-crm">
@@ -237,6 +246,10 @@
       bind("eq-p-phone", (e) => {
         p.phone = e.target.value;
       });
+      bind("eq-p-cpf", (e) => {
+        p.cpf = e.target.value.replace(/\D/g, "").slice(0, 11);
+        e.target.value = maskCPF(p.cpf);
+      });
       bind("eq-p-crm-uf", (e) => {
         p.crm = { ...p.crm, uf: e.target.value };
       });
@@ -249,6 +262,7 @@
         const newMeta = {
           full_name: p.name,
           telefone: p.phone,
+          cpf: p.cpf,
           crm_uf: p.crm?.uf || "",
           crm_numero: p.crm?.number || "",
         };
@@ -1238,6 +1252,7 @@
     S.profile.name = meta.full_name || meta.name || meta.name_user || (u.email || "").split("@")[0] || "Usuário";
     S.profile.email = u.email || "";
     S.profile.phone = meta.telefone || meta.phone || "";
+    S.profile.cpf = (meta.cpf || "").replace(/\D/g, "").slice(0, 11);
     S.profile.crm = { uf: meta.crm_uf || "", number: meta.crm_numero || "" };
     renderProfile();
   }
