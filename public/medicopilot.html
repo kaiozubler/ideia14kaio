@@ -2844,6 +2844,9 @@
                             <div class="dm-item green" onclick="closeDropdown()">
                               <i class="ti ti-certificate"></i> Emitir atestado
                             </div>
+                            <div class="dm-item green" onclick="closeDropdown();openLmeModal()">
+                              <i class="ti ti-file-text"></i> Gerar LME
+                            </div>
                             <div class="dm-item" onclick="closeDropdown()">
                               <i class="ti ti-paperclip"></i> Anexar arquivo
                             </div>
@@ -4709,6 +4712,121 @@
           <button class="btn" onclick="closeModal()">Cancelar</button>
           <button class="btn primary" id="gd-submit-btn" onclick="gerarDocumentoGenerico()">
             <i class="ti ti-file-plus"></i> Gerar documento
+          </button>
+        </div>
+      </div>
+
+      <!-- GERAR LME (Componente Especializado - SUS) -->
+      <div class="modal wide" id="m-lme" style="display:none;max-width:1080px">
+        <div class="mhd">
+          <span class="mhd-title"><i class="ti ti-file-text"></i> Gerar LME — Laudo de Solicitação de Medicamento(s)</span
+          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody" style="max-height:70vh;overflow-y:auto">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+            <button class="btn primary" onclick="lmeAutofill(false)" id="lme-ia-btn">
+              <i class="ti ti-sparkles"></i> Preencher com IA
+            </button>
+            <button class="btn ghost" onclick="lmeToggleChat()">
+              <i class="ti ti-message-2"></i> Conversar com a assistente
+            </button>
+            <span id="lme-status" style="font-size:11.5px;color:var(--n400)"></span>
+          </div>
+
+          <div id="lme-pendencias" style="display:none;margin-bottom:12px;border:0.5px solid #fde047;background:#fefce8;border-radius:8px;padding:8px 10px;font-size:11.5px;color:#78350f"></div>
+
+          <div id="lme-chat-wrap" style="display:none;margin-bottom:14px;border:0.5px solid var(--n200);border-radius:10px;overflow:hidden">
+            <div id="lme-chat-log" style="max-height:200px;overflow-y:auto;padding:10px;background:#f8fafc;display:flex;flex-direction:column;gap:8px;font-size:12px"></div>
+            <div style="display:flex;gap:6px;padding:8px;border-top:0.5px solid var(--n200)">
+              <input type="text" id="lme-chat-input" placeholder="Ex: peso 72kg, altura 168, CNES 1234567, já tratou com metformina..."
+                style="flex:1;border:0.5px solid var(--n200);border-radius:8px;padding:7px 10px;font-size:12.5px;outline:none;font-family:inherit"
+                onkeydown="if(event.key==='Enter')lmeChatSend()" />
+              <button class="btn sm primary" onclick="lmeChatSend()"><i class="ti ti-send"></i></button>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="fld"><label>1 - Número do CNES *</label><input type="text" id="lme-cnes" placeholder="0000000" /></div>
+            <div class="fld"><label>2 - Estabelecimento de saúde solicitante</label><input type="text" id="lme-estab" /></div>
+            <div class="fld"><label>3 - Nome completo do paciente *</label><input type="text" id="lme-nome" /></div>
+            <div class="fld"><label>4 - Nome da mãe do paciente *</label><input type="text" id="lme-mae" /></div>
+            <div class="fld"><label>5 - Peso (kg) *</label><input type="text" id="lme-peso" /></div>
+            <div class="fld"><label>6 - Altura (cm) *</label><input type="text" id="lme-altura" /></div>
+          </div>
+
+          <div style="margin-top:14px">
+            <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--n400)">7 e 8 - Medicamentos e quantidade solicitada por mês *</label>
+            <div id="lme-meds" style="margin-top:6px;display:flex;flex-direction:column;gap:8px"></div>
+            <button class="btn ghost sm" style="margin-top:8px" onclick="lmeAddMed()"><i class="ti ti-plus"></i> Adicionar medicamento</button>
+          </div>
+
+          <div class="form-grid" style="margin-top:14px">
+            <div class="fld" style="position:relative">
+              <label>9 - CID-10 *</label>
+              <input type="text" id="lme-cid" placeholder="Código ou descrição" autocomplete="off"
+                oninput="lmeCidSuggest()" onblur="setTimeout(()=>{const s=document.getElementById('lme-cid-suggest');if(s)s.style.display='none'},150)" />
+              <div id="lme-cid-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:30;background:#fff;border:0.5px solid var(--n200);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,.08);max-height:200px;overflow-y:auto"></div>
+              <div id="lme-cid-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px"></div>
+            </div>
+            <div class="fld"><label>10 - Diagnóstico</label><input type="text" id="lme-diagnostico" /></div>
+          </div>
+
+          <div class="fld wide" style="margin-top:12px">
+            <label>11 - Anamnese *</label>
+            <textarea id="lme-anamnese" class="cf-ta" style="min-height:130px" placeholder="História da doença, evolução, tratamentos realizados e justificativa da solicitação"></textarea>
+          </div>
+
+          <div class="form-grid" style="margin-top:12px">
+            <div class="fld">
+              <label>12 - Tratamento prévio ou em tratamento? *</label>
+              <select id="lme-trat"><option value="nao">Não</option><option value="sim">Sim</option></select>
+            </div>
+            <div class="fld"><label>12 - Relatar tratamento</label><input type="text" id="lme-trat-relato" /></div>
+            <div class="fld">
+              <label>13 - Paciente considerado incapaz? *</label>
+              <select id="lme-incapaz"><option value="nao">Não</option><option value="sim">Sim</option></select>
+            </div>
+            <div class="fld"><label>13 - Nome do responsável</label><input type="text" id="lme-resp" /></div>
+            <div class="fld"><label>14 - Médico solicitante *</label><input type="text" id="lme-medico" /></div>
+            <div class="fld"><label>15 - CNS do médico *</label><input type="text" id="lme-cns" /></div>
+            <div class="fld"><label>16 - Data da solicitação *</label><input type="date" id="lme-data" /></div>
+            <div class="fld">
+              <label>18 - Campos abaixo preenchidos por *</label>
+              <select id="lme-preenchido">
+                <option value="paciente">Paciente</option>
+                <option value="mae">Mãe do paciente</option>
+                <option value="responsavel">Responsável (item 13)</option>
+                <option value="medico">Médico solicitante</option>
+                <option value="outro">Outro</option>
+              </select>
+            </div>
+            <div class="fld"><label>18 - Outro: nome</label><input type="text" id="lme-outro-nome" /></div>
+            <div class="fld"><label>18 - Outro: CPF</label><input type="text" id="lme-outro-cpf" /></div>
+            <div class="fld">
+              <label>19 - Raça/Cor/Etnia *</label>
+              <select id="lme-raca">
+                <option value="">—</option>
+                <option value="branca">Branca</option>
+                <option value="preta">Preta</option>
+                <option value="parda">Parda</option>
+                <option value="amarela">Amarela</option>
+                <option value="indigena">Indígena</option>
+              </select>
+            </div>
+            <div class="fld"><label>19 - Etnia (indígena)</label><input type="text" id="lme-etnia" /></div>
+            <div class="fld"><label>20 - Telefone(s) do paciente</label><input type="text" id="lme-tel" /></div>
+            <div class="fld"><label>21 - Documento do paciente</label><input type="text" id="lme-doc-num" /></div>
+            <div class="fld">
+              <label>21 - Tipo do documento</label>
+              <select id="lme-doc-tipo"><option value="cpf">CPF</option><option value="cns">CNS</option></select>
+            </div>
+            <div class="fld"><label>22 - E-mail do paciente</label><input type="text" id="lme-email" /></div>
+          </div>
+        </div>
+        <div class="mfoot">
+          <button class="btn" onclick="closeModal()">Cancelar</button>
+          <button class="btn primary" id="lme-emitir-btn" onclick="emitirLME()">
+            <i class="ti ti-file-download"></i> Emitir LME
           </button>
         </div>
       </div>

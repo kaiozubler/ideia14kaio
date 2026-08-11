@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>LME — Laudo de Solicitação, Avaliação e Autorização de Medicamento(s)</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { font-family: Arial, Helvetica, sans-serif; color: #111; background: #fff; }
+      .sheet { width: 210mm; padding: 10mm 9mm; background: #fff; font-size: 9.2pt; line-height: 1.35; }
+      .hdr { display: flex; align-items: center; gap: 10px; border-bottom: 1.5px solid {{PRIMARY_COLOR}}; padding-bottom: 6px; }
+      .hdr .logo-slot img { max-height: 46px; max-width: 120px; object-fit: contain; }
+      .hdr-txt { flex: 1; text-align: center; }
+      .hdr-txt .gov { font-size: 8pt; text-transform: uppercase; letter-spacing: .4px; color: #333; }
+      .hdr-txt h1 { font-size: 10.5pt; margin-top: 2px; text-transform: uppercase; }
+      .hdr-txt h2 { font-size: 9.5pt; font-weight: 700; margin-top: 1px; }
+      .hdr-txt .sub { font-size: 8.4pt; margin-top: 2px; color: #444; }
+      .band { background: {{PRIMARY_COLOR}}; color: #fff; font-size: 8.6pt; font-weight: 700; text-transform: uppercase; padding: 3px 6px; margin: 7px 0 5px; }
+      .row { display: flex; gap: 6px; margin-bottom: 5px; }
+      .fld { border: 0.6px solid #666; border-radius: 2px; padding: 3px 5px; flex: 1; min-height: 30px; }
+      .fld .lb { font-size: 7.2pt; font-weight: 700; text-transform: uppercase; color: #444; display: block; }
+      .fld .vl { font-size: 9.4pt; white-space: pre-wrap; word-break: break-word; }
+      .fld.sm { flex: 0 0 22%; }
+      .fld.md { flex: 0 0 33%; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 0.6px solid #666; padding: 3px 4px; font-size: 8.6pt; vertical-align: top; }
+      th { background: #f1f1f1; font-size: 7.6pt; text-transform: uppercase; }
+      td.idx { text-align: center; width: 16px; }
+      td.qt { text-align: center; width: 8%; }
+      .box { border: 0.6px solid #666; border-radius: 2px; padding: 4px 5px; margin-bottom: 5px; }
+      .box .lb { font-size: 7.2pt; font-weight: 700; text-transform: uppercase; color: #444; }
+      .box .vl { font-size: 9.2pt; white-space: pre-wrap; }
+      .anamnese .vl { min-height: 34mm; }
+      .chk { display: inline-flex; align-items: center; gap: 4px; margin-right: 14px; font-size: 9pt; }
+      .chk i { display: inline-block; width: 9px; height: 9px; border: 0.8px solid #333; text-align: center; line-height: 8px; font-style: normal; font-size: 8pt; }
+      .sig { margin-top: 6px; display: flex; gap: 10px; }
+      .sig .cell { flex: 1; border: 0.6px solid #666; border-radius: 2px; padding: 4px 5px; min-height: 60px; text-align: center; }
+      .sig .cell img { max-height: 34px; margin: 2px auto; display: block; }
+      .sig .cell .line { border-top: 0.6px solid #333; margin: 26px 8px 3px; }
+      .sig .cell .nm { font-size: 8.6pt; font-weight: 700; }
+      .sig .cell .mt { font-size: 7.6pt; color: #444; }
+      .foot { margin-top: 6px; border-top: 0.6px solid #999; padding-top: 4px; font-size: 7.2pt; color: #555; display: flex; justify-content: space-between; gap: 8px; }
+      .digi { font-size: 7.2pt; color: #444; }
+    </style>
+  </head>
+  <body>
+    <div class="sheet">
+      <div class="hdr">
+        <div class="logo-slot"><img src="{{LOGO_URL}}" alt="" /></div>
+        <div class="hdr-txt">
+          <div class="gov">Ministério da Saúde · Secretaria de Estado da Saúde · Sistema Único de Saúde</div>
+          <h1>Componente Especializado da Assistência Farmacêutica</h1>
+          <h2>Laudo de Solicitação, Avaliação e Autorização de Medicamento(s)</h2>
+          <div class="sub">{{CLINIC_NAME}} · {{CLINIC_ADDRESS}}</div>
+        </div>
+      </div>
+
+      <div class="band">Campos de preenchimento exclusivo pelo médico solicitante</div>
+
+      <div class="row">
+        <div class="fld md"><span class="lb">1 - Número do CNES *</span><span class="vl">{{CNES}}</span></div>
+        <div class="fld"><span class="lb">2 - Nome do estabelecimento de saúde solicitante</span><span class="vl">{{ESTABELECIMENTO}}</span></div>
+      </div>
+      <div class="row">
+        <div class="fld"><span class="lb">3 - Nome completo do paciente *</span><span class="vl">{{PACIENTE_NOME}}</span></div>
+        <div class="fld sm"><span class="lb">5 - Peso do paciente * (kg)</span><span class="vl">{{PESO}}</span></div>
+      </div>
+      <div class="row">
+        <div class="fld"><span class="lb">4 - Nome da mãe do paciente *</span><span class="vl">{{PACIENTE_MAE}}</span></div>
+        <div class="fld sm"><span class="lb">6 - Altura do paciente * (cm)</span><span class="vl">{{ALTURA}}</span></div>
+      </div>
+
+      <table>
+        <tr>
+          <th colspan="2">7 - Medicamento(s) *</th>
+          <th colspan="6">8 - Quantidade solicitada *</th>
+        </tr>
+        <tr>
+          <th></th><th></th>
+          <th>1º mês</th><th>2º mês</th><th>3º mês</th><th>4º mês</th><th>5º mês</th><th>6º mês</th>
+        </tr>
+        {{MEDICAMENTOS_ROWS}}
+      </table>
+
+      <div class="row" style="margin-top:5px">
+        <div class="fld md"><span class="lb">9 - CID-10 *</span><span class="vl">{{CID_CODE}}</span></div>
+        <div class="fld"><span class="lb">10 - Diagnóstico</span><span class="vl">{{DIAGNOSTICO}}</span></div>
+      </div>
+
+      <div class="box anamnese"><span class="lb">11 - Anamnese *</span><div class="vl">{{ANAMNESE}}</div></div>
+
+      <div class="box">
+        <span class="lb">12 - Paciente realizou tratamento prévio ou está em tratamento da doença? *</span>
+        <div class="vl">
+          <span class="chk"><i>{{TRAT_NAO}}</i> NÃO</span>
+          <span class="chk"><i>{{TRAT_SIM}}</i> SIM. Relatar:</span>
+          {{TRATAMENTO_RELATO}}
+        </div>
+      </div>
+
+      <div class="box">
+        <span class="lb">13 - Atestado de capacidade *</span>
+        <div class="vl">O paciente é considerado incapaz (arts. 3º e 4º do Código Civil)?
+          <span class="chk"><i>{{INCAPAZ_NAO}}</i> NÃO</span>
+          <span class="chk"><i>{{INCAPAZ_SIM}}</i> SIM. Responsável: {{RESPONSAVEL_NOME}}</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="fld"><span class="lb">14 - Nome do médico solicitante *</span><span class="vl">{{MEDICO_NOME}}{{MEDICO_CRM}}</span></div>
+        <div class="fld md"><span class="lb">15 - CNS do médico solicitante *</span><span class="vl">{{MEDICO_CNS}}</span></div>
+        <div class="fld sm"><span class="lb">16 - Data da solicitação *</span><span class="vl">{{DATA_SOLICITACAO}}</span></div>
+      </div>
+
+      <div class="sig">
+        <div class="cell">
+          <div class="mt">17 - Assinatura e carimbo do médico *</div>
+          <img src="{{SIGNATURE_IMAGE_URL}}" alt="" />
+          <div class="line"></div>
+          <div class="nm">{{MEDICO_NOME}}</div>
+          <div class="mt">{{MEDICO_CRM_PLAIN}}</div>
+          <div class="digi">{{ASSINATURA_DIGITAL}}</div>
+        </div>
+      </div>
+
+      <div class="band">18 - Campos abaixo preenchidos por *</div>
+      <div class="box">
+        <div class="vl">
+          <span class="chk"><i>{{PP_PACIENTE}}</i> Paciente</span>
+          <span class="chk"><i>{{PP_MAE}}</i> Mãe do paciente</span>
+          <span class="chk"><i>{{PP_RESP}}</i> Responsável (item 13)</span>
+          <span class="chk"><i>{{PP_MEDICO}}</i> Médico solicitante</span>
+          <span class="chk"><i>{{PP_OUTRO}}</i> Outro: {{OUTRO_NOME}} · CPF {{OUTRO_CPF}}</span>
+        </div>
+      </div>
+
+      <div class="box">
+        <span class="lb">19 - Raça/Cor/Etnia informado pelo paciente ou responsável *</span>
+        <div class="vl">
+          <span class="chk"><i>{{RC_BRANCA}}</i> Branca</span>
+          <span class="chk"><i>{{RC_PRETA}}</i> Preta</span>
+          <span class="chk"><i>{{RC_PARDA}}</i> Parda</span>
+          <span class="chk"><i>{{RC_AMARELA}}</i> Amarela</span>
+          <span class="chk"><i>{{RC_INDIGENA}}</i> Indígena. Etnia: {{ETNIA}}</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="fld"><span class="lb">20 - Telefone(s) para contato do paciente</span><span class="vl">{{TELEFONE}}</span></div>
+        <div class="fld"><span class="lb">21 - Número do documento do paciente</span><span class="vl">{{DOCUMENTO_NUMERO}} ({{DOCUMENTO_TIPO}})</span></div>
+      </div>
+      <div class="row">
+        <div class="fld"><span class="lb">22 - Correio eletrônico do paciente</span><span class="vl">{{EMAIL}}</span></div>
+        <div class="fld"><span class="lb">23 - Assinatura do responsável pelo preenchimento *</span><span class="vl"><div class="line" style="border-top:0.6px solid #333;margin:22px 8px 0"></div></span></div>
+      </div>
+
+      <div class="foot">
+        <span>* Campos de preenchimento obrigatório · Suporte: ceaf.daf@saude.gov.br</span>
+        <span>Emitido em {{ISSUE_DATETIME}}</span>
+      </div>
+    </div>
+  </body>
+</html>
