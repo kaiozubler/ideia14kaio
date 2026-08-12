@@ -4200,11 +4200,6 @@
             <button class="mf-close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>
           </div>
         </div>
-        <div class="mf-ia-callbar" onclick="mfToggleIA()">
-          <span class="mf-ia-call-ico"><i class="ti ti-sparkles"></i></span>
-          <span class="mf-ia-call-txt">Perguntar à IA sobre esta família</span>
-          <i class="ti ti-chevron-down" id="mf-ia-chev"></i>
-        </div>
         <div class="mf-alertas-pop" id="mf-alertas-pop"></div>
         <div class="mf-legenda">
           <span>Cada agrupamento de nós é uma família (mesmo sobrenome/vínculo)</span>
@@ -4216,6 +4211,11 @@
             <span style="font-size:13px">Nenhum parente vinculado ainda.</span>
           </div>
           <svg id="mf-svg" style="width:100%;height:100%;display:block"></svg>
+          <div class="mf-ia-callbar" onclick="mfToggleIA()">
+            <span class="mf-ia-call-ico"><i class="ti ti-sparkles"></i></span>
+            <span class="mf-ia-call-txt">Perguntar à IA sobre esta família</span>
+            <i class="ti ti-chevron-down" id="mf-ia-chev"></i>
+          </div>
           <div id="mf-tooltip" class="mf-tooltip"></div>
           <div id="mf-pessoa-expand" class="mf-exp-panel"></div>
           <div class="mf-ia-panel" id="mf-ia-panel">
@@ -7385,11 +7385,14 @@
                                                                   .attr('stroke-dasharray',d=>d.consanguineo===false?'4,3':null);
                                                                 const linkLabel=g.append('g').selectAll('text').data(edges).join('text')
                                                                   .attr('font-size',9.5).attr('fill','var(--n400)').attr('text-anchor','middle').text(d=>d.parentesco||'');
+                                                                let _mfHoverId=null;
                                                                 function aoEntrarNode(ev,d){
+                                                                  _mfHoverId=d.id;
                                                                   mostrarTooltip(ev,d);
                                                                   d3.select(ev.currentTarget).select('circle').transition().duration(180).attr('r',d.id===_mfFocoId?23:19);
                                                                 }
                                                                 function aoSairNode(ev,d){
+                                                                  if(_mfHoverId===d.id)_mfHoverId=null;
                                                                   esconderTooltip();
                                                                   d3.select(ev.currentTarget).select('circle').transition().duration(180).attr('r',d.id===_mfFocoId?20:16);
                                                                 }
@@ -7430,13 +7433,13 @@
                                                                 function forcaCursor(){
                                                                   return ()=>{
                                                                     if(mousePos.x==null)return;
-                                                                    const raio=95;
+                                                                    const raio=52;
                                                                     nodes.forEach(n=>{
-                                                                      if(n.fx!=null)return;
+                                                                      if(n.fx!=null||n.id===_mfHoverId)return;
                                                                       const dx=n.x-mousePos.x, dy=n.y-mousePos.y;
                                                                       const dist=Math.sqrt(dx*dx+dy*dy)||0.001;
                                                                       if(dist<raio){
-                                                                        const forca=(raio-dist)/raio*2.4;
+                                                                        const forca=(raio-dist)/raio*0.7;
                                                                         n.vx=(n.vx||0)+(dx/dist)*forca;
                                                                         n.vy=(n.vy||0)+(dy/dist)*forca;
                                                                       }
