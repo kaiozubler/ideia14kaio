@@ -4192,9 +4192,18 @@
               <span class="lg-toggle-track"><span class="lg-toggle-thumb"></span></span>
               <span class="lg-toggle-text" style="font-size:11.5px">Mostrar CIDs no nó</span>
             </label>
+            <button class="mf-alerta-btn" id="mf-alerta-btn" style="display:none" onclick="mfToggleAlertas()">
+              <i class="ti ti-alert-triangle"></i> <span id="mf-alerta-lbl">0 correlações</span>
+            </button>
             <button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
           </div>
         </div>
+        <div class="mf-ia-callbar" onclick="mfToggleIA()">
+          <span class="mf-ia-call-ico"><i class="ti ti-sparkles"></i></span>
+          <span class="mf-ia-call-txt">Perguntar à IA sobre esta família</span>
+          <i class="ti ti-chevron-down" id="mf-ia-chev"></i>
+        </div>
+        <div class="mf-alertas-pop" id="mf-alertas-pop"></div>
         <div class="mf-legenda">
           <span>Cada agrupamento de nós é uma família (mesmo sobrenome/vínculo)</span>
           <span style="display:flex;align-items:center;gap:4px"><svg width="18" height="2"><line x1="0" y1="1" x2="18" y2="1" stroke="var(--n300)" stroke-width="1.3" stroke-dasharray="4,3"/></svg> não consanguíneo (fora da análise genética)</span>
@@ -4207,6 +4216,19 @@
           <svg id="mf-svg" style="width:100%;height:100%;display:block"></svg>
           <div id="mf-tooltip" class="mf-tooltip"></div>
           <div id="mf-pessoa-expand" class="mf-exp-panel"></div>
+          <div class="mf-ia-panel" id="mf-ia-panel">
+            <div class="mf-ia-head">
+              <span class="mf-ia-head-title"><i class="ti ti-sparkles"></i> IA do mapa familiar</span>
+              <button class="mclose" onclick="mfToggleIA(false)"><i class="ti ti-x"></i></button>
+            </div>
+            <div class="mf-ia-bubbles bubbles-scroll" id="mf-ia-bubbles"></div>
+            <div class="mf-ia-foot">
+              <div class="ai-input-row">
+                <input class="ai-inp" id="mf-ia-inp" type="text" placeholder="Pergunte sobre a família, correlações, riscos..." onkeydown="if(event.key==='Enter')mfSendIA()" />
+                <button class="ai-sbtn" onclick="mfSendIA()"><i class="ti ti-send"></i></button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -6939,6 +6961,12 @@
                                                               document.getElementById('modal-overlay').classList.add('open');
                                                               const m=document.getElementById('m-mapa-familiar');
                                                               if(m)m.style.display='flex';
+                                                              if(typeof mfResetIA==='function')mfResetIA();
+                                                              const alBtn=document.getElementById('mf-alerta-btn');
+                                                              if(alBtn)alBtn.style.display='none';
+                                                              const alPop=document.getElementById('mf-alertas-pop');
+                                                              if(alPop)alPop.classList.remove('open');
+                                                              _mfCorrelacoes=[];
                                                               const svg=document.getElementById('mf-svg');
                                                               document.getElementById('mf-empty').style.display='none';
                                                               if(svg)svg.innerHTML='<text x="50%" y="50%" text-anchor="middle" fill="var(--n400)" font-size="12">Carregando...</text>';
@@ -6962,7 +6990,8 @@
                                                                 return;
                                                               }
                                                               mfSetView('mapa');
-                                                            }
+                                                              mfRenderAlertas();
+                                                             }
 
                                                             function mfSetView(v){
                                                               _mfView=v;
@@ -6970,6 +6999,160 @@
                                                               if(bm)bm.classList.toggle('primary',v==='mapa');
                                                               if(ba)ba.classList.toggle('primary',v==='arvore');
                                                               mfRender();
+                                                            }
+
+                                                            /* ===== IA do mapa familiar + alertas de correlação de CIDs ===== */
+                                                            let _mfIaHistory=[];
+                                                            let _mfIaBusy=false;
+                                                            let _mfCorrelacoes=[];
+
+                                                            function mfEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+                                                            function mfCidsDoNode(n){
+                                                              return (Array.isArray(n&&n.cids)?n.cids:[]).map(c=>({
+                                                                code:(c.code||c.codigo||'').toUpperCase().trim(),
+                                                                description:c.description||c.descricao||''
+                                                              })).filter(c=>c.code);
+                                                            }
+
+                                                            /* Correlações: mesmo CID (match exato) ou mesmo capítulo/grupo (3 primeiros caracteres)
+                                                               em 2+ pessoas do mapa; consanguíneos ganham prioridade. */
+                                                            function mfCalcularCorrelacoes(){
+                                                              const nodes=(_mfData&&_mfData.nodes)||[];
+                                                              const edges=(_mfData&&_mfData.edges)||[];
+                                                              const naoConsang=new Set();
+                                                              edges.forEach(e=>{if(e.consanguineo===false){naoConsang.add(e.origem);naoConsang.add(e.destino);}});
+                                                              const exato={}, grupo={};
+                                                              nodes.forEach(n=>{
+                                                                mfCidsDoNode(n).forEach(c=>{
+                                                                  exato[c.code]=exato[c.code]||{code:c.code,description:c.description,pessoas:[]};
+                                                                  if(!exato[c.code].pessoas.some(p=>p.id===n.id))exato[c.code].pessoas.push({id:n.id,nome:n.nome||''});
+                                                                  const g=c.code.slice(0,3);
+                                                                  grupo[g]=grupo[g]||{code:g,description:c.description,pessoas:[],codigos:new Set()};
+                                                                  grupo[g].codigos.add(c.code);
+                                                                  if(!grupo[g].pessoas.some(p=>p.id===n.id))grupo[g].pessoas.push({id:n.id,nome:n.nome||''});
+                                                                });
+                                                              });
+                                                              const out=[];
+                                                              Object.values(exato).forEach(x=>{
+                                                                if(x.pessoas.length<2)return;
+                                                                out.push({tipo:'exato',code:x.code,description:x.description,pessoas:x.pessoas,
+                                                                  consanguineo:x.pessoas.some(p=>!naoConsang.has(p.id))&&x.pessoas.filter(p=>!naoConsang.has(p.id)).length>=2});
+                                                              });
+                                                              Object.values(grupo).forEach(x=>{
+                                                                if(x.pessoas.length<2)return;
+                                                                if(x.codigos.size<2)return; // já coberto pelo match exato
+                                                                out.push({tipo:'grupo',code:x.code,description:x.description,codigos:[...x.codigos],pessoas:x.pessoas,
+                                                                  consanguineo:x.pessoas.filter(p=>!naoConsang.has(p.id)).length>=2});
+                                                              });
+                                                              out.sort((a,b)=>(b.consanguineo-a.consanguineo)||(b.pessoas.length-a.pessoas.length)||(a.tipo==='exato'?-1:1));
+                                                              _mfCorrelacoes=out;
+                                                              return out;
+                                                            }
+
+                                                            function mfRenderAlertas(){
+                                                              const btn=document.getElementById('mf-alerta-btn');
+                                                              const lbl=document.getElementById('mf-alerta-lbl');
+                                                              const pop=document.getElementById('mf-alertas-pop');
+                                                              if(!btn||!pop)return;
+                                                              pop.classList.remove('open');
+                                                              const cors=mfCalcularCorrelacoes();
+                                                              if(!cors.length){btn.style.display='none';pop.innerHTML='';return;}
+                                                              btn.style.display='inline-flex';
+                                                              if(lbl)lbl.textContent=cors.length+(cors.length===1?' correlação':' correlações');
+                                                              pop.innerHTML='<h4><i class="ti ti-alert-triangle" style="color:#be123c"></i> Pontos de atenção — correlação familiar</h4>'
+                                                                +'<div class="mf-al-sub">CIDs coincidentes entre pacientes desta família. Avalie relevância genética/hereditária.</div>'
+                                                                +cors.map(c=>{
+                                                                  const tag=c.consanguineo?'<span class="mf-al-tag">consanguíneo</span>':'';
+                                                                  const titulo=c.tipo==='exato'
+                                                                    ?mfEsc(c.code)+(c.description?' — '+mfEsc(c.description):'')
+                                                                    :'Grupo '+mfEsc(c.code)+' ('+(c.codigos||[]).map(mfEsc).join(', ')+')';
+                                                                  const pessoas=c.pessoas.map(p=>'<span class="mf-chip-membro" onclick="openMapaFamiliar(\''+p.id+'\')">'+mfEsc(p.nome)+'</span>').join('');
+                                                                  return '<div class="mf-al-item"><span class="mf-al-cid">'+titulo+tag+'</span>'
+                                                                    +'<div class="mf-membros" style="margin-top:4px">'+pessoas+'</div>'
+                                                                    +'<div style="margin-top:5px;font-size:11px;color:#6b7280">'+c.pessoas.length+' pacientes com '+(c.tipo==='exato'?'o mesmo CID':'CIDs do mesmo grupo diagnóstico')+'.</div></div>';
+                                                                }).join('');
+                                                            }
+
+                                                            function mfToggleAlertas(){
+                                                              const pop=document.getElementById('mf-alertas-pop');
+                                                              if(pop)pop.classList.toggle('open');
+                                                            }
+
+                                                            function mfIaBubble(type,text){
+                                                              const wrap=document.getElementById('mf-ia-bubbles');
+                                                              if(!wrap)return null;
+                                                              const el=document.createElement('div');
+                                                              el.className='bbl '+(type==='usr'?'usr':type==='typing'?'ia typing':'ia');
+                                                              if(type==='typing'){el.innerHTML='<span class="tdot"></span><span class="tdot"></span><span class="tdot"></span>';}
+                                                              else{el.innerHTML='<span class="bbl-text">'+mfEsc(text).replace(/\n/g,'<br>')+'</span>';}
+                                                              wrap.appendChild(el);
+                                                              wrap.scrollTop=wrap.scrollHeight;
+                                                              return el;
+                                                            }
+
+                                                            function mfResetIA(){
+                                                              _mfIaHistory=[];
+                                                              const wrap=document.getElementById('mf-ia-bubbles');
+                                                              if(wrap)wrap.innerHTML='';
+                                                              const panel=document.getElementById('mf-ia-panel');
+                                                              if(panel)panel.classList.remove('open');
+                                                              document.querySelectorAll('#m-mapa-familiar .mf-ia-callbar').forEach(b=>b.classList.remove('active'));
+                                                            }
+
+                                                            function mfToggleIA(force){
+                                                              const panel=document.getElementById('mf-ia-panel');
+                                                              if(!panel)return;
+                                                              const abrir=force===undefined?!panel.classList.contains('open'):!!force;
+                                                              panel.classList.toggle('open',abrir);
+                                                              document.querySelectorAll('#m-mapa-familiar .mf-ia-callbar').forEach(b=>b.classList.toggle('active',abrir));
+                                                              if(abrir){
+                                                                const wrap=document.getElementById('mf-ia-bubbles');
+                                                                if(wrap&&!wrap.children.length){
+                                                                  const nodes=(_mfData&&_mfData.nodes)||[];
+                                                                  mfIaBubble('ia','Como posso ajudar?');
+                                                                  mfIaBubble('ia','Tenho o contexto de '+nodes.length+' pessoa(s) desta família'
+                                                                    +(_mfCorrelacoes.length?' e '+_mfCorrelacoes.length+' correlação(ões) de CID detectada(s)':'')
+                                                                    +'. Posso analisar histórico familiar, riscos hereditários e pontos de atenção.');
+                                                                }
+                                                                const inp=document.getElementById('mf-ia-inp');
+                                                                if(inp)setTimeout(()=>inp.focus(),260);
+                                                              }
+                                                            }
+
+                                                            async function mfSendIA(){
+                                                              const inp=document.getElementById('mf-ia-inp');
+                                                              if(!inp||_mfIaBusy)return;
+                                                              const txt=(inp.value||'').trim();
+                                                              if(!txt)return;
+                                                              inp.value='';
+                                                              mfIaBubble('usr',txt);
+                                                              _mfIaHistory.push({role:'user',content:txt});
+                                                              _mfIaBusy=true;
+                                                              const typing=mfIaBubble('typing');
+                                                              try{
+                                                                const {data:sess}=await sb.auth.getSession();
+                                                                const token=sess&&sess.session?sess.session.access_token:null;
+                                                                const nodes=((_mfData&&_mfData.nodes)||[]).map(n=>({id:n.id,nome:n.nome,sexo:n.sexo,nascimento:n.nascimento,cids:mfCidsDoNode(n)}));
+                                                                const res=await fetch('/api/mapa-familiar-ia',{
+                                                                  method:'POST',
+                                                                  headers:Object.assign({'Content-Type':'application/json'},token?{Authorization:'Bearer '+token}:{}),
+                                                                  body:JSON.stringify({messages:_mfIaHistory,contexto:{foco_id:_mfFocoId,nodes,edges:(_mfData&&_mfData.edges)||[],correlacoes:_mfCorrelacoes}})
+                                                                });
+                                                                const data=await res.json().catch(()=>({}));
+                                                                if(typing)typing.remove();
+                                                                if(!res.ok||!data.reply){
+                                                                  mfIaBubble('ia','Não consegui responder agora. Tente novamente.');
+                                                                }else{
+                                                                  mfIaBubble('ia',data.reply);
+                                                                  _mfIaHistory.push({role:'assistant',content:data.reply});
+                                                                }
+                                                              }catch(e){
+                                                                if(typing)typing.remove();
+                                                                mfIaBubble('ia','Erro de comunicação com a IA.');
+                                                              }finally{
+                                                                _mfIaBusy=false;
+                                                              }
                                                             }
 
                                                             function mfNumCids(n){return Array.isArray(n.cids)?n.cids.length:0;}

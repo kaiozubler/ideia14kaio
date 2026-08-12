@@ -187,6 +187,27 @@ export type Database = {
           },
         ]
       }
+      cid10: {
+        Row: {
+          codigo: string
+          created_at: string
+          descricao: string
+          id: string
+        }
+        Insert: {
+          codigo: string
+          created_at?: string
+          descricao: string
+          id?: string
+        }
+        Update: {
+          codigo?: string
+          created_at?: string
+          descricao?: string
+          id?: string
+        }
+        Relationships: []
+      }
       conceitos_clinicos: {
         Row: {
           ativo: boolean
@@ -1848,6 +1869,13 @@ export type Database = {
           regra_id: string
           status: string
           tarefas_criadas: number
+        }[]
+      }
+      buscar_cid10: {
+        Args: { p_limit?: number; termo: string }
+        Returns: {
+          codigo: string
+          descricao: string
         }[]
       }
       buscar_comerciais: {
