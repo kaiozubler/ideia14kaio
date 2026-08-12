@@ -17,6 +17,7 @@ import { Route as ApiChatIaRouteImport } from './routes/api/chat-ia'
 import { Route as ApiDailyRoomRouteImport } from './routes/api/daily-room'
 import { Route as ApiDeepgramTokenRouteImport } from './routes/api/deepgram-token'
 import { Route as ApiLmeIaRouteImport } from './routes/api/lme-ia'
+import { Route as ApiMapaFamiliarIaRouteImport } from './routes/api/mapa-familiar-ia'
 import { Route as ApiWhatsappConviteRouteImport } from './routes/api/whatsapp-convite'
 import { Route as ApiWhatsappWebhookRouteImport } from './routes/api/whatsapp-webhook'
 import { Route as ApiBryCancelEnvelopeRouteImport } from './routes/api/bry/cancel-envelope'
@@ -77,6 +78,11 @@ const ApiDeepgramTokenRoute = ApiDeepgramTokenRouteImport.update({
 const ApiLmeIaRoute = ApiLmeIaRouteImport.update({
   id: '/api/lme-ia',
   path: '/api/lme-ia',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMapaFamiliarIaRoute = ApiMapaFamiliarIaRouteImport.update({
+  id: '/api/mapa-familiar-ia',
+  path: '/api/mapa-familiar-ia',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiWhatsappConviteRoute = ApiWhatsappConviteRouteImport.update({
@@ -194,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/lme-ia': typeof ApiLmeIaRoute
+  '/api/mapa-familiar-ia': typeof ApiMapaFamiliarIaRoute
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
   '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
@@ -224,6 +231,7 @@ export interface FileRoutesByTo {
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/lme-ia': typeof ApiLmeIaRoute
+  '/api/mapa-familiar-ia': typeof ApiMapaFamiliarIaRoute
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
   '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
@@ -255,6 +263,7 @@ export interface FileRoutesById {
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/lme-ia': typeof ApiLmeIaRoute
+  '/api/mapa-familiar-ia': typeof ApiMapaFamiliarIaRoute
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
   '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
@@ -287,6 +296,7 @@ export interface FileRouteTypes {
     | '/api/daily-room'
     | '/api/deepgram-token'
     | '/api/lme-ia'
+    | '/api/mapa-familiar-ia'
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
     | '/api/bry/cancel-envelope'
@@ -317,6 +327,7 @@ export interface FileRouteTypes {
     | '/api/daily-room'
     | '/api/deepgram-token'
     | '/api/lme-ia'
+    | '/api/mapa-familiar-ia'
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
     | '/api/bry/cancel-envelope'
@@ -347,6 +358,7 @@ export interface FileRouteTypes {
     | '/api/daily-room'
     | '/api/deepgram-token'
     | '/api/lme-ia'
+    | '/api/mapa-familiar-ia'
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
     | '/api/bry/cancel-envelope'
@@ -378,6 +390,7 @@ export interface RootRouteChildren {
   ApiDailyRoomRoute: typeof ApiDailyRoomRoute
   ApiDeepgramTokenRoute: typeof ApiDeepgramTokenRoute
   ApiLmeIaRoute: typeof ApiLmeIaRoute
+  ApiMapaFamiliarIaRoute: typeof ApiMapaFamiliarIaRoute
   ApiWhatsappConviteRoute: typeof ApiWhatsappConviteRoute
   ApiWhatsappWebhookRoute: typeof ApiWhatsappWebhookRoute
   ApiBryCancelEnvelopeRoute: typeof ApiBryCancelEnvelopeRoute
@@ -456,6 +469,13 @@ declare module '@tanstack/react-router' {
       path: '/api/lme-ia'
       fullPath: '/api/lme-ia'
       preLoaderRoute: typeof ApiLmeIaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/mapa-familiar-ia': {
+      id: '/api/mapa-familiar-ia'
+      path: '/api/mapa-familiar-ia'
+      fullPath: '/api/mapa-familiar-ia'
+      preLoaderRoute: typeof ApiMapaFamiliarIaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/whatsapp-convite': {
@@ -610,6 +630,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDailyRoomRoute: ApiDailyRoomRoute,
   ApiDeepgramTokenRoute: ApiDeepgramTokenRoute,
   ApiLmeIaRoute: ApiLmeIaRoute,
+  ApiMapaFamiliarIaRoute: ApiMapaFamiliarIaRoute,
   ApiWhatsappConviteRoute: ApiWhatsappConviteRoute,
   ApiWhatsappWebhookRoute: ApiWhatsappWebhookRoute,
   ApiBryCancelEnvelopeRoute: ApiBryCancelEnvelopeRoute,
