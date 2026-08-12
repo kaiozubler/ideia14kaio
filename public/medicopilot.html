@@ -4182,20 +4182,22 @@
       <div class="modal wide" id="m-mapa-familiar" style="display:none;width:94vw;max-width:1240px;height:88vh">
         <div class="mhd">
           <span class="mhd-title"><i class="ti ti-affiliate"></i> Mapa familiar</span>
-          <div style="display:flex;align-items:center;gap:10px">
-            <div style="display:flex;border:0.5px solid var(--n200);border-radius:var(--r8);overflow:hidden">
-              <button class="btn sm primary" id="mf-btn-mapa" onclick="mfSetView('mapa')" style="border-radius:0;border:none">Mapa mental</button>
-              <button class="btn sm" id="mf-btn-arvore" onclick="mfSetView('arvore')" style="border-radius:0;border:none;border-left:0.5px solid var(--n200)">Árvore genealógica</button>
+          <div class="mf-toolbar">
+            <div class="mf-segmented">
+              <button class="mf-seg-btn active" id="mf-btn-mapa" onclick="mfSetView('mapa')">Mapa mental</button>
+              <button class="mf-seg-btn" id="mf-btn-arvore" onclick="mfSetView('arvore')">Árvore genealógica</button>
             </div>
-            <label class="lg-toggle" style="margin:0">
-              <input type="checkbox" id="mf-show-cids" onchange="mfRender()" />
-              <span class="lg-toggle-track"><span class="lg-toggle-thumb"></span></span>
-              <span class="lg-toggle-text" style="font-size:11.5px">Mostrar CIDs no nó</span>
+            <label class="mf-toggle-wrap">
+              <span class="mf-toggle">
+                <input type="checkbox" id="mf-show-cids" onchange="mfRender()" />
+                <span class="mf-toggle-track"><span class="mf-toggle-thumb"></span></span>
+              </span>
+              <span class="mf-toggle-label">Mostrar CIDs no nó</span>
             </label>
             <button class="mf-alerta-btn" id="mf-alerta-btn" style="display:none" onclick="mfToggleAlertas()">
               <i class="ti ti-alert-triangle"></i> <span id="mf-alerta-lbl">0 correlações</span>
             </button>
-            <button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+            <button class="mf-close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>
           </div>
         </div>
         <div class="mf-ia-callbar" onclick="mfToggleIA()">
@@ -6996,8 +6998,8 @@
                                                             function mfSetView(v){
                                                               _mfView=v;
                                                               const bm=document.getElementById('mf-btn-mapa'), ba=document.getElementById('mf-btn-arvore');
-                                                              if(bm)bm.classList.toggle('primary',v==='mapa');
-                                                              if(ba)ba.classList.toggle('primary',v==='arvore');
+                                                              if(bm)bm.classList.toggle('active',v==='mapa');
+                                                              if(ba)ba.classList.toggle('active',v==='arvore');
                                                               mfRender();
                                                             }
 
@@ -7383,18 +7385,27 @@
                                                                   .attr('stroke-dasharray',d=>d.consanguineo===false?'4,3':null);
                                                                 const linkLabel=g.append('g').selectAll('text').data(edges).join('text')
                                                                   .attr('font-size',9.5).attr('fill','var(--n400)').attr('text-anchor','middle').text(d=>d.parentesco||'');
+                                                                function aoEntrarNode(ev,d){
+                                                                  mostrarTooltip(ev,d);
+                                                                  d3.select(ev.currentTarget).select('circle').transition().duration(180).attr('r',d.id===_mfFocoId?23:19);
+                                                                }
+                                                                function aoSairNode(ev,d){
+                                                                  esconderTooltip();
+                                                                  d3.select(ev.currentTarget).select('circle').transition().duration(180).attr('r',d.id===_mfFocoId?20:16);
+                                                                }
                                                                 const nodeG=g.append('g').selectAll('g').data(nodes).join('g')
                                                                   .style('cursor','pointer')
                                                                   .call(d3.drag()
                                                                     .on('start',(ev,d)=>{if(!ev.active)_mfSim.alphaTarget(0.25).restart();d.fx=d.x;d.fy=d.y;})
                                                                     .on('drag',(ev,d)=>{d.fx=ev.x;d.fy=ev.y;})
-                                                                    .on('end',(ev,d)=>{if(!ev.active)_mfSim.alphaTarget(0);d.fx=null;d.fy=null;}))
-                                                                  .on('mouseenter',mostrarTooltip).on('mousemove',mostrarTooltip).on('mouseleave',esconderTooltip)
+                                                                    .on('end',(ev,d)=>{if(!ev.active)_mfSim.alphaTarget(0.035);d.fx=null;d.fy=null;}))
+                                                                  .on('mouseenter',aoEntrarNode).on('mousemove',mostrarTooltip).on('mouseleave',aoSairNode)
                                                                   .on('click',(ev,d)=>mfExpandirPessoa(ev,d));
                                                                 nodeG.append('circle').attr('r',d=>d.id===_mfFocoId?20:16)
                                                                   .attr('fill',d=>mfCorSexo(d.sexo))
                                                                   .attr('stroke',d=>d.id===_mfFocoId?'#1a1917':'#fff')
-                                                                  .attr('stroke-width',d=>d.id===_mfFocoId?2.5:1.5);
+                                                                  .attr('stroke-width',d=>d.id===_mfFocoId?2.5:1.5)
+                                                                  .style('transition','stroke .18s');
                                                                 nodeG.filter(d=>mfNumCids(d)>0).append('circle')
                                                                   .attr('r',7).attr('cx',12).attr('cy',-12).attr('fill','#dc2626').attr('stroke','#fff').attr('stroke-width',1.5);
                                                                 nodeG.filter(d=>mfNumCids(d)>0).append('text')
@@ -7415,11 +7426,35 @@
                                                                     });
                                                                   };
                                                                 }
+                                                                const mousePos={x:null,y:null};
+                                                                function forcaCursor(){
+                                                                  return ()=>{
+                                                                    if(mousePos.x==null)return;
+                                                                    const raio=95;
+                                                                    nodes.forEach(n=>{
+                                                                      if(n.fx!=null)return;
+                                                                      const dx=n.x-mousePos.x, dy=n.y-mousePos.y;
+                                                                      const dist=Math.sqrt(dx*dx+dy*dy)||0.001;
+                                                                      if(dist<raio){
+                                                                        const forca=(raio-dist)/raio*2.4;
+                                                                        n.vx=(n.vx||0)+(dx/dist)*forca;
+                                                                        n.vy=(n.vy||0)+(dy/dist)*forca;
+                                                                      }
+                                                                    });
+                                                                  };
+                                                                }
+                                                                svg.on('mousemove.cursorforce',ev=>{
+                                                                  const [mx,my]=d3.pointer(ev,g.node());
+                                                                  mousePos.x=mx;mousePos.y=my;
+                                                                }).on('mouseleave.cursorforce',()=>{mousePos.x=null;mousePos.y=null;});
                                                                 _mfSim=d3.forceSimulation(nodes)
+                                                                  .velocityDecay(0.52)
                                                                   .force('link',d3.forceLink(edges).id(d=>d.id).distance(115).strength(0.7))
                                                                   .force('charge',d3.forceManyBody().strength(-260))
                                                                   .force('collide',d3.forceCollide(42))
                                                                   .force('cluster',forcaClusters())
+                                                                  .force('cursor',forcaCursor())
+                                                                  .alphaTarget(0.035)
                                                                   .on('tick',()=>{
                                                                     linkSel.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
                                                                     linkLabel.attr('x',d=>(d.source.x+d.target.x)/2).attr('y',d=>(d.source.y+d.target.y)/2);
@@ -12005,6 +12040,9 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                             function closeModal(){
                                                               document.getElementById('modal-overlay').classList.remove('open');
                                                               document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
+                                                              if(typeof _mfSim!=='undefined'&&_mfSim){_mfSim.stop();_mfSim=null;}
+                                                              const mfExp=document.getElementById('mf-pessoa-expand');
+                                                              if(mfExp)mfExp.style.display='none';
                                                         // Se havia uma receita gerada pela IA, pergunta sobre envio
                                                         if(window.__iaAfterReceita&&rxSelected&&rxSelected.length){
                                                           window.__iaAfterReceita=false;
