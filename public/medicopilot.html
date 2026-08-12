@@ -4192,9 +4192,18 @@
               <span class="lg-toggle-track"><span class="lg-toggle-thumb"></span></span>
               <span class="lg-toggle-text" style="font-size:11.5px">Mostrar CIDs no nó</span>
             </label>
+            <button class="mf-alerta-btn" id="mf-alerta-btn" style="display:none" onclick="mfToggleAlertas()">
+              <i class="ti ti-alert-triangle"></i> <span id="mf-alerta-lbl">0 correlações</span>
+            </button>
             <button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
           </div>
         </div>
+        <div class="mf-ia-callbar" onclick="mfToggleIA()">
+          <span class="mf-ia-call-ico"><i class="ti ti-sparkles"></i></span>
+          <span class="mf-ia-call-txt">Perguntar à IA sobre esta família</span>
+          <i class="ti ti-chevron-down" id="mf-ia-chev"></i>
+        </div>
+        <div class="mf-alertas-pop" id="mf-alertas-pop"></div>
         <div class="mf-legenda">
           <span>Cada agrupamento de nós é uma família (mesmo sobrenome/vínculo)</span>
           <span style="display:flex;align-items:center;gap:4px"><svg width="18" height="2"><line x1="0" y1="1" x2="18" y2="1" stroke="var(--n300)" stroke-width="1.3" stroke-dasharray="4,3"/></svg> não consanguíneo (fora da análise genética)</span>
@@ -4207,6 +4216,19 @@
           <svg id="mf-svg" style="width:100%;height:100%;display:block"></svg>
           <div id="mf-tooltip" class="mf-tooltip"></div>
           <div id="mf-pessoa-expand" class="mf-exp-panel"></div>
+          <div class="mf-ia-panel" id="mf-ia-panel">
+            <div class="mf-ia-head">
+              <span class="mf-ia-head-title"><i class="ti ti-sparkles"></i> IA do mapa familiar</span>
+              <button class="mclose" onclick="mfToggleIA(false)"><i class="ti ti-x"></i></button>
+            </div>
+            <div class="mf-ia-bubbles bubbles-scroll" id="mf-ia-bubbles"></div>
+            <div class="mf-ia-foot">
+              <div class="ai-input-row">
+                <input class="ai-inp" id="mf-ia-inp" type="text" placeholder="Pergunte sobre a família, correlações, riscos..." onkeydown="if(event.key==='Enter')mfSendIA()" />
+                <button class="ai-sbtn" onclick="mfSendIA()"><i class="ti ti-send"></i></button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
