@@ -406,14 +406,70 @@
       const items = (d.items || []).slice(0, 12).map((it) => type === "Exame"
         ? { id: it.id, label: it.nome, code: it.codigo_tuss }
         : { id: it.id_substancia, label: it.nome_exibicao, code: "" });
-      if (!items.length) return catalogDropdownShow(prefix, `<div class="pt-cat-empty">Nenhum resultado — a ação ficará pendente de vínculo</div>`);
+      const criarHtml = type === "Exame"
+        ? `<div class="pt-cat-item pt-cat-create" data-catcreate="${prefix}" data-catcreateterm="${esc(term.trim())}">+ Cadastrar novo exame: "${esc(term.trim())}"</div>`
+        : "";
+      if (!items.length) {
+        return catalogDropdownShow(prefix, criarHtml || `<div class="pt-cat-empty">Nenhum resultado — a ação ficará pendente de vínculo</div>`);
+      }
       catalogDropdownShow(prefix, items.map((it) =>
         `<div class="pt-cat-item" data-catpick="${prefix}" data-catid="${esc(it.id)}" data-catlabel="${esc(it.label)}" data-catcode="${esc(it.code || "")}">${esc(it.label)}${it.code ? ` <span>${esc(it.code)}</span>` : ""}</div>`
-      ).join(""));
+      ).join("") + criarHtml);
     } catch {
       catalogDropdownShow(prefix, `<div class="pt-cat-empty">Falha na busca — tente novamente</div>`);
     }
   }
+  /** Aplica um item do catálogo (selecionado na busca ou recém-criado) aos campos ocultos do form. */
+  function applyCatalogPick(prefix, it) {
+    const type = prefix === "pt-ba" ? (S._batype || "Receita") : (S._atype || "Exame");
+    const nameEl = document.getElementById(prefix + "-name"); if (nameEl) nameEl.value = it.label || nameEl.value;
+    const qEl = document.getElementById(prefix + "-catq"); if (qEl) qEl.value = it.label || "";
+    const tussIdEl = document.getElementById(prefix + "-tussid");
+    const tussCodeEl = document.getElementById(prefix + "-tusscode");
+    const substIdEl = document.getElementById(prefix + "-substid");
+    const statusEl = document.getElementById(prefix + "-catstatus");
+    if (type === "Exame") {
+      if (tussIdEl) tussIdEl.value = it.id || "";
+      if (tussCodeEl) tussCodeEl.value = it.code || "";
+      if (substIdEl) substIdEl.value = "";
+    } else {
+      if (substIdEl) substIdEl.value = it.id || "";
+      if (tussIdEl) tussIdEl.value = "";
+      if (tussCodeEl) tussCodeEl.value = "";
+    }
+    if (statusEl) statusEl.value = "vinculado";
+    catalogDropdownShow(prefix, "");
+    const badge = document.getElementById(prefix + "-catbadge");
+    if (badge) {
+      badge.innerHTML = type === "Exame"
+        ? `<span class="pt-tag vinculado">✓ ${it.code ? "TUSS " + esc(it.code) : "Vinculado ao catálogo"}</span>`
+        : `<span class="pt-tag vinculado">✓ Vinculado ao catálogo</span>`;
+    }
+  }
+
+  /** Cria (ou reaproveita, se já existir por nome) um procedimento TUSS "pendente de cadastro". */
+  async function criarExamePendente(nome) {
+    const sb = sbc();
+    let token = "";
+    try {
+      const { data: sess } = await sb.auth.getSession();
+      token = (sess && sess.session && sess.session.access_token) || "";
+    } catch { /* segue sem token; endpoint responde 401 */ }
+    if (!token) return null;
+    try {
+      const res = await fetch("/api/tuss/criar", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: "Bearer " + token },
+        body: JSON.stringify({ nome }),
+      });
+      if (!res.ok) return null;
+      const d = await res.json();
+      return d.item || null;
+    } catch {
+      return null;
+    }
+  }
+
   function catalogBadgeHtml(f) {
     if (f.type === "Exame" && f.tussId) return `<span class="pt-tag vinculado">✓ ${f.codigoTuss ? "TUSS " + esc(f.codigoTuss) : "Vinculado ao catálogo"}</span>`;
     if (f.type === "Receita" && f.idSubstancia) return `<span class="pt-tag vinculado">✓ Vinculado ao catálogo</span>`;
@@ -732,7 +788,7 @@
   document.addEventListener("click", (e) => {
     const root = document.getElementById("s-protocolos");
     if (!root || root.style.display === "none") return;
-    const t = e.target.closest("[data-menu],[data-act],[data-dd],[data-group],[data-bulk],[data-clear],[data-goprot],[data-back],[data-new],[data-edit],[data-toggle],[data-mclose],[data-msave],[data-mbg],[data-cidadd],[data-cidrm],[data-anew],[data-aedit],[data-adel],[data-asave],[data-acancel],[data-atype],[data-afreq],[data-zoom],[data-gact],[data-fclear],[data-fapply],[data-tladd],[data-aiopen],[data-aiclose],[data-aigen],[data-aibg],[data-rnew],[data-redit],[data-rdel],[data-rcancel],[data-rsave],[data-banew],[data-baedit],[data-badel],[data-bacancel],[data-basave],[data-batype],[data-catpick]");
+    const t = e.target.closest("[data-menu],[data-act],[data-dd],[data-group],[data-bulk],[data-clear],[data-goprot],[data-back],[data-new],[data-edit],[data-toggle],[data-mclose],[data-msave],[data-mbg],[data-cidadd],[data-cidrm],[data-anew],[data-aedit],[data-adel],[data-asave],[data-acancel],[data-atype],[data-afreq],[data-zoom],[data-gact],[data-fclear],[data-fapply],[data-tladd],[data-aiopen],[data-aiclose],[data-aigen],[data-aibg],[data-rnew],[data-redit],[data-rdel],[data-rcancel],[data-rsave],[data-banew],[data-baedit],[data-badel],[data-bacancel],[data-basave],[data-batype],[data-catpick],[data-catcreate]");
     if (!t) { if (S.dd) { S.dd = null; render(); } return; }
     const d = t.dataset;
     if (d.aiopen) { S.aiModal = { obs: "", pdf: null, filename: "", loading: false, error: "" }; return render(); }
@@ -770,31 +826,18 @@
     if (d.atype) { const cur = collectAction(); S._atype = d.atype; if (cur) { cur.type = d.atype; S._draft = cur; } return renderDraft(cur, d.atype); }
     if (d.afreq) { document.getElementById("pt-a-freq").value = d.afreq; return; }
     if (d.catpick) {
-      const prefix = d.catpick;
-      const type = prefix === "pt-ba" ? (S._batype || "Receita") : (S._atype || "Exame");
-      const nameEl = document.getElementById(prefix + "-name"); if (nameEl) nameEl.value = d.catlabel || nameEl.value;
-      const qEl = document.getElementById(prefix + "-catq"); if (qEl) qEl.value = d.catlabel || "";
-      const tussIdEl = document.getElementById(prefix + "-tussid");
-      const tussCodeEl = document.getElementById(prefix + "-tusscode");
-      const substIdEl = document.getElementById(prefix + "-substid");
-      const statusEl = document.getElementById(prefix + "-catstatus");
-      if (type === "Exame") {
-        if (tussIdEl) tussIdEl.value = d.catid || "";
-        if (tussCodeEl) tussCodeEl.value = d.catcode || "";
-        if (substIdEl) substIdEl.value = "";
-      } else {
-        if (substIdEl) substIdEl.value = d.catid || "";
-        if (tussIdEl) tussIdEl.value = "";
-        if (tussCodeEl) tussCodeEl.value = "";
-      }
-      if (statusEl) statusEl.value = "vinculado";
-      catalogDropdownShow(prefix, "");
-      const badge = document.getElementById(prefix + "-catbadge");
-      if (badge) {
-        badge.innerHTML = type === "Exame"
-          ? `<span class="pt-tag vinculado">✓ ${d.catcode ? "TUSS " + esc(d.catcode) : "Vinculado ao catálogo"}</span>`
-          : `<span class="pt-tag vinculado">✓ Vinculado ao catálogo</span>`;
-      }
+      applyCatalogPick(d.catpick, { id: d.catid, label: d.catlabel, code: d.catcode });
+      return;
+    }
+    if (d.catcreate) {
+      const prefix = d.catcreate;
+      const term = (d.catcreateterm || "").trim();
+      if (!term) return;
+      catalogDropdownShow(prefix, `<div class="pt-cat-empty">Cadastrando…</div>`);
+      criarExamePendente(term).then((item) => {
+        if (!item) return catalogDropdownShow(prefix, `<div class="pt-cat-empty">Falha ao cadastrar — tente novamente</div>`);
+        applyCatalogPick(prefix, { id: item.id, label: item.nome, code: item.codigo_tuss });
+      });
       return;
     }
     if (d.zoom) { S.zoom = +d.zoom; return render(); }
