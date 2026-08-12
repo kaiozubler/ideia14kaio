@@ -16,6 +16,9 @@
     <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
     <script src="https://unpkg.com/@daily-co/daily-js"></script>
     <link rel="stylesheet" href="equipe.css" />
+    <link rel="stylesheet" href="paciente-protocolos.css" />
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="paciente-protocolos.js" defer></script>
     <script src="equipe.js" defer></script>
     <link rel="stylesheet" href="protocolos.css" />
     <script src="protocolos.js" defer></script>
@@ -2548,6 +2551,7 @@
               <div class="tab on" onclick="openTab('cadastro',this)">Cadastro</div>
               <div class="tab" onclick="openTab('atendimentos',this)">Atendimentos</div>
               <div class="tab" onclick="openTab('exames',this)">Exames</div>
+              <div class="tab" onclick="openTab('protocolos',this)">Protocolos</div>
               <div class="tab" onclick="openTab('financeiro',this)">Hist. Financeiro</div>
               <div class="tab" onclick="openTab('agenda',this)">Agenda</div>
               <div class="tab" onclick="openTab('timeline',this)">Timeline</div>
@@ -3040,6 +3044,11 @@
                 </button>
               </div>
               <div id="exame-list"></div>
+            </div>
+
+            <!-- TAB PROTOCOLOS -->
+            <div class="tab-body" id="tb-protocolos" style="display:none">
+              <div id="pat-protocolos-root"></div>
             </div>
 
             <!-- TAB FINANCEIRO -->
@@ -7632,7 +7641,7 @@
                                                             function openTab(name,el){
                                                               document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
                                                               document.querySelectorAll('.tab-body').forEach(b=>b.style.display='none');
-                                                              const names=['cadastro','atendimentos','exames','financeiro','agenda','timeline','prontuario'];
+                                                              const names=['cadastro','atendimentos','exames','protocolos','financeiro','agenda','timeline','prontuario'];
                                                               if(el)el.classList.add('on');
                                                               else{const idx=names.indexOf(name);if(idx>=0)document.querySelectorAll('.tab')[idx].classList.add('on');}
                                                               const body=document.getElementById('tb-'+name);
@@ -7642,6 +7651,7 @@
                                                               if(name==='prontuario')renderProntuario();
                                                               if(name==='timeline')renderTimeline();
                                                               if(name==='agenda')renderPatientAgenda();
+                                                              if(name==='protocolos'&&typeof renderPacienteProtocolosTab==='function')renderPacienteProtocolosTab();
                                                               updateCadastroFloatBar(name);
                                                             }
                                                             function updateCadastroFloatBar(activeTab){
@@ -14831,7 +14841,7 @@ let rxSelected = [];
                                                     const res = await _renderLmePdf(form);
                                                     if (!res) return;
                                                     _baixarBlob(res.finalBlob, res.filename);
-                                                    await salvarDocumentoGerado({
+                                                    const documentoGerado = await salvarDocumentoGerado({
                                                       tipo: 'laudo',
                                                       pacienteNome: form.paciente_nome,
                                                       pacienteCpf: form.documento_tipo === 'cpf' ? form.documento_numero : null,
@@ -14841,6 +14851,12 @@ let rxSelected = [];
                                                       filename: res.filename,
                                                       assinado: res.assinado,
                                                     });
+                                                    /* Se o LME foi emitido a partir da aba "Protocolos" (processo já
+                                                       existente), vincula o documento recém-gerado a esse processo. */
+                                                    if (window.__lmeProcessoAlvo && documentoGerado && typeof window.vincularDocumentoAoLmeProcesso === 'function') {
+                                                      await window.vincularDocumentoAoLmeProcesso(window.__lmeProcessoAlvo, documentoGerado, 'gerado');
+                                                      window.__lmeProcessoAlvo = null;
+                                                    }
                                                     const ta = document.getElementById('pront-area');
                                                     if (ta) {
                                                       ta.value = (ta.value ? ta.value + '\n\n' : '') + 'LME EMITIDO (' + (form.cid_code || '') + '): ' +
@@ -15314,11 +15330,12 @@ let rxSelected = [];
                                                     status: assinado ? 'assinado' : 'nao_assinado',
                                                   };
                                                   const { data, error } = await sb.from('documentos_paciente').insert(payload).select('*').single();
-                                                  if (error) { showToast && showToast('Erro ao salvar documento na listagem: ' + error.message, 'error'); return; }
+                                                  if (error) { showToast && showToast('Erro ao salvar documento na listagem: ' + error.message, 'error'); return null; }
                                                   documentosGerados.unshift(data);
                                                   documentosLoaded = true;
                                                   const scr = document.getElementById('s-receitas');
                                                   if (scr && scr.style.display !== 'none') renderReceitasList();
+                                                  return data;
                                                 }
 
                                                 function abrirModalGerarDocumento() {
