@@ -1,0 +1,118 @@
+/* ABA "PROTOCOLOS" — dentro do Cadastro do Paciente — Liquid glass, mesma
+   linguagem visual de protocolos.css, com prefixo pp- para não colidir. */
+#pat-protocolos-root{font-size:13px;color:#334155}
+
+.pp-section{margin-bottom:22px}
+.pp-section-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.pp-section-h h3{font-size:14px;font-weight:700;color:#1e293b;margin:0;display:flex;align-items:center;gap:7px}
+.pp-section-h h3 .ti{font-size:16px;color:#6366f1}
+.pp-section-h p{font-size:11px;color:#94a3b8;margin:2px 0 0}
+
+.pp-empty{border-radius:16px;padding:22px;text-align:center;color:#94a3b8;font-size:12px;background:rgba(255,255,255,.5);border:1px dashed rgba(148,163,184,.4)}
+.pp-empty .ti{font-size:22px;display:block;margin-bottom:6px;color:#c7d2fe}
+
+/* ---- Card de protocolo vinculado ---- */
+.pp-card{backdrop-filter:blur(18px);background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.7);box-shadow:0 4px 24px rgba(0,0,0,.08),inset 0 1px 0 rgba(255,255,255,.7);border-radius:16px;margin-bottom:12px;overflow:hidden;transition:opacity .15s}
+.pp-card.inativo{opacity:.6}
+.pp-card-h{display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer}
+.pp-card-h:hover{background:rgba(255,255,255,.25)}
+.pp-card-tt{flex:1;min-width:0}
+.pp-card-tt .nm{font-size:13.5px;font-weight:700;color:#1e293b;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pp-card-tt .sub{font-size:11px;color:#94a3b8;margin-top:2px}
+.pp-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;border:1px solid;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.pp-badge.ativo{background:rgba(209,250,229,.7);color:#047857;border-color:rgba(167,243,208,.7)}
+.pp-badge.inativo{background:rgba(226,232,240,.7);color:#64748b;border-color:rgba(203,213,225,.7)}
+.pp-badge.atraso{background:rgba(254,226,226,.8);color:#b91c1c;border-color:rgba(252,165,165,.7)}
+.pp-badge.emdia{background:rgba(219,234,254,.7);color:#1d4ed8;border-color:rgba(191,219,254,.7)}
+.pp-cid{font-family:ui-monospace,monospace;font-size:10.5px;font-weight:700;color:#4f46e5;background:rgba(224,231,255,.6);padding:1px 7px;border-radius:7px;border:1px solid rgba(199,210,254,.6)}
+.pp-chev{font-size:16px;color:#94a3b8;transition:transform .15s;flex-shrink:0}
+.pp-card.open .pp-chev{transform:rotate(90deg)}
+.pp-card-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.pp-icon-btn{width:28px;height:28px;border-radius:9px;border:1px solid rgba(255,255,255,.8);background:rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#64748b;transition:.15s}
+.pp-icon-btn:hover{background:#fff;color:#334155}
+.pp-icon-btn.danger:hover{color:#dc2626;border-color:#fecaca;background:#fef2f2}
+.pp-icon-btn.ok:hover{color:#059669;border-color:#a7f3d0;background:#ecfdf5}
+
+.pp-card-body{display:none;padding:0 16px 16px}
+.pp-card.open .pp-card-body{display:block}
+
+/* ---- Pendências / próximos passos ---- */
+.pp-pend-list{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.pp-pend{display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:11px;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.7);font-size:12px}
+.pp-pend .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.pp-pend .dot.red{background:#ef4444}
+.pp-pend .dot.amber{background:#f59e0b}
+.pp-pend .dot.blue{background:#3b82f6}
+.pp-pend .dot.gray{background:#cbd5e1}
+.pp-pend .tt{flex:1;min-width:0}
+.pp-pend .tt b{font-weight:600;color:#1e293b}
+.pp-pend .due{font-size:10.5px;color:#94a3b8;flex-shrink:0;white-space:nowrap}
+.pp-pend.late .due{color:#dc2626;font-weight:700}
+
+/* ---- Fluxograma (raiz da árvore) ---- */
+.pp-flow-wrap{border-radius:16px;background:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.6);padding:10px;margin-bottom:12px;overflow:auto}
+.pp-flow-svg{display:block;min-width:100%}
+.pp-flow-node rect,.pp-flow-node circle{stroke-width:1.6px}
+.pp-flow-node text{font-family:var(--font,'Figtree',system-ui,sans-serif);pointer-events:none}
+.pp-flow-link{fill:none;stroke-width:2px}
+.pp-flow-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:10.5px;color:#64748b;padding:8px 4px 2px}
+.pp-flow-legend span{display:inline-flex;align-items:center;gap:5px}
+.pp-flow-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+/* ---- Processos LME ---- */
+.pp-lme-card{backdrop-filter:blur(18px);background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.7);box-shadow:0 4px 24px rgba(0,0,0,.08);border-radius:16px;padding:14px 16px;margin-bottom:12px}
+.pp-lme-card.vencido{border-color:rgba(252,165,165,.8);background:rgba(254,242,242,.6)}
+.pp-lme-head{display:flex;align-items:flex-start;gap:10px;justify-content:space-between;flex-wrap:wrap;margin-bottom:8px}
+.pp-lme-tt{font-size:13.5px;font-weight:700;color:#1e293b}
+.pp-lme-sub{font-size:11px;color:#94a3b8;margin-top:2px}
+.pp-lme-status{font-size:10px;font-weight:700;padding:3px 22px 3px 9px;border-radius:9px;border:1px solid;white-space:nowrap;cursor:pointer;appearance:none;-webkit-appearance:none;background-repeat:no-repeat;background-position:right 7px center;background-size:9px;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.4' fill='none'/></svg>")}
+.pp-lme-status.rascunho{background:rgba(226,232,240,.7);color:#64748b;border-color:rgba(203,213,225,.7)}
+.pp-lme-status.protocolado{background:rgba(219,234,254,.7);color:#1d4ed8;border-color:rgba(191,219,254,.7)}
+.pp-lme-status.em_analise{background:rgba(254,243,199,.8);color:#b45309;border-color:rgba(253,230,138,.8)}
+.pp-lme-status.deferido{background:rgba(209,250,229,.7);color:#047857;border-color:rgba(167,243,208,.7)}
+.pp-lme-status.indeferido{background:rgba(254,226,226,.8);color:#b91c1c;border-color:rgba(252,165,165,.7)}
+.pp-lme-status.renovacao_solicitada{background:rgba(237,233,254,.8);color:#6d28d9;border-color:rgba(221,214,254,.8)}
+
+.pp-lme-expira{display:flex;align-items:center;gap:8px;font-size:11.5px;margin-bottom:10px}
+.pp-lme-bar{flex:1;height:6px;border-radius:4px;background:rgba(203,213,225,.5);overflow:hidden;max-width:220px}
+.pp-lme-bar i{display:block;height:100%;border-radius:4px}
+.pp-lme-expira.ok{color:#059669}
+.pp-lme-expira.atencao{color:#b45309}
+.pp-lme-expira.vencido{color:#dc2626;font-weight:700}
+
+.pp-doc-list{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.pp-doc{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.75);font-size:11.5px}
+.pp-doc .ti{font-size:14px;color:#6366f1;flex-shrink:0}
+.pp-doc .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#334155}
+.pp-doc .origem{font-size:9.5px;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
+.pp-doc button{background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:14px;flex-shrink:0}
+.pp-doc button:hover{color:#dc2626}
+.pp-doc-empty{font-size:11px;color:#b0b8c4;padding:6px 2px}
+
+.pp-lme-actions{display:flex;gap:8px;flex-wrap:wrap}
+.pp-btn{padding:7px 13px;border-radius:11px;font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.75);background:rgba(255,255,255,.65);color:#4f46e5;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.pp-btn:hover{background:#fff}
+.pp-btn.primary{background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;border:none;box-shadow:0 4px 16px rgba(99,102,241,.3)}
+.pp-btn.warn{background:linear-gradient(135deg,#f59e0b,#ea580c);color:#fff;border:none}
+.pp-btn.ghost{background:none;border:none;color:#64748b}
+.pp-btn:disabled{opacity:.55;cursor:default}
+
+.pp-lme-new{margin-top:4px}
+
+/* ---- Modal leve, próprio deste módulo ---- */
+.pp-modal-bg{position:fixed;inset:0;z-index:2400;background:rgba(0,0,0,.25);backdrop-filter:blur(8px);display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto}
+.pp-modal{width:100%;max-width:480px;margin:auto;background:rgba(255,255,255,.92);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.85);box-shadow:0 20px 60px rgba(0,0,0,.2);border-radius:20px;overflow:hidden}
+.pp-modal-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 18px;border-bottom:1px solid rgba(255,255,255,.6)}
+.pp-modal-h h2{margin:0;font-size:15px;font-weight:700;color:#1e293b}
+.pp-modal-h button{background:none;border:none;font-size:18px;color:#94a3b8;cursor:pointer}
+.pp-modal-b{padding:16px 18px;max-height:60vh;overflow-y:auto}
+.pp-modal-f{padding:12px 18px;border-top:1px solid rgba(255,255,255,.6);display:flex;gap:10px;justify-content:flex-end}
+.pp-field{margin-bottom:12px}
+.pp-field label{font-size:11px;color:#64748b;font-weight:600;display:block;margin-bottom:5px}
+.pp-field input[type=text],.pp-field input[type=date],.pp-field select,.pp-field textarea{width:100%;padding:8px 11px;border-radius:11px;font-size:12.5px;background:rgba(255,255,255,.8);border:1px solid rgba(203,213,225,.8);outline:none;color:#334155;font-family:inherit}
+.pp-field input:focus,.pp-field select:focus,.pp-field textarea:focus{box-shadow:0 0 0 3px rgba(199,210,254,.6)}
+.pp-import-row{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:11px;border:1px solid rgba(226,232,240,.9);margin-bottom:6px;cursor:pointer}
+.pp-import-row:hover{background:rgba(238,242,255,.6);border-color:#c7d2fe}
+.pp-import-row input{margin:0}
+.pp-import-row .nm{flex:1;font-size:12px;color:#334155}
+.pp-import-row .dt{font-size:10.5px;color:#94a3b8}
