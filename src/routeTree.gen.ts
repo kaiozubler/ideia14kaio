@@ -23,6 +23,7 @@ import { Route as ApiBryCancelEnvelopeRouteImport } from './routes/api/bry/cance
 import { Route as ApiBryCreateEnvelopeRouteImport } from './routes/api/bry/create-envelope'
 import { Route as ApiBryDownloadDocumentRouteImport } from './routes/api/bry/download-document'
 import { Route as ApiBryGetEnvelopeRouteImport } from './routes/api/bry/get-envelope'
+import { Route as ApiCidBuscarRouteImport } from './routes/api/cid/buscar'
 import { Route as ApiMedicamentosBuscarRouteImport } from './routes/api/medicamentos/buscar'
 import { Route as ApiProtocolosGerarIaRouteImport } from './routes/api/protocolos/gerar-ia'
 import { Route as ApiProtocolosSincronizarRouteImport } from './routes/api/protocolos/sincronizar'
@@ -31,6 +32,7 @@ import { Route as ApiSignatureCredentialRouteImport } from './routes/api/signatu
 import { Route as ApiSignatureLocalCertificateRouteImport } from './routes/api/signature/local-certificate'
 import { Route as ApiSignatureSignRouteImport } from './routes/api/signature/sign'
 import { Route as ApiTussBuscarRouteImport } from './routes/api/tuss/buscar'
+import { Route as ApiTussCriarRouteImport } from './routes/api/tuss/criar'
 import { Route as ApiPublicHooksSyncInteracoesRouteImport } from './routes/api/public/hooks/sync-interacoes'
 import { Route as ApiPublicHooksSyncTussRouteImport } from './routes/api/public/hooks/sync-tuss'
 import { Route as ApiPublicSignatureCallbackRouteImport } from './routes/api/public/signature/callback'
@@ -107,6 +109,11 @@ const ApiBryGetEnvelopeRoute = ApiBryGetEnvelopeRouteImport.update({
   path: '/api/bry/get-envelope',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCidBuscarRoute = ApiCidBuscarRouteImport.update({
+  id: '/api/cid/buscar',
+  path: '/api/cid/buscar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMedicamentosBuscarRoute = ApiMedicamentosBuscarRouteImport.update({
   id: '/api/medicamentos/buscar',
   path: '/api/medicamentos/buscar',
@@ -150,6 +157,11 @@ const ApiTussBuscarRoute = ApiTussBuscarRouteImport.update({
   path: '/api/tuss/buscar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTussCriarRoute = ApiTussCriarRouteImport.update({
+  id: '/api/tuss/criar',
+  path: '/api/tuss/criar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksSyncInteracoesRoute =
   ApiPublicHooksSyncInteracoesRouteImport.update({
     id: '/api/public/hooks/sync-interacoes',
@@ -188,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
+  '/api/cid/buscar': typeof ApiCidBuscarRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
@@ -196,6 +209,7 @@ export interface FileRoutesByFullPath {
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
+  '/api/tuss/criar': typeof ApiTussCriarRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
@@ -216,6 +230,7 @@ export interface FileRoutesByTo {
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
+  '/api/cid/buscar': typeof ApiCidBuscarRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
@@ -224,6 +239,7 @@ export interface FileRoutesByTo {
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
+  '/api/tuss/criar': typeof ApiTussCriarRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
@@ -245,6 +261,7 @@ export interface FileRoutesById {
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
+  '/api/cid/buscar': typeof ApiCidBuscarRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
@@ -253,6 +270,7 @@ export interface FileRoutesById {
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
+  '/api/tuss/criar': typeof ApiTussCriarRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
@@ -275,6 +293,7 @@ export interface FileRouteTypes {
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
     | '/api/bry/get-envelope'
+    | '/api/cid/buscar'
     | '/api/medicamentos/buscar'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
@@ -283,6 +302,7 @@ export interface FileRouteTypes {
     | '/api/signature/local-certificate'
     | '/api/signature/sign'
     | '/api/tuss/buscar'
+    | '/api/tuss/criar'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
@@ -303,6 +323,7 @@ export interface FileRouteTypes {
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
     | '/api/bry/get-envelope'
+    | '/api/cid/buscar'
     | '/api/medicamentos/buscar'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
@@ -311,6 +332,7 @@ export interface FileRouteTypes {
     | '/api/signature/local-certificate'
     | '/api/signature/sign'
     | '/api/tuss/buscar'
+    | '/api/tuss/criar'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
@@ -331,6 +353,7 @@ export interface FileRouteTypes {
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
     | '/api/bry/get-envelope'
+    | '/api/cid/buscar'
     | '/api/medicamentos/buscar'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
@@ -339,6 +362,7 @@ export interface FileRouteTypes {
     | '/api/signature/local-certificate'
     | '/api/signature/sign'
     | '/api/tuss/buscar'
+    | '/api/tuss/criar'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
@@ -360,6 +384,7 @@ export interface RootRouteChildren {
   ApiBryCreateEnvelopeRoute: typeof ApiBryCreateEnvelopeRoute
   ApiBryDownloadDocumentRoute: typeof ApiBryDownloadDocumentRoute
   ApiBryGetEnvelopeRoute: typeof ApiBryGetEnvelopeRoute
+  ApiCidBuscarRoute: typeof ApiCidBuscarRoute
   ApiMedicamentosBuscarRoute: typeof ApiMedicamentosBuscarRoute
   ApiProtocolosGerarIaRoute: typeof ApiProtocolosGerarIaRoute
   ApiProtocolosSincronizarRoute: typeof ApiProtocolosSincronizarRoute
@@ -368,6 +393,7 @@ export interface RootRouteChildren {
   ApiSignatureLocalCertificateRoute: typeof ApiSignatureLocalCertificateRoute
   ApiSignatureSignRoute: typeof ApiSignatureSignRoute
   ApiTussBuscarRoute: typeof ApiTussBuscarRoute
+  ApiTussCriarRoute: typeof ApiTussCriarRoute
   ApiPublicHooksSyncInteracoesRoute: typeof ApiPublicHooksSyncInteracoesRoute
   ApiPublicHooksSyncTussRoute: typeof ApiPublicHooksSyncTussRoute
   ApiPublicSignatureCallbackRoute: typeof ApiPublicSignatureCallbackRoute
@@ -474,6 +500,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBryGetEnvelopeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cid/buscar': {
+      id: '/api/cid/buscar'
+      path: '/api/cid/buscar'
+      fullPath: '/api/cid/buscar'
+      preLoaderRoute: typeof ApiCidBuscarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/medicamentos/buscar': {
       id: '/api/medicamentos/buscar'
       path: '/api/medicamentos/buscar'
@@ -530,6 +563,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTussBuscarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/tuss/criar': {
+      id: '/api/tuss/criar'
+      path: '/api/tuss/criar'
+      fullPath: '/api/tuss/criar'
+      preLoaderRoute: typeof ApiTussCriarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/sync-interacoes': {
       id: '/api/public/hooks/sync-interacoes'
       path: '/api/public/hooks/sync-interacoes'
@@ -576,6 +616,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBryCreateEnvelopeRoute: ApiBryCreateEnvelopeRoute,
   ApiBryDownloadDocumentRoute: ApiBryDownloadDocumentRoute,
   ApiBryGetEnvelopeRoute: ApiBryGetEnvelopeRoute,
+  ApiCidBuscarRoute: ApiCidBuscarRoute,
   ApiMedicamentosBuscarRoute: ApiMedicamentosBuscarRoute,
   ApiProtocolosGerarIaRoute: ApiProtocolosGerarIaRoute,
   ApiProtocolosSincronizarRoute: ApiProtocolosSincronizarRoute,
@@ -584,6 +625,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSignatureLocalCertificateRoute: ApiSignatureLocalCertificateRoute,
   ApiSignatureSignRoute: ApiSignatureSignRoute,
   ApiTussBuscarRoute: ApiTussBuscarRoute,
+  ApiTussCriarRoute: ApiTussCriarRoute,
   ApiPublicHooksSyncInteracoesRoute: ApiPublicHooksSyncInteracoesRoute,
   ApiPublicHooksSyncTussRoute: ApiPublicHooksSyncTussRoute,
   ApiPublicSignatureCallbackRoute: ApiPublicSignatureCallbackRoute,
@@ -592,3 +634,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
