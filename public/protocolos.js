@@ -382,6 +382,7 @@
      deixa de ser só texto solto. Se o médico não vincular, a ação é salva
      com catalogo_status = 'pendente_cadastro' e pode ser revisada depois. */
   let _catTmr = null;
+  let _cidTmr = null;
   function catalogDropdownShow(prefix, html) {
     const dd = document.getElementById(prefix + "-catdd"); if (!dd) return;
     dd.innerHTML = html; dd.style.display = html ? "" : "none";
@@ -470,6 +471,34 @@
     }
   }
 
+  async function cidSearchRun(term) {
+    if (!term || term.trim().length < 2) return catalogDropdownShow("pt-m-cid", "");
+    catalogDropdownShow("pt-m-cid", `<div class="pt-cat-empty">Buscando…</div>`);
+    const sb = sbc();
+    let token = "";
+    try {
+      const { data: sess } = await sb.auth.getSession();
+      token = (sess && sess.session && sess.session.access_token) || "";
+    } catch { /* segue sem token; endpoint responde 401 e cai no catch abaixo */ }
+    try {
+      const res = await fetch("/api/cid/buscar?q=" + encodeURIComponent(term), { headers: token ? { authorization: "Bearer " + token } : {} });
+      const d = await res.json();
+      const items = (d.items || []).slice(0, 15);
+      if (!items.length) return catalogDropdownShow("pt-m-cid", `<div class="pt-cat-empty">Nenhum código encontrado</div>`);
+      catalogDropdownShow("pt-m-cid", items.map((it) =>
+        `<div class="pt-cat-item" data-cidpick="${esc(it.codigo)}">${esc(it.codigo)} <span>${esc(it.descricao)}</span></div>`
+      ).join(""));
+    } catch {
+      catalogDropdownShow("pt-m-cid", `<div class="pt-cat-empty">Falha na busca — tente novamente</div>`);
+    }
+  }
+  function cidPickApply(codigo) {
+    const v = String(codigo || "").trim().toUpperCase();
+    if (v && !S.modal.cids.includes(v)) S.modal.cids.push(v);
+    S.cidInput = "";
+    catalogDropdownShow("pt-m-cid", "");
+    render();
+  }
   function catalogBadgeHtml(f) {
     if (f.type === "Exame" && f.tussId) return `<span class="pt-tag vinculado">✓ ${f.codigoTuss ? "TUSS " + esc(f.codigoTuss) : "Vinculado ao catálogo"}</span>`;
     if (f.type === "Receita" && f.idSubstancia) return `<span class="pt-tag vinculado">✓ Vinculado ao catálogo</span>`;
@@ -605,7 +634,11 @@
           <input class="pt-in" id="pt-m-title" value="${esc(m.title)}" placeholder="Ex: Hipertensão Arterial"></div>
         <div style="margin-bottom:16px"><span class="pt-lbl">CIDs contemplados</span>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">${m.cids.map((c) => `<span class="pt-chip">${esc(c)}<button data-cidrm="${esc(c)}">×</button></span>`).join("")}</div>
-          <div style="display:flex;gap:8px"><input class="pt-in" id="pt-m-cid" value="${esc(S.cidInput)}" placeholder="Ex: I10">
+          <div style="position:relative;display:flex;gap:8px">
+          <div style="position:relative;flex:1">
+            <input class="pt-in pt-cid-q" id="pt-m-cid" value="${esc(S.cidInput)}" placeholder="Buscar por código ou descrição… Ex: I10, diabetes" autocomplete="off">
+            <div class="pt-cat-dd" id="pt-m-cid-catdd" style="display:none"></div>
+          </div>
           <button class="pt-btn" data-cidadd="1">+ Adicionar</button></div></div>
         <div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -788,7 +821,7 @@
   document.addEventListener("click", (e) => {
     const root = document.getElementById("s-protocolos");
     if (!root || root.style.display === "none") return;
-    const t = e.target.closest("[data-menu],[data-act],[data-dd],[data-group],[data-bulk],[data-clear],[data-goprot],[data-back],[data-new],[data-edit],[data-toggle],[data-mclose],[data-msave],[data-mbg],[data-cidadd],[data-cidrm],[data-anew],[data-aedit],[data-adel],[data-asave],[data-acancel],[data-atype],[data-afreq],[data-zoom],[data-gact],[data-fclear],[data-fapply],[data-tladd],[data-aiopen],[data-aiclose],[data-aigen],[data-aibg],[data-rnew],[data-redit],[data-rdel],[data-rcancel],[data-rsave],[data-banew],[data-baedit],[data-badel],[data-bacancel],[data-basave],[data-batype],[data-catpick],[data-catcreate]");
+    const t = e.target.closest("[data-menu],[data-act],[data-dd],[data-group],[data-bulk],[data-clear],[data-goprot],[data-back],[data-new],[data-edit],[data-toggle],[data-mclose],[data-msave],[data-mbg],[data-cidadd],[data-cidrm],[data-anew],[data-aedit],[data-adel],[data-asave],[data-acancel],[data-atype],[data-afreq],[data-zoom],[data-gact],[data-fclear],[data-fapply],[data-tladd],[data-aiopen],[data-aiclose],[data-aigen],[data-aibg],[data-rnew],[data-redit],[data-rdel],[data-rcancel],[data-rsave],[data-banew],[data-baedit],[data-badel],[data-bacancel],[data-basave],[data-batype],[data-catpick],[data-catcreate],[data-cidpick]");
     if (!t) { if (S.dd) { S.dd = null; render(); } return; }
     const d = t.dataset;
     if (d.aiopen) { S.aiModal = { obs: "", pdf: null, filename: "", loading: false, error: "" }; return render(); }
@@ -812,6 +845,7 @@
     if (d.mbg && e.target === t) { S.modal = null; return render(); }
     if (d.mclose) { S.modal = null; S.showActionEditor = false; S.editingAction = null; return render(); }
     if (d.msave) { const m = { ...S.modal, title: document.getElementById("pt-m-title").value.trim() }; if (!m.title) return alert("Informe o nome do protocolo."); S.modal = null; render(); return saveProtocol(m); }
+    if (d.cidpick) { cidPickApply(d.cidpick); return; }
     if (d.cidadd) { const v = (document.getElementById("pt-m-cid").value || "").trim().toUpperCase(); if (v && !S.modal.cids.includes(v)) S.modal.cids.push(v); S.cidInput = ""; return render(); }
     if (d.cidrm) { S.modal.cids = S.modal.cids.filter((c) => c !== d.cidrm); return render(); }
     if (d.anew || d.tladd) { S.editingAction = null; S.showActionEditor = true; S._atype = "Exame"; S._draft = null; return render(); }
@@ -953,6 +987,12 @@
       const term = e.target.value;
       clearTimeout(_catTmr);
       _catTmr = setTimeout(() => catalogSearchRun(prefix, term), 300);
+    }
+    if (e.target.classList && e.target.classList.contains("pt-cid-q")) {
+      const term = e.target.value;
+      S.cidInput = term;
+      clearTimeout(_cidTmr);
+      _cidTmr = setTimeout(() => cidSearchRun(term), 300);
     }
   });
 
