@@ -6961,6 +6961,12 @@
                                                               document.getElementById('modal-overlay').classList.add('open');
                                                               const m=document.getElementById('m-mapa-familiar');
                                                               if(m)m.style.display='flex';
+                                                              if(typeof mfResetIA==='function')mfResetIA();
+                                                              const alBtn=document.getElementById('mf-alerta-btn');
+                                                              if(alBtn)alBtn.style.display='none';
+                                                              const alPop=document.getElementById('mf-alertas-pop');
+                                                              if(alPop)alPop.classList.remove('open');
+                                                              _mfCorrelacoes=[];
                                                               const svg=document.getElementById('mf-svg');
                                                               document.getElementById('mf-empty').style.display='none';
                                                               if(svg)svg.innerHTML='<text x="50%" y="50%" text-anchor="middle" fill="var(--n400)" font-size="12">Carregando...</text>';
@@ -6985,6 +6991,7 @@
                                                               }
                                                               mfSetView('mapa');
                                                             }
+                                                              
 
                                                             function mfSetView(v){
                                                               _mfView=v;
