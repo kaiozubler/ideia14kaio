@@ -21,6 +21,7 @@
     <script src="protocolos.js" defer></script>
     <link rel="stylesheet" href="faturamento.css?v=2" />
     <script src="faturamento.js?v=2" defer></script>
+    <link rel="stylesheet" href="mapa-familiar.css" />
     <style>
                                                       *{box-sizing:border-box;margin:0;padding:0}
                                                       :root{
@@ -3578,37 +3579,33 @@
 
           <!-- SCREEN: MAPA FAMILIAR -->
           <div id="s-mapa-familiar" style="display:none">
-            <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px">
-              <div class="cop-ico-box" style="background:linear-gradient(135deg,#34d399,#059669)">
-                <i class="ti ti-affiliate"></i>
-              </div>
+            <div class="mf-head">
+              <div class="mf-head-ico"><i class="ti ti-affiliate"></i></div>
               <div>
-                <div style="font-size:19px;font-weight:700;color:var(--n700);letter-spacing:-.3px">Mapa Familiar</div>
-                <div style="font-size:12px;color:var(--n400);margin-top:2px">
-                  Famílias identificadas pelos vínculos de parentesco já confirmados, com busca por paciente e por CID.
-                </div>
+                <div class="mf-head-title">Mapa Familiar</div>
+                <div class="mf-head-sub">Famílias identificadas pelos vínculos de parentesco já confirmados, com busca por paciente e por CID.</div>
               </div>
             </div>
 
-            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;align-items:end">
-              <div class="fld" style="flex:1;min-width:220px;margin:0">
+            <div class="mf-filtros">
+              <div class="mf-fld">
                 <label>Buscar por paciente ou família (sobrenome)</label>
-                <input type="text" id="mf-busca-nome" placeholder="Ex: Jackson" oninput="mfFiltrarFamilias()" autocomplete="off" />
+                <input type="text" class="mf-in" id="mf-busca-nome" placeholder="Ex: Jackson" oninput="mfFiltrarFamilias()" autocomplete="off" />
               </div>
-              <div class="fld" style="flex:1;min-width:220px;margin:0">
+              <div class="mf-fld">
                 <label>Buscar por CID (código ou descrição)</label>
-                <input type="text" id="mf-busca-cid" placeholder="Ex: E11 ou diabetes" oninput="mfFiltrarFamilias()" autocomplete="off" />
+                <input type="text" class="mf-in" id="mf-busca-cid" placeholder="Ex: E11 ou diabetes" oninput="mfFiltrarFamilias()" autocomplete="off" />
               </div>
-              <label class="cop-chk" style="margin:0 0 3px 0">
+              <label class="mf-chk-row">
                 <input type="checkbox" id="mf-somente-consang" checked onchange="mfFiltrarFamilias()" />
                 <span><strong>Somente consanguíneos</strong> na análise de CID</span>
               </label>
-              <button class="btn sm" onclick="mfCarregarFamilias()"><i class="ti ti-refresh"></i> Atualizar</button>
+              <button class="mf-btn-refresh" onclick="mfCarregarFamilias()"><i class="ti ti-refresh"></i> Atualizar</button>
             </div>
 
-            <div id="mf-familias-resumo" style="font-size:11.5px;color:var(--n400);margin-bottom:12px"></div>
-            <div id="mf-familias-list" style="display:flex;flex-direction:column;gap:10px"></div>
-            <div id="mf-familias-empty" class="rec-empty" style="display:none">
+            <div id="mf-familias-resumo" class="mf-resumo"></div>
+            <div id="mf-familias-list" class="mf-familias"></div>
+            <div id="mf-familias-empty" class="mf-empty-glass" style="display:none">
               <i class="ti ti-affiliate"></i>
               <h3>Nenhuma família encontrada</h3>
               <p>Vincule parentescos no cadastro dos pacientes para começar a ver famílias aqui.</p>
@@ -4198,7 +4195,7 @@
             <button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
           </div>
         </div>
-        <div style="padding:5px 16px;font-size:10.5px;color:var(--n400);border-bottom:0.5px solid var(--n150);display:flex;gap:14px;align-items:center">
+        <div class="mf-legenda">
           <span>Cada agrupamento de nós é uma família (mesmo sobrenome/vínculo)</span>
           <span style="display:flex;align-items:center;gap:4px"><svg width="18" height="2"><line x1="0" y1="1" x2="18" y2="1" stroke="var(--n300)" stroke-width="1.3" stroke-dasharray="4,3"/></svg> não consanguíneo (fora da análise genética)</span>
         </div>
@@ -4208,7 +4205,8 @@
             <span style="font-size:13px">Nenhum parente vinculado ainda.</span>
           </div>
           <svg id="mf-svg" style="width:100%;height:100%;display:block"></svg>
-          <div id="mf-tooltip" style="position:absolute;display:none;max-width:260px;background:#1a1917;color:#fff;font-size:11.5px;line-height:1.5;padding:8px 10px;border-radius:8px;pointer-events:none;z-index:20;box-shadow:0 8px 24px rgba(0,0,0,.25)"></div>
+          <div id="mf-tooltip" class="mf-tooltip"></div>
+          <div id="mf-pessoa-expand" class="mf-exp-panel"></div>
         </div>
       </div>
 
@@ -7039,8 +7037,9 @@
                                                               if(error){
                                                                 console.error('grafo_familiar (geral):',error);
                                                                 if(resumo)resumo.textContent='';
-                                                                emptyEl.innerHTML='<i class="ti ti-alert-triangle" style="font-size:32px;color:#dc2626"></i><h3 style="color:#dc2626">Não foi possível carregar</h3><p style="font-family:monospace;font-size:11px">'+((error.message||'').replace(/</g,'&lt;'))+'</p>';
-                                                                emptyEl.style.display='flex';
+                                                                emptyEl.classList.add('erro');
+                                                                emptyEl.innerHTML='<i class="ti ti-alert-triangle"></i><h3>Não foi possível carregar</h3><p><code>'+((error.message||'').replace(/</g,'&lt;'))+'</code></p>';
+                                                                emptyEl.style.display='block';
                                                                 return;
                                                               }
                                                               _mfFamiliasRaw=data||{nodes:[],edges:[]};
@@ -7074,28 +7073,86 @@
                                                               if(resumo)resumo.textContent=total+' família(s) no total'+(filtradas.length!==total?' · '+filtradas.length+' após o filtro':'');
                                                               if(!filtradas.length){
                                                                 list.innerHTML='';
-                                                                emptyEl.innerHTML='<i class="ti ti-affiliate" style="font-size:32px"></i><h3>Nenhuma família encontrada</h3><p>'+(total?'Ajuste os filtros de busca.':'Vincule parentescos no cadastro dos pacientes para começar a ver famílias aqui.')+'</p>';
-                                                                emptyEl.style.display='flex';
+                                                                emptyEl.classList.remove('erro');
+                                                                emptyEl.innerHTML='<i class="ti ti-affiliate"></i><h3>Nenhuma família encontrada</h3><p>'+(total?'Ajuste os filtros de busca.':'Vincule parentescos no cadastro dos pacientes para começar a ver famílias aqui.')+'</p>';
+                                                                emptyEl.style.display='block';
                                                                 return;
                                                               }
                                                               emptyEl.style.display='none';
                                                               list.innerHTML=filtradas.map(({fam,cids})=>{
                                                                 const naoConsangIds=mfFamiliaNaoConsangIds(fam);
-                                                                const membrosHtml=fam.membros.map(m=>`<span style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;padding:3px 8px;border-radius:999px;background:var(--n75);color:var(--n700);margin:2px 4px 2px 0;cursor:pointer" onclick="openMapaFamiliar('${m.id}')" title="Abrir mapa focado em ${(m.nome||'').replace(/"/g,'&quot;')}">${m.nome||''}${naoConsangIds.has(m.id)?' <i class="ti ti-slash" title="Não consanguíneo com pelo menos um parente do grupo"></i>':''}</span>`).join('');
-                                                                const cidsHtml=cids.length?cids.map(c=>`<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:999px;background:#fef2f2;color:#b91c1c;margin:2px 4px 2px 0" title="${c.pacientes.join(', ').replace(/"/g,'&quot;')}">${c.code}${c.description?' — '+c.description:''} <b>×${c.pacientes.length}</b></span>`).join(''):'<span style="font-size:11.5px;color:var(--n400);font-style:italic">Nenhum CID registrado nesta família</span>';
+                                                                const membrosHtml=fam.membros.map(m=>`<span class="mf-chip-membro" onclick="openMapaFamiliar('${m.id}')" title="Abrir mapa focado em ${(m.nome||'').replace(/"/g,'&quot;')}">${m.nome||''}${naoConsangIds.has(m.id)?' <i class="ti ti-slash" title="Não consanguíneo com pelo menos um parente do grupo"></i>':''}</span>`).join('');
+                                                                const cidsHtml=cids.length?cids.map(c=>`<span class="mf-chip-cid" title="${c.pacientes.join(', ').replace(/"/g,'&quot;')}">${c.code}${c.description?' — '+c.description:''} <b>×${c.pacientes.length}</b></span>`).join(''):'<span class="mf-cids-vazio">Nenhum CID registrado nesta família</span>';
                                                                 const repId=fam.membros[0]&&fam.membros[0].id;
-                                                                return `<div style="border:0.5px solid var(--n150);border-radius:var(--r10);padding:14px 16px;background:#fff">
-                                                                  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-                                                                    <div>
-                                                                      <div style="font-size:14.5px;font-weight:700;color:var(--n700)"><i class="ti ti-users-group" style="font-size:14px;color:var(--n400)"></i> Família ${fam.rotulo}</div>
-                                                                      <div style="font-size:11px;color:var(--n400);margin-top:2px">${fam.membros.length} membro(s) vinculado(s)</div>
+                                                                return `<div class="mf-fam-card">
+                                                                  <div class="mf-fam-top">
+                                                                    <div class="mf-fam-id">
+                                                                      <div class="mf-fam-ico"><i class="ti ti-users-group"></i></div>
+                                                                      <div>
+                                                                        <div class="mf-fam-nome">Família ${fam.rotulo}</div>
+                                                                        <div class="mf-fam-count">${fam.membros.length} membro(s) vinculado(s)</div>
+                                                                      </div>
                                                                     </div>
-                                                                    <button class="btn sm" onclick="openMapaFamiliar('${repId}')"><i class="ti ti-affiliate"></i> Ver mapa</button>
+                                                                    <button class="mf-btn-ver" onclick="openMapaFamiliar('${repId}')"><i class="ti ti-affiliate"></i> Ver mapa</button>
                                                                   </div>
-                                                                  <div style="margin-top:10px">${membrosHtml}</div>
-                                                                  <div style="margin-top:8px;padding-top:8px;border-top:0.5px dashed var(--n150)">${cidsHtml}</div>
+                                                                  <div class="mf-membros">${membrosHtml}</div>
+                                                                  <div class="mf-cids">${cidsHtml}</div>
                                                                 </div>`;
                                                               }).join('');
+                                                            }
+                                                            function mfIdade(nascimento){
+                                                              if(!nascimento)return null;
+                                                              const d=new Date(nascimento+'T00:00:00');
+                                                              const hoje=new Date();
+                                                              let idade=hoje.getFullYear()-d.getFullYear();
+                                                              const m=hoje.getMonth()-d.getMonth();
+                                                              if(m<0||(m===0&&hoje.getDate()<d.getDate()))idade--;
+                                                              return idade;
+                                                            }
+                                                            function irParaPacienteId(id){
+                                                              closeModal();
+                                                              if(typeof openPatient==='function')openPatient(id);
+                                                            }
+                                                            function mfFecharExpandidoFora(e){
+                                                              const painel=document.getElementById('mf-pessoa-expand');
+                                                              if(!painel||painel.style.display==='none')return;
+                                                              if(painel.contains(e.target))return;
+                                                              painel.style.display='none';
+                                                              document.removeEventListener('click',mfFecharExpandidoFora,true);
+                                                            }
+                                                            function mfExpandirPessoa(ev,n){
+                                                              ev.stopPropagation();
+                                                              const painel=document.getElementById('mf-pessoa-expand');
+                                                              const svgEl=document.getElementById('mf-svg');
+                                                              if(!painel||!svgEl)return;
+                                                              const wrapEl=svgEl.parentElement;
+                                                              const idade=mfIdade(n.nascimento);
+                                                              const inicial=(n.nome||'?').trim().charAt(0).toUpperCase();
+                                                              painel.innerHTML=`
+                                                                <div class="mf-exp-head">
+                                                                  <div class="mf-exp-avatar">${inicial}</div>
+                                                                  <div>
+                                                                    <div class="mf-exp-nome">${n.nome||''}</div>
+                                                                    <div class="mf-exp-sub">${n.sexo||'Sexo não informado'}${idade!==null?' · '+idade+' anos':''}</div>
+                                                                  </div>
+                                                                  <button class="mf-exp-link" title="Abrir cadastro do paciente" onclick="irParaPacienteId('${n.id}')"><i class="ti ti-external-link"></i></button>
+                                                                </div>
+                                                                <div class="mf-exp-row"><i class="ti ti-id-badge-2"></i> ${n.cpf?n.cpf:'CPF não informado'}</div>
+                                                                <div class="mf-exp-row"><i class="ti ti-cake"></i> ${n.nascimento?new Date(n.nascimento+'T00:00:00').toLocaleDateString('pt-BR'):'Nascimento não informado'}</div>
+                                                                <div class="mf-exp-cids">${mfCidResumo(n.cids)}</div>
+                                                              `;
+                                                              const tt=document.getElementById('mf-tooltip');
+                                                              if(tt)tt.style.display='none';
+                                                              painel.style.display='block';
+                                                              const r=wrapEl.getBoundingClientRect();
+                                                              const larguraPainel=250, alturaEstimativa=220;
+                                                              let left=ev.clientX-r.left+14, top=ev.clientY-r.top+10;
+                                                              if(left+larguraPainel+10>r.width)left=Math.max(8,ev.clientX-r.left-larguraPainel-14);
+                                                              if(top+alturaEstimativa>r.height)top=Math.max(8,r.height-alturaEstimativa-8);
+                                                              painel.style.left=left+'px';
+                                                              painel.style.top=top+'px';
+                                                              document.removeEventListener('click',mfFecharExpandidoFora,true);
+                                                              setTimeout(()=>document.addEventListener('click',mfFecharExpandidoFora,true),0);
                                                             }
                                                             function mfRender(){
                                                               if(!_mfData)return;
@@ -7103,6 +7160,9 @@
                                                               if(!svgEl||typeof d3==='undefined')return;
                                                               svgEl.innerHTML='';
                                                               if(_mfSim){_mfSim.stop();_mfSim=null;}
+                                                              const expandEl=document.getElementById('mf-pessoa-expand');
+                                                              if(expandEl)expandEl.style.display='none';
+                                                              document.removeEventListener('click',mfFecharExpandidoFora,true);
                                                               const wrapEl=svgEl.parentElement;
                                                               const box=wrapEl.getBoundingClientRect();
                                                               const W=box.width||900, H=box.height||600;
@@ -7125,7 +7185,6 @@
                                                                 tooltip.style.top=(ev.clientY-r.top+12)+'px';
                                                               }
                                                               function esconderTooltip(){tooltip.style.display='none';}
-                                                              function irParaPaciente(d){closeModal();if(typeof openPatient==='function')openPatient(d.id);}
 
                                                               if(_mfView==='mapa'){
                                                                 const {comp,total:totalFamilias}=mfComponentes(nodes,edges);
@@ -7148,7 +7207,7 @@
                                                                     .on('drag',(ev,d)=>{d.fx=ev.x;d.fy=ev.y;})
                                                                     .on('end',(ev,d)=>{if(!ev.active)_mfSim.alphaTarget(0);d.fx=null;d.fy=null;}))
                                                                   .on('mouseenter',mostrarTooltip).on('mousemove',mostrarTooltip).on('mouseleave',esconderTooltip)
-                                                                  .on('click',(ev,d)=>irParaPaciente(d));
+                                                                  .on('click',(ev,d)=>mfExpandirPessoa(ev,d));
                                                                 nodeG.append('circle').attr('r',d=>d.id===_mfFocoId?20:16)
                                                                   .attr('fill',d=>mfCorSexo(d.sexo))
                                                                   .attr('stroke',d=>d.id===_mfFocoId?'#1a1917':'#fff')
@@ -7232,7 +7291,7 @@
                                                                   .attr('transform',d=>`translate(${d.x},${d.y})`)
                                                                   .style('cursor','pointer')
                                                                   .on('mouseenter',mostrarTooltip).on('mousemove',mostrarTooltip).on('mouseleave',esconderTooltip)
-                                                                  .on('click',(ev,d)=>irParaPaciente(d));
+                                                                  .on('click',(ev,d)=>mfExpandirPessoa(ev,d));
                                                                 nodeG.append('rect').attr('x',-46).attr('y',-16).attr('width',92).attr('height',32).attr('rx',8)
                                                                   .attr('fill',d=>mfCorSexo(d.sexo)).attr('opacity',0.14)
                                                                   .attr('stroke',d=>mfCorSexo(d.sexo)).attr('stroke-width',d=>d.id===focoId?2.5:1.2);
