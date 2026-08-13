@@ -421,6 +421,10 @@
       : "/api/medicamentos/buscar?q=" + encodeURIComponent(term);
     try {
       const res = await fetch(url, { headers: token ? { authorization: "Bearer " + token } : {} });
+      if (!res.ok) {
+        console.error("[catalogSearchRun] busca falhou:", res.status, await res.text().catch(() => ""));
+        return catalogDropdownShow(prefix, `<div class="pt-cat-empty">Falha na busca (erro ${res.status}) — tente novamente</div>`);
+      }
       const d = await res.json();
       const items = (d.items || []).slice(0, 12).map((it) => type === "Exame"
         ? { id: it.id, label: it.nome, code: it.codigo_tuss }
