@@ -1,0 +1,51 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font: 13px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif;
+  color: #0f172a;
+  background: linear-gradient(160deg, #f1f5f9, #e2e8f0);
+  height: 100vh;
+}
+.hidden { display: none !important; }
+.screen { display: flex; flex-direction: column; height: 100vh; padding: 14px; gap: 8px; }
+.brand { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.logo {
+  width: 26px; height: 26px; border-radius: 9px; display: grid; place-items: center;
+  background: linear-gradient(135deg, #0ea5a4, #0369a1); color: #fff; font-size: 11px; font-weight: 700;
+}
+.head { display: flex; align-items: center; justify-content: space-between; }
+.head-actions { display: flex; gap: 6px; }
+.ghost {
+  border: 1px solid rgba(15, 23, 42, 0.1); background: rgba(255, 255, 255, 0.7);
+  border-radius: 9px; width: 28px; height: 28px; cursor: pointer;
+}
+.muted { color: #64748b; margin: 2px 0 6px; }
+.tiny { font-size: 11px; }
+.err { color: #dc2626; min-height: 16px; font-size: 12px; }
+.lbl { font-size: 11px; font-weight: 600; color: #475569; }
+.inp, textarea {
+  width: 100%; padding: 9px 11px; border-radius: 11px; font: inherit;
+  border: 1px solid rgba(15, 23, 42, 0.12); background: rgba(255, 255, 255, 0.8);
+}
+.btn {
+  margin-top: 10px; padding: 10px; border: 0; border-radius: 11px; cursor: pointer;
+  background: linear-gradient(135deg, #0ea5a4, #0369a1); color: #fff; font-weight: 600;
+}
+.ctx {
+  font-size: 11px; color: #475569; background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 10px; padding: 6px 9px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.msgs { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 4px 0; }
+.bubble {
+  max-width: 88%; padding: 9px 12px; border-radius: 14px; white-space: pre-wrap; word-break: break-word;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+.bubble.ia { background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(15, 23, 42, 0.08); align-self: flex-start; }
+.bubble.me { background: linear-gradient(135deg, #0ea5a4, #0369a1); color: #fff; align-self: flex-end; }
+.composer { display: flex; gap: 6px; align-items: flex-end; }
+.composer textarea { resize: none; max-height: 120px; }
+.send {
+  border: 0; border-radius: 11px; width: 38px; height: 38px; cursor: pointer; color: #fff;
+  background: linear-gradient(135deg, #0ea5a4, #0369a1);
+}
