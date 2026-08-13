@@ -294,20 +294,62 @@
     const acoes = PP.acoesByProtocolo[v.protocolo_id] || [];
     if (!acoes.length) return "";
     const tree = buildTree(v.protocolo_id, v.id);
-    const svg = renderFlowSvg(tree);
+    const resumo = resumoAtual(tree);
     return `
       <div class="pp-section-h" style="margin-top:16px"><h3 style="font-size:12.5px"><i class="ti ti-sitemap"></i> Fluxo do protocolo</h3></div>
-      <div class="pp-flow-wrap">${svg}</div>
-      <div class="pp-flow-legend">
-        <span><i style="background:#6366f1"></i> Caminho seguido</span>
-        <span><i style="background:#cbd5e1;opacity:.6"></i> Ramo não seguido</span>
-        <span><i style="background:#ef4444"></i> Não realizado / atrasado</span>
-        <span><i style="background:#f59e0b"></i> Resultado diferente do esperado</span>
-      </div>`;
+      ${resumoAtualHtml(v.id, resumo)}`;
   }
 
   const COLORS = { ok: "#6366f1", red: "#ef4444", amber: "#f59e0b", gray: "#cbd5e1" };
   const COLORS_LIGHT = { ok: "#eef2ff", red: "#fee2e2", amber: "#fef3c7", gray: "#f1f5f9" };
+
+  function subLabelForStatus(st) {
+    if (st.color === "red") return "Não realizado";
+    if (st.color === "amber") return "Resultado inesperado";
+    if (st.color === "ok") return st.tarefas.some((t) => t.status !== "concluido") ? "Previsto: " + fmtDate(st.tarefas[0].due_date) : "Concluído em " + fmtDate(st.tarefas.slice().reverse()[0].due_date);
+    return "Não seguido";
+  }
+
+  /* ---- Resumo compacto: só o(s) evento(s) mais recente(s) + próximo ---- */
+  function flattenActionNodes(tree) {
+    const out = [];
+    (function walk(node) {
+      if (node.type === "acao") out.push(node);
+      (node.children || []).forEach(walk);
+    })(tree);
+    return out;
+  }
+
+  function resumoAtual(tree) {
+    const alcancadas = flattenActionNodes(tree).filter((n) => n.status.reached);
+    if (!alcancadas.length) return null;
+    const comData = alcancadas.map((n) => ({ node: n, due: (n.status.tarefas[0] || {}).due_date || "" })).sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0));
+    const hoje = todayStr();
+    const passadas = comData.filter((x) => x.due <= hoje);
+    const ultimo = passadas.length ? passadas[passadas.length - 1] : comData[0];
+    const idx = comData.indexOf(ultimo);
+    const proximo = comData.slice(idx + 1).find((x) => x.node.status.tarefas.some((t) => t.status !== "concluido")) || null;
+    return { ultimo: ultimo.node, proximo: proximo ? proximo.node : null };
+  }
+
+  function resumoAtualHtml(vinculoId, resumo) {
+    const chip = (node, label) => {
+      const st = node.status;
+      return `<div class="pp-flow-chip" style="border-color:${COLORS[st.color]};background:${COLORS_LIGHT[st.color]}">
+          <span class="pp-flow-chip-tag" style="color:${COLORS[st.color]}">${esc(label)}</span>
+          <span class="pp-flow-chip-nm">${esc(node.acao.nome)}</span>
+          <span class="pp-flow-chip-sub">${esc(subLabelForStatus(st))}</span>
+        </div>`;
+    };
+    const corpo = resumo
+      ? `${chip(resumo.ultimo, "Último evento")}${resumo.proximo ? `<i class="ti ti-arrow-narrow-right pp-flow-resumo-arrow"></i>${chip(resumo.proximo, "Próximo passo")}` : ""}`
+      : `<div class="pp-doc-empty">Nenhum evento registrado ainda para este protocolo.</div>`;
+    return `
+      <div class="pp-flow-resumo-wrap">
+        <div class="pp-flow-resumo">${corpo}</div>
+        <button class="pp-btn" data-act="ver-fluxo-completo" data-id="${vinculoId}"><i class="ti ti-arrows-maximize"></i> Ver fluxo completo</button>
+      </div>`;
+  }
 
   function renderFlowSvg(tree) {
     // Layout manual em níveis (BFS), sem depender de d3.hierarchy — evita
@@ -359,11 +401,7 @@
       const stroke = COLORS[st.color];
       const opacity = st.reached ? 1 : 0.4;
       const nome = node.acao.nome.length > 20 ? node.acao.nome.slice(0, 19) + "…" : node.acao.nome;
-      let sub = "";
-      if (st.color === "red") sub = "Não realizado";
-      else if (st.color === "amber") sub = "Resultado inesperado";
-      else if (st.color === "ok") sub = st.tarefas.some((t) => t.status !== "concluido") ? "Previsto: " + fmtDate(st.tarefas[0].due_date) : "Concluído";
-      else sub = "Não seguido";
+      const sub = subLabelForStatus(st);
       nodes += `
         <g class="pp-flow-node" opacity="${opacity}" transform="translate(${x - NODE_W / 2},${y - NODE_H / 2})">
           <rect width="${NODE_W}" height="${NODE_H}" rx="12" fill="${fill}" stroke="${stroke}" />
@@ -482,6 +520,7 @@
     if (!PP.modal) return "";
     if (PP.modal.type === "novo-lme") return modalNovoLme();
     if (PP.modal.type === "importar") return modalImportar();
+    if (PP.modal.type === "fluxo") return modalFluxoCompleto();
     return "";
   }
 
@@ -533,6 +572,32 @@
       </div>`;
   }
 
+  function modalFluxoCompleto() {
+    const v = PP.vinculos.find((x) => x.id === PP.modal.vinculoId);
+    if (!v) return "";
+    const protocolo = v.protocolos || {};
+    const tree = buildTree(v.protocolo_id, v.id);
+    const svg = renderFlowSvg(tree);
+    return `
+      <div class="pp-modal-bg" data-act="close-modal-bg">
+        <div class="pp-modal fullscreen" onclick="event.stopPropagation()">
+          <div class="pp-modal-h">
+            <h2><i class="ti ti-sitemap"></i> Fluxo do protocolo — ${esc(protocolo.titulo || "")}</h2>
+            <button data-act="close-modal"><i class="ti ti-x"></i></button>
+          </div>
+          <div class="pp-modal-b fullscreen">
+            <div class="pp-flow-wrap fullscreen">${svg}</div>
+            <div class="pp-flow-legend">
+              <span><i style="background:#6366f1"></i> Caminho seguido</span>
+              <span><i style="background:#cbd5e1;opacity:.6"></i> Ramo não seguido</span>
+              <span><i style="background:#ef4444"></i> Não realizado / atrasado</span>
+              <span><i style="background:#f59e0b"></i> Resultado diferente do esperado</span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
   /* ------------------------------------------------------------------ */
   /* Eventos                                                             */
   /* ------------------------------------------------------------------ */
@@ -558,6 +623,10 @@
         break;
       case "novo-lme":
         PP.modal = { type: "novo-lme" };
+        paint();
+        break;
+      case "ver-fluxo-completo":
+        PP.modal = { type: "fluxo", vinculoId: id };
         paint();
         break;
       case "close-modal":
