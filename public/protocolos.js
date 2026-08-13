@@ -791,7 +791,18 @@
 
   function render() {
     const el = document.getElementById("s-protocolos"); if (!el) return;
+    // Cada clique (editar ação, excluir, adicionar regra, etc.) chama render(),
+    // que reconstrói todo o HTML — sem isso, o corpo rolável do modal
+    // (.pt-modal-b) e a página voltavam sempre para o topo.
+    const modalScrolls = Array.from(document.querySelectorAll(".pt-modal-b")).map((n) => n.scrollTop);
+    const pageY = window.scrollY;
     el.innerHTML = `<div class="pt-wrap">${S.loading ? '<div class="pt-empty">Carregando protocolos…</div>' : (S.screen === "protocols" ? myProtocolsHtml() : reportHtml())}${modalHtml()}${aiModalHtml()}</div>`;
+    const newModalBodies = document.querySelectorAll(".pt-modal-b");
+    if (newModalBodies.length) {
+      newModalBodies.forEach((n, i) => { n.scrollTop = modalScrolls[i] || 0; });
+    } else if (pageY) {
+      window.scrollTo(0, pageY);
+    }
   }
 
   /* ---------- EVENTS ---------- */
