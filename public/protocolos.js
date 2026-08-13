@@ -52,9 +52,9 @@
         actions: (p.protocolo_acoes || []).map((a) => ({
           id: a.id, type: a.tipo, name: a.nome, startDay: a.start_day, frequency: a.frequency,
           recurrent: a.recurrent, autoRestart: a.auto_restart, specialty: a.especialidade || "", desc: a.descricao || "",
-          regraPaiId: a.regra_id || null, startDayRef: a.start_day_referencia || "inicio_protocolo",
+          regraPaiId: a.regra_pai_id || null,
           tussId: a.tuss_procedimento_id || null, codigoTuss: (a.tuss_procedimentos && a.tuss_procedimentos.codigo_tuss) || null,
-          idSubstancia: a.id_substancia || null, medicamentoId: a.medicamento_id || null,
+          idSubstancia: a.id_substancia || null, medicamentoId: null,
           catalogStatus: a.catalogo_status || "nao_aplicavel",
         })),
         regras: (p.protocolo_regras || []).map((r) => ({
@@ -87,28 +87,44 @@
     return {
       protocolo_id: protocoloId, tipo: a.type, nome: a.name, start_day: a.startDay, frequency: a.frequency,
       recurrent: !!a.recurrent, auto_restart: !!a.autoRestart, especialidade: a.specialty || null, descricao: a.desc || null,
-      start_day_referencia: a.regraPaiId ? "resultado_regra" : "inicio_protocolo",
       tuss_procedimento_id: a.type === "Exame" ? a.tussId || null : null,
       id_substancia: a.type === "Receita" ? a.idSubstancia || null : null,
-      medicamento_id: a.type === "Receita" ? a.medicamentoId || null : null,
       catalogo_status: a.type === "Consulta" ? "nao_aplicavel" : (a.tussId || a.idSubstancia ? "vinculado" : (a.catalogStatus || "pendente_cadastro")),
     };
   }
 
   async function saveProtocol(form) {
     const sb = sbc(); if (!sb) return;
+    S.modal = { ...form, saving: true, saveError: null }; render();
+
+    function fail(step, error) {
+      console.error("saveProtocol:" + step, error);
+      const msg = "Não foi possível salvar (" + step + "): " + ((error && error.message) || "erro desconhecido");
+      if (typeof toast === "function") toast(msg); else alert(msg);
+      S.modal = { ...form, saving: false, saveError: msg };
+      render();
+    }
+
     let id = form.id;
     if (id) {
-      await sb.from("protocolos").update({ titulo: form.title }).eq("id", id);
-      await sb.from("protocolo_cids").delete().eq("protocolo_id", id);
+      const r1 = await sb.from("protocolos").update({ titulo: form.title }).eq("id", id);
+      if (r1.error) return fail("atualizar protocolo", r1.error);
+      const r2 = await sb.from("protocolo_cids").delete().eq("protocolo_id", id);
+      if (r2.error) return fail("limpar CIDs", r2.error);
       // ações de ramo referenciam regras via FK; apagar ações antes de regras
-      await sb.from("protocolo_acoes").delete().eq("protocolo_id", id);
-      await sb.from("protocolo_regras").delete().eq("protocolo_id", id);
+      const r3 = await sb.from("protocolo_acoes").delete().eq("protocolo_id", id);
+      if (r3.error) return fail("limpar ações", r3.error);
+      const r4 = await sb.from("protocolo_regras").delete().eq("protocolo_id", id);
+      if (r4.error) return fail("limpar regras", r4.error);
     } else {
-      const { data } = await sb.from("protocolos").insert({ titulo: form.title }).select("id").single();
-      id = data && data.id; if (!id) return;
+      const { data, error } = await sb.from("protocolos").insert({ titulo: form.title }).select("id").single();
+      if (error) return fail("criar protocolo", error);
+      id = data && data.id; if (!id) return fail("criar protocolo", { message: "id não retornado" });
     }
-    if (form.cids.length) await sb.from("protocolo_cids").insert(form.cids.map((c) => ({ protocolo_id: id, cid_code: c })));
+    if (form.cids.length) {
+      const { error } = await sb.from("protocolo_cids").insert(form.cids.map((c) => ({ protocolo_id: id, cid_code: c })));
+      if (error) return fail("salvar CIDs", error);
+    }
 
     const regras = form.regras || [];
     const rootActions = form.actions.filter((a) => !a.regraPaiId);
@@ -118,7 +134,7 @@
     if (rootActions.length) {
       const { data: inserted, error } = await sb.from("protocolo_acoes")
         .insert(rootActions.map((a) => actionRow(id, a))).select("id");
-      if (error) { console.error("save acoes raiz", error); return; }
+      if (error) return fail("salvar ações", error);
       (inserted || []).forEach((row, i) => { idMap[rootActions[i].id] = row.id; });
     }
 
@@ -134,22 +150,24 @@
         repete_gatilho_apos_dias: r.repeteGatilhoApos || null,
       }));
       const { data: insertedR, error } = await sb.from("protocolo_regras").insert(rows).select("id");
-      if (error) { console.error("save regras", error); return; }
+      if (error) return fail("salvar regras de ramificação", error);
       (insertedR || []).forEach((row, i) => { regraIdMap[regras[i].id] = row.id; });
     }
 
     if (branchActions.length) {
       const rows = branchActions
         .filter((a) => regraIdMap[a.regraPaiId]) // ignora ações órfãs de regra não salva
-        .map((a) => ({ ...actionRow(id, a), regra_id: regraIdMap[a.regraPaiId] }));
+        .map((a) => ({ ...actionRow(id, a), regra_pai_id: regraIdMap[a.regraPaiId] }));
       if (rows.length) {
         const { error } = await sb.from("protocolo_acoes").insert(rows);
-        if (error) console.error("save acoes de ramo", error);
+        if (error) return fail("salvar ações de ramo", error);
       }
     }
 
     await sincronizarProtocolo(id);
+    S.modal = null;
     await load();
+    if (typeof toast === "function") toast("Protocolo salvo com sucesso.");
   }
 
   async function toggleActive(id) {
@@ -626,6 +644,7 @@
           <button class="pt-btn ai" data-aiopen="1">✨ Criar com IA</button>
           <button class="pt-btn ghost" data-mclose="1" style="padding:2px 10px">×</button></div></div>
       <div class="pt-modal-b">
+        ${m.saveError ? `<div class="pt-err-warn"><strong>Falha ao salvar:</strong> ${esc(m.saveError)}</div>` : ""}
         ${(m.pendencias || []).length ? `<div class="pt-cat-warn">
           <strong>${m.pendencias.length} ${m.pendencias.length === 1 ? "item precisa" : "itens precisam"} de revisão antes de salvar:</strong>
           <ul>${m.pendencias.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>
@@ -660,7 +679,7 @@
         </div>
       </div>
       <div class="pt-modal-f"><button class="pt-btn ghost" data-mclose="1">Cancelar</button>
-      <button class="pt-btn primary" data-msave="1">Salvar protocolo</button></div>
+      <button class="pt-btn primary" data-msave="1" ${m.saving ? "disabled" : ""}>${m.saving ? "Salvando…" : "Salvar protocolo"}</button></div>
     </div></div>`;
   }
 
@@ -855,7 +874,7 @@
     if (d.toggle) return toggleActive(d.toggle);
     if (d.mbg && e.target === t) { S.modal = null; return render(); }
     if (d.mclose) { S.modal = null; S.showActionEditor = false; S.editingAction = null; return render(); }
-    if (d.msave) { const m = { ...S.modal, title: document.getElementById("pt-m-title").value.trim() }; if (!m.title) return alert("Informe o nome do protocolo."); S.modal = null; render(); return saveProtocol(m); }
+    if (d.msave) { const m = { ...S.modal, title: document.getElementById("pt-m-title").value.trim() }; if (!m.title) return alert("Informe o nome do protocolo."); return saveProtocol(m); }
     if (d.cidpick) { cidPickApply(d.cidpick); return; }
     if (d.cidadd) { const v = (document.getElementById("pt-m-cid").value || "").trim().toUpperCase(); if (v && !S.modal.cids.includes(v)) S.modal.cids.push(v); S.cidInput = ""; return render(); }
     if (d.cidrm) { S.modal.cids = S.modal.cids.filter((c) => c !== d.cidrm); return render(); }

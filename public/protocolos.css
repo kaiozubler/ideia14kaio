@@ -90,3 +90,6 @@
 .pt-cat-warn strong{display:block;margin-bottom:4px;font-size:12.5px}
 .pt-cat-warn ul{margin:0;padding-left:18px}
 .pt-cat-warn li{margin-bottom:2px}
+.pt-err-warn{margin-bottom:16px;padding:12px 14px;border-radius:12px;background:rgba(254,242,242,.9);border:1px solid rgba(254,202,202,.9);color:#b91c1c;font-size:12.5px}
+.pt-err-warn strong{margin-right:4px}
+button[disabled]{opacity:.6;cursor:not-allowed}
