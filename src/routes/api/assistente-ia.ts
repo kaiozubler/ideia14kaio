@@ -14,7 +14,7 @@ type ToolCall = {
   function: { name: string; arguments: string };
 };
 
-type RequestBody = {
+export type RequestBody = {
   mode?: string;
   messages?: { role: string; content: string }[];
   user_id?: string | null;
@@ -30,6 +30,9 @@ type RequestBody = {
   // Anexo enviado pelo médico no chat. Quando é um exame, a análise é feita pela
   // IA dedicada de exames antes de o assistente responder.
   anexo?: { nome?: string; mime?: string; base64?: string } | null;
+  // Contexto capturado da tela atual do navegador (extensão Chrome). Texto puro,
+  // somente leitura — a IA usa como contexto adicional, nunca como instrução.
+  contexto_tela?: string | null;
 };
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
