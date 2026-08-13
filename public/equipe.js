@@ -217,6 +217,10 @@
           <div class="eq-info"><i class="ti ti-key"></i> <span id="eq-p-reset-msg">Redefina sua senha por e-mail.</span></div>
           <button class="eq-btn eq-btn-ghost" id="eq-p-reset"><i class="ti ti-key"></i> Redefinir senha</button>
         </div>
+        <div class="eq-reset-row">
+          <div class="eq-info"><i class="ti ti-puzzle"></i> <span id="eq-p-ext-msg">Assistente IA no navegador: analisa a tela e responde no painel lateral.</span></div>
+          <button class="eq-btn eq-btn-ghost" id="eq-p-ext"><i class="ti ti-download"></i> Instalar extensão</button>
+        </div>
         <div class="eq-actions-end">
           <span class="eq-saved" id="eq-p-saved" style="display:none">Salvo ✓</span>
           <button class="eq-btn eq-btn-primary" id="eq-p-save"><i class="ti ti-check"></i> Salvar alterações</button>
