@@ -1287,6 +1287,22 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
           const msg = err instanceof Error ? err.message : "Unknown error";
           return new Response(msg, { status: 500 });
         }
+      }
+    }
+  }
+}
+
+export const Route = createFileRoute("/api/assistente-ia")({
+  server: {
+    handlers: {
+      POST: async ({ request }) => {
+        let body: RequestBody;
+        try {
+          body = (await request.json()) as RequestBody;
+        } catch {
+          return new Response("Invalid JSON", { status: 400 });
+        }
+        return handleAssistente(body);
       },
     },
   },
