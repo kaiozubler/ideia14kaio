@@ -28,6 +28,9 @@ async function handle(request: Request) {
     },
   );
 
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData?.user?.id ?? null;
+
   // p_tabela: quando o front não pede uma tabela TUSS específica, deixamos
   // null propositalmente — buscar_tuss() já trata null como "sem filtro de
   // tabela" (WHERE p.tabela = coalesce(p_tabela, p.tabela) vira sempre
@@ -39,6 +42,8 @@ async function handle(request: Request) {
     termo: parsed.data.q ?? "",
     p_tabela: parsed.data.tabela ?? null,
     p_limit: parsed.data.limit ?? 30,
+    p_usar_alias: true,
+    p_user_id: userId,
   });
 
   if (error) {
