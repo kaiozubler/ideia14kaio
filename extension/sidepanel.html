@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Assistente MediCopilot</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Autenticação (exigida a cada 30 dias) -->
+    <section id="auth" class="screen">
+      <div class="brand"><span class="logo">MC</span><b>Assistente MediCopilot</b></div>
+      <p class="muted">Entre com a sua conta do MediCopilot para usar o assistente.</p>
+      <label class="lbl">E-mail</label>
+      <input id="au-email" class="inp" type="email" autocomplete="username" placeholder="voce@clinica.com" />
+      <label class="lbl">Senha</label>
+      <input id="au-pass" class="inp" type="password" autocomplete="current-password" placeholder="••••••••" />
+      <button id="au-btn" class="btn">Entrar</button>
+      <div id="au-msg" class="err"></div>
+      <p class="muted tiny">Por segurança, a autenticação é solicitada novamente a cada 30 dias.</p>
+    </section>
+
+    <!-- Chat -->
+    <section id="chat" class="screen hidden">
+      <header class="head">
+        <div class="brand"><span class="logo">MC</span><b>Assistente</b></div>
+        <div class="head-actions">
+          <button id="ch-new" class="ghost" title="Nova conversa">＋</button>
+          <button id="ch-out" class="ghost" title="Sair">⏻</button>
+        </div>
+      </header>
+      <div id="ctx" class="ctx">Contexto da tela: <span id="ctx-info">lendo…</span></div>
+      <div id="msgs" class="msgs"></div>
+      <form id="ch-form" class="composer">
+        <textarea id="ch-inp" rows="1" placeholder="Pergunte algo sobre a tela ou o paciente…"></textarea>
+        <button class="send" type="submit">➤</button>
+      </form>
+    </section>
+
+    <script src="config.js"></script>
+    <script src="auth.js"></script>
+    <script src="sidepanel.js"></script>
+  </body>
+</html>
