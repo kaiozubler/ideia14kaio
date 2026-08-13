@@ -28,9 +28,16 @@ async function handle(request: Request) {
     },
   );
 
+  // p_tabela: quando o front não pede uma tabela TUSS específica, deixamos
+  // null propositalmente — buscar_tuss() já trata null como "sem filtro de
+  // tabela" (WHERE p.tabela = coalesce(p_tabela, p.tabela) vira sempre
+  // verdadeiro). Antes isso vinha fixo em 'tuss-22', então exames
+  // cadastrados em outras tabelas (ex.: exames laboratoriais/oftalmológicos
+  // sincronizados sob outro código de tabela) nunca apareciam na busca do
+  // modal "Editar protocolo", mesmo já existindo em tuss_procedimentos.
   const { data, error } = await supabase.rpc("buscar_tuss", {
     termo: parsed.data.q ?? "",
-    p_tabela: parsed.data.tabela ?? "tuss-22",
+    p_tabela: parsed.data.tabela ?? null,
     p_limit: parsed.data.limit ?? 30,
   });
 
