@@ -49,7 +49,20 @@
 .pp-pend .due{font-size:10.5px;color:#94a3b8;flex-shrink:0;white-space:nowrap}
 .pp-pend.late .due{color:#dc2626;font-weight:700}
 
-/* ---- Fluxograma (raiz da árvore) ---- */
+/* ---- Resumo compacto do fluxo (recorte do último evento) ---- */
+.pp-flow-resumo-wrap{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;border-radius:16px;background:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.6);padding:12px 14px;margin-bottom:10px}
+.pp-flow-resumo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:1;min-width:0}
+.pp-flow-resumo-arrow{font-size:18px;color:#c7d2fe;flex-shrink:0}
+.pp-flow-chip{display:flex;flex-direction:column;gap:2px;padding:8px 13px;border-radius:13px;border:1.5px solid;min-width:140px}
+.pp-flow-chip-tag{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.pp-flow-chip-nm{font-size:12.5px;font-weight:700;color:#1e293b}
+.pp-flow-chip-sub{font-size:10.5px;color:#64748b}
+
+/* ---- Modal em tela cheia (fluxo completo) ---- */
+.pp-modal.fullscreen{max-width:min(1400px,96vw);width:96vw;margin:16px auto;display:flex;flex-direction:column}
+.pp-modal-b.fullscreen{max-height:none;flex:1;display:flex;flex-direction:column}
+.pp-flow-wrap.fullscreen{max-height:76vh;min-height:320px}
+
 .pp-flow-wrap{border-radius:16px;background:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.6);padding:10px;margin-bottom:12px;overflow:auto}
 .pp-flow-svg{display:block;min-width:100%}
 .pp-flow-node rect,.pp-flow-node circle{stroke-width:1.6px}
