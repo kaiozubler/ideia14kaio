@@ -30,16 +30,16 @@
 
     if (PP.pacienteId !== pid) {
       PP.pacienteId = pid;
-      PP.loaded = false;
       PP.openCards = new Set();
     }
-    if (!PP.loaded) {
-      PP.loading = true;
-      paint();
-      await loadAll();
-      PP.loading = false;
-      PP.loaded = true;
-    }
+    // Sempre busca dados frescos ao abrir a aba (nunca reaproveita cache de
+    // uma visita anterior nesta sessão) — evita mostrar protocolos
+    // desatualizados depois que um CID foi adicionado/removido do cadastro.
+    PP.loading = true;
+    paint();
+    await loadAll();
+    PP.loading = false;
+    PP.loaded = true;
     paint();
   }
   window.renderPacienteProtocolosTab = renderPacienteProtocolosTab;
@@ -47,6 +47,13 @@
   async function loadAll() {
     const pid = PP.pacienteId;
     try {
+      // Reforço: sincroniza vínculos de protocolo pelos CIDs atuais do
+      // cadastro antes de ler. Idempotente e barato — cobre o caso de um
+      // vínculo não ter sido criado no momento certo (ex: protocolo
+      // ativado no catálogo depois do CID já estar no cadastro, já que o
+      // gatilho do banco só dispara quando a coluna cids muda).
+      await sb.rpc("sincronizar_protocolos_paciente", { p_paciente_id: pid });
+
       const [vincRes, lmeRes, docsRes] = await Promise.all([
         sb.from("paciente_protocolos")
           .select("*, protocolos(id,titulo,ativo)")
@@ -93,7 +100,7 @@
     }
   }
 
-  async function refresh() { PP.loaded = false; await renderPacienteProtocolosTab(); }
+  async function refresh() { await renderPacienteProtocolosTab(); }
 
   /* ------------------------------------------------------------------ */
   /* Helpers                                                            */
