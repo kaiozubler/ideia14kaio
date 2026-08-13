@@ -1,9 +1,14 @@
 /* ABA "PROTOCOLOS" do Cadastro do Paciente — módulo standalone, no mesmo
-   padrão de protocolos.js: IIFE, usa window.sb / window.showToast /
-   window.currentPatient / window.currentUser já existentes no app. */
+   padrão de protocolos.js: IIFE, usa window.sb / window.showToast e os
+   getters window.getCurrentPatient() / window.getCurrentUser() (currentPatient
+   e currentUser são `let` no script principal, então não viram propriedade
+   de window diretamente — só os getters, que são function declarations). */
 (function () {
   const ROOT_ID = "pat-protocolos-root";
   const TIPO_ICON = { Exame: "ti-flask-2", Consulta: "ti-stethoscope", Receita: "ti-pill" };
+
+  function getPatient() { return typeof window.getCurrentPatient === "function" ? window.getCurrentPatient() : window.currentPatient; }
+  function getUser() { return typeof window.getCurrentUser === "function" ? window.getCurrentUser() : window.currentUser; }
 
   const PP = {
     pacienteId: null,
@@ -23,7 +28,8 @@
   /* Bootstrap                                                          */
   /* ------------------------------------------------------------------ */
   async function renderPacienteProtocolosTab() {
-    const pid = window.currentPatient && window.currentPatient.id;
+    const patient = getPatient();
+    const pid = patient && patient.id;
     const root = document.getElementById(ROOT_ID);
     if (!root) return;
     if (!pid) { root.innerHTML = emptyState("Abra o cadastro de um paciente."); return; }
@@ -696,14 +702,16 @@
     input.onchange = async () => {
       const file = input.files && input.files[0];
       if (!file) return;
-      if (!window.currentUser) { showToast && showToast("Sessão expirada, recarregue a página", "error"); return; }
-      const path = window.currentUser.id + "/" + Date.now() + "_" + file.name.replace(/[^\w.\-]+/g, "_");
+      const user = getUser();
+      if (!user) { showToast && showToast("Sessão expirada, recarregue a página", "error"); return; }
+      const patient = getPatient();
+      const path = user.id + "/" + Date.now() + "_" + file.name.replace(/[^\w.\-]+/g, "_");
       const { error: upErr } = await sb.storage.from("documentos-arquivos").upload(path, file, { contentType: file.type || "application/octet-stream", upsert: false });
       if (upErr) { showToast && showToast("Erro ao enviar arquivo: " + upErr.message, "error"); return; }
       const { data: docRow, error: insErr } = await sb.from("documentos_paciente").insert({
         paciente_id: PP.pacienteId,
-        paciente_nome: window.currentPatient && window.currentPatient.name,
-        id_medico: window.currentUser.id,
+        paciente_nome: patient && patient.name,
+        id_medico: user.id,
         tipo: "lme_anexo",
         conteudo: {},
         arquivo_path: path,
