@@ -34,6 +34,7 @@ import { Route as ApiSignatureLocalCertificateRouteImport } from './routes/api/s
 import { Route as ApiSignatureSignRouteImport } from './routes/api/signature/sign'
 import { Route as ApiTussBuscarRouteImport } from './routes/api/tuss/buscar'
 import { Route as ApiTussCriarRouteImport } from './routes/api/tuss/criar'
+import { Route as ApiPublicExtensaoChatRouteImport } from './routes/api/public/extensao/chat'
 import { Route as ApiPublicHooksSyncInteracoesRouteImport } from './routes/api/public/hooks/sync-interacoes'
 import { Route as ApiPublicHooksSyncTussRouteImport } from './routes/api/public/hooks/sync-tuss'
 import { Route as ApiPublicSignatureCallbackRouteImport } from './routes/api/public/signature/callback'
@@ -168,6 +169,11 @@ const ApiTussCriarRoute = ApiTussCriarRouteImport.update({
   path: '/api/tuss/criar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicExtensaoChatRoute = ApiPublicExtensaoChatRouteImport.update({
+  id: '/api/public/extensao/chat',
+  path: '/api/public/extensao/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksSyncInteracoesRoute =
   ApiPublicHooksSyncInteracoesRouteImport.update({
     id: '/api/public/hooks/sync-interacoes',
@@ -217,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/api/signature/sign': typeof ApiSignatureSignRoute
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/tuss/criar': typeof ApiTussCriarRoute
+  '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
@@ -248,6 +255,7 @@ export interface FileRoutesByTo {
   '/api/signature/sign': typeof ApiSignatureSignRoute
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/tuss/criar': typeof ApiTussCriarRoute
+  '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
@@ -280,6 +288,7 @@ export interface FileRoutesById {
   '/api/signature/sign': typeof ApiSignatureSignRoute
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/tuss/criar': typeof ApiTussCriarRoute
+  '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
@@ -313,6 +322,7 @@ export interface FileRouteTypes {
     | '/api/signature/sign'
     | '/api/tuss/buscar'
     | '/api/tuss/criar'
+    | '/api/public/extensao/chat'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
@@ -344,6 +354,7 @@ export interface FileRouteTypes {
     | '/api/signature/sign'
     | '/api/tuss/buscar'
     | '/api/tuss/criar'
+    | '/api/public/extensao/chat'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
@@ -375,6 +386,7 @@ export interface FileRouteTypes {
     | '/api/signature/sign'
     | '/api/tuss/buscar'
     | '/api/tuss/criar'
+    | '/api/public/extensao/chat'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
@@ -407,6 +419,7 @@ export interface RootRouteChildren {
   ApiSignatureSignRoute: typeof ApiSignatureSignRoute
   ApiTussBuscarRoute: typeof ApiTussBuscarRoute
   ApiTussCriarRoute: typeof ApiTussCriarRoute
+  ApiPublicExtensaoChatRoute: typeof ApiPublicExtensaoChatRoute
   ApiPublicHooksSyncInteracoesRoute: typeof ApiPublicHooksSyncInteracoesRoute
   ApiPublicHooksSyncTussRoute: typeof ApiPublicHooksSyncTussRoute
   ApiPublicSignatureCallbackRoute: typeof ApiPublicSignatureCallbackRoute
@@ -590,6 +603,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTussCriarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/extensao/chat': {
+      id: '/api/public/extensao/chat'
+      path: '/api/public/extensao/chat'
+      fullPath: '/api/public/extensao/chat'
+      preLoaderRoute: typeof ApiPublicExtensaoChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/sync-interacoes': {
       id: '/api/public/hooks/sync-interacoes'
       path: '/api/public/hooks/sync-interacoes'
@@ -647,6 +667,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSignatureSignRoute: ApiSignatureSignRoute,
   ApiTussBuscarRoute: ApiTussBuscarRoute,
   ApiTussCriarRoute: ApiTussCriarRoute,
+  ApiPublicExtensaoChatRoute: ApiPublicExtensaoChatRoute,
   ApiPublicHooksSyncInteracoesRoute: ApiPublicHooksSyncInteracoesRoute,
   ApiPublicHooksSyncTussRoute: ApiPublicHooksSyncTussRoute,
   ApiPublicSignatureCallbackRoute: ApiPublicSignatureCallbackRoute,
