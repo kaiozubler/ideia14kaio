@@ -150,12 +150,39 @@
   /* ------------------------------------------------------------------ */
   /* Pintura geral                                                      */
   /* ------------------------------------------------------------------ */
+  /* Portal de modal: renderizado direto em document.body, fora da árvore
+     de #pat-protocolos-root. #s-patient-detail aplica `position:relative;
+     z-index:1` em todos os seus filhos diretos (regra global do app), o
+     que cria um novo contexto de empilhamento — um modal position:fixed
+     preso ali dentro fica sujeito a esse contexto local e pode acabar
+     coberto por outros elementos da tela mesmo cobrindo a viewport
+     corretamente em termos de layout. Renderizar num container próprio,
+     filho direto de <body>, evita esse problema por completo. */
+  function ensureModalPortal() {
+    let el = document.getElementById("pp-modal-portal");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "pp-modal-portal";
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+
   function paint() {
     const root = document.getElementById(ROOT_ID);
     if (!root) return;
-    if (PP.loading) { root.innerHTML = `<div class="pp-empty"><i class="ti ti-loader-2"></i>Carregando protocolos…</div>`; return; }
-    root.innerHTML = sectionProtocolos() + sectionLme() + (PP.modal ? modalHtml() : "");
+    if (PP.loading) {
+      root.innerHTML = `<div class="pp-empty"><i class="ti ti-loader-2"></i>Carregando protocolos…</div>`;
+      const mr = ensureModalPortal();
+      mr.innerHTML = PP.modal ? modalHtml() : "";
+      wireEvents(mr);
+      return;
+    }
+    root.innerHTML = sectionProtocolos() + sectionLme();
     wireEvents(root);
+    const modalRoot = ensureModalPortal();
+    modalRoot.innerHTML = PP.modal ? modalHtml() : "";
+    wireEvents(modalRoot);
   }
 
   /* ------------------------------------------------------------------ */
