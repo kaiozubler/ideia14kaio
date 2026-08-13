@@ -339,7 +339,7 @@
         <div style="flex:0 0 160px;background:rgba(255,255,255,.6);box-shadow:2px 0 12px rgba(0,0,0,.06)">
           <div style="height:52px;display:flex;align-items:flex-end;padding:0 14px 8px;border-bottom:1px solid rgba(255,255,255,.5)"><span style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8">Ação</span></div>
           ${actions.map((a) => `<div class="pt-tl-row"><div class="pt-icon ${a.type}">${AT[a.type].icon}</div>
-            <div style="min-width:0;flex:1"><div style="font-size:11px;font-weight:600;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(a.name)}">${esc(a.name)}</div>
+            <div style="min-width:0;flex:1"><div style="font-size:11px;font-weight:600;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" data-tip="${esc(a.desc || "")}" data-tipt="${esc(a.name)}">${esc(a.name)}</div>
             <span class="pt-tag ${a.type}" style="margin-top:2px">${a.type}</span></div></div>`).join("")}
         </div>
         <div style="overflow-x:auto;flex:1"><div style="width:${total + 48}px;min-width:100%">
