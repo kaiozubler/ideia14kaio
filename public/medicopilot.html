@@ -4684,7 +4684,7 @@
               <div id="gd-nome-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:#fff;border:0.5px solid var(--n200);border-radius:var(--r8);box-shadow:0 8px 20px rgba(0,0,0,.08);max-height:220px;overflow-y:auto;margin-top:2px"></div>
             </div>
             <div class="fld">
-              <label>CPF do paciente</label>
+              <label>CPF do paciente <span id="gd-cpf-req" style="font-weight:400;color:var(--n300)"></span></label>
 <input type="text" id="gd-cpf" placeholder="000.000.000-00" maxlength="14" oninput="onGdCpfChange()" />            </div>
             <div class="fld">
               <label>Telefone <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
@@ -4693,6 +4693,7 @@
             <div class="fld wide">
               <label
                 >Data de nascimento <span id="gd-idade" style="font-weight:400;color:var(--n300)"></span
+                ><span id="gd-nasc-req" style="font-weight:400;color:var(--n300)"></span
               ></label>
               <input type="date" id="gd-nasc" oninput="onGdNascChange()" />
             </div>
@@ -13336,6 +13337,25 @@ let rxSelected = [];
                                                               const formulasValidas = rxFormulasValidas();
                                                               if (!rxSelected.length && !formulasValidas.length) { showToast && showToast('Adicione ao menos um medicamento ou uma fórmula', 'warn'); return; }
 
+                                                              // CPF e idade (data de nascimento) do paciente são obrigatórios
+                                                              // para emitir/exportar a receita — checagem final antes de gerar
+                                                              // o PDF, cobrindo tanto a receita avulsa (dados digitados) quanto
+                                                              // a receita emitida dentro de um atendimento (paciente cadastrado).
+                                                              const rxPacienteCheck = rxManualPatient || currentPatient || {};
+                                                              const rxIdadeCheck = _rxIdade(rxPacienteCheck.nasc || rxPacienteCheck.data_nascimento || '');
+                                                              const rxFaltando = [];
+                                                              if (!rxPacienteCheck.cpf) rxFaltando.push('CPF');
+                                                              if (!rxIdadeCheck) rxFaltando.push('data de nascimento');
+                                                              if (rxFaltando.length) {
+                                                                showToast && showToast(
+                                                                  (rxIsAvulsa
+                                                                    ? 'Informe ' + rxFaltando.join(' e ') + ' do paciente para emitir a receita'
+                                                                    : 'Complete ' + rxFaltando.join(' e ') + ' no cadastro do paciente para emitir a receita'),
+                                                                  'warn'
+                                                                );
+                                                                return;
+                                                              }
+
                                                               const linhasMed = rxSelected.map((it, i) =>
                                                                 `${i + 1}. ${it.nome_comercial}${it.apresentacao ? ' — ' + it.apresentacao : ''}${it.quantidade ? ' — ' + it.quantidade : ''}${it.posologia ? '\n   ' + it.posologia : ''}`
                                                               ).join('\n');
@@ -13924,6 +13944,19 @@ let rxSelected = [];
                                       const p = rxManualPatient || currentPatient || {};
                                       rxManualPatient = null;
                                       const patientAge = _rxIdade(p.nasc || p.data_nascimento || '');
+
+                                      // CPF e idade (data de nascimento) do paciente são obrigatórios em
+                                      // toda receita exportada — checagem final, única para qualquer
+                                      // caminho que gere o PDF (emissão normal, avulsa ou a partir de
+                                      // Conduta > Documentos), garantindo que nenhuma receita saia sem
+                                      // esses dados mesmo que a validação anterior seja pulada/alterada.
+                                      const faltandoPdf = [];
+                                      if (!p.cpf) faltandoPdf.push('CPF');
+                                      if (!patientAge) faltandoPdf.push('data de nascimento');
+                                      if (faltandoPdf.length) {
+                                        showToast && showToast('Não é possível gerar a receita: informe ' + faltandoPdf.join(' e ') + ' do paciente', 'warn');
+                                        return;
+                                      }
 
                                                   // HTML dos medicamentos
                                                   const itemsHtml = meds.map((it, i) => `
@@ -15580,6 +15613,12 @@ let rxSelected = [];
                                       if (conteudoWrap) conteudoWrap.style.display = (isReceita || isExame) ? 'none' : '';
                                       if (medsWrap) medsWrap.style.display = isReceita ? '' : 'none';
                                       if (examesWrap) examesWrap.style.display = isExame ? '' : 'none';
+                                      // CPF e data de nascimento são obrigatórios para emitir receita
+                                      // (necessários no documento final); sinaliza com "*" só nesse caso.
+                                      const cpfReq = document.getElementById('gd-cpf-req');
+                                      const nascReq = document.getElementById('gd-nasc-req');
+                                      if (cpfReq) cpfReq.textContent = isReceita ? '*' : '';
+                                      if (nascReq) nascReq.textContent = isReceita ? '*' : '';
                                       const btn = document.getElementById('gd-submit-btn');
                                       if (!btn) return;
                                       if (isReceita) {
@@ -15611,11 +15650,24 @@ let rxSelected = [];
                                     function abrirSelecaoMedicamentosDocumento() {
                                       const nome = document.getElementById('gd-nome').value.trim();
                                       if (!nome) { showToast && showToast('Informe o nome do paciente', 'warn'); return; }
+                                      const cpf = document.getElementById('gd-cpf').value.trim();
+                                      const nasc = document.getElementById('gd-nasc').value;
+                                      // CPF e data de nascimento (idade) são obrigatórios para emitir
+                                      // receita — validados aqui antes de abrir a seleção de medicamentos
+                                      // para não fazer o médico perder o trabalho de selecionar tudo e só
+                                      // descobrir o problema na hora de emitir.
+                                      const faltando = [];
+                                      if (!cpf) faltando.push('CPF');
+                                      if (!_rxIdade(nasc)) faltando.push('data de nascimento');
+                                      if (faltando.length) {
+                                        showToast && showToast('Informe ' + faltando.join(' e ') + ' do paciente para emitir a receita', 'warn');
+                                        return;
+                                      }
                                       rxManualPatient = {
                                         id: (gdMatchedPaciente && gdMatchedPaciente.name === nome) ? gdMatchedPaciente.id : null,
                                         name: nome,
-                                        cpf: document.getElementById('gd-cpf').value.trim(),
-                                        nasc: document.getElementById('gd-nasc').value,
+                                        cpf: cpf,
+                                        nasc: nasc,
                                         tel: document.getElementById('gd-telefone').value.trim(),
                                       };
                                       rxIsAvulsa = true;
