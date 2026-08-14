@@ -420,7 +420,7 @@
       (node.children || []).forEach((c) => walk(c, depth + 1));
     })(tree, 0);
 
-    const NODE_W = 168, NODE_H = 44, BRANCH_H = 26, ROW_GAP = 70, COL_GAP = 26;
+    const NODE_W = 180, NODE_H = 48, BRANCH_H = 30, ROW_GAP = 74, COL_GAP = 28;
     let leafCounter = 0;
     function assignX(node) {
       if (!node.children || !node.children.length) {
@@ -450,43 +450,47 @@
     function drawEdge(x1, y1, x2, y2, color, opacity, dashed) {
       const midY = (y1 + y2) / 2;
       links += `<path class="pp-flow-link" d="M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}"
-        stroke="${color}" opacity="${opacity}" ${dashed ? 'stroke-dasharray="4,4"' : ""}/>`;
+        stroke="${color}" opacity="${opacity}" stroke-width="${dashed ? 1.6 : 2}" ${dashed ? 'stroke-dasharray="4,4"' : ""}/>`;
     }
 
     function drawActionNode(node, depth) {
       const x = node._x + 20, y = nodeY(depth);
       const st = node.status;
-      const fill = COLORS_LIGHT[st.color];
-      const stroke = COLORS[st.color];
-      const opacity = st.reached ? 1 : 0.4;
-      const nome = node.acao.nome.length > 20 ? node.acao.nome.slice(0, 19) + "…" : node.acao.nome;
+      // Texto e traço sempre 100% opacos — o estado "não seguido" é
+      // comunicado só pela paleta (cinza claro), nunca por opacity no <g>,
+      // que multiplicaria e deixaria o texto ilegível em qualquer zoom.
+      const fill = st.reached ? COLORS_LIGHT[st.color] : "#f1f5f9";
+      const stroke = st.reached ? COLORS[st.color] : "#cbd5e1";
+      const titleColor = st.reached ? "#1e293b" : "#64748b";
+      const subColor = st.reached ? "#475569" : "#94a3b8";
+      const nome = node.acao.nome.length > 22 ? node.acao.nome.slice(0, 21) + "…" : node.acao.nome;
       const sub = subLabelForStatus(st);
       nodes += `
-        <g class="pp-flow-node" opacity="${opacity}" transform="translate(${x - NODE_W / 2},${y - NODE_H / 2})">
-          <rect width="${NODE_W}" height="${NODE_H}" rx="12" fill="${fill}" stroke="${stroke}" />
-          <text x="14" y="18" font-size="11.5" font-weight="700" fill="#1e293b">${esc(nome)}</text>
-          <text x="14" y="33" font-size="9.5" fill="#64748b">${esc(sub)}</text>
+        <g class="pp-flow-node" transform="translate(${x - NODE_W / 2},${y - NODE_H / 2})">
+          <rect width="${NODE_W}" height="${NODE_H}" rx="12" fill="${fill}" stroke="${stroke}" stroke-width="${st.reached ? 1.6 : 1.3}" ${st.reached ? "" : 'stroke-dasharray="4,3"'} />
+          <text x="14" y="21" font-size="12" font-weight="700" fill="${titleColor}">${esc(nome)}</text>
+          <text x="14" y="37" font-size="10.5" fill="${subColor}">${esc(sub)}</text>
         </g>`;
       (node.children || []).forEach((child) => {
         const cx = child._x + 20, cy = nodeY(depth + 1);
-        drawEdge(x, y + NODE_H / 2, cx, cy - BRANCH_H / 2, child.taken === false ? COLORS.gray : COLORS[st.reached ? "ok" : "gray"], child.taken === false ? 0.35 : 1, child.taken === false);
+        drawEdge(x, y + NODE_H / 2, cx, cy - BRANCH_H / 2, child.taken === false ? COLORS.gray : COLORS[st.reached ? "ok" : "gray"], child.taken === false ? 0.7 : 1, child.taken === false);
         drawBranchNode(child, depth + 1);
       });
     }
 
     function drawBranchNode(node, depth) {
       const x = node._x + 20, y = nodeY(depth);
-      const color = node.taken ? "#8b5cf6" : "#cbd5e1";
-      const opacity = node.taken ? 1 : 0.4;
+      const color = node.taken ? "#8b5cf6" : "#94a3b8";
+      const textColor = node.taken ? "#6d28d9" : "#64748b";
       const label = (node.regra.descricao || (node.regra.is_default ? "Caso padrão" : "Se…")).slice(0, 22);
       nodes += `
-        <g class="pp-flow-node" opacity="${opacity}" transform="translate(${x - NODE_W / 2},${y - BRANCH_H / 2})">
-          <rect width="${NODE_W}" height="${BRANCH_H}" rx="13" fill="none" stroke="${color}" stroke-dasharray="${node.taken ? "0" : "3,3"}" />
-          <text x="${NODE_W / 2}" y="${BRANCH_H / 2 + 4}" font-size="10" text-anchor="middle" fill="${node.taken ? "#6d28d9" : "#94a3b8"}">${esc(label)}</text>
+        <g class="pp-flow-node" transform="translate(${x - NODE_W / 2},${y - BRANCH_H / 2})">
+          <rect width="${NODE_W}" height="${BRANCH_H}" rx="13" fill="${node.taken ? "#f5f3ff" : "#f8fafc"}" stroke="${color}" stroke-width="1.4" stroke-dasharray="${node.taken ? "0" : "3,3"}" />
+          <text x="${NODE_W / 2}" y="${BRANCH_H / 2 + 4}" font-size="10.5" font-weight="600" text-anchor="middle" fill="${textColor}">${esc(label)}</text>
         </g>`;
       (node.children || []).forEach((child) => {
         const cx = child._x + 20, cy = nodeY(depth + 1);
-        drawEdge(x, y + BRANCH_H / 2, cx, cy - NODE_H / 2, color, opacity, !node.taken);
+        drawEdge(x, y + BRANCH_H / 2, cx, cy - NODE_H / 2, color, node.taken ? 1 : 0.7, !node.taken);
         drawActionNode(child, depth + 1);
       });
     }
