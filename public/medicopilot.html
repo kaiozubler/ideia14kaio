@@ -18,7 +18,6 @@
     <link rel="stylesheet" href="equipe.css" />
     <link rel="stylesheet" href="paciente-protocolos.css" />
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.2/dist/svg-pan-zoom.min.js"></script>
     <script src="paciente-protocolos.js" defer></script>
     <script src="equipe.js" defer></script>
     <link rel="stylesheet" href="protocolos.css?v=2" />
@@ -710,6 +709,32 @@
                                                 .rx-st-assinado{background:#dcfce7;color:#166534}
                                                 .rx-st-enviado{background:#dbeafe;color:#1e40af}
                                                 .rx-doc-acts{display:flex;gap:4px}
+
+                                                /* ATALHO "ÚLTIMAS RECEITAS EMITIDAS" — ocupa o espaço de
+                                                   "Medicamentos selecionados" no modal Emitir receita enquanto
+                                                   nenhum medicamento/modelo foi escolhido ainda. Paleta índigo
+                                                   (distinta do branco usado pelos cards de medicamento
+                                                   selecionado) para não gerar confusão entre os dois estados. */
+                                                .rx-last-wrap{display:flex;flex-direction:column;gap:10px}
+                                                .rx-last-header{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:.06em}
+                                                .rx-last-header .ti{font-size:13px}
+                                                .rx-last-sub{font-size:11px;color:#94a3b8;margin:-5px 0 2px}
+                                                .rx-last-card{border:1px solid #e0e7ff;background:#fff;border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .1s}
+                                                .rx-last-card:hover{border-color:#a5b4fc;box-shadow:0 6px 16px rgba(79,70,229,.14);transform:translateY(-1px)}
+                                                .rx-last-card-head{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#eef2ff}
+                                                .rx-last-card-head .ti-history{color:#6366f1;font-size:14px;flex-shrink:0}
+                                                .rx-last-date{font-size:11.5px;font-weight:700;color:#3730a3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+                                                .rx-last-count-badge{margin-left:auto;font-size:9.5px;font-weight:700;color:#4f46e5;background:#e0e7ff;padding:2px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+                                                .rx-last-meds{display:flex;flex-direction:column;background:#fff}
+                                                .rx-last-med{padding:8px 12px;border-top:1px dashed #eef2ff}
+                                                .rx-last-med-name{font-size:12.5px;font-weight:600;color:#1e1b4b;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+                                                .rx-last-med-name .ti-pill{font-size:12px;color:#818cf8;flex-shrink:0}
+                                                .rx-last-med-compo,.rx-last-med-apres{font-size:11px;color:#64748b;padding-left:17px;margin-top:1px;display:flex;align-items:center;gap:4px}
+                                                .rx-last-med-compo .ti,.rx-last-med-apres .ti{font-size:10px;color:#a5b4fc;flex-shrink:0}
+                                                .rx-last-med-apres{color:#94a3b8;font-style:italic}
+                                                .rx-last-generico-tag{font-size:8.5px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 5px;border-radius:4px;letter-spacing:.03em}
+                                                .rx-last-footer{padding:6px 12px;font-size:10.5px;font-weight:600;color:#6366f1;background:#eef2ff;border-top:1px solid #e0e7ff;display:flex;align-items:center;justify-content:center;gap:4px}
+                                                .rx-last-footer .ti{font-size:11px}
 
                                                 .back-btn{display:inline-flex;align-items:center;gap:5px;color:var(--n400);font-size:12px;padding:5px 9px;border-radius:var(--r6);border:none;background:transparent;cursor:pointer;margin-bottom:14px;transition:all .12s}
                                                       .back-btn:hover{background:var(--n100);color:var(--n600)}
@@ -12921,7 +12946,8 @@ let rxSelected = [];
                                                               rxUpdateFooterInfo();
 
                                                               if (!rxSelected.length) {
-                                                                wrap.innerHTML = `<div id="rx-empty" style="text-align:center;color:#94a3b8;font-size:12px;padding:28px 16px;border:1px dashed #e2e8f0;border-radius:10px;line-height:1.6">
+                                                                const ultimas = rxCarregarUltimasReceitas();
+                                                                wrap.innerHTML = ultimas.length ? rxRenderUltimasReceitasBloco(ultimas) : `<div id="rx-empty" style="text-align:center;color:#94a3b8;font-size:12px;padding:28px 16px;border:1px dashed #e2e8f0;border-radius:10px;line-height:1.6">
                                                                   <i class="ti ti-pill" style="font-size:22px;display:block;margin-bottom:6px;opacity:.4"></i>
                                                                   Nenhum medicamento adicionado ainda.<br>
                                                                   <span style="font-size:11px">Use o campo acima para buscar.</span>
@@ -13102,6 +13128,114 @@ let rxSelected = [];
                                                               showToast && showToast('Modelo "' + modelo.nome + '" aplicado', 'success');
                                                             }
 
+                                                            /* ── ÚLTIMAS RECEITAS EMITIDAS (atalho) ──────────────────────────────
+                                                               Guarda, no navegador (por médico logado), um pequeno histórico das
+                                                               últimas receitas de medicamentos emitidas, para reuso rápido. Ocupa
+                                                               o mesmo espaço de "Medicamentos selecionados" enquanto ele está
+                                                               vazio; assim que um medicamento (ou modelo) é selecionado, esse
+                                                               espaço passa a mostrar a receita em edição normalmente. */
+                                                            const RX_ULTIMAS_MAX = 6;
+
+                                                            function rxUltimasStorageKey() {
+                                                              const uid = (typeof currentUser !== 'undefined' && currentUser && currentUser.id) ? currentUser.id : 'anon';
+                                                              return 'mp_rx_ultimas_receitas_' + uid;
+                                                            }
+
+                                                            function rxCarregarUltimasReceitas() {
+                                                              try {
+                                                                const raw = localStorage.getItem(rxUltimasStorageKey());
+                                                                const lista = raw ? JSON.parse(raw) : [];
+                                                                return Array.isArray(lista) ? lista : [];
+                                                              } catch (e) { return []; }
+                                                            }
+
+                                                            function rxRegistrarUltimaReceita(itens) {
+                                                              if (!itens || !itens.length) return;
+                                                              try {
+                                                                const entrada = {
+                                                                  id: 'ur-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+                                                                  data: new Date().toISOString(),
+                                                                  itens: itens.map(it => ({
+                                                                    nome_comercial: it.nome_comercial || '',
+                                                                    composicao: it.composicao || '',
+                                                                    apresentacao: it.apresentacao || '',
+                                                                    apresentacoes: Array.isArray(it.apresentacoes) ? it.apresentacoes : [],
+                                                                    quantidade: it.quantidade || '',
+                                                                    posologia: it.posologia || '',
+                                                                    is_generico: !!it.is_generico,
+                                                                    fabricante: it.fabricante || '',
+                                                                    fabricantes: Array.isArray(it.fabricantes) ? it.fabricantes : [],
+                                                                    id_substancia: it.id_substancia || null
+                                                                  }))
+                                                                };
+                                                                let lista = rxCarregarUltimasReceitas();
+                                                                lista.unshift(entrada);
+                                                                // remove receitas duplicadas (mesmo conjunto de medicamentos),
+                                                                // mantendo apenas a mais recente, e limita o tamanho do histórico
+                                                                const vistos = new Set();
+                                                                const dedup = [];
+                                                                for (const e of lista) {
+                                                                  const assinatura = (e.itens || []).map(i => (i.nome_comercial || '').toLowerCase().trim()).sort().join('|');
+                                                                  if (!assinatura || vistos.has(assinatura)) continue;
+                                                                  vistos.add(assinatura);
+                                                                  dedup.push(e);
+                                                                  if (dedup.length >= RX_ULTIMAS_MAX) break;
+                                                                }
+                                                                localStorage.setItem(rxUltimasStorageKey(), JSON.stringify(dedup));
+                                                              } catch (e) { console.warn('Falha ao salvar atalho de últimas receitas', e); }
+                                                            }
+
+                                                            function rxFormatarDataUltimaReceita(iso) {
+                                                              try {
+                                                                const d = new Date(iso);
+                                                                const dataTxt = d.toLocaleDateString('pt-BR');
+                                                                const horaTxt = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                                                                return dataTxt + ' às ' + horaTxt;
+                                                              } catch (e) { return ''; }
+                                                            }
+
+                                                            function rxRenderUltimasReceitasBloco(lista) {
+                                                              const cards = lista.map(r => {
+                                                                const itens = r.itens || [];
+                                                                const medsHtml = itens.map(it => {
+                                                                  const gen = it.is_generico ? '<span class="rx-last-generico-tag">GENÉRICO</span>' : '';
+                                                                  return `<div class="rx-last-med">
+                                                                    <div class="rx-last-med-name"><i class="ti ti-pill"></i>${rxEscape(it.nome_comercial)}${gen}</div>
+                                                                    ${it.composicao ? `<div class="rx-last-med-compo"><i class="ti ti-flask"></i>${rxEscape(it.composicao)}</div>` : ''}
+                                                                    ${it.apresentacao ? `<div class="rx-last-med-apres"><i class="ti ti-box"></i>${rxEscape(it.apresentacao)}</div>` : ''}
+                                                                  </div>`;
+                                                                }).join('');
+                                                                const n = itens.length;
+                                                                return `<div class="rx-last-card" onclick="rxAplicarUltimaReceita('${r.id}')">
+                                                                  <div class="rx-last-card-head">
+                                                                    <i class="ti ti-history"></i>
+                                                                    <span class="rx-last-date">${rxFormatarDataUltimaReceita(r.data)}</span>
+                                                                    <span class="rx-last-count-badge">${n} ${n === 1 ? 'medicamento' : 'medicamentos'}</span>
+                                                                  </div>
+                                                                  <div class="rx-last-meds">${medsHtml}</div>
+                                                                  <div class="rx-last-footer"><i class="ti ti-repeat"></i> Clique para reutilizar esta receita</div>
+                                                                </div>`;
+                                                              }).join('');
+
+                                                              return `<div class="rx-last-wrap">
+                                                                <div class="rx-last-header"><i class="ti ti-history"></i> Últimas receitas emitidas</div>
+                                                                <div class="rx-last-sub">Atalho: clique em uma receita abaixo para adicionar seus medicamentos automaticamente.</div>
+                                                                ${cards}
+                                                              </div>`;
+                                                            }
+
+                                                            function rxAplicarUltimaReceita(id) {
+                                                              const lista = rxCarregarUltimasReceitas();
+                                                              const r = lista.find(x => x.id === id);
+                                                              if (!r) return;
+                                                              rxSelected = (r.itens || []).map(it => ({
+                                                                ...JSON.parse(JSON.stringify(it)),
+                                                                uid: Math.random().toString(36).slice(2, 10)
+                                                              }));
+                                                              rxRenderSelected();
+                                                              showToast && showToast('Medicamentos da receita anterior adicionados', 'success');
+                                                            }
+
                                                             async function rxRenomearModelo(id) {
                                                               const modelo = rxModelosCache.find(m => m.id === id);
                                                               if (!modelo) return;
@@ -13233,6 +13367,10 @@ let rxSelected = [];
                                                                 quantidade: it.quantidade || '',
                                                                 posologia: it.posologia || ''
                                                               }));
+
+                                                              // Salva no atalho "Últimas receitas emitidas" (histórico local do
+                                                              // médico) para reuso rápido na próxima vez que este modal abrir.
+                                                              rxRegistrarUltimaReceita(rxSelected);
 
                                                               const formulaItems = formulasValidas.map(rxFormulaParaItem);
                                                               const linhasFormula = formulasValidas.map((f, i) => `${i + 1}. ${rxFormulaResumoTexto(f)}`).join('\n');
