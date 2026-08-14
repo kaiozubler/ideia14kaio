@@ -168,6 +168,32 @@
     return el;
   }
 
+  let _flowPanZoom = null;
+  function destroyFlowPanZoom() {
+    if (_flowPanZoom) {
+      try { _flowPanZoom.destroy(); } catch (e) { /* já destruído / DOM removido */ }
+      _flowPanZoom = null;
+    }
+  }
+  function initFlowPanZoom() {
+    destroyFlowPanZoom();
+    if (typeof window.svgPanZoom !== "function") return;
+    const el = document.getElementById(FLOW_SVG_ID);
+    if (!el) return;
+    try {
+      _flowPanZoom = window.svgPanZoom(el, {
+        zoomEnabled: true,
+        panEnabled: true,
+        controlIconsEnabled: true,
+        fit: true,
+        center: true,
+        minZoom: 0.4,
+        maxZoom: 8,
+        zoomScaleSensitivity: 0.35,
+      });
+    } catch (e) { console.warn("Falha ao iniciar pan/zoom do fluxograma:", e); }
+  }
+
   function paint() {
     const root = document.getElementById(ROOT_ID);
     if (!root) return;
@@ -183,6 +209,12 @@
     const modalRoot = ensureModalPortal();
     modalRoot.innerHTML = PP.modal ? modalHtml() : "";
     wireEvents(modalRoot);
+    destroyFlowPanZoom();
+    if (PP.modal && PP.modal.type === "fluxo") {
+      // precisa aguardar o layout real do modal (dimensões do container)
+      // antes de o svg-pan-zoom calcular o "fit" — um frame é suficiente.
+      requestAnimationFrame(() => requestAnimationFrame(initFlowPanZoom));
+    }
   }
 
   /* ------------------------------------------------------------------ */
@@ -378,7 +410,7 @@
       </div>`;
   }
 
-  function renderFlowSvg(tree) {
+  function renderFlowSvg(tree, svgId) {
     // Layout manual em níveis (BFS), sem depender de d3.hierarchy — evita
     // colisão com outros usos de d3 já existentes no app.
     const levels = [];
@@ -461,7 +493,7 @@
 
     tree.children.forEach((c) => drawActionNode(c, 1));
 
-    return `<svg class="pp-flow-svg" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">${links}${nodes}</svg>`;
+    return `<svg id="${svgId || ""}" class="pp-flow-svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">${links}${nodes}</svg>`;
   }
 
   /* ------------------------------------------------------------------ */
@@ -599,21 +631,24 @@
       </div>`;
   }
 
+  const FLOW_SVG_ID = "pp-flow-svg-full";
+
   function modalFluxoCompleto() {
     const v = PP.vinculos.find((x) => x.id === PP.modal.vinculoId);
     if (!v) return "";
     const protocolo = v.protocolos || {};
     const tree = buildTree(v.protocolo_id, v.id);
-    const svg = renderFlowSvg(tree);
+    const svg = renderFlowSvg(tree, FLOW_SVG_ID);
     return `
       <div class="pp-modal-bg" data-act="close-modal-bg">
         <div class="pp-modal fullscreen" onclick="event.stopPropagation()">
           <div class="pp-modal-h">
             <h2><i class="ti ti-sitemap"></i> Fluxo do protocolo — ${esc(protocolo.titulo || "")}</h2>
+            <span class="pp-flow-hint"><i class="ti ti-mouse"></i> Arraste para navegar · role a roda do mouse para zoom</span>
             <button data-act="close-modal"><i class="ti ti-x"></i></button>
           </div>
           <div class="pp-modal-b fullscreen">
-            <div class="pp-flow-wrap fullscreen">${svg}</div>
+            <div class="pp-flow-wrap fullscreen" id="pp-flow-wrap-full">${svg}</div>
             <div class="pp-flow-legend">
               <span><i style="background:#6366f1"></i> Caminho seguido</span>
               <span><i style="background:#cbd5e1;opacity:.6"></i> Ramo não seguido</span>
