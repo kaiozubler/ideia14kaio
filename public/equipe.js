@@ -287,6 +287,68 @@
         setTimeout(() => (s.style.display = "none"), 1600);
         renderProfile();
       };
+      document.getElementById("eq-p-ext").onclick = async () => {
+        const btn = document.getElementById("eq-p-ext");
+        const msg = document.getElementById("eq-p-ext-msg");
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ti ti-loader-2 ti-spin"></i> Preparando pacote…';
+        try {
+          const res = await fetch("/medicopilot-extension.zip");
+          if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+          const blob = await res.blob();
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = "medicopilot-extension.zip";
+          a.click();
+          URL.revokeObjectURL(a.href);
+          showExtensionInstructions();
+        } catch (e) {
+          console.error("Falha ao baixar extensão", e);
+          msg.innerHTML = '<b style="color:#dc2626">Não foi possível baixar o pacote. Tente novamente.</b>';
+          setTimeout(() => {
+            const m = document.getElementById("eq-p-ext-msg");
+            if (m) m.textContent = "Assistente IA no navegador: analisa a tela e responde no painel lateral.";
+          }, 3000);
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="ti ti-download"></i> Instalar extensão';
+        }
+      };
+      function showExtensionInstructions() {
+        const wrap = document.createElement("div");
+        wrap.id = "eq-ext-modal";
+        wrap.style.cssText =
+          "position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:16px";
+        wrap.innerHTML = `<div style="background:#fff;border-radius:14px;max-width:460px;width:100%;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,.2)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <b style="font-size:15px"><i class="ti ti-puzzle" style="margin-right:6px"></i>Instalar extensão no Chrome</b>
+            <button type="button" id="eq-ext-x" style="border:0;background:transparent;font-size:18px;cursor:pointer">×</button>
+          </div>
+          <div style="display:grid;gap:12px;color:#334155;font-size:13px">
+            <p>O pacote <b>medicopilot-extension.zip</b> foi baixado. Siga os passos:</p>
+            <ol style="margin:0;padding-left:20px;display:grid;gap:8px">
+              <li>Descompacte o arquivo <b>medicopilot-extension.zip</b> em uma pasta.</li>
+              <li>Abra o Chrome (ou Edge, Brave, Arc, Opera) e vá para <b>chrome://extensions</b>.</li>
+              <li>Ative o <b>Modo do desenvolvedor</b> (interruptor no canto superior direito).</li>
+              <li>Clique em <b>Carregar sem compactação</b> e selecione a pasta descompactada.</li>
+            </ol>
+            <p style="margin:0">A extensão aparecerá na barra de ferramentas. Clique no ícone para abrir o painel lateral e converse com a IA.</p>
+            <div style="background:#f0fdfa;border:1px solid #ccfbf1;border-radius:10px;padding:10px;color:#0f766e">
+              <b>Dica:</b> a autenticação é solicitada a cada 30 dias. Use o mesmo e-mail e senha do MediCopilot.
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:16px">
+            <button type="button" class="eq-btn eq-btn-primary" id="eq-ext-done">Entendi</button>
+          </div>
+        </div>`;
+        document.body.appendChild(wrap);
+        const close = () => wrap.remove();
+        wrap.addEventListener("click", (e) => {
+          if (e.target === wrap) close();
+        });
+        document.getElementById("eq-ext-x").onclick = close;
+        document.getElementById("eq-ext-done").onclick = close;
+      }
       document.getElementById("eq-p-reset").onclick = async () => {
         const msgEl = document.getElementById("eq-p-reset-msg");
         if (!p.email || !window.sb?.auth?.resetPasswordForEmail) return;
