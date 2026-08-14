@@ -84,8 +84,17 @@
         await MC_AUTH.clear();
         return showAuth("Sessão expirada. Entre novamente.");
       }
-      if (!res.ok) throw new Error(await res.text());
+      const ctype = res.headers.get("content-type") || "";
+      if (!ctype.includes("application/json")) {
+        pending.textContent =
+          "O endpoint do assistente ainda não está disponível na versão publicada do app (" +
+          APP_URL +
+          "). Publique a última versão do MediCopilot e tente novamente.";
+        history.pop();
+        return;
+      }
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Falha na requisição");
       conversaId = data.conversa_id || conversaId;
       const reply = (data.reply || "").trim() || "Não consegui responder agora.";
       pending.textContent = reply;
