@@ -120,32 +120,11 @@
   function daysBetween(a, b) { return Math.round((new Date(b + "T00:00:00") - new Date(a + "T00:00:00")) / 86400000); }
   function emptyState(msg) { return `<div class="pp-empty"><i class="ti ti-mood-empty"></i>${esc(msg)}</div>`; }
 
-  /* Mesma lógica de public.avaliar_condicao(), em JS, só para classificar
-     visualmente qual regra bateu — a decisão real de ramificação continua
-     100% no banco (avaliar_resultado_tarefa). */
-  function avaliarCondicaoJs(cond, resultado) {
-    if (!cond || !resultado) return false;
-    const campo = cond.campo, op = cond.operador;
-    try {
-      if (campo === "numero") {
-        if (resultado.numero == null) return false;
-        const n = Number(resultado.numero);
-        if (op === "maior_que") return n > Number(cond.numero);
-        if (op === "menor_que") return n < Number(cond.numero);
-        if (op === "entre") return n >= Number(cond.numero_min) && n <= Number(cond.numero_max);
-        if (op === "igual") return n === Number(cond.numero);
-        return false;
-      }
-      if (campo === "texto") {
-        if (!resultado.texto) return false;
-        const t = String(resultado.texto).toLowerCase().trim();
-        if (op === "igual") return t === String(cond.texto || "").toLowerCase().trim();
-        if (op === "contem") return t.includes(String(cond.texto || "").toLowerCase().trim());
-        return false;
-      }
-    } catch (e) { return false; }
-    return false;
-  }
+  /* Antes, esta função reimplementava public.avaliar_condicao() em JS para
+     "adivinhar" qual regra bateu. Não é mais necessário: desde a migration
+     de ramificação condicional mais recente, protocolo_tarefas.regra_origem_id
+     já registra, no banco, exatamente qual regra gerou cada tarefa — é a
+     fonte da verdade, sem duplicar lógica de condição no cliente. */
 
   /* ------------------------------------------------------------------ */
   /* Pintura geral                                                      */
@@ -313,11 +292,12 @@
 
     const regras = regrasByGatilho[acao.id] || [];
     if (regras.length) {
-      const anormal = ts.find((t) => {
-        if (t.status !== "concluido" || !t.resultado_valor) return false;
-        const naoDefault = regras.filter((r) => !r.is_default).sort((a, b) => a.ordem - b.ordem);
-        return naoDefault.some((r) => avaliarCondicaoJs(r.condicao, t.resultado_valor));
-      });
+      // "Resultado inesperado" = alguma tarefa gerada a partir deste exame
+      // teve origem numa regra que NÃO é a padrão (regra_origem_id aponta
+      // para uma regra não-default) — informação já resolvida pelo banco
+      // em avaliar_resultado_tarefa(), não precisa ser re-simulada aqui.
+      const naoDefaultIds = new Set(regras.filter((r) => !r.is_default).map((r) => r.id));
+      const anormal = (tarefas || []).some((t) => t.regra_origem_id && naoDefaultIds.has(t.regra_origem_id));
       if (anormal) return { reached: true, color: "amber", tarefas: ts };
     }
     return { reached: true, color: "ok", tarefas: ts };
@@ -331,7 +311,9 @@
     const regrasByGatilho = {};
     regras.forEach((r) => { (regrasByGatilho[r.acao_gatilho_id] = regrasByGatilho[r.acao_gatilho_id] || []).push(r); });
     const acoesByRegra = {};
-    acoes.forEach((a) => { if (a.regra_id) (acoesByRegra[a.regra_id] = acoesByRegra[a.regra_id] || []).push(a); });
+    // regra_pai_id é a coluna real de vínculo ação↔regra (regra_id, de uma
+    // migration anterior, ficou obsoleta e não é mais escrita pelo app).
+    acoes.forEach((a) => { if (a.regra_pai_id) (acoesByRegra[a.regra_pai_id] = acoesByRegra[a.regra_pai_id] || []).push(a); });
 
     function buildActionNode(acao) {
       const status = classificarAcao(acao, tarefas, regrasByGatilho);
@@ -345,7 +327,7 @@
       return node;
     }
 
-    const trunk = acoes.filter((a) => !a.regra_id).sort((a, b) => a.start_day - b.start_day);
+    const trunk = acoes.filter((a) => !a.regra_pai_id).sort((a, b) => a.start_day - b.start_day);
     return { type: "root", children: trunk.map(buildActionNode) };
   }
 

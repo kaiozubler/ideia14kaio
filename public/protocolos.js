@@ -19,6 +19,7 @@
     newRegraFor: null, editingRegra: null, newBranchActionFor: null, editingBranchAction: null, _batype: null,
     filters: { protocols: [], doctors: [], specialties: [], actions: [], statuses: [], patient: "", cid: "" },
     showFilter: false, dd: null,
+    flowModal: null, // null | 'editing' | <protocoloId>
   };
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const uid = () => "n" + Math.random().toString(36).slice(2, 9);
@@ -645,6 +646,7 @@
     return `<div class="pt-modal-bg" data-mbg="1"><div class="pt-modal">
       <div class="pt-modal-h"><h2>${m.id ? "Editar protocolo" : "Novo protocolo"}</h2>
         <div style="display:flex;gap:8px;align-items:center">
+          <button class="pt-btn" data-flowopen="editing" title="Ver fluxograma do protocolo">🔀 Ver fluxo</button>
           <button class="pt-btn ai" data-aiopen="1">✨ Criar com IA</button>
           <button class="pt-btn ghost" data-mclose="1" style="padding:2px 10px">×</button></div></div>
       <div class="pt-modal-b">
@@ -785,6 +787,7 @@
             <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">${p.cids.map((c) => `<span class="pt-cid">${esc(c)}</span>`).join("")}</div></div>
           <div style="display:flex;gap:8px;flex-shrink:0">
             <button class="pt-btn pt-pill" data-toggle="${p.id}" title="${p.active ? "Inativar protocolo" : "Ativar protocolo"}">${p.active ? "🟢" : "⭕"}</button>
+            <button class="pt-btn pt-pill" data-flowopen="${p.id}" title="Ver fluxograma completo">🔀</button>
             <button class="pt-btn pt-pill" data-edit="${p.id}">✏️ Editar</button></div></div>
         <div class="pt-metrics">
           <div class="pt-metric blue"><div class="n">${p.patients}</div><div class="t">Pacientes</div></div>
@@ -812,20 +815,175 @@
         ${Object.values(STATUS_NOTICE).map((s) => `<span style="display:flex;gap:6px;align-items:center"><span class="pt-dot ${s.cls}"></span>${s.label}</span>`).join("")}</div>`;
   }
 
+  /* ---------- FLUXOGRAMA (mesma linguagem visual do fluxo do paciente,
+     mas em modo "template": mostra a estrutura desenhada do protocolo —
+     não há "seguido/não seguido" aqui, pois não há paciente nenhum ainda.
+     Todo o desenho fica em uma única cor de destaque. ---------- */
+  const FLOW_SVG_ID = "pt-flow-svg-full";
+  const FLOW_ICON = { Consulta: "🩺", Exame: "🧪", Receita: "💊" };
+
+  function buildTemplateTree(actions, regras) {
+    const regrasByGatilho = {};
+    (regras || []).forEach((r) => { (regrasByGatilho[r.gatilhoId] = regrasByGatilho[r.gatilhoId] || []).push(r); });
+    const acoesByRegra = {};
+    (actions || []).forEach((a) => { if (a.regraPaiId) (acoesByRegra[a.regraPaiId] = acoesByRegra[a.regraPaiId] || []).push(a); });
+
+    function buildActionNode(a) {
+      const node = { type: "acao", acao: a, children: [] };
+      const rs = (regrasByGatilho[a.id] || []).slice().sort((x, y) => x.ordem - y.ordem);
+      rs.forEach((r) => {
+        const filhos = acoesByRegra[r.id] || [];
+        node.children.push({ type: "regra", regra: r, children: filhos.map(buildActionNode) });
+      });
+      return node;
+    }
+    const trunk = (actions || []).filter((a) => !a.regraPaiId).sort((a, b) => a.startDay - b.startDay);
+    return { type: "root", children: trunk.map(buildActionNode) };
+  }
+
+  function renderTemplateFlowSvg(tree, svgId) {
+    const NODE_W = 190, NODE_H = 50, BRANCH_H = 30, ROW_GAP = 76, COL_GAP = 28;
+    let leafCounter = 0;
+    function assignX(node) {
+      if (!node.children || !node.children.length) { node._x = leafCounter * (NODE_W + COL_GAP); leafCounter++; return node._x; }
+      node.children.forEach(assignX);
+      const xs = node.children.map((c) => c._x);
+      node._x = (Math.min(...xs) + Math.max(...xs)) / 2;
+      return node._x;
+    }
+    tree.children.forEach(assignX);
+    if (tree.children.length) { const xs = tree.children.map((c) => c._x); tree._x = (Math.min(...xs) + Math.max(...xs)) / 2; } else tree._x = 0;
+
+    const width = Math.max(leafCounter * (NODE_W + COL_GAP), NODE_W) + 40;
+    let maxDepth = 0;
+    (function walk(n, d) { maxDepth = Math.max(maxDepth, d); (n.children || []).forEach((c) => walk(c, d + 1)); })(tree, 0);
+
+    let links = "", nodes = "";
+    const nodeY = (depth) => 30 + depth * ROW_GAP;
+
+    function drawEdge(x1, y1, x2, y2, color) {
+      const midY = (y1 + y2) / 2;
+      links += `<path d="M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}" fill="none" stroke="${color}" stroke-width="2" opacity="1"/>`;
+    }
+
+    function drawActionNode(node, depth) {
+      const x = node._x + 20, y = nodeY(depth);
+      const nome = node.acao.name.length > 22 ? node.acao.name.slice(0, 21) + "…" : node.acao.name;
+      const sub = "Dia " + node.acao.startDay + (node.acao.recurrent ? " · a cada " + node.acao.frequency + "d" : " · única vez");
+      nodes += `
+        <g transform="translate(${x - NODE_W / 2},${y - NODE_H / 2})">
+          <rect width="${NODE_W}" height="${NODE_H}" rx="12" fill="#eef2ff" stroke="#6366f1" stroke-width="1.6" />
+          <text x="14" y="21" font-size="12" font-weight="700" fill="#1e293b">${FLOW_ICON[node.acao.type] || ""} ${esc(nome)}</text>
+          <text x="14" y="37" font-size="10.5" fill="#475569">${esc(sub)}</text>
+        </g>`;
+      (node.children || []).forEach((child) => {
+        const cx = child._x + 20, cy = nodeY(depth + 1);
+        drawEdge(x, y + NODE_H / 2, cx, cy - BRANCH_H / 2, "#8b5cf6");
+        drawBranchNode(child, depth + 1);
+      });
+    }
+
+    function drawBranchNode(node, depth) {
+      const x = node._x + 20, y = nodeY(depth);
+      const label = (node.regra.descricao || (node.regra.isDefault ? "Caso padrão" : "Se…")).slice(0, 24);
+      nodes += `
+        <g transform="translate(${x - NODE_W / 2},${y - BRANCH_H / 2})">
+          <rect width="${NODE_W}" height="${BRANCH_H}" rx="13" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.4" />
+          <text x="${NODE_W / 2}" y="${BRANCH_H / 2 + 4}" font-size="10.5" font-weight="600" text-anchor="middle" fill="#6d28d9">${esc(label)}</text>
+        </g>`;
+      (node.children || []).forEach((child) => {
+        const cx = child._x + 20, cy = nodeY(depth + 1);
+        drawEdge(x, y + BRANCH_H / 2, cx, cy - NODE_H / 2, "#6366f1");
+        drawActionNode(child, depth + 1);
+      });
+    }
+
+    tree.children.forEach((c) => drawActionNode(c, 1));
+    const finalHeight = 30 + (maxDepth + 1) * ROW_GAP;
+    if (!tree.children.length) {
+      return `<svg id="${svgId}" width="${NODE_W + 40}" height="${NODE_H + 60}" viewBox="0 0 ${NODE_W + 40} ${NODE_H + 60}" xmlns="http://www.w3.org/2000/svg">
+        <text x="20" y="40" font-size="13" fill="#94a3b8">Nenhuma ação cadastrada ainda.</text></svg>`;
+    }
+    return `<svg id="${svgId}" width="${width}" height="${finalHeight}" viewBox="0 0 ${width} ${finalHeight}" xmlns="http://www.w3.org/2000/svg">${links}${nodes}</svg>`;
+  }
+
+  function flowSourceData() {
+    if (S.flowModal === "editing") return S.modal ? { title: S.modal.title || "Novo protocolo", actions: S.modal.actions || [], regras: S.modal.regras || [] } : null;
+    const p = S.protocols.find((x) => x.id === S.flowModal);
+    return p ? { title: p.title, actions: p.actions, regras: p.regras || [] } : null;
+  }
+
+  function flowModalHtml() {
+    const data = flowSourceData();
+    if (!data) return "";
+    const tree = buildTemplateTree(data.actions, data.regras);
+    const svg = renderTemplateFlowSvg(tree, FLOW_SVG_ID);
+    return `
+      <div class="pt-modal-bg" data-flowbg="1" style="z-index:5500">
+        <div class="pt-modal fullscreen" onclick="event.stopPropagation()">
+          <div class="pt-modal-h">
+            <h2>🔀 Fluxo do protocolo — ${esc(data.title || "")}</h2>
+            <span class="pt-flow-hint">🖱️ Arraste para navegar · role a roda do mouse para zoom</span>
+            <button class="pt-btn ghost" data-flowclose="1" style="padding:2px 10px">×</button>
+          </div>
+          <div class="pt-modal-b">
+            <div class="pt-flow-wrap">${svg}</div>
+            <div class="pt-flow-legend">
+              <span><i style="background:#6366f1"></i> Ação (consulta/exame/receita)</span>
+              <span><i style="background:#8b5cf6"></i> Condição / ramificação</span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  let _flowPanZoom = null;
+  function destroyFlowPanZoom() {
+    if (_flowPanZoom) { try { _flowPanZoom.destroy(); } catch (e) { /* já destruído */ } _flowPanZoom = null; }
+  }
+  function initFlowPanZoom() {
+    destroyFlowPanZoom();
+    if (typeof window.svgPanZoom !== "function") return;
+    const el = document.getElementById(FLOW_SVG_ID);
+    if (!el) return;
+    try {
+      _flowPanZoom = window.svgPanZoom(el, {
+        zoomEnabled: true, panEnabled: true, controlIconsEnabled: true,
+        fit: true, center: true, minZoom: 0.4, maxZoom: 8, zoomScaleSensitivity: 0.35,
+      });
+    } catch (e) { console.warn("Falha ao iniciar pan/zoom do fluxograma:", e); }
+  }
+
+  /* Portal próprio em document.body — mesma razão do módulo de protocolos
+     do paciente: evita que o modal position:fixed fique preso num contexto
+     de empilhamento criado por algum ancestral posicionado. */
+  function ensureFlowModalPortal() {
+    let el = document.getElementById("pt-flow-modal-portal");
+    if (!el) { el = document.createElement("div"); el.id = "pt-flow-modal-portal"; document.body.appendChild(el); }
+    return el;
+  }
+  function paintFlowModal() {
+    const portal = ensureFlowModalPortal();
+    portal.innerHTML = S.flowModal ? flowModalHtml() : "";
+    destroyFlowPanZoom();
+    if (S.flowModal) requestAnimationFrame(() => requestAnimationFrame(initFlowPanZoom));
+  }
+
   function render() {
     const el = document.getElementById("s-protocolos"); if (!el) return;
     // Cada clique (editar ação, excluir, adicionar regra, etc.) chama render(),
     // que reconstrói todo o HTML — sem isso, o corpo rolável do modal
     // (.pt-modal-b) e a página voltavam sempre para o topo.
-    const modalScrolls = Array.from(document.querySelectorAll(".pt-modal-b")).map((n) => n.scrollTop);
+    const modalScrolls = Array.from(el.querySelectorAll(".pt-modal-b")).map((n) => n.scrollTop);
     const pageY = window.scrollY;
     el.innerHTML = `<div class="pt-wrap">${S.loading ? '<div class="pt-empty">Carregando protocolos…</div>' : (S.screen === "protocols" ? myProtocolsHtml() : reportHtml())}${modalHtml()}${aiModalHtml()}</div>`;
-    const newModalBodies = document.querySelectorAll(".pt-modal-b");
+    const newModalBodies = el.querySelectorAll(".pt-modal-b");
     if (newModalBodies.length) {
       newModalBodies.forEach((n, i) => { n.scrollTop = modalScrolls[i] || 0; });
     } else if (pageY) {
       window.scrollTo(0, pageY);
     }
+    paintFlowModal();
   }
 
   /* ---------- EVENTS ---------- */
@@ -855,7 +1013,7 @@
   document.addEventListener("click", (e) => {
     const root = document.getElementById("s-protocolos");
     if (!root || root.style.display === "none") return;
-    const t = e.target.closest("[data-menu],[data-act],[data-dd],[data-group],[data-bulk],[data-clear],[data-goprot],[data-back],[data-new],[data-edit],[data-toggle],[data-mclose],[data-msave],[data-mbg],[data-cidadd],[data-cidrm],[data-anew],[data-aedit],[data-adel],[data-asave],[data-acancel],[data-atype],[data-afreq],[data-zoom],[data-gact],[data-fclear],[data-fapply],[data-tladd],[data-aiopen],[data-aiclose],[data-aigen],[data-aibg],[data-rnew],[data-redit],[data-rdel],[data-rcancel],[data-rsave],[data-banew],[data-baedit],[data-badel],[data-bacancel],[data-basave],[data-batype],[data-catpick],[data-catcreate],[data-cidpick]");
+    const t = e.target.closest("[data-menu],[data-act],[data-dd],[data-group],[data-bulk],[data-clear],[data-goprot],[data-back],[data-new],[data-edit],[data-toggle],[data-mclose],[data-msave],[data-mbg],[data-cidadd],[data-cidrm],[data-anew],[data-aedit],[data-adel],[data-asave],[data-acancel],[data-atype],[data-afreq],[data-zoom],[data-gact],[data-fclear],[data-fapply],[data-tladd],[data-aiopen],[data-aiclose],[data-aigen],[data-aibg],[data-rnew],[data-redit],[data-rdel],[data-rcancel],[data-rsave],[data-banew],[data-baedit],[data-badel],[data-bacancel],[data-basave],[data-batype],[data-catpick],[data-catcreate],[data-cidpick],[data-flowopen],[data-flowclose],[data-flowbg]");
     if (!t) { if (S.dd) { S.dd = null; render(); } return; }
     const d = t.dataset;
     if (d.aiopen) { S.aiModal = { obs: "", pdf: null, filename: "", loading: false, error: "" }; return render(); }
@@ -878,6 +1036,9 @@
     if (d.toggle) return toggleActive(d.toggle);
     if (d.mbg && e.target === t) { S.modal = null; return render(); }
     if (d.mclose) { S.modal = null; S.showActionEditor = false; S.editingAction = null; return render(); }
+    if (d.flowopen) { S.flowModal = d.flowopen; return render(); }
+    if (d.flowclose) { S.flowModal = null; return render(); }
+    if (d.flowbg && e.target === t) { S.flowModal = null; return render(); }
     if (d.msave) { const m = { ...S.modal, title: document.getElementById("pt-m-title").value.trim() }; if (!m.title) return alert("Informe o nome do protocolo."); return saveProtocol(m); }
     if (d.cidpick) { cidPickApply(d.cidpick); return; }
     if (d.cidadd) { const v = (document.getElementById("pt-m-cid").value || "").trim().toUpperCase(); if (v && !S.modal.cids.includes(v)) S.modal.cids.push(v); S.cidInput = ""; return render(); }
