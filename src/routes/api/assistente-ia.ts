@@ -472,6 +472,13 @@ function maskPhone(tel?: string | null) {
   return "•••••" + d.slice(-4);
 }
 
+// Mostramos o CPF parcialmente para o médico confirmar sem expor o número inteiro.
+function maskCpf(cpf?: string | null) {
+  const d = (cpf || "").replace(/\D/g, "");
+  if (d.length < 11) return d ? `•••.•••.•••-${d.slice(-2)}` : null;
+  return `${d.slice(0, 3)}.•••.•••-${d.slice(-2)}`;
+}
+
 function onlyDigits(v?: string | null) {
   return (v || "").replace(/\D/g, "");
 }
