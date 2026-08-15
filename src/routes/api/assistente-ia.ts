@@ -590,7 +590,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
       if (!args.confirmado) {
         return { erro: "confirmacao_pendente", instrucao: "Peça a confirmação do médico antes de atualizar o cadastro." };
       }
-      const patch: Record<string, string> = {};
+      const patch: { cpf?: string; telefone?: string; data_nascimento?: string } = {};
       if (args.cpf) patch.cpf = String(args.cpf);
       if (args.telefone) patch.telefone = String(args.telefone);
       if (args.data_nascimento && /^\d{4}-\d{2}-\d{2}$/.test(String(args.data_nascimento))) {
