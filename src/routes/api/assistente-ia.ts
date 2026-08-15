@@ -550,6 +550,14 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
           paciente_id: p.paciente_id,
           nome: p.name,
           telefone_mascarado: maskPhone(p.telefone),
+          cpf_mascarado: maskCpf(p.cpf),
+          idade: calcIdade(p.data_nascimento),
+          data_nascimento: p.data_nascimento || null,
+          campos_vazios: [
+            ...(p.cpf ? [] : ["cpf"]),
+            ...(p.telefone ? [] : ["telefone"]),
+            ...(p.data_nascimento ? [] : ["data_nascimento"]),
+          ],
           tem_telefone: !!p.telefone,
           tem_cpf: !!p.cpf,
         })),
@@ -571,7 +579,40 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         nome: found.name,
         tem_telefone: !!found.telefone,
         telefone_mascarado: maskPhone(found.telefone),
+        cpf_mascarado: maskCpf(found.cpf),
+        data_nascimento: found.data_nascimento || null,
         idade: calcIdade(found.data_nascimento),
+      };
+    }
+
+    case "atualizar_paciente": {
+      if (!medicoId) return { erro: "Usuário não identificado na sessão." };
+      if (!args.confirmado) {
+        return { erro: "confirmacao_pendente", instrucao: "Peça a confirmação do médico antes de atualizar o cadastro." };
+      }
+      const patch: Record<string, string> = {};
+      if (args.cpf) patch.cpf = String(args.cpf);
+      if (args.telefone) patch.telefone = String(args.telefone);
+      if (args.data_nascimento && /^\d{4}-\d{2}-\d{2}$/.test(String(args.data_nascimento))) {
+        patch.data_nascimento = String(args.data_nascimento);
+      }
+      if (!Object.keys(patch).length) return { erro: "Nenhum dado válido para atualizar." };
+      const { data, error } = await db
+        .from("pacientes")
+        .update(patch)
+        .eq("paciente_id", String(args.paciente_id))
+        .eq("user_id", medicoId)
+        .select("paciente_id,name,cpf,telefone,data_nascimento")
+        .maybeSingle();
+      if (error) return { erro: error.message };
+      if (!data) return { erro: "Cadastro não encontrado." };
+      return {
+        atualizado: true,
+        paciente_id: data.paciente_id,
+        nome: data.name,
+        cpf_mascarado: maskCpf(data.cpf),
+        telefone_mascarado: maskPhone(data.telefone),
+        idade: calcIdade(data.data_nascimento),
       };
     }
 
