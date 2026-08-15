@@ -5965,13 +5965,27 @@
 
                                                             function authToggle(){
                                                               authMode=authMode==='signin'?'signup':'signin';
-                                                              document.getElementById('auth-title').textContent=authMode==='signin'?'Entrar':'Criar conta';
+                                                              document.getElementById('auth-title').textContent=authMode==='signin'?'Bem-vindo de volta':'Criar conta';
                                                               document.getElementById('auth-sub').textContent=authMode==='signin'?'Acesse com seu e-mail e senha.':'Cadastre-se para começar.';
-                                                              document.getElementById('auth-submit').textContent=authMode==='signin'?'Entrar':'Criar conta';
+                                                              document.getElementById('auth-submit').innerHTML=(authMode==='signin'?'Entrar':'Criar conta')+' <i class="ti ti-arrow-right"></i>';
                                                               document.getElementById('auth-toggle-q').textContent=authMode==='signin'?'Não tem conta?':'Já tem conta?';
-                                                              document.getElementById('auth-toggle').textContent=authMode==='signin'?'Criar conta':'Entrar';
+                                                              document.getElementById('auth-toggle').innerHTML=(authMode==='signin'?'Criar conta':'Entrar')+' <i class="ti ti-arrow-right"></i>';
                                                               document.getElementById('auth-name-wrap').style.display=authMode==='signup'?'block':'none';
                                                               document.getElementById('auth-err').style.display='none';
+                                                            }
+                                                            function authTogglePass(btn){
+                                                              const inp=document.getElementById('auth-pass');
+                                                              const show=inp.type==='password';
+                                                              inp.type=show?'text':'password';
+                                                              btn.innerHTML='<i class="ti '+(show?'ti-eye-off':'ti-eye')+'"></i>';
+                                                            }
+                                                            async function authGoogle(){
+                                                              const btn=document.getElementById('auth-google');
+                                                              btn.disabled=true;
+                                                              try{
+                                                                const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin+'/medicopilot.html'}});
+                                                                if(error)throw error;
+                                                              }catch(e){authError(e.message||'Não foi possível entrar com o Google.');btn.disabled=false;}
                                                             }
                                                             function authError(msg){
                                                               const el=document.getElementById('auth-err');
@@ -5982,19 +5996,19 @@
                                                               const pass=document.getElementById('auth-pass').value;
                                                               const name=document.getElementById('auth-name').value.trim();
                                                               if(!email||!pass){authError('Preencha e-mail e senha.');return;}
-                                                              const btn=document.getElementById('auth-submit');btn.disabled=true;btn.textContent='Aguarde…';
+                                                              const btn=document.getElementById('auth-submit');btn.disabled=true;btn.innerHTML='Aguarde…';
                                                               try{
                                                                 if(authMode==='signup'){
                                                                   const {error}=await sb.auth.signUp({email,password:pass,options:{data:{name_user:name||email.split('@')[0],tipo_user:'medico'},emailRedirectTo:window.location.origin}});
                                                                   if(error)throw error;
                                                                   // tenta login direto (se confirm email estiver desligado)
                                                                   const {error:e2}=await sb.auth.signInWithPassword({email,password:pass});
-                                                                  if(e2){authError('Conta criada. Verifique seu e-mail para confirmar e depois entre.');btn.disabled=false;btn.textContent='Entrar';authMode='signin';return;}
+                                                                  if(e2){authError('Conta criada. Verifique seu e-mail para confirmar e depois entre.');btn.disabled=false;btn.innerHTML='Entrar <i class="ti ti-arrow-right"></i>';authMode='signin';return;}
                                                                 }else{
                                                                   const {error}=await sb.auth.signInWithPassword({email,password:pass});
                                                                   if(error)throw error;
                                                                 }
-                                                              }catch(e){authError(e.message||'Erro ao autenticar.');btn.disabled=false;btn.textContent=authMode==='signin'?'Entrar':'Criar conta';}
+                                                              }catch(e){authError(e.message||'Erro ao autenticar.');btn.disabled=false;btn.innerHTML=(authMode==='signin'?'Entrar':'Criar conta')+' <i class="ti ti-arrow-right"></i>';}
                                                             }
                                                             async function logout(){await sb.auth.signOut();location.reload();}
 
