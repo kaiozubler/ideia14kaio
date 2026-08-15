@@ -157,6 +157,25 @@ const tools: ToolDef[] = [
   {
     type: "function",
     function: {
+      name: "atualizar_paciente",
+      description:
+        "Atualiza dados faltantes/incorretos no cadastro do paciente (CPF, telefone, data de nascimento). Só chame após o médico confirmar o valor.",
+      parameters: {
+        type: "object",
+        properties: {
+          paciente_id: { type: "string" },
+          cpf: { type: "string" },
+          telefone: { type: "string" },
+          data_nascimento: { type: "string", description: "AAAA-MM-DD" },
+          confirmado: { type: "boolean" },
+        },
+        required: ["paciente_id", "confirmado"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "agendar_paciente",
       description: "Agenda um atendimento futuro. Só chame após confirmação explícita do usuário.",
       parameters: {
