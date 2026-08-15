@@ -50,10 +50,27 @@
   }
 
   /* ---------- render ---------- */
+  // Converte o markdown simples que a IA às vezes devolve (negrito/itálico/código)
+  // em HTML seguro — antes os asteriscos apareciam literalmente na bolha.
+  function mdToHtml(text) {
+    const esc = (text || "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+    return esc
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/__([^_]+)__/g, "<strong>$1</strong>")
+      .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,;:!?]|$)/g, "$1<em>$2</em>")
+      .replace(/^\s*[-*]\s+/gm, "• ")
+      .replace(/\n/g, "<br>");
+  }
+
+  function setBubbleText(el, text) {
+    el.innerHTML = mdToHtml(text);
+  }
+
   function bubble(role, text) {
     const div = document.createElement("div");
     div.className = "bubble " + (role === "user" ? "me" : "ia");
-    div.textContent = text;
+    setBubbleText(div, text);
     $("msgs").appendChild(div);
     $("msgs").scrollTop = $("msgs").scrollHeight;
     return div;
@@ -86,10 +103,12 @@
       }
       const ctype = res.headers.get("content-type") || "";
       if (!ctype.includes("application/json")) {
-        pending.textContent =
+        setBubbleText(
+          pending,
           "O endpoint do assistente ainda não está disponível na versão publicada do app (" +
-          APP_URL +
-          "). Publique a última versão do MediCopilot e tente novamente.";
+            APP_URL +
+            "). Publique a última versão do MediCopilot e tente novamente.",
+        );
         history.pop();
         return;
       }
@@ -97,10 +116,10 @@
       if (!res.ok) throw new Error(data.error || "Falha na requisição");
       conversaId = data.conversa_id || conversaId;
       const reply = (data.reply || "").trim() || "Não consegui responder agora.";
-      pending.textContent = reply;
+      setBubbleText(pending, reply);
       history.push({ role: "assistant", content: reply });
     } catch (e) {
-      pending.textContent = "Erro ao falar com o assistente: " + (e?.message || e);
+      setBubbleText(pending, "Erro ao falar com o assistente: " + (e?.message || e));
     }
   }
 
