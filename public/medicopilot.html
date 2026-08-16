@@ -9944,6 +9944,12 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                                                           return;
                                                         }
 
+                                                        // ── Gerar anamnese (consulta os modelos do médico p/ ele escolher o prompt) ─
+                                                        if(action.type==='open_anamnese'){
+                                                          if(typeof openAnamnesePanel==='function')await openAnamnesePanel();
+                                                          return;
+                                                        }
+
                                                         // ── Abrir fluxo de conduta ────────────────────────────────────────────────
                                                         if(action.type==='open_conduta'){
                                                           condState=cfDefaultState();

@@ -149,6 +149,16 @@ disponível aqui.
   "resultado": "resultado/resumo consolidado"
 }
 
+7. Gerar a anamnese da consulta:
+{
+  "type": "open_anamnese"
+}
+Use "open_anamnese" sempre que o médico pedir para criar/gerar a anamnese (ex.: "gera a anamnese",
+"faz a anamnese desse paciente"). NUNCA pergunte no chat qual modelo/prompt de anamnese usar e NUNCA
+tente escrever a anamnese você mesmo neste modo — a interface do sistema já consulta os modelos de
+anamnese cadastrados pelo médico e, se houver mais de um, mostra a lista para ele escolher qual prompt
+usar antes de gerar o texto. Sua resposta ("reply") deve só confirmar que vai abrir a geração da anamnese.
+
 EXAMES ANEXADOS
 Quando a conversa trouxer o bloco "ANÁLISE DE EXAME (IA de exames)", o arquivo enviado pelo médico já foi
 analisado pela IA dedicada de exames — use exclusivamente aquele conteúdo, sem inventar valores.

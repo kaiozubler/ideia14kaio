@@ -82,6 +82,10 @@ APÓS GERAR DOCUMENTO
 CONFIRMAÇÕES OBRIGATÓRIAS
 - Nunca envie mensagem/documento ao paciente nem agende/remarque sem confirmação explícita do usuário na conversa. Consultas (agenda, próximo paciente, FAQ) não precisam de confirmação.
 
+NOVO ATENDIMENTO (botão de gravação da extensão)
+- Quando o médico pedir para "iniciar", "criar" ou "abrir" um novo atendimento (inclusive quando a mensagem vier automaticamente do botão de microfone da extensão de navegador), identifique o paciente normalmente (regras acima) e então chame criar_atendimento com o paciente_id. Essa ação não precisa de confirmação extra, pois cria apenas um rascunho editável — nunca finaliza nem substitui um atendimento existente.
+- Se não for possível identificar o paciente a partir do contexto da tela nem da conversa, pergunte o nome antes de chamar a tool.
+
 NUNCA ANUNCIE SUCESSO QUE NÃO ACONTECEU
 - Se uma tool devolver um campo "erro" ou "faltam_dados_paciente" (por exemplo, CPF ou idade ausentes), você NUNCA deve dizer ao usuário que o documento/ação foi concluído com sucesso.
 - Nesse caso, siga exatamente a instrução do campo "instrucao" quando houver (ex.: peça o dado que falta), ou explique o problema em uma frase curta. Só confirme sucesso quando a tool devolver "gerado":true, "confirmado":true, "agendado":true ou equivalente.
@@ -211,6 +215,22 @@ const tools: ToolDef[] = [
       name: "proximo_paciente",
       description: "Próximo atendimento agendado a partir de agora.",
       parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "criar_atendimento",
+      description:
+        "Abre um novo atendimento (rascunho) para o paciente identificado nesta conversa — usado quando o médico pede para iniciar/criar um novo atendimento (ex.: pelo botão de gravação da extensão). Não use para reabrir ou editar um atendimento já existente.",
+      parameters: {
+        type: "object",
+        properties: {
+          paciente_id: { type: "string" },
+          paciente_nome: { type: "string" },
+        },
+        required: ["paciente_id"],
+      },
     },
   },
   {
@@ -777,6 +797,38 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
           motivo: next.motivo,
         },
       };
+    }
+
+    case "criar_atendimento": {
+      if (!medicoId) return { erro: "Usuário não identificado na sessão." };
+      const pacienteId = String(args.paciente_id || "").trim();
+      if (!pacienteId) return { erro: "Paciente não identificado." };
+      const { data: paciente, error: pErro } = await db
+        .from("pacientes")
+        .select("paciente_id,name")
+        .eq("paciente_id", pacienteId)
+        .eq("user_id", medicoId)
+        .maybeSingle();
+      if (pErro) return { erro: pErro.message };
+      if (!paciente) return { erro: "Cadastro de paciente não encontrado." };
+      const now = new Date();
+      const dateStr = fmtHora(now.toISOString()).split(" ")[0];
+      const { data, error } = await db
+        .from("consulta")
+        .insert({
+          paciente_id: paciente.paciente_id,
+          id_medico: medicoId,
+          started_at: now.toISOString(),
+          title: `Consulta — ${dateStr}`,
+          acao: "Rascunho",
+          resumo: "Atendimento registrado.",
+          notas: "Sem anotações.",
+        })
+        .select("id")
+        .single();
+      if (error) return { erro: error.message };
+      ctx.pendingAction.value = { type: "criar_atendimento", consulta_id: data.id, paciente_id: paciente.paciente_id };
+      return { criado: true, atendimento_id: data.id, paciente_nome: paciente.name };
     }
 
     case "gerar_receita": {
