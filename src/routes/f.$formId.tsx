@@ -119,7 +119,7 @@ function PublicForm() {
     }
 
     setEnviando(true);
-    const payload = form.anonimo
+    const payload: Record<string, unknown> = form.anonimo
       ? { questionario_id: form.id }
       : {
           questionario_id: form.id,
