@@ -2227,6 +2227,10 @@ export type Database = {
           status: string
         }[]
       }
+      resposta_de_formulario_ativo: {
+        Args: { p_resposta_id: string }
+        Returns: boolean
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       sincronizar_protocolo: {
