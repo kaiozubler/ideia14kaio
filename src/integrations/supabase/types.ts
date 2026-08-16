@@ -1512,6 +1512,218 @@ export type Database = {
         }
         Relationships: []
       }
+      questionario_envios: {
+        Row: {
+          enviado_em: string
+          id: string
+          paciente_id: string | null
+          questionario_id: string
+          user_id: string
+        }
+        Insert: {
+          enviado_em?: string
+          id?: string
+          paciente_id?: string | null
+          questionario_id: string
+          user_id?: string
+        }
+        Update: {
+          enviado_em?: string
+          id?: string
+          paciente_id?: string | null
+          questionario_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questionario_envios_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["paciente_id"]
+          },
+          {
+            foreignKeyName: "questionario_envios_questionario_id_fkey"
+            columns: ["questionario_id"]
+            isOneToOne: false
+            referencedRelation: "questionarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      questionario_perguntas: {
+        Row: {
+          enunciado: string
+          escala_label_max: string | null
+          escala_label_min: string | null
+          escala_max: number | null
+          escala_min: number | null
+          id: string
+          obrigatoria: boolean
+          opcoes: Json | null
+          ordem: number
+          questionario_id: string
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          enunciado: string
+          escala_label_max?: string | null
+          escala_label_min?: string | null
+          escala_max?: number | null
+          escala_min?: number | null
+          id?: string
+          obrigatoria?: boolean
+          opcoes?: Json | null
+          ordem?: number
+          questionario_id: string
+          tipo: string
+          user_id?: string
+        }
+        Update: {
+          enunciado?: string
+          escala_label_max?: string | null
+          escala_label_min?: string | null
+          escala_max?: number | null
+          escala_min?: number | null
+          id?: string
+          obrigatoria?: boolean
+          opcoes?: Json | null
+          ordem?: number
+          questionario_id?: string
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questionario_perguntas_questionario_id_fkey"
+            columns: ["questionario_id"]
+            isOneToOne: false
+            referencedRelation: "questionarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      questionario_resposta_itens: {
+        Row: {
+          id: string
+          pergunta_id: string
+          resposta_id: string
+          valor_escala: number | null
+          valor_opcoes: Json | null
+          valor_texto: string | null
+        }
+        Insert: {
+          id?: string
+          pergunta_id: string
+          resposta_id: string
+          valor_escala?: number | null
+          valor_opcoes?: Json | null
+          valor_texto?: string | null
+        }
+        Update: {
+          id?: string
+          pergunta_id?: string
+          resposta_id?: string
+          valor_escala?: number | null
+          valor_opcoes?: Json | null
+          valor_texto?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questionario_resposta_itens_pergunta_id_fkey"
+            columns: ["pergunta_id"]
+            isOneToOne: false
+            referencedRelation: "questionario_perguntas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questionario_resposta_itens_resposta_id_fkey"
+            columns: ["resposta_id"]
+            isOneToOne: false
+            referencedRelation: "questionario_respostas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      questionario_respostas: {
+        Row: {
+          id: string
+          paciente_cpf: string | null
+          paciente_email: string | null
+          paciente_id: string | null
+          paciente_nome: string | null
+          paciente_telefone: string | null
+          questionario_id: string
+          respondido_em: string
+        }
+        Insert: {
+          id?: string
+          paciente_cpf?: string | null
+          paciente_email?: string | null
+          paciente_id?: string | null
+          paciente_nome?: string | null
+          paciente_telefone?: string | null
+          questionario_id: string
+          respondido_em?: string
+        }
+        Update: {
+          id?: string
+          paciente_cpf?: string | null
+          paciente_email?: string | null
+          paciente_id?: string | null
+          paciente_nome?: string | null
+          paciente_telefone?: string | null
+          questionario_id?: string
+          respondido_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questionario_respostas_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["paciente_id"]
+          },
+          {
+            foreignKeyName: "questionario_respostas_questionario_id_fkey"
+            columns: ["questionario_id"]
+            isOneToOne: false
+            referencedRelation: "questionarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      questionarios: {
+        Row: {
+          anonimo: boolean
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          id: string
+          titulo: string
+          user_id: string
+        }
+        Insert: {
+          anonimo?: boolean
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          titulo: string
+          user_id?: string
+        }
+        Update: {
+          anonimo?: boolean
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          titulo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       receita_modelos: {
         Row: {
           created_at: string
@@ -2014,6 +2226,10 @@ export type Database = {
           specialty: string
           status: string
         }[]
+      }
+      resposta_de_formulario_ativo: {
+        Args: { p_resposta_id: string }
+        Returns: boolean
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }

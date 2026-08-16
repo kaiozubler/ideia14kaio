@@ -20,6 +20,7 @@ import { Route as ApiLmeIaRouteImport } from './routes/api/lme-ia'
 import { Route as ApiMapaFamiliarIaRouteImport } from './routes/api/mapa-familiar-ia'
 import { Route as ApiWhatsappConviteRouteImport } from './routes/api/whatsapp-convite'
 import { Route as ApiWhatsappWebhookRouteImport } from './routes/api/whatsapp-webhook'
+import { Route as FFormIdRouteImport } from './routes/f.$formId'
 import { Route as ApiBryCancelEnvelopeRouteImport } from './routes/api/bry/cancel-envelope'
 import { Route as ApiBryCreateEnvelopeRouteImport } from './routes/api/bry/create-envelope'
 import { Route as ApiBryDownloadDocumentRouteImport } from './routes/api/bry/download-document'
@@ -94,6 +95,11 @@ const ApiWhatsappConviteRoute = ApiWhatsappConviteRouteImport.update({
 const ApiWhatsappWebhookRoute = ApiWhatsappWebhookRouteImport.update({
   id: '/api/whatsapp-webhook',
   path: '/api/whatsapp-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FFormIdRoute = FFormIdRouteImport.update({
+  id: '/f/$formId',
+  path: '/f/$formId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBryCancelEnvelopeRoute = ApiBryCancelEnvelopeRouteImport.update({
@@ -209,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/api/mapa-familiar-ia': typeof ApiMapaFamiliarIaRoute
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
+  '/f/$formId': typeof FFormIdRoute
   '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
@@ -241,6 +248,7 @@ export interface FileRoutesByTo {
   '/api/mapa-familiar-ia': typeof ApiMapaFamiliarIaRoute
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
+  '/f/$formId': typeof FFormIdRoute
   '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
@@ -274,6 +282,7 @@ export interface FileRoutesById {
   '/api/mapa-familiar-ia': typeof ApiMapaFamiliarIaRoute
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
+  '/f/$formId': typeof FFormIdRoute
   '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
@@ -308,6 +317,7 @@ export interface FileRouteTypes {
     | '/api/mapa-familiar-ia'
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
+    | '/f/$formId'
     | '/api/bry/cancel-envelope'
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
@@ -340,6 +350,7 @@ export interface FileRouteTypes {
     | '/api/mapa-familiar-ia'
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
+    | '/f/$formId'
     | '/api/bry/cancel-envelope'
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
@@ -372,6 +383,7 @@ export interface FileRouteTypes {
     | '/api/mapa-familiar-ia'
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
+    | '/f/$formId'
     | '/api/bry/cancel-envelope'
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
@@ -405,6 +417,7 @@ export interface RootRouteChildren {
   ApiMapaFamiliarIaRoute: typeof ApiMapaFamiliarIaRoute
   ApiWhatsappConviteRoute: typeof ApiWhatsappConviteRoute
   ApiWhatsappWebhookRoute: typeof ApiWhatsappWebhookRoute
+  FFormIdRoute: typeof FFormIdRoute
   ApiBryCancelEnvelopeRoute: typeof ApiBryCancelEnvelopeRoute
   ApiBryCreateEnvelopeRoute: typeof ApiBryCreateEnvelopeRoute
   ApiBryDownloadDocumentRoute: typeof ApiBryDownloadDocumentRoute
@@ -503,6 +516,13 @@ declare module '@tanstack/react-router' {
       path: '/api/whatsapp-webhook'
       fullPath: '/api/whatsapp-webhook'
       preLoaderRoute: typeof ApiWhatsappWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/f/$formId': {
+      id: '/f/$formId'
+      path: '/f/$formId'
+      fullPath: '/f/$formId'
+      preLoaderRoute: typeof FFormIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/bry/cancel-envelope': {
@@ -653,6 +673,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMapaFamiliarIaRoute: ApiMapaFamiliarIaRoute,
   ApiWhatsappConviteRoute: ApiWhatsappConviteRoute,
   ApiWhatsappWebhookRoute: ApiWhatsappWebhookRoute,
+  FFormIdRoute: FFormIdRoute,
   ApiBryCancelEnvelopeRoute: ApiBryCancelEnvelopeRoute,
   ApiBryCreateEnvelopeRoute: ApiBryCreateEnvelopeRoute,
   ApiBryDownloadDocumentRoute: ApiBryDownloadDocumentRoute,
