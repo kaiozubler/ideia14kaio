@@ -119,9 +119,13 @@ function PublicForm() {
     }
 
     setEnviando(true);
+    // O papel anônimo pode inserir, mas não ler respostas — por isso o id é gerado
+    // aqui no cliente em vez de vir de um .select() após o insert.
+    const respostaId = crypto.randomUUID();
     const payload: Record<string, unknown> = form.anonimo
-      ? { questionario_id: form.id }
+      ? { id: respostaId, questionario_id: form.id }
       : {
+          id: respostaId,
           questionario_id: form.id,
           paciente_id: pacienteId || null,
           paciente_nome: ident.nome.trim().slice(0, 120),
@@ -129,9 +133,10 @@ function PublicForm() {
           paciente_email: ident.email.trim().slice(0, 160) || null,
           paciente_cpf: onlyDigits(ident.cpf).slice(0, 11) || null,
         };
-    const { data: resp, error } = await sb.from("questionario_respostas").insert(payload).select("id").single();
-    if (error || !resp) {
+    const { error } = await sb.from("questionario_respostas").insert(payload);
+    if (error) {
       setEnviando(false);
+      console.error("insert resposta", error);
       return setErro("Não foi possível enviar suas respostas. Tente novamente.");
     }
     const itens = form.questionario_perguntas
@@ -139,7 +144,7 @@ function PublicForm() {
       .map((p) => {
         const v = respostas[p.id];
         return {
-          resposta_id: resp.id,
+          resposta_id: respostaId,
           pergunta_id: p.id,
           valor_texto: p.tipo === "texto" ? String(v).slice(0, 4000) : p.tipo === "unica" ? String(v) : null,
           valor_opcoes: p.tipo === "multipla" ? (v as string[]) : null,
