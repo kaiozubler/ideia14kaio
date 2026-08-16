@@ -22,6 +22,8 @@
     <script src="equipe.js" defer></script>
     <link rel="stylesheet" href="protocolos.css?v=2" />
     <script src="protocolos.js?v=2" defer></script>
+    <link rel="stylesheet" href="questionarios.css?v=1" />
+    <script src="questionarios.js?v=1" defer></script>
     <link rel="stylesheet" href="faturamento.css?v=2" />
     <script src="faturamento.js?v=2" defer></script>
     <link rel="stylesheet" href="mapa-familiar.css" />
@@ -2162,6 +2164,9 @@
           <div class="sb-item" id="nav-protocolos" onclick="goScreen('protocolos')">
             <i class="ti ti-clipboard-heart"></i><span class="sb-lbl">Protocolos</span>
           </div>
+          <div class="sb-item" id="nav-questionarios" onclick="goScreen('questionarios')">
+            <i class="ti ti-clipboard-list"></i><span class="sb-lbl">Questionário</span>
+          </div>
           <div class="sb-item" id="nav-faturamento" onclick="goScreen('faturamento')">
             <i class="ti ti-cash-banknote"></i><span class="sb-lbl">Faturamento</span>
           </div>
@@ -3858,6 +3863,8 @@
 
           <!-- SCREEN: PROTOCOLOS -->
           <div id="s-protocolos" style="display:none"></div>
+          <!-- SCREEN: QUESTIONARIOS -->
+          <div id="s-questionarios" style="display:none"></div>
           <div id="s-faturamento" style="display:none"></div>
 
           <!-- SCREEN: MINHA EQUIPE -->
@@ -6132,13 +6139,13 @@
                                                                 const el=document.getElementById('s-'+s);
                                                                 if(el)el.style.display='none';
                                                               });
-                                                              ['conversas','protocolos','faturamento'].forEach(s=>{const el=document.getElementById('s-'+s);if(el)el.style.display='none';});
+                                                              ['conversas','protocolos','questionarios','faturamento'].forEach(s=>{const el=document.getElementById('s-'+s);if(el)el.style.display='none';});
                                                               const el=document.getElementById('s-'+name);
                                                               if(el)el.style.display=name==='patient-detail'?'flex':'block';
                                                               document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
                                                               const nav=document.getElementById('nav-'+name);
                                                               if(nav)nav.classList.add('active');
-                                                              const titles={atendimentos:'Atendimentos',patients:'Pacientes',conversas:'Conversas',agenda:'Agenda',receitas:'Receitas e Atestados',protocolos:'Protocolos',faturamento:'Faturamento',indicadores:'Indicadores',secretaria:'Secretária digital',anamnese:'Gerador de Anamnese',copiloto:'Copiloto de consulta',configuracoes:'Configurações',equipe:'Minha equipe',clinica:'Minha clínica','mapa-familiar':'Mapa Familiar'};
+                                                              const titles={atendimentos:'Atendimentos',patients:'Pacientes',conversas:'Conversas',agenda:'Agenda',receitas:'Receitas e Atestados',protocolos:'Protocolos',questionarios:'Questionário',faturamento:'Faturamento',indicadores:'Indicadores',secretaria:'Secretária digital',anamnese:'Gerador de Anamnese',copiloto:'Copiloto de consulta',configuracoes:'Configurações',equipe:'Minha equipe',clinica:'Minha clínica','mapa-familiar':'Mapa Familiar'};
                                                               const pt=document.getElementById('page-title');
                                                               pt.textContent=titles[name]||'Paciente';
                                                               pt.style.cursor='';
@@ -6155,6 +6162,7 @@
                                                               if(name==='mapa-familiar')mfCarregarFamilias();
                                                               if(name==='equipe'&&typeof initEquipe==='function')initEquipe();
                                                               if(name==='protocolos'&&typeof initProtocolos==='function')initProtocolos();
+                                                              if(name==='questionarios'&&typeof initQuestionarios==='function')initQuestionarios();
                                                               if(name==='faturamento'&&typeof initFaturamento==='function')initFaturamento();
                                                               if(['secretaria','anamnese','copiloto'].includes(name)){
                                                                 const g=document.getElementById('grp-ia');if(g)g.classList.add('open');
