@@ -27,6 +27,7 @@ import { Route as ApiBryDownloadDocumentRouteImport } from './routes/api/bry/dow
 import { Route as ApiBryGetEnvelopeRouteImport } from './routes/api/bry/get-envelope'
 import { Route as ApiCidBuscarRouteImport } from './routes/api/cid/buscar'
 import { Route as ApiMedicamentosBuscarRouteImport } from './routes/api/medicamentos/buscar'
+import { Route as ApiProtocolosAvaliarExameRouteImport } from './routes/api/protocolos/avaliar-exame'
 import { Route as ApiProtocolosGerarIaRouteImport } from './routes/api/protocolos/gerar-ia'
 import { Route as ApiProtocolosSincronizarRouteImport } from './routes/api/protocolos/sincronizar'
 import { Route as ApiQuestionariosGerarIaRouteImport } from './routes/api/questionarios/gerar-ia'
@@ -38,6 +39,7 @@ import { Route as ApiTussBuscarRouteImport } from './routes/api/tuss/buscar'
 import { Route as ApiTussCriarRouteImport } from './routes/api/tuss/criar'
 import { Route as ApiPublicExtensaoChatRouteImport } from './routes/api/public/extensao/chat'
 import { Route as ApiPublicExtensaoDeepgramTokenRouteImport } from './routes/api/public/extensao/deepgram-token'
+import { Route as ApiPublicFormulariosResponderRouteImport } from './routes/api/public/formularios/responder'
 import { Route as ApiPublicHooksSyncInteracoesRouteImport } from './routes/api/public/hooks/sync-interacoes'
 import { Route as ApiPublicHooksSyncTussRouteImport } from './routes/api/public/hooks/sync-tuss'
 import { Route as ApiPublicSignatureCallbackRouteImport } from './routes/api/public/signature/callback'
@@ -134,6 +136,12 @@ const ApiMedicamentosBuscarRoute = ApiMedicamentosBuscarRouteImport.update({
   path: '/api/medicamentos/buscar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiProtocolosAvaliarExameRoute =
+  ApiProtocolosAvaliarExameRouteImport.update({
+    id: '/api/protocolos/avaliar-exame',
+    path: '/api/protocolos/avaliar-exame',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiProtocolosGerarIaRoute = ApiProtocolosGerarIaRouteImport.update({
   id: '/api/protocolos/gerar-ia',
   path: '/api/protocolos/gerar-ia',
@@ -193,6 +201,12 @@ const ApiPublicExtensaoDeepgramTokenRoute =
     path: '/api/public/extensao/deepgram-token',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicFormulariosResponderRoute =
+  ApiPublicFormulariosResponderRouteImport.update({
+    id: '/api/public/formularios/responder',
+    path: '/api/public/formularios/responder',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSyncInteracoesRoute =
   ApiPublicHooksSyncInteracoesRouteImport.update({
     id: '/api/public/hooks/sync-interacoes',
@@ -235,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/cid/buscar': typeof ApiCidBuscarRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
+  '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
   '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
@@ -246,6 +261,7 @@ export interface FileRoutesByFullPath {
   '/api/tuss/criar': typeof ApiTussCriarRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
+  '/api/public/formularios/responder': typeof ApiPublicFormulariosResponderRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
@@ -270,6 +286,7 @@ export interface FileRoutesByTo {
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/cid/buscar': typeof ApiCidBuscarRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
+  '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
   '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
@@ -281,6 +298,7 @@ export interface FileRoutesByTo {
   '/api/tuss/criar': typeof ApiTussCriarRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
+  '/api/public/formularios/responder': typeof ApiPublicFormulariosResponderRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
@@ -306,6 +324,7 @@ export interface FileRoutesById {
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/cid/buscar': typeof ApiCidBuscarRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
+  '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
   '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
@@ -317,6 +336,7 @@ export interface FileRoutesById {
   '/api/tuss/criar': typeof ApiTussCriarRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
+  '/api/public/formularios/responder': typeof ApiPublicFormulariosResponderRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
@@ -343,6 +363,7 @@ export interface FileRouteTypes {
     | '/api/bry/get-envelope'
     | '/api/cid/buscar'
     | '/api/medicamentos/buscar'
+    | '/api/protocolos/avaliar-exame'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
     | '/api/questionarios/gerar-ia'
@@ -354,6 +375,7 @@ export interface FileRouteTypes {
     | '/api/tuss/criar'
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
+    | '/api/public/formularios/responder'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
@@ -378,6 +400,7 @@ export interface FileRouteTypes {
     | '/api/bry/get-envelope'
     | '/api/cid/buscar'
     | '/api/medicamentos/buscar'
+    | '/api/protocolos/avaliar-exame'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
     | '/api/questionarios/gerar-ia'
@@ -389,6 +412,7 @@ export interface FileRouteTypes {
     | '/api/tuss/criar'
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
+    | '/api/public/formularios/responder'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
@@ -413,6 +437,7 @@ export interface FileRouteTypes {
     | '/api/bry/get-envelope'
     | '/api/cid/buscar'
     | '/api/medicamentos/buscar'
+    | '/api/protocolos/avaliar-exame'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
     | '/api/questionarios/gerar-ia'
@@ -424,6 +449,7 @@ export interface FileRouteTypes {
     | '/api/tuss/criar'
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
+    | '/api/public/formularios/responder'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
@@ -449,6 +475,7 @@ export interface RootRouteChildren {
   ApiBryGetEnvelopeRoute: typeof ApiBryGetEnvelopeRoute
   ApiCidBuscarRoute: typeof ApiCidBuscarRoute
   ApiMedicamentosBuscarRoute: typeof ApiMedicamentosBuscarRoute
+  ApiProtocolosAvaliarExameRoute: typeof ApiProtocolosAvaliarExameRoute
   ApiProtocolosGerarIaRoute: typeof ApiProtocolosGerarIaRoute
   ApiProtocolosSincronizarRoute: typeof ApiProtocolosSincronizarRoute
   ApiQuestionariosGerarIaRoute: typeof ApiQuestionariosGerarIaRoute
@@ -460,6 +487,7 @@ export interface RootRouteChildren {
   ApiTussCriarRoute: typeof ApiTussCriarRoute
   ApiPublicExtensaoChatRoute: typeof ApiPublicExtensaoChatRoute
   ApiPublicExtensaoDeepgramTokenRoute: typeof ApiPublicExtensaoDeepgramTokenRoute
+  ApiPublicFormulariosResponderRoute: typeof ApiPublicFormulariosResponderRoute
   ApiPublicHooksSyncInteracoesRoute: typeof ApiPublicHooksSyncInteracoesRoute
   ApiPublicHooksSyncTussRoute: typeof ApiPublicHooksSyncTussRoute
   ApiPublicSignatureCallbackRoute: typeof ApiPublicSignatureCallbackRoute
@@ -594,6 +622,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMedicamentosBuscarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/protocolos/avaliar-exame': {
+      id: '/api/protocolos/avaliar-exame'
+      path: '/api/protocolos/avaliar-exame'
+      fullPath: '/api/protocolos/avaliar-exame'
+      preLoaderRoute: typeof ApiProtocolosAvaliarExameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/protocolos/gerar-ia': {
       id: '/api/protocolos/gerar-ia'
       path: '/api/protocolos/gerar-ia'
@@ -671,6 +706,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensaoDeepgramTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/formularios/responder': {
+      id: '/api/public/formularios/responder'
+      path: '/api/public/formularios/responder'
+      fullPath: '/api/public/formularios/responder'
+      preLoaderRoute: typeof ApiPublicFormulariosResponderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/sync-interacoes': {
       id: '/api/public/hooks/sync-interacoes'
       path: '/api/public/hooks/sync-interacoes'
@@ -721,6 +763,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBryGetEnvelopeRoute: ApiBryGetEnvelopeRoute,
   ApiCidBuscarRoute: ApiCidBuscarRoute,
   ApiMedicamentosBuscarRoute: ApiMedicamentosBuscarRoute,
+  ApiProtocolosAvaliarExameRoute: ApiProtocolosAvaliarExameRoute,
   ApiProtocolosGerarIaRoute: ApiProtocolosGerarIaRoute,
   ApiProtocolosSincronizarRoute: ApiProtocolosSincronizarRoute,
   ApiQuestionariosGerarIaRoute: ApiQuestionariosGerarIaRoute,
@@ -732,6 +775,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTussCriarRoute: ApiTussCriarRoute,
   ApiPublicExtensaoChatRoute: ApiPublicExtensaoChatRoute,
   ApiPublicExtensaoDeepgramTokenRoute: ApiPublicExtensaoDeepgramTokenRoute,
+  ApiPublicFormulariosResponderRoute: ApiPublicFormulariosResponderRoute,
   ApiPublicHooksSyncInteracoesRoute: ApiPublicHooksSyncInteracoesRoute,
   ApiPublicHooksSyncTussRoute: ApiPublicHooksSyncTussRoute,
   ApiPublicSignatureCallbackRoute: ApiPublicSignatureCallbackRoute,

@@ -8455,14 +8455,25 @@ showAtendList();
                                                               const e=exames.find(x=>x.id===id);
                                                               if(!e)return null;
                                                               if(!e.tussId||!e.resultadoEstruturado)return null;
-                                                              const {data,error}=await sb.rpc('avaliar_resultado_exame',{
-                                                                p_exame_id:id,
-                                                                p_paciente_id:currentPatient.id,
-                                                                p_tuss_procedimento_id:e.tussId,
-                                                                p_resultado:e.resultadoEstruturado
-                                                              });
-                                                              if(error){console.warn('Motor de protocolos',error);return null;}
-                                                              const rows=data||[];
+                                                              let rows=[];
+                                                              try{
+                                                                const {data:sess}=await sb.auth.getSession();
+                                                                const token=sess&&sess.session&&sess.session.access_token;
+                                                                if(!token)return null;
+                                                                const res=await fetch('/api/protocolos/avaliar-exame',{
+                                                                  method:'POST',
+                                                                  headers:{'content-type':'application/json',authorization:'Bearer '+token},
+                                                                  body:JSON.stringify({
+                                                                    exameId:id,
+                                                                    pacienteId:currentPatient.id,
+                                                                    tussProcedimentoId:e.tussId,
+                                                                    resultado:e.resultadoEstruturado
+                                                                  })
+                                                                });
+                                                                if(!res.ok){console.warn('Motor de protocolos',res.status);return null;}
+                                                                const j=await res.json();
+                                                                rows=j.rows||[];
+                                                              }catch(err){console.warn('Motor de protocolos',err);return null;}
                                                               const {data:row}=await sb.from('exames').select('*').eq('id',id).single();
                                                               if(row){const i=exames.findIndex(x=>x.id===id);if(i>=0)exames[i]=mapExameRow(row);}
                                                               renderExames();

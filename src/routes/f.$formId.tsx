@@ -119,47 +119,48 @@ function PublicForm() {
     }
 
     setEnviando(true);
-    // O papel anônimo pode inserir, mas não ler respostas — por isso o id é gerado
-    // aqui no cliente em vez de vir de um .select() após o insert.
-    const respostaId = crypto.randomUUID();
-    const payload: Record<string, unknown> = form.anonimo
-      ? { id: respostaId, questionario_id: form.id }
-      : {
-          id: respostaId,
-          questionario_id: form.id,
-          paciente_id: pacienteId || null,
-          paciente_nome: ident.nome.trim().slice(0, 120),
-          paciente_telefone: onlyDigits(ident.telefone).slice(0, 20),
-          paciente_email: ident.email.trim().slice(0, 160) || null,
-          paciente_cpf: onlyDigits(ident.cpf).slice(0, 11) || null,
-        };
-    const { error } = await sb.from("questionario_respostas").insert(payload);
-    if (error) {
-      setEnviando(false);
-      console.error("insert resposta", error);
-      return setErro("Não foi possível enviar suas respostas. Tente novamente.");
-    }
     const itens = form.questionario_perguntas
       .filter((p) => respostas[p.id] !== undefined && respostas[p.id] !== "")
       .map((p) => {
         const v = respostas[p.id];
         return {
-          resposta_id: respostaId,
           pergunta_id: p.id,
           valor_texto: p.tipo === "texto" ? String(v).slice(0, 4000) : p.tipo === "unica" ? String(v) : null,
           valor_opcoes: p.tipo === "multipla" ? (v as string[]) : null,
           valor_escala: p.tipo === "escala" ? Number(v) : null,
         };
       });
-    if (itens.length) {
-      const { error: e2 } = await sb.from("questionario_resposta_itens").insert(itens);
-      if (e2) {
-        setEnviando(false);
-        return setErro("Suas respostas não foram gravadas por completo. Tente novamente.");
+    // A gravação passa pelo servidor: o link público não escreve direto no banco.
+    const body = {
+      questionario_id: form.id,
+      itens,
+      ...(form.anonimo
+        ? {}
+        : {
+            paciente_id: pacienteId || null,
+            paciente_nome: ident.nome.trim().slice(0, 120),
+            paciente_telefone: onlyDigits(ident.telefone).slice(0, 20),
+            paciente_email: ident.email.trim().slice(0, 160) || null,
+            paciente_cpf: onlyDigits(ident.cpf).slice(0, 11) || null,
+          }),
+    };
+    try {
+      const res = await fetch("/api/public/formularios/responder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      setEnviando(false);
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        if (j.error === "form_unavailable") return setErro("Este formulário não está mais aceitando respostas.");
+        return setErro("Não foi possível enviar suas respostas. Tente novamente.");
       }
+      setOk(true);
+    } catch {
+      setEnviando(false);
+      setErro("Não foi possível enviar suas respostas. Verifique sua conexão e tente novamente.");
     }
-    setEnviando(false);
-    setOk(true);
   }
 
   return (

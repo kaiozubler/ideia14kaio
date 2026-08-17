@@ -1,0 +1,1 @@
+DELETE FROM public.questionario_respostas WHERE paciente_nome = 'Paciente Teste Playwright';
