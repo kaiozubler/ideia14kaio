@@ -125,8 +125,8 @@ function PublicForm() {
         const v = respostas[p.id];
         return {
           pergunta_id: p.id,
-          valor_texto: p.tipo === "texto" ? String(v).slice(0, 4000) : p.tipo === "unica" ? String(v) : null,
-          valor_opcoes: p.tipo === "multipla" ? (v as string[]) : null,
+          valor_texto: p.tipo === "texto" ? String(v).slice(0, 4000) : null,
+          valor_opcoes: p.tipo === "unica" ? [String(v)] : p.tipo === "multipla" ? (v as string[]) : null,
           valor_escala: p.tipo === "escala" ? Number(v) : null,
         };
       });

@@ -544,5 +544,54 @@
     if (e.target.id === "qz-filter-form") { S.filterForm = e.target.value; return render(); }
   });
 
+  /* ---------- MODAL STANDALONE: "Ver resposta" (chamado de fora, ex.: timeline do paciente) ---------- */
+  window.mostrarRespostaQuestionario = async function (respostaId) {
+    const sb = sbc(); if (!sb || !respostaId) return;
+    const holderId = "qz-standalone-resp";
+    let holder = document.getElementById(holderId);
+    if (!holder) { holder = document.createElement("div"); holder.id = holderId; document.body.appendChild(holder); }
+    holder.innerHTML = `<div class="qz-modal-bg" data-standalone-bg="1" style="z-index:5000"><div class="qz-modal sm">
+      <div class="qz-modal-h"><h2>Carregando…</h2><button class="qz-btn ghost" data-standalone-close="1" style="padding:2px 10px">×</button></div>
+      <div class="qz-modal-b"><div class="qz-empty">Carregando resposta…</div></div>
+    </div></div>`;
+    const closeStandalone = () => { holder.innerHTML = ""; };
+    holder.querySelector("[data-standalone-close]").onclick = closeStandalone;
+    holder.querySelector("[data-standalone-bg]").onclick = (e) => { if (e.target === e.currentTarget) closeStandalone(); };
+
+    const { data, error } = await sb.from("questionario_respostas")
+      .select("id,paciente_nome,paciente_telefone,paciente_email,paciente_cpf,respondido_em,questionarios(titulo,anonimo),questionario_resposta_itens(valor_texto,valor_opcoes,valor_escala,questionario_perguntas(enunciado,tipo))")
+      .eq("id", respostaId).maybeSingle();
+    if (error || !data) { holder.innerHTML = ""; return toast("Não foi possível carregar essa resposta."); }
+    const r = {
+      questionarioTitulo: (data.questionarios && data.questionarios.titulo) || "—",
+      anonimo: !!(data.questionarios && data.questionarios.anonimo),
+      pacienteNome: data.paciente_nome || "", pacienteTelefone: data.paciente_telefone || "",
+      pacienteEmail: data.paciente_email || "", pacienteCpf: data.paciente_cpf || "",
+      respondidoEm: data.respondido_em,
+      itens: (data.questionario_resposta_itens || []).map((it) => ({
+        enunciado: (it.questionario_perguntas && it.questionario_perguntas.enunciado) || "",
+        tipo: (it.questionario_perguntas && it.questionario_perguntas.tipo) || "texto",
+        valorTexto: it.valor_texto || "", valorOpcoes: it.valor_opcoes || null, valorEscala: it.valor_escala,
+      })),
+    };
+    holder.innerHTML = `<div class="qz-modal-bg" data-standalone-bg="1" style="z-index:5000"><div class="qz-modal sm">
+      <div class="qz-modal-h"><h2>${esc(r.questionarioTitulo)}</h2><button class="qz-btn ghost" data-standalone-close="1" style="padding:2px 10px">×</button></div>
+      <div class="qz-modal-b">
+        ${r.anonimo ? '<div class="qz-nom-note">Esta resposta é anônima — nenhum dado de identificação foi coletado.</div>' : `
+        <div class="qz-card" style="padding:12px 14px;margin-bottom:14px">
+          <div style="font-size:12.5px;color:#1e293b"><b>${esc(r.pacienteNome || "—")}</b></div>
+          <div style="font-size:11.5px;color:#64748b;margin-top:4px">📞 ${esc(r.pacienteTelefone || "—")} · ✉️ ${esc(r.pacienteEmail || "—")} · CPF ${esc(r.pacienteCpf || "—")}</div>
+        </div>`}
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:10px">Respondido em ${brDateTime(r.respondidoEm)}</div>
+        ${r.itens.map((it) => `<div class="qz-answer">
+          <div class="q">${esc(it.enunciado)}</div>
+          <div class="a">${it.tipo === "escala" ? (it.valorEscala ?? "—") : it.tipo === "multipla" || it.tipo === "unica" ? esc((it.valorOpcoes || []).join(", ") || "—") : esc(it.valorTexto || "—")}</div>
+        </div>`).join("") || '<div class="qz-empty" style="padding:24px">Sem respostas registradas.</div>'}
+      </div>
+    </div></div>`;
+    holder.querySelector("[data-standalone-close]").onclick = closeStandalone;
+    holder.querySelector("[data-standalone-bg]").onclick = (e) => { if (e.target === e.currentTarget) closeStandalone(); };
+  };
+
   window.initQuestionarios = function () { render(); load(); };
 })();
