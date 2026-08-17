@@ -36,6 +36,7 @@ import { Route as ApiSignatureSignRouteImport } from './routes/api/signature/sig
 import { Route as ApiTussBuscarRouteImport } from './routes/api/tuss/buscar'
 import { Route as ApiTussCriarRouteImport } from './routes/api/tuss/criar'
 import { Route as ApiPublicExtensaoChatRouteImport } from './routes/api/public/extensao/chat'
+import { Route as ApiPublicExtensaoDeepgramTokenRouteImport } from './routes/api/public/extensao/deepgram-token'
 import { Route as ApiPublicHooksSyncInteracoesRouteImport } from './routes/api/public/hooks/sync-interacoes'
 import { Route as ApiPublicHooksSyncTussRouteImport } from './routes/api/public/hooks/sync-tuss'
 import { Route as ApiPublicSignatureCallbackRouteImport } from './routes/api/public/signature/callback'
@@ -180,6 +181,12 @@ const ApiPublicExtensaoChatRoute = ApiPublicExtensaoChatRouteImport.update({
   path: '/api/public/extensao/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicExtensaoDeepgramTokenRoute =
+  ApiPublicExtensaoDeepgramTokenRouteImport.update({
+    id: '/api/public/extensao/deepgram-token',
+    path: '/api/public/extensao/deepgram-token',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSyncInteracoesRoute =
   ApiPublicHooksSyncInteracoesRouteImport.update({
     id: '/api/public/hooks/sync-interacoes',
@@ -231,6 +238,7 @@ export interface FileRoutesByFullPath {
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/tuss/criar': typeof ApiTussCriarRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
+  '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
@@ -264,6 +272,7 @@ export interface FileRoutesByTo {
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/tuss/criar': typeof ApiTussCriarRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
+  '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
@@ -298,6 +307,7 @@ export interface FileRoutesById {
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/tuss/criar': typeof ApiTussCriarRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
+  '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
@@ -333,6 +343,7 @@ export interface FileRouteTypes {
     | '/api/tuss/buscar'
     | '/api/tuss/criar'
     | '/api/public/extensao/chat'
+    | '/api/public/extensao/deepgram-token'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
@@ -366,6 +377,7 @@ export interface FileRouteTypes {
     | '/api/tuss/buscar'
     | '/api/tuss/criar'
     | '/api/public/extensao/chat'
+    | '/api/public/extensao/deepgram-token'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
@@ -399,6 +411,7 @@ export interface FileRouteTypes {
     | '/api/tuss/buscar'
     | '/api/tuss/criar'
     | '/api/public/extensao/chat'
+    | '/api/public/extensao/deepgram-token'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
@@ -433,6 +446,7 @@ export interface RootRouteChildren {
   ApiTussBuscarRoute: typeof ApiTussBuscarRoute
   ApiTussCriarRoute: typeof ApiTussCriarRoute
   ApiPublicExtensaoChatRoute: typeof ApiPublicExtensaoChatRoute
+  ApiPublicExtensaoDeepgramTokenRoute: typeof ApiPublicExtensaoDeepgramTokenRoute
   ApiPublicHooksSyncInteracoesRoute: typeof ApiPublicHooksSyncInteracoesRoute
   ApiPublicHooksSyncTussRoute: typeof ApiPublicHooksSyncTussRoute
   ApiPublicSignatureCallbackRoute: typeof ApiPublicSignatureCallbackRoute
@@ -630,6 +644,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensaoChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/extensao/deepgram-token': {
+      id: '/api/public/extensao/deepgram-token'
+      path: '/api/public/extensao/deepgram-token'
+      fullPath: '/api/public/extensao/deepgram-token'
+      preLoaderRoute: typeof ApiPublicExtensaoDeepgramTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/sync-interacoes': {
       id: '/api/public/hooks/sync-interacoes'
       path: '/api/public/hooks/sync-interacoes'
@@ -689,6 +710,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTussBuscarRoute: ApiTussBuscarRoute,
   ApiTussCriarRoute: ApiTussCriarRoute,
   ApiPublicExtensaoChatRoute: ApiPublicExtensaoChatRoute,
+  ApiPublicExtensaoDeepgramTokenRoute: ApiPublicExtensaoDeepgramTokenRoute,
   ApiPublicHooksSyncInteracoesRoute: ApiPublicHooksSyncInteracoesRoute,
   ApiPublicHooksSyncTussRoute: ApiPublicHooksSyncTussRoute,
   ApiPublicSignatureCallbackRoute: ApiPublicSignatureCallbackRoute,
