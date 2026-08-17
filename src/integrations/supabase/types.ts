@@ -1559,6 +1559,7 @@ export type Database = {
           escala_max: number | null
           escala_min: number | null
           id: string
+          longa: boolean
           obrigatoria: boolean
           opcoes: Json | null
           ordem: number
@@ -1573,6 +1574,7 @@ export type Database = {
           escala_max?: number | null
           escala_min?: number | null
           id?: string
+          longa?: boolean
           obrigatoria?: boolean
           opcoes?: Json | null
           ordem?: number
@@ -1587,6 +1589,7 @@ export type Database = {
           escala_max?: number | null
           escala_min?: number | null
           id?: string
+          longa?: boolean
           obrigatoria?: boolean
           opcoes?: Json | null
           ordem?: number
