@@ -109,14 +109,36 @@ export const Route = createFileRoute("/api/public/formularios/responder")({
           if (!form.anonimo && !pacienteIdResolvido && body.paciente_cpf) {
             const digits = onlyDigits(body.paciente_cpf);
             if (digits.length === 11) {
-              const { data: pac } = await supabaseAdmin
+              const formatted = formatCpf(digits);
+              const { data: pac, error: pacErr } = await supabaseAdmin
                 .from("pacientes")
                 .select("paciente_id")
-                .eq("id_medico", form.user_id)
-                .or(`cpf.eq.${formatCpf(digits)},cpf.eq.${digits}`)
+                .eq("user_id", form.user_id)
+                .or(`cpf.eq.${formatted},cpf.eq.${digits}`)
                 .limit(1)
                 .maybeSingle();
-              if (pac) pacienteIdResolvido = pac.paciente_id;
+              if (pacErr) console.warn("[formularios:responder] falha ao buscar paciente por CPF", pacErr);
+
+              if (pac) {
+                pacienteIdResolvido = pac.paciente_id;
+              } else if (body.paciente_nome && body.paciente_nome.trim()) {
+                // CPF não corresponde a nenhum paciente cadastrado: cria um
+                // novo cadastro com os dados informados no formulário.
+                const { data: novoPaciente, error: novoErr } = await supabaseAdmin
+                  .from("pacientes")
+                  .insert({
+                    name: body.paciente_nome.trim(),
+                    cpf: formatted,
+                    telefone: body.paciente_telefone || null,
+                    email: body.paciente_email || null,
+                    convenio: "Particular",
+                    user_id: form.user_id,
+                  })
+                  .select("paciente_id")
+                  .single();
+                if (novoErr) console.warn("[formularios:responder] falha ao criar novo paciente", novoErr);
+                else pacienteIdResolvido = novoPaciente.paciente_id;
+              }
             }
           }
 
