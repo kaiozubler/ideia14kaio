@@ -49,7 +49,7 @@
     S.loading = true; render();
     const [{ data: forms, error: e1 }, { data: resp, error: e2 }] = await Promise.all([
       sb.from("questionarios")
-        .select("id,titulo,descricao,anonimo,ativo,created_at,questionario_perguntas(id,ordem,tipo,enunciado,opcoes,escala_min,escala_max,escala_label_min,escala_label_max,obrigatoria)")
+        .select("id,titulo,descricao,anonimo,ativo,created_at,questionario_perguntas(id,ordem,tipo,enunciado,longa,opcoes,escala_min,escala_max,escala_label_min,escala_label_max,obrigatoria)")
         .order("created_at", { ascending: false }),
       sb.from("questionario_respostas")
         .select("id,questionario_id,paciente_nome,paciente_telefone,paciente_email,paciente_cpf,respondido_em,questionarios(titulo,anonimo),questionario_resposta_itens(id,valor_texto,valor_opcoes,valor_escala,questionario_perguntas(enunciado,tipo))")
@@ -61,7 +61,7 @@
       id: f.id, titulo: f.titulo, descricao: f.descricao || "", anonimo: !!f.anonimo, ativo: f.ativo !== false,
       createdAt: f.created_at,
       perguntas: (f.questionario_perguntas || []).sort((a, b) => (a.ordem || 0) - (b.ordem || 0)).map((p) => ({
-        id: p.id, ordem: p.ordem || 0, tipo: p.tipo, enunciado: p.enunciado,
+        id: p.id, ordem: p.ordem || 0, tipo: p.tipo, enunciado: p.enunciado, longa: !!p.longa,
         opcoes: p.opcoes || [], escalaMin: p.escala_min, escalaMax: p.escala_max,
         escalaLabelMin: p.escala_label_min || "", escalaLabelMax: p.escala_label_max || "",
         obrigatoria: p.obrigatoria !== false,
@@ -108,6 +108,7 @@
     }
     const rows = m.perguntas.map((p, i) => ({
       questionario_id: id, ordem: i, tipo: p.tipo, enunciado: p.enunciado.trim(),
+      longa: p.tipo === "texto" ? !!p.longa : false,
       opcoes: (p.tipo === "unica" || p.tipo === "multipla") ? p.opcoes.filter((o) => o.trim()) : null,
       escala_min: p.tipo === "escala" ? p.escalaMin : null, escala_max: p.tipo === "escala" ? p.escalaMax : null,
       escala_label_min: p.tipo === "escala" ? (p.escalaLabelMin || null) : null,
