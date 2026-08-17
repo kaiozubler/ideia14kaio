@@ -27,6 +27,7 @@ import { Route as ApiBryDownloadDocumentRouteImport } from './routes/api/bry/dow
 import { Route as ApiBryGetEnvelopeRouteImport } from './routes/api/bry/get-envelope'
 import { Route as ApiCidBuscarRouteImport } from './routes/api/cid/buscar'
 import { Route as ApiMedicamentosBuscarRouteImport } from './routes/api/medicamentos/buscar'
+import { Route as ApiProtocolosAvaliarExameRouteImport } from './routes/api/protocolos/avaliar-exame'
 import { Route as ApiProtocolosGerarIaRouteImport } from './routes/api/protocolos/gerar-ia'
 import { Route as ApiProtocolosSincronizarRouteImport } from './routes/api/protocolos/sincronizar'
 import { Route as ApiQuestionariosGerarIaRouteImport } from './routes/api/questionarios/gerar-ia'
@@ -135,6 +136,12 @@ const ApiMedicamentosBuscarRoute = ApiMedicamentosBuscarRouteImport.update({
   path: '/api/medicamentos/buscar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiProtocolosAvaliarExameRoute =
+  ApiProtocolosAvaliarExameRouteImport.update({
+    id: '/api/protocolos/avaliar-exame',
+    path: '/api/protocolos/avaliar-exame',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiProtocolosGerarIaRoute = ApiProtocolosGerarIaRouteImport.update({
   id: '/api/protocolos/gerar-ia',
   path: '/api/protocolos/gerar-ia',
@@ -242,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/cid/buscar': typeof ApiCidBuscarRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
+  '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
   '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
@@ -278,6 +286,7 @@ export interface FileRoutesByTo {
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/cid/buscar': typeof ApiCidBuscarRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
+  '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
   '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
@@ -315,6 +324,7 @@ export interface FileRoutesById {
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/cid/buscar': typeof ApiCidBuscarRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
+  '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
   '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
@@ -353,6 +363,7 @@ export interface FileRouteTypes {
     | '/api/bry/get-envelope'
     | '/api/cid/buscar'
     | '/api/medicamentos/buscar'
+    | '/api/protocolos/avaliar-exame'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
     | '/api/questionarios/gerar-ia'
@@ -389,6 +400,7 @@ export interface FileRouteTypes {
     | '/api/bry/get-envelope'
     | '/api/cid/buscar'
     | '/api/medicamentos/buscar'
+    | '/api/protocolos/avaliar-exame'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
     | '/api/questionarios/gerar-ia'
@@ -425,6 +437,7 @@ export interface FileRouteTypes {
     | '/api/bry/get-envelope'
     | '/api/cid/buscar'
     | '/api/medicamentos/buscar'
+    | '/api/protocolos/avaliar-exame'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
     | '/api/questionarios/gerar-ia'
@@ -462,6 +475,7 @@ export interface RootRouteChildren {
   ApiBryGetEnvelopeRoute: typeof ApiBryGetEnvelopeRoute
   ApiCidBuscarRoute: typeof ApiCidBuscarRoute
   ApiMedicamentosBuscarRoute: typeof ApiMedicamentosBuscarRoute
+  ApiProtocolosAvaliarExameRoute: typeof ApiProtocolosAvaliarExameRoute
   ApiProtocolosGerarIaRoute: typeof ApiProtocolosGerarIaRoute
   ApiProtocolosSincronizarRoute: typeof ApiProtocolosSincronizarRoute
   ApiQuestionariosGerarIaRoute: typeof ApiQuestionariosGerarIaRoute
@@ -608,6 +622,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMedicamentosBuscarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/protocolos/avaliar-exame': {
+      id: '/api/protocolos/avaliar-exame'
+      path: '/api/protocolos/avaliar-exame'
+      fullPath: '/api/protocolos/avaliar-exame'
+      preLoaderRoute: typeof ApiProtocolosAvaliarExameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/protocolos/gerar-ia': {
       id: '/api/protocolos/gerar-ia'
       path: '/api/protocolos/gerar-ia'
@@ -742,6 +763,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBryGetEnvelopeRoute: ApiBryGetEnvelopeRoute,
   ApiCidBuscarRoute: ApiCidBuscarRoute,
   ApiMedicamentosBuscarRoute: ApiMedicamentosBuscarRoute,
+  ApiProtocolosAvaliarExameRoute: ApiProtocolosAvaliarExameRoute,
   ApiProtocolosGerarIaRoute: ApiProtocolosGerarIaRoute,
   ApiProtocolosSincronizarRoute: ApiProtocolosSincronizarRoute,
   ApiQuestionariosGerarIaRoute: ApiQuestionariosGerarIaRoute,
