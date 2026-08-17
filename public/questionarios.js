@@ -12,6 +12,44 @@
     { label: "0 a 10", min: 0, max: 10 },
   ];
 
+  // Catálogo de campos do cadastro do paciente disponíveis pro formulário.
+  // Fica fora das tabelas com busca/lookup (CID, vínculos de parentesco,
+  // médico preferencial, grupo) — só campos que o próprio paciente preenche.
+  const CAMPOS_CADASTRO_OBRIGATORIOS = ["name", "cpf", "telefone", "email"];
+  const CAMPOS_CADASTRO = [
+    { id: "name", label: "Nome", grupo: "Dados pessoais" },
+    { id: "cpf", label: "CPF", grupo: "Dados pessoais" },
+    { id: "telefone", label: "Telefone", grupo: "Dados pessoais" },
+    { id: "email", label: "Email", grupo: "Dados pessoais" },
+    { id: "data_nascimento", label: "Data de nascimento", grupo: "Dados pessoais" },
+    { id: "sexo", label: "Sexo", grupo: "Dados pessoais" },
+    { id: "sus", label: "Cartão SUS", grupo: "Dados pessoais" },
+    { id: "mae", label: "Nome da mãe", grupo: "Dados pessoais" },
+    { id: "pai", label: "Nome do pai", grupo: "Dados pessoais" },
+    { id: "ocupacao", label: "Ocupação", grupo: "Dados pessoais" },
+    { id: "convenio", label: "Convênio", grupo: "Dados pessoais" },
+    { id: "cep", label: "CEP", grupo: "Endereço" },
+    { id: "logradouro", label: "Logradouro", grupo: "Endereço" },
+    { id: "numero", label: "Número", grupo: "Endereço" },
+    { id: "complemento", label: "Complemento", grupo: "Endereço" },
+    { id: "bairro", label: "Bairro", grupo: "Endereço" },
+    { id: "cidade", label: "Cidade", grupo: "Endereço" },
+    { id: "uf", label: "UF", grupo: "Endereço" },
+    { id: "dados_clinicos", label: "Dados clínicos (observações gerais)", grupo: "Dados clínicos" },
+    { id: "ic_peso", label: "Peso (kg)", grupo: "Dados clínicos" },
+    { id: "ic_altura", label: "Altura (cm)", grupo: "Dados clínicos" },
+    { id: "ic_sangue", label: "Tipo sanguíneo", grupo: "Dados clínicos" },
+    { id: "ic_sedent", label: "Nível de atividade física", grupo: "Dados clínicos" },
+    { id: "ic_tab", label: "Tabagismo", grupo: "Dados clínicos" },
+    { id: "ic_eti", label: "Etilismo", grupo: "Dados clínicos" },
+    { id: "ic_sono", label: "Sono", grupo: "Dados clínicos" },
+    { id: "ic_meds", label: "Medicações em uso", grupo: "Dados clínicos" },
+    { id: "ic_alerg", label: "Alergias", grupo: "Dados clínicos" },
+    { id: "ic_fam", label: "Histórico familiar (doenças)", grupo: "Dados clínicos" },
+    { id: "ic_outros", label: "Outras informações", grupo: "Dados clínicos" },
+  ];
+  const CAMPO_CADASTRO_BY_ID = Object.fromEntries(CAMPOS_CADASTRO.map((c) => [c.id, c]));
+
   const S = {
     screen: "respostas", // 'respostas' | 'formularios'
     loading: true,
@@ -57,7 +95,7 @@
     S.loading = true; render();
     const [{ data: forms, error: e1 }, { data: resp, error: e2 }] = await Promise.all([
       sb.from("questionarios")
-        .select("id,titulo,descricao,anonimo,ativo,created_at,questionario_perguntas(id,ordem,tipo,enunciado,longa,opcoes,escala_min,escala_max,escala_label_min,escala_label_max,obrigatoria)")
+        .select("id,titulo,descricao,anonimo,ativo,created_at,campos_cadastro,questionario_perguntas(id,ordem,tipo,enunciado,longa,opcoes,escala_min,escala_max,escala_label_min,escala_label_max,obrigatoria)")
         .order("created_at", { ascending: false }),
       sb.from("questionario_respostas")
         .select("id,questionario_id,paciente_nome,paciente_telefone,paciente_email,paciente_cpf,respondido_em,questionarios(titulo,anonimo),questionario_resposta_itens(id,valor_texto,valor_opcoes,valor_escala,questionario_perguntas(enunciado,tipo))")
@@ -68,6 +106,7 @@
     S.forms = (forms || []).map((f) => ({
       id: f.id, titulo: f.titulo, descricao: f.descricao || "", anonimo: !!f.anonimo, ativo: f.ativo !== false,
       createdAt: f.created_at,
+      camposCadastro: Array.isArray(f.campos_cadastro) && f.campos_cadastro.length ? f.campos_cadastro : [...CAMPOS_CADASTRO_OBRIGATORIOS],
       perguntas: (f.questionario_perguntas || []).sort((a, b) => (a.ordem || 0) - (b.ordem || 0)).map((p) => ({
         id: p.id, ordem: p.ordem || 0, tipo: p.tipo, enunciado: p.enunciado, longa: !!p.longa,
         opcoes: p.opcoes || [], escalaMin: p.escala_min, escalaMax: p.escala_max,
@@ -103,7 +142,8 @@
     }
     m.saving = true; render();
     let id = m.id;
-    const payload = { titulo: m.titulo.trim(), descricao: m.descricao.trim() || null, anonimo: m.anonimo, ativo: m.ativo !== false };
+    const camposCadastro = Array.from(new Set([...CAMPOS_CADASTRO_OBRIGATORIOS, ...(m.anonimo ? [] : m.camposCadastro || [])]));
+    const payload = { titulo: m.titulo.trim(), descricao: m.descricao.trim() || null, anonimo: m.anonimo, ativo: m.ativo !== false, campos_cadastro: m.anonimo ? [] : camposCadastro };
     if (id) {
       const { error } = await sb.from("questionarios").update(payload).eq("id", id);
       if (error) { m.saving = false; render(); return toast("Falha ao salvar: " + error.message); }
@@ -314,10 +354,11 @@
           <textarea class="qz-in" rows="2" id="qz-m-desc" style="resize:none">${esc(m.descricao || "")}</textarea></div>
         <div style="margin-bottom:8px"><span class="qz-lbl">Identificação do respondente</span></div>
         <div class="qz-idbox">
-          <div class="qz-idopt ${!m.anonimo ? "sel" : ""}" data-idset="0"><b>👤 Nominal</b><span>Coleta nome, telefone, e-mail e CPF do paciente</span></div>
+          <div class="qz-idopt ${!m.anonimo ? "sel" : ""}" data-idset="0"><b>👤 Nominal</b><span>Coleta os campos do cadastro selecionados abaixo</span></div>
           <div class="qz-idopt ${m.anonimo ? "sel" : ""}" data-idset="1"><b>🙈 Anônimo</b><span>Nenhum dado de identificação é coletado</span></div>
         </div>
-        ${!m.anonimo ? `<div class="qz-nom-note">Formulários nominais exibem automaticamente a logo e o nome da clínica, e pedem nome, telefone, e-mail e CPF antes das perguntas.</div>` : ""}
+        ${!m.anonimo ? `<div class="qz-nom-note">Formulários nominais exibem automaticamente a logo e o nome da clínica antes das perguntas.</div>` : ""}
+        ${!m.anonimo ? camposCadastroHtml(m) : ""}
         <div style="display:flex;align-items:center;justify-content:space-between;margin:18px 0 10px">
           <span class="qz-lbl" style="text-transform:uppercase;letter-spacing:.08em;margin:0">Perguntas (${m.perguntas.length})</span>
         </div>
@@ -327,6 +368,36 @@
       <div class="qz-modal-f"><button class="qz-btn ghost" data-mclose="1">Cancelar</button>
       <button class="qz-btn primary" data-msave="1" ${m.saving ? "disabled" : ""}>${m.saving ? "Salvando…" : "Salvar formulário"}</button></div>
     </div></div>`;
+  }
+
+  function camposCadastroHtml(m) {
+    const selecionados = m.camposCadastro && m.camposCadastro.length ? m.camposCadastro : [...CAMPOS_CADASTRO_OBRIGATORIOS];
+    const disponiveis = CAMPOS_CADASTRO.filter((c) => !selecionados.includes(c.id));
+    const grupos = ["Dados pessoais", "Endereço", "Dados clínicos"];
+    return `<div style="margin-bottom:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span class="qz-lbl" style="text-transform:uppercase;letter-spacing:.08em;margin:0">Campos do cadastro</span>
+      </div>
+      <div class="qz-card" style="padding:12px 14px;position:relative">
+        <div style="font-size:11.5px;color:#64748b;margin-bottom:10px">O paciente confirma/preenche estes dados antes das perguntas. Nome, CPF, telefone e e-mail são sempre pedidos.</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          ${selecionados.map((id) => {
+            const c = CAMPO_CADASTRO_BY_ID[id]; if (!c) return "";
+            const obrig = CAMPOS_CADASTRO_OBRIGATORIOS.includes(id);
+            return `<span class="qz-tag ${obrig ? "nom" : "on"}" style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px">${esc(c.label)}${obrig ? "" : ` <button data-campo-remove="${id}" style="background:none;border:none;cursor:pointer;color:inherit;font-size:13px;line-height:1;padding:0">×</button>`}</span>`;
+          }).join("")}
+          <button class="qz-btn ghost" style="padding:4px 12px;font-size:12px;position:relative" data-campo-add-toggle="1">+ Adicionar campo</button>
+        </div>
+        ${m.campoPickerOpen ? `<div class="qz-dd" style="position:absolute;top:100%;left:14px;right:14px;margin-top:6px;max-height:280px;overflow:auto">
+          ${disponiveis.length ? grupos.map((g) => {
+            const itens = disponiveis.filter((c) => c.grupo === g);
+            if (!itens.length) return "";
+            return `<div style="padding:8px 14px 2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">${g}</div>
+              ${itens.map((c) => `<button data-campo-add="${c.id}">${esc(c.label)}</button>`).join("")}`;
+          }).join("") : `<div style="padding:10px 14px;font-size:12px;color:#94a3b8">Todos os campos disponíveis já foram adicionados.</div>`}
+        </div>` : ""}
+      </div>
+    </div>`;
   }
 
   /* ---------- COMPARTILHAR ---------- */
@@ -434,10 +505,11 @@
 
   /* ---------- HELPERS DE ESTADO DO CONSTRUTOR ---------- */
   function newQuestion() { return { id: uid(), tipo: "texto", enunciado: "", longa: false, opcoes: ["", ""], escalaMin: 1, escalaMax: 5, escalaLabelMin: "", escalaLabelMax: "", obrigatoria: true }; }
-  function openNewForm() { S.modal = { id: null, titulo: "", descricao: "", anonimo: false, ativo: true, perguntas: [newQuestion()], saving: false }; render(); }
+  function openNewForm() { S.modal = { id: null, titulo: "", descricao: "", anonimo: false, ativo: true, camposCadastro: [...CAMPOS_CADASTRO_OBRIGATORIOS], campoPickerOpen: false, perguntas: [newQuestion()], saving: false }; render(); }
   function openEditForm(id) {
     const f = S.forms.find((x) => x.id === id); if (!f) return;
     S.modal = { id: f.id, titulo: f.titulo, descricao: f.descricao, anonimo: f.anonimo, ativo: f.ativo, saving: false,
+      camposCadastro: f.camposCadastro && f.camposCadastro.length ? [...f.camposCadastro] : [...CAMPOS_CADASTRO_OBRIGATORIOS], campoPickerOpen: false,
       perguntas: f.perguntas.map((p) => ({ ...p, opcoes: p.opcoes && p.opcoes.length ? [...p.opcoes] : ["", ""] })) };
     render();
   }
@@ -446,7 +518,7 @@
   document.addEventListener("click", (e) => {
     const root = document.getElementById("s-questionarios");
     if (!root || root.style.display === "none") return;
-    const t = e.target.closest("[data-gomeus],[data-back],[data-new],[data-edit],[data-toggle],[data-clear],[data-viewresp],[data-vclose],[data-vbg],[data-mclose],[data-mbg],[data-msave],[data-idset],[data-qadd],[data-qdel],[data-qtype],[data-optadd],[data-optdel],[data-scalepreset],[data-copylink],[data-share],[data-sclose],[data-sbg],[data-smode],[data-psel],[data-sbulk],[data-wasend],[data-aiopen],[data-aiclose],[data-aigen],[data-aibg]");
+    const t = e.target.closest("[data-gomeus],[data-back],[data-new],[data-edit],[data-toggle],[data-clear],[data-viewresp],[data-vclose],[data-vbg],[data-mclose],[data-mbg],[data-msave],[data-idset],[data-qadd],[data-qdel],[data-qtype],[data-optadd],[data-optdel],[data-scalepreset],[data-copylink],[data-share],[data-sclose],[data-sbg],[data-smode],[data-psel],[data-sbulk],[data-wasend],[data-aiopen],[data-aiclose],[data-aigen],[data-aibg],[data-campo-add-toggle],[data-campo-add],[data-campo-remove]");
     if (!t) return;
     const d = t.dataset;
     if (d.gomeus) { S.screen = "formularios"; return render(); }
@@ -463,6 +535,15 @@
     if (d.aiclose || (d.aibg && e.target === t)) { S.aiModal = null; return render(); }
     if (d.aigen) return generateWithAI();
     if (d.idset !== undefined && S.modal) { S.modal.anonimo = d.idset === "1"; return render(); }
+    if (d.campoAddToggle && S.modal) { S.modal.campoPickerOpen = !S.modal.campoPickerOpen; return render(); }
+    if (d.campoAdd && S.modal) {
+      if (!S.modal.camposCadastro.includes(d.campoAdd)) S.modal.camposCadastro.push(d.campoAdd);
+      S.modal.campoPickerOpen = false; return render();
+    }
+    if (d.campoRemove && S.modal) {
+      S.modal.camposCadastro = S.modal.camposCadastro.filter((x) => x !== d.campoRemove || CAMPOS_CADASTRO_OBRIGATORIOS.includes(x));
+      return render();
+    }
     if (d.qadd && S.modal) { S.modal.perguntas.push(newQuestion()); return render(); }
     if (d.qdel && S.modal) { S.modal.perguntas = S.modal.perguntas.filter((p) => p.id !== d.qdel); return render(); }
     if (d.qtype && S.modal) {

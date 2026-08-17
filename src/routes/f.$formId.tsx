@@ -40,8 +40,56 @@ type Form = {
   descricao: string | null;
   anonimo: boolean;
   ativo: boolean;
+  campos_cadastro: string[] | null;
   questionario_perguntas: Pergunta[];
 };
+
+type CampoKind = "text" | "tel" | "email" | "date" | "number" | "select" | "textarea";
+type CampoDef = {
+  id: string;
+  label: string;
+  grupo: "Dados pessoais" | "Endereço" | "Dados clínicos";
+  kind: CampoKind;
+  placeholder?: string;
+  options?: string[];
+};
+
+// Espelha o catálogo do construtor (public/questionarios.js) — os únicos
+// campos que o próprio paciente pode preencher (sem lookup de tabela).
+const CAMPOS_OBRIGATORIOS = ["name", "cpf", "telefone", "email"];
+const CAMPO_CATALOG: CampoDef[] = [
+  { id: "name", label: "Nome completo", grupo: "Dados pessoais", kind: "text", placeholder: "Seu nome" },
+  { id: "cpf", label: "CPF", grupo: "Dados pessoais", kind: "text", placeholder: "000.000.000-00" },
+  { id: "telefone", label: "Telefone (com DDD)", grupo: "Dados pessoais", kind: "tel", placeholder: "(31) 99999-9999" },
+  { id: "email", label: "E-mail", grupo: "Dados pessoais", kind: "email", placeholder: "voce@email.com" },
+  { id: "data_nascimento", label: "Data de nascimento", grupo: "Dados pessoais", kind: "date" },
+  { id: "sexo", label: "Sexo", grupo: "Dados pessoais", kind: "select", options: ["Feminino", "Masculino", "Outro"] },
+  { id: "sus", label: "Cartão SUS", grupo: "Dados pessoais", kind: "text" },
+  { id: "mae", label: "Nome da mãe", grupo: "Dados pessoais", kind: "text" },
+  { id: "pai", label: "Nome do pai", grupo: "Dados pessoais", kind: "text" },
+  { id: "ocupacao", label: "Ocupação", grupo: "Dados pessoais", kind: "text" },
+  { id: "convenio", label: "Convênio", grupo: "Dados pessoais", kind: "select", options: ["Particular", "SUS", "Unimed", "Bradesco", "Amil"] },
+  { id: "cep", label: "CEP", grupo: "Endereço", kind: "text", placeholder: "00000-000" },
+  { id: "logradouro", label: "Logradouro", grupo: "Endereço", kind: "text", placeholder: "Rua, avenida..." },
+  { id: "numero", label: "Número", grupo: "Endereço", kind: "text" },
+  { id: "complemento", label: "Complemento", grupo: "Endereço", kind: "text" },
+  { id: "bairro", label: "Bairro", grupo: "Endereço", kind: "text" },
+  { id: "cidade", label: "Cidade", grupo: "Endereço", kind: "text" },
+  { id: "uf", label: "UF", grupo: "Endereço", kind: "text", placeholder: "Ex: SC" },
+  { id: "dados_clinicos", label: "Dados clínicos (observações gerais)", grupo: "Dados clínicos", kind: "textarea" },
+  { id: "ic_peso", label: "Peso (kg)", grupo: "Dados clínicos", kind: "number", placeholder: "Ex: 72.5" },
+  { id: "ic_altura", label: "Altura (cm)", grupo: "Dados clínicos", kind: "number", placeholder: "Ex: 170" },
+  { id: "ic_sangue", label: "Tipo sanguíneo", grupo: "Dados clínicos", kind: "select", options: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] },
+  { id: "ic_sedent", label: "Nível de atividade física", grupo: "Dados clínicos", kind: "select", options: ["Sedentário", "Atividade leve (1-2x/sem)", "Atividade moderada (3-4x/sem)", "Atividade intensa (5+x/sem)"] },
+  { id: "ic_tab", label: "Tabagismo", grupo: "Dados clínicos", kind: "select", options: ["Nunca fumou", "Ex-tabagista", "Tabagista ativo"] },
+  { id: "ic_eti", label: "Etilismo", grupo: "Dados clínicos", kind: "select", options: ["Não consome", "Social / ocasional", "Frequente", "Etilista crônico"] },
+  { id: "ic_sono", label: "Sono", grupo: "Dados clínicos", kind: "select", options: ["Bom / reparador", "Regular", "Insônia ocasional", "Insônia frequente", "Sonolência diurna excessiva", "Suspeita de apneia do sono"] },
+  { id: "ic_meds", label: "Medicações em uso", grupo: "Dados clínicos", kind: "textarea" },
+  { id: "ic_alerg", label: "Alergias", grupo: "Dados clínicos", kind: "text", placeholder: "Ex: Dipirona, Penicilina, frutos do mar..." },
+  { id: "ic_fam", label: "Histórico familiar (doenças)", grupo: "Dados clínicos", kind: "textarea" },
+  { id: "ic_outros", label: "Outras informações", grupo: "Dados clínicos", kind: "textarea" },
+];
+const CAMPO_BY_ID = Object.fromEntries(CAMPO_CATALOG.map((c) => [c.id, c]));
 
 function anonClient() {
   const url = import.meta.env.VITE_SUPABASE_URL as string;
@@ -61,7 +109,7 @@ function PublicForm() {
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [ok, setOk] = useState(false);
-  const [ident, setIdent] = useState({ nome: "", telefone: "", email: "", cpf: "" });
+  const [ident, setIdent] = useState<Record<string, string>>({});
   const [respostas, setRespostas] = useState<Record<string, string | string[] | number>>({});
   const pacienteId = useMemo(() => {
     if (typeof window === "undefined") return null;
@@ -74,7 +122,7 @@ function PublicForm() {
       const { data, error } = await sb
         .from("questionarios")
         .select(
-          "id,titulo,descricao,anonimo,ativo,questionario_perguntas(id,ordem,tipo,enunciado,opcoes,escala_min,escala_max,escala_label_min,escala_label_max,obrigatoria)",
+          "id,titulo,descricao,anonimo,ativo,campos_cadastro,questionario_perguntas(id,ordem,tipo,enunciado,opcoes,escala_min,escala_max,escala_label_min,escala_label_max,obrigatoria)",
         )
         .eq("id", formId)
         .maybeSingle();
@@ -100,15 +148,23 @@ function PublicForm() {
     setResp(id, atual.includes(opt) ? atual.filter((o) => o !== opt) : [...atual, opt]);
   }
 
+  const camposAtivos = useMemo(() => {
+    const ids = form?.campos_cadastro && form.campos_cadastro.length ? form.campos_cadastro : CAMPOS_OBRIGATORIOS;
+    return ids.map((id) => CAMPO_BY_ID[id]).filter(Boolean) as CampoDef[];
+  }, [form]);
+
   async function enviar() {
     if (!form) return;
     setErro("");
     if (!form.anonimo) {
-      if (ident.nome.trim().length < 3) return setErro("Informe seu nome completo.");
-      if (onlyDigits(ident.telefone).length < 10) return setErro("Informe um telefone válido com DDD.");
-      if (ident.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ident.email.trim()))
-        return setErro("Informe um e-mail válido.");
-      if (ident.cpf && onlyDigits(ident.cpf).length !== 11) return setErro("Informe um CPF válido (11 dígitos).");
+      const nome = (ident.name || "").trim();
+      const tel = onlyDigits(ident.telefone || "");
+      const email = (ident.email || "").trim();
+      const cpf = onlyDigits(ident.cpf || "");
+      if (nome.length < 3) return setErro("Informe seu nome completo.");
+      if (tel.length < 10) return setErro("Informe um telefone válido com DDD.");
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setErro("Informe um e-mail válido.");
+      if (cpf.length !== 11) return setErro("Informe um CPF válido (11 dígitos).");
     }
     for (const p of form.questionario_perguntas) {
       if (!p.obrigatoria) continue;
@@ -130,19 +186,20 @@ function PublicForm() {
           valor_escala: p.tipo === "escala" ? Number(v) : null,
         };
       });
+
+    const campos: Record<string, string> = {};
+    if (!form.anonimo) {
+      for (const c of camposAtivos) {
+        const raw = (ident[c.id] || "").trim();
+        if (!raw) continue;
+        campos[c.id] = c.id === "telefone" ? onlyDigits(raw) : c.id === "cpf" ? onlyDigits(raw) : raw;
+      }
+    }
     // A gravação passa pelo servidor: o link público não escreve direto no banco.
     const body = {
       questionario_id: form.id,
       itens,
-      ...(form.anonimo
-        ? {}
-        : {
-            paciente_id: pacienteId || null,
-            paciente_nome: ident.nome.trim().slice(0, 120),
-            paciente_telefone: onlyDigits(ident.telefone).slice(0, 20),
-            paciente_email: ident.email.trim().slice(0, 160) || null,
-            paciente_cpf: onlyDigits(ident.cpf).slice(0, 11) || null,
-          }),
+      ...(form.anonimo ? {} : { paciente_id: pacienteId || null, campos }),
     };
     try {
       const res = await fetch("/api/public/formularios/responder", {
@@ -192,47 +249,56 @@ function PublicForm() {
             {!form.anonimo && (
               <section className="pf-sec">
                 <h2>Seus dados</h2>
-                <label className="pf-lbl">Nome completo *</label>
-                <input
-                  className="pf-in"
-                  value={ident.nome}
-                  maxLength={120}
-                  onChange={(e) => setIdent({ ...ident, nome: e.target.value })}
-                  placeholder="Seu nome"
-                />
-                <div className="pf-row">
-                  <div>
-                    <label className="pf-lbl">Telefone (com DDD) *</label>
-                    <input
-                      className="pf-in"
-                      value={ident.telefone}
-                      maxLength={20}
-                      inputMode="tel"
-                      onChange={(e) => setIdent({ ...ident, telefone: e.target.value })}
-                      placeholder="(31) 99999-9999"
-                    />
-                  </div>
-                  <div>
-                    <label className="pf-lbl">CPF</label>
-                    <input
-                      className="pf-in"
-                      value={ident.cpf}
-                      maxLength={14}
-                      inputMode="numeric"
-                      onChange={(e) => setIdent({ ...ident, cpf: e.target.value })}
-                      placeholder="000.000.000-00"
-                    />
-                  </div>
-                </div>
-                <label className="pf-lbl">E-mail</label>
-                <input
-                  className="pf-in"
-                  value={ident.email}
-                  maxLength={160}
-                  type="email"
-                  onChange={(e) => setIdent({ ...ident, email: e.target.value })}
-                  placeholder="voce@email.com"
-                />
+                {["Dados pessoais", "Endereço", "Dados clínicos"].map((grupo) => {
+                  const campos = camposAtivos.filter((c) => c.grupo === grupo);
+                  if (!campos.length) return null;
+                  return (
+                    <div key={grupo}>
+                      {grupo !== "Dados pessoais" && <div className="pf-subhd">{grupo}</div>}
+                      <div className="pf-row">
+                        {campos.map((c) => (
+                          <div key={c.id} className={c.kind === "textarea" ? "pf-full" : undefined}>
+                            <label className="pf-lbl">
+                              {c.label} {CAMPOS_OBRIGATORIOS.includes(c.id) && <span className="pf-req">*</span>}
+                            </label>
+                            {c.kind === "select" ? (
+                              <select
+                                className="pf-in"
+                                value={ident[c.id] || ""}
+                                onChange={(e) => setIdent({ ...ident, [c.id]: e.target.value })}
+                              >
+                                <option value="">—</option>
+                                {(c.options || []).map((o) => (
+                                  <option key={o} value={o}>
+                                    {o}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : c.kind === "textarea" ? (
+                              <textarea
+                                className="pf-in"
+                                rows={2}
+                                value={ident[c.id] || ""}
+                                onChange={(e) => setIdent({ ...ident, [c.id]: e.target.value })}
+                                placeholder={c.placeholder}
+                              />
+                            ) : (
+                              <input
+                                className="pf-in"
+                                type={c.kind === "number" ? "number" : c.kind === "date" ? "date" : c.kind === "email" ? "email" : "text"}
+                                inputMode={c.kind === "tel" ? "tel" : c.id === "cpf" ? "numeric" : undefined}
+                                value={ident[c.id] || ""}
+                                maxLength={c.id === "cpf" ? 14 : c.id === "telefone" ? 20 : undefined}
+                                onChange={(e) => setIdent({ ...ident, [c.id]: e.target.value })}
+                                placeholder={c.placeholder}
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </section>
             )}
 
@@ -341,6 +407,8 @@ const CSS = `
 .pf-in{width:100%;padding:10px 12px;border-radius:12px;font-size:14px;background:rgba(255,255,255,.85);border:1px solid rgba(203,213,225,.9);outline:none;color:#0f172a;font-family:inherit;resize:vertical}
 .pf-in:focus{border-color:#0d9488;box-shadow:0 0 0 3px rgba(153,246,228,.55)}
 .pf-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pf-subhd{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin:14px 0 6px}
+.pf-full{grid-column:1 / -1}
 @media(max-width:520px){.pf-row{grid-template-columns:1fr}.pf-card{padding:20px 16px}}
 .pf-q{padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.85);border-left:3px solid #99f6e4;margin-bottom:12px}
 .pf-qh{display:flex;gap:9px;align-items:flex-start;margin-bottom:9px;font-size:14px;color:#0f172a}

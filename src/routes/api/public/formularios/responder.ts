@@ -15,10 +15,10 @@ const ItemSchema = z.object({
 const BodySchema = z.object({
   questionario_id: z.string().uuid(),
   paciente_id: z.string().uuid().nullable().optional(),
-  paciente_nome: z.string().trim().max(120).optional(),
-  paciente_telefone: z.string().trim().max(20).optional(),
-  paciente_email: z.string().trim().email().max(160).nullable().optional(),
-  paciente_cpf: z.string().trim().max(11).nullable().optional(),
+  // Campos do cadastro selecionados no construtor (ex.: name, cpf, telefone,
+  // email, data_nascimento, ic_peso...) — ver CAMPO_CATALOG em f.$formId.tsx
+  // e CAMPOS_CADASTRO em public/questionarios.js.
+  campos: z.record(z.string(), z.string().max(2000)).optional(),
   itens: z.array(ItemSchema).max(200),
 });
 
@@ -66,6 +66,40 @@ function flattenRespostas(perguntas: PerguntaRef[], itens: ItemGravado[]): strin
   return linhas.join("\n\n");
 }
 
+// Campos do cadastro que mapeiam direto pra colunas de "pacientes".
+const COLUNAS_DIRETAS = [
+  "data_nascimento",
+  "sexo",
+  "sus",
+  "mae",
+  "pai",
+  "ocupacao",
+  "convenio",
+  "cep",
+  "logradouro",
+  "numero",
+  "complemento",
+  "bairro",
+  "cidade",
+  "uf",
+  "dados_clinicos",
+] as const;
+
+// Campos que mapeiam pra dentro de info_complementar (jsonb).
+const INFO_COMPLEMENTAR_MAP: Record<string, string> = {
+  ic_peso: "peso",
+  ic_altura: "altura",
+  ic_sangue: "sangue",
+  ic_sedent: "sedent",
+  ic_tab: "tab",
+  ic_eti: "eti",
+  ic_sono: "sono",
+  ic_meds: "meds",
+  ic_alerg: "alerg",
+  ic_fam: "fam",
+  ic_outros: "outros",
+};
+
 export const Route = createFileRoute("/api/public/formularios/responder")({
   server: {
     handlers: {
@@ -79,6 +113,7 @@ export const Route = createFileRoute("/api/public/formularios/responder")({
         const parsed = BodySchema.safeParse(raw);
         if (!parsed.success) return Response.json({ error: "invalid_body" }, { status: 400 });
         const body = parsed.data;
+        const campos = body.campos || {};
 
         try {
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -101,44 +136,91 @@ export const Route = createFileRoute("/api/public/formularios/responder")({
           const validas = new Set(perguntasRef.map((p) => p.id));
           const itens = body.itens.filter((i) => validas.has(i.pergunta_id));
 
+          const nome = (campos.name || "").trim();
+          const telefone = onlyDigits(campos.telefone).slice(0, 20);
+          const email = (campos.email || "").trim();
+          const cpfDigits = onlyDigits(campos.cpf);
+          const cpfFormatado = cpfDigits.length === 11 ? formatCpf(cpfDigits) : "";
+
           // Cruza o CPF informado com os pacientes já cadastrados deste médico
           // (mesmo dono do formulário) — habilita ligar a resposta ao
           // paciente certo, mesmo quando o link foi enviado sem o parâmetro
           // ?p= (compartilhamento avulso/em massa, WhatsApp, impressão etc.).
           let pacienteIdResolvido: string | null = body.paciente_id || null;
-          if (!form.anonimo && !pacienteIdResolvido && body.paciente_cpf) {
-            const digits = onlyDigits(body.paciente_cpf);
-            if (digits.length === 11) {
-              const formatted = formatCpf(digits);
-              const { data: pac, error: pacErr } = await supabaseAdmin
-                .from("pacientes")
-                .select("paciente_id")
-                .eq("user_id", form.user_id)
-                .or(`cpf.eq.${formatted},cpf.eq.${digits}`)
-                .limit(1)
-                .maybeSingle();
-              if (pacErr) console.warn("[formularios:responder] falha ao buscar paciente por CPF", pacErr);
+          if (!form.anonimo && !pacienteIdResolvido && cpfDigits.length === 11) {
+            const { data: pac, error: pacErr } = await supabaseAdmin
+              .from("pacientes")
+              .select("paciente_id")
+              .eq("user_id", form.user_id)
+              .or(`cpf.eq.${cpfFormatado},cpf.eq.${cpfDigits}`)
+              .limit(1)
+              .maybeSingle();
+            if (pacErr) console.warn("[formularios:responder] falha ao buscar paciente por CPF", pacErr);
+            if (pac) pacienteIdResolvido = pac.paciente_id;
+          }
 
-              if (pac) {
-                pacienteIdResolvido = pac.paciente_id;
-              } else if (body.paciente_nome && body.paciente_nome.trim()) {
-                // CPF não corresponde a nenhum paciente cadastrado: cria um
-                // novo cadastro com os dados informados no formulário.
-                const { data: novoPaciente, error: novoErr } = await supabaseAdmin
-                  .from("pacientes")
-                  .insert({
-                    name: body.paciente_nome.trim(),
-                    cpf: formatted,
-                    telefone: body.paciente_telefone || null,
-                    email: body.paciente_email || null,
-                    convenio: "Particular",
-                    user_id: form.user_id,
-                  })
-                  .select("paciente_id")
-                  .single();
-                if (novoErr) console.warn("[formularios:responder] falha ao criar novo paciente", novoErr);
-                else pacienteIdResolvido = novoPaciente.paciente_id;
+          // Monta os "extras" do cadastro (colunas diretas + info_complementar)
+          // a partir dos campos que o médico configurou pro formulário.
+          const colunasExtras: Record<string, string> = {};
+          for (const col of COLUNAS_DIRETAS) if (campos[col]) colunasExtras[col] = campos[col];
+          const infoComplementarExtras: Record<string, string> = {};
+          for (const [campoId, chave] of Object.entries(INFO_COMPLEMENTAR_MAP)) {
+            if (campos[campoId]) infoComplementarExtras[chave] = campos[campoId];
+          }
+
+          if (!form.anonimo && !pacienteIdResolvido && nome && cpfDigits.length === 11) {
+            // CPF não corresponde a nenhum paciente cadastrado: cria um novo
+            // cadastro com todos os dados informados no formulário.
+            const { data: novoPaciente, error: novoErr } = await supabaseAdmin
+              .from("pacientes")
+              .insert({
+                name: nome,
+                cpf: cpfFormatado,
+                telefone: telefone || null,
+                email: email || null,
+                convenio: colunasExtras.convenio || "Particular",
+                user_id: form.user_id,
+                ...colunasExtras,
+                ...(Object.keys(infoComplementarExtras).length ? { info_complementar: infoComplementarExtras } : {}),
+              })
+              .select("paciente_id")
+              .single();
+            if (novoErr) console.warn("[formularios:responder] falha ao criar novo paciente", novoErr);
+            else pacienteIdResolvido = novoPaciente.paciente_id;
+          } else if (!form.anonimo && pacienteIdResolvido && (Object.keys(colunasExtras).length || Object.keys(infoComplementarExtras).length)) {
+            // Paciente já existe: completa só o que estiver em branco no
+            // cadastro — nunca sobrescreve dado já preenchido pela clínica.
+            try {
+              const { data: existente } = await supabaseAdmin
+                .from("pacientes")
+                .select([...COLUNAS_DIRETAS, "info_complementar"].join(","))
+                .eq("paciente_id", pacienteIdResolvido)
+                .maybeSingle();
+              if (existente) {
+                const ex = existente as unknown as Record<string, unknown>;
+                const updateCols: Record<string, string> = {};
+                for (const col of COLUNAS_DIRETAS) {
+                  if (colunasExtras[col] && !ex[col]) updateCols[col] = colunasExtras[col];
+                }
+                const infoAtual = (ex.info_complementar as Record<string, unknown>) || {};
+                const infoMerge = { ...infoAtual };
+                let infoMudou = false;
+                for (const [chave, valor] of Object.entries(infoComplementarExtras)) {
+                  if (!infoAtual[chave]) {
+                    infoMerge[chave] = valor;
+                    infoMudou = true;
+                  }
+                }
+                if (Object.keys(updateCols).length || infoMudou) {
+                  const { error: updErr } = await supabaseAdmin
+                    .from("pacientes")
+                    .update({ ...updateCols, ...(infoMudou ? { info_complementar: infoMerge } : {}) })
+                    .eq("paciente_id", pacienteIdResolvido);
+                  if (updErr) console.warn("[formularios:responder] falha ao completar cadastro do paciente", updErr);
+                }
               }
+            } catch (compErr) {
+              console.warn("[formularios:responder] falha ao mesclar dados do paciente", compErr);
             }
           }
 
@@ -146,10 +228,10 @@ export const Route = createFileRoute("/api/public/formularios/responder")({
             ? {}
             : {
                 paciente_id: pacienteIdResolvido,
-                paciente_nome: body.paciente_nome || null,
-                paciente_telefone: body.paciente_telefone || null,
-                paciente_email: body.paciente_email || null,
-                paciente_cpf: body.paciente_cpf || null,
+                paciente_nome: nome || null,
+                paciente_telefone: telefone || null,
+                paciente_email: email || null,
+                paciente_cpf: cpfDigits || null,
               };
 
           const { data: resp, error: rErr } = await supabaseAdmin
