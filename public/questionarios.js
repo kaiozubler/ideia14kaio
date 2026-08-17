@@ -19,6 +19,7 @@
     search: "", fsearch: "",
     filterForm: "",
     modal: null,           // construtor de formulário (novo/editar)
+    aiModal: null,          // { obs, loading, error }
     shareModal: null,      // { formId, mode:'individual'|'massa', query, patients:[], selected:[], sending:false }
     viewResponse: null,    // resposta aberta em detalhe
     dd: null,
@@ -293,7 +294,10 @@
     const m = S.modal; if (!m) return "";
     return `<div class="qz-modal-bg" data-mbg="1"><div class="qz-modal">
       <div class="qz-modal-h"><h2>${m.id ? "Editar formulário" : "Novo formulário"}</h2>
-        <button class="qz-btn ghost" data-mclose="1" style="padding:2px 10px">×</button></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="qz-btn violet" data-aiopen="1">✨ Criar com IA</button>
+          <button class="qz-btn ghost" data-mclose="1" style="padding:2px 10px">×</button>
+        </div></div>
       <div class="qz-modal-b">
         <div style="margin-bottom:14px"><span class="qz-lbl">Nome do formulário</span>
           <input class="qz-in" id="qz-m-titulo" value="${esc(m.titulo)}" placeholder="Ex: Avaliação pós-consulta"></div>
@@ -350,12 +354,68 @@
     </div></div>`;
   }
 
+  /* ---------- CRIAR COM IA ---------- */
+  function aiModalHtml() {
+    const a = S.aiModal; if (!a) return "";
+    return `<div class="qz-modal-bg" data-aibg="1" style="z-index:2200"><div class="qz-modal sm">
+      <div class="qz-modal-h"><h2>✨ Criar formulário com IA</h2>
+        <button class="qz-btn ghost" data-aiclose="1" style="padding:2px 10px">×</button></div>
+      <div class="qz-modal-b">
+        <p style="font-size:12px;color:#64748b;margin:0 0 14px">Descreva o formulário que você quer (público, objetivo, o que perguntar). A IA monta o título, a descrição e as perguntas já estruturadas.</p>
+        <div><span class="qz-lbl">Instruções para a IA</span>
+          <textarea class="qz-in" rows="7" id="qz-ai-obs" style="resize:vertical" placeholder="Ex: formulário de avaliação pós-consulta de hipertensão, perguntando se está tomando a medicação corretamente, se sentiu efeitos colaterais, nível de dor de 0 a 10 e satisfação com o atendimento de 1 a 5...">${esc(a.obs || "")}</textarea></div>
+        ${a.error ? `<div style="margin-top:12px;font-size:12px;color:#b91c1c">${esc(a.error)}</div>` : ""}
+        ${a.loading ? `<div style="margin-top:12px;font-size:12px;color:#7c3aed">Gerando formulário…</div>` : ""}
+      </div>
+      <div class="qz-modal-f"><button class="qz-btn ghost" data-aiclose="1">Cancelar</button>
+      <button class="qz-btn violet" data-aigen="1" ${a.loading ? "disabled" : ""}>${a.loading ? "Gerando…" : "Gerar formulário"}</button></div>
+    </div></div>`;
+  }
+
+  async function generateWithAI() {
+    const a = S.aiModal; if (!a || a.loading) return;
+    a.obs = (document.getElementById("qz-ai-obs") || {}).value || a.obs || "";
+    if (!a.obs.trim()) { a.error = "Escreva uma instrução descrevendo o formulário."; return render(); }
+    a.loading = true; a.error = ""; render();
+    try {
+      const res = await fetch("/api/questionarios/gerar-ia", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ observacao: a.obs }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const d = await res.json();
+
+      if (!S.modal) S.modal = { id: null, titulo: "", descricao: "", anonimo: false, ativo: true, perguntas: [], saving: false };
+      if (d.titulo) S.modal.titulo = d.titulo;
+      if (d.descricao) S.modal.descricao = d.descricao;
+      if (typeof d.anonimo === "boolean") S.modal.anonimo = d.anonimo;
+
+      const geradas = (Array.isArray(d.perguntas) ? d.perguntas : []).map((p) => ({
+        id: uid(), tipo: TIPOS[p.tipo] ? p.tipo : "texto", enunciado: String(p.enunciado || ""),
+        longa: !!p.longa,
+        opcoes: (p.tipo === "unica" || p.tipo === "multipla") ? (Array.isArray(p.opcoes) && p.opcoes.length >= 2 ? p.opcoes.map(String) : ["", ""]) : ["", ""],
+        escalaMin: Number.isFinite(+p.escala_min) ? +p.escala_min : 1,
+        escalaMax: Number.isFinite(+p.escala_max) ? +p.escala_max : 5,
+        escalaLabelMin: p.escala_label_min || "", escalaLabelMax: p.escala_label_max || "",
+        obrigatoria: p.obrigatoria !== false,
+      }));
+      // se só existe a pergunta em branco padrão (usuário ainda não mexeu), substitui; senão, acrescenta
+      const soPlaceholder = S.modal.perguntas.length === 1 && !S.modal.perguntas[0].enunciado.trim();
+      S.modal.perguntas = soPlaceholder ? geradas : [...S.modal.perguntas, ...geradas];
+      if (!S.modal.perguntas.length) S.modal.perguntas = [newQuestion()];
+
+      S.aiModal = null; render();
+    } catch (err) {
+      a.loading = false; a.error = String((err && err.message) || err); render();
+    }
+  }
+
   /* ---------- RENDER PRINCIPAL ---------- */
   function render() {
     const el = document.getElementById("s-questionarios"); if (!el) return;
     const modalScrolls = Array.from(document.querySelectorAll(".qz-modal-b")).map((n) => n.scrollTop);
     const pageY = window.scrollY;
-    el.innerHTML = `<div class="qz-wrap">${S.loading ? '<div class="qz-empty">Carregando questionários…</div>' : (S.screen === "formularios" ? myFormsHtml() : respostasHtml())}${builderModalHtml()}${shareModalHtml()}${respostaModalHtml()}
+    el.innerHTML = `<div class="qz-wrap">${S.loading ? '<div class="qz-empty">Carregando questionários…</div>' : (S.screen === "formularios" ? myFormsHtml() : respostasHtml())}${builderModalHtml()}${aiModalHtml()}${shareModalHtml()}${respostaModalHtml()}
       ${S.toastMsg ? `<div class="qz-pill" style="position:fixed;bottom:20px;right:20px;padding:10px 16px;background:#1e293b;color:#fff;font-size:12.5px;z-index:3000">${esc(S.toastMsg)}</div>` : ""}
     </div>`;
     const newModalBodies = document.querySelectorAll(".qz-modal-b");
@@ -377,7 +437,7 @@
   document.addEventListener("click", (e) => {
     const root = document.getElementById("s-questionarios");
     if (!root || root.style.display === "none") return;
-    const t = e.target.closest("[data-gomeus],[data-back],[data-new],[data-edit],[data-toggle],[data-clear],[data-viewresp],[data-vclose],[data-vbg],[data-mclose],[data-mbg],[data-msave],[data-idset],[data-qadd],[data-qdel],[data-qtype],[data-optadd],[data-optdel],[data-scalepreset],[data-copylink],[data-share],[data-sclose],[data-sbg],[data-smode],[data-psel],[data-sbulk],[data-wasend]");
+    const t = e.target.closest("[data-gomeus],[data-back],[data-new],[data-edit],[data-toggle],[data-clear],[data-viewresp],[data-vclose],[data-vbg],[data-mclose],[data-mbg],[data-msave],[data-idset],[data-qadd],[data-qdel],[data-qtype],[data-optadd],[data-optdel],[data-scalepreset],[data-copylink],[data-share],[data-sclose],[data-sbg],[data-smode],[data-psel],[data-sbulk],[data-wasend],[data-aiopen],[data-aiclose],[data-aigen],[data-aibg]");
     if (!t) return;
     const d = t.dataset;
     if (d.gomeus) { S.screen = "formularios"; return render(); }
@@ -390,6 +450,9 @@
     if (d.vclose || (d.vbg && e.target === t)) { S.viewResponse = null; return render(); }
     if (d.mclose || (d.mbg && e.target === t)) { S.modal = null; return render(); }
     if (d.msave) return saveForm();
+    if (d.aiopen) { S.aiModal = { obs: "", loading: false, error: "" }; return render(); }
+    if (d.aiclose || (d.aibg && e.target === t)) { S.aiModal = null; return render(); }
+    if (d.aigen) return generateWithAI();
     if (d.idset !== undefined && S.modal) { S.modal.anonimo = d.idset === "1"; return render(); }
     if (d.qadd && S.modal) { S.modal.perguntas.push(newQuestion()); return render(); }
     if (d.qdel && S.modal) { S.modal.perguntas = S.modal.perguntas.filter((p) => p.id !== d.qdel); return render(); }
@@ -443,6 +506,7 @@
     if (e.target.id === "qz-fq") { S.fsearch = e.target.value; const p = e.target.selectionStart; render(); const n = document.getElementById("qz-fq"); if (n) { n.focus(); n.setSelectionRange(p, p); } return; }
     if (e.target.id === "qz-m-titulo" && S.modal) { S.modal.titulo = e.target.value; return; }
     if (e.target.id === "qz-m-desc" && S.modal) { S.modal.descricao = e.target.value; return; }
+    if (e.target.id === "qz-ai-obs" && S.aiModal) { S.aiModal.obs = e.target.value; return; }
     if (e.target.dataset && e.target.dataset.qfield && S.modal) {
       const p = S.modal.perguntas.find((x) => x.id === e.target.dataset.qid); if (!p) return;
       const f = e.target.dataset.qfield;

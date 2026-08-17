@@ -29,6 +29,7 @@ import { Route as ApiCidBuscarRouteImport } from './routes/api/cid/buscar'
 import { Route as ApiMedicamentosBuscarRouteImport } from './routes/api/medicamentos/buscar'
 import { Route as ApiProtocolosGerarIaRouteImport } from './routes/api/protocolos/gerar-ia'
 import { Route as ApiProtocolosSincronizarRouteImport } from './routes/api/protocolos/sincronizar'
+import { Route as ApiQuestionariosGerarIaRouteImport } from './routes/api/questionarios/gerar-ia'
 import { Route as ApiSignatureAuthenticateRouteImport } from './routes/api/signature/authenticate'
 import { Route as ApiSignatureCredentialRouteImport } from './routes/api/signature/credential'
 import { Route as ApiSignatureLocalCertificateRouteImport } from './routes/api/signature/local-certificate'
@@ -144,6 +145,11 @@ const ApiProtocolosSincronizarRoute =
     path: '/api/protocolos/sincronizar',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiQuestionariosGerarIaRoute = ApiQuestionariosGerarIaRouteImport.update({
+  id: '/api/questionarios/gerar-ia',
+  path: '/api/questionarios/gerar-ia',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSignatureAuthenticateRoute =
   ApiSignatureAuthenticateRouteImport.update({
     id: '/api/signature/authenticate',
@@ -231,6 +237,7 @@ export interface FileRoutesByFullPath {
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
+  '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
@@ -265,6 +272,7 @@ export interface FileRoutesByTo {
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
+  '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
@@ -300,6 +308,7 @@ export interface FileRoutesById {
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
+  '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
@@ -336,6 +345,7 @@ export interface FileRouteTypes {
     | '/api/medicamentos/buscar'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
+    | '/api/questionarios/gerar-ia'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
     | '/api/signature/local-certificate'
@@ -370,6 +380,7 @@ export interface FileRouteTypes {
     | '/api/medicamentos/buscar'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
+    | '/api/questionarios/gerar-ia'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
     | '/api/signature/local-certificate'
@@ -404,6 +415,7 @@ export interface FileRouteTypes {
     | '/api/medicamentos/buscar'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
+    | '/api/questionarios/gerar-ia'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
     | '/api/signature/local-certificate'
@@ -439,6 +451,7 @@ export interface RootRouteChildren {
   ApiMedicamentosBuscarRoute: typeof ApiMedicamentosBuscarRoute
   ApiProtocolosGerarIaRoute: typeof ApiProtocolosGerarIaRoute
   ApiProtocolosSincronizarRoute: typeof ApiProtocolosSincronizarRoute
+  ApiQuestionariosGerarIaRoute: typeof ApiQuestionariosGerarIaRoute
   ApiSignatureAuthenticateRoute: typeof ApiSignatureAuthenticateRoute
   ApiSignatureCredentialRoute: typeof ApiSignatureCredentialRoute
   ApiSignatureLocalCertificateRoute: typeof ApiSignatureLocalCertificateRoute
@@ -595,6 +608,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiProtocolosSincronizarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/questionarios/gerar-ia': {
+      id: '/api/questionarios/gerar-ia'
+      path: '/api/questionarios/gerar-ia'
+      fullPath: '/api/questionarios/gerar-ia'
+      preLoaderRoute: typeof ApiQuestionariosGerarIaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/signature/authenticate': {
       id: '/api/signature/authenticate'
       path: '/api/signature/authenticate'
@@ -703,6 +723,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMedicamentosBuscarRoute: ApiMedicamentosBuscarRoute,
   ApiProtocolosGerarIaRoute: ApiProtocolosGerarIaRoute,
   ApiProtocolosSincronizarRoute: ApiProtocolosSincronizarRoute,
+  ApiQuestionariosGerarIaRoute: ApiQuestionariosGerarIaRoute,
   ApiSignatureAuthenticateRoute: ApiSignatureAuthenticateRoute,
   ApiSignatureCredentialRoute: ApiSignatureCredentialRoute,
   ApiSignatureLocalCertificateRoute: ApiSignatureLocalCertificateRoute,
