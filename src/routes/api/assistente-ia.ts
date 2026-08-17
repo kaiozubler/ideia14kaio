@@ -86,6 +86,11 @@ NOVO ATENDIMENTO (botão de gravação da extensão)
 - Quando o médico pedir para "iniciar", "criar" ou "abrir" um novo atendimento (inclusive quando a mensagem vier automaticamente do botão de microfone da extensão de navegador), identifique o paciente normalmente (regras acima) e então chame criar_atendimento com o paciente_id. Essa ação não precisa de confirmação extra, pois cria apenas um rascunho editável — nunca finaliza nem substitui um atendimento existente.
 - Se não for possível identificar o paciente a partir do contexto da tela nem da conversa, pergunte o nome antes de chamar a tool.
 
+ANAMNESE
+- Quando o médico pedir para gerar/criar uma anamnese, NUNCA escreva o texto da anamnese você mesmo. Primeiro chame listar_modelos_anamnese. Se vier mais de um modelo, mostre os nomes em uma lista curta e pergunte qual ele quer usar; NÃO chame gerar_anamnese até ele responder. Se vier só um modelo, confirme rapidamente que é esse mesmo antes de seguir. Se não houver nenhum modelo, avise e não invente um prompt.
+- Depois de saber o modelo escolhido, reúna em "dados_clinicos" apenas o que o médico já contou nesta conversa (ou no contexto da tela) sobre o paciente — nunca invente sintomas, histórico ou queixas. Se ainda não houver dados clínicos suficientes, peça-os antes de chamar gerar_anamnese.
+- Chame gerar_anamnese com o modelo_id e os dados_clinicos, e devolva o texto gerado ao médico na íntegra.
+
 NUNCA ANUNCIE SUCESSO QUE NÃO ACONTECEU
 - Se uma tool devolver um campo "erro" ou "faltam_dados_paciente" (por exemplo, CPF ou idade ausentes), você NUNCA deve dizer ao usuário que o documento/ação foi concluído com sucesso.
 - Nesse caso, siga exatamente a instrução do campo "instrucao" quando houver (ex.: peça o dado que falta), ou explique o problema em uma frase curta. Só confirme sucesso quando a tool devolver "gerado":true, "confirmado":true, "agendado":true ou equivalente.
@@ -230,6 +235,35 @@ const tools: ToolDef[] = [
           paciente_nome: { type: "string" },
         },
         required: ["paciente_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "listar_modelos_anamnese",
+      description:
+        "Lista os modelos de anamnese (nome + prompt) que o próprio médico cadastrou no sistema. Chame esta tool SEMPRE que o médico pedir para gerar/criar uma anamnese, antes de qualquer outra coisa — nunca escreva uma anamnese com um prompt inventado.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "gerar_anamnese",
+      description:
+        "Gera o texto da anamnese usando um dos modelos cadastrados pelo médico (obtidos com listar_modelos_anamnese) e os dados clínicos informados na conversa.",
+      parameters: {
+        type: "object",
+        properties: {
+          modelo_id: { type: "string", description: "id do modelo escolhido pelo médico, obtido em listar_modelos_anamnese" },
+          dados_clinicos: {
+            type: "string",
+            description:
+              "Resumo, em texto corrido, de tudo que o médico já informou sobre o paciente/queixa nesta conversa (motivo da consulta, sintomas, histórico etc.). Nunca invente dados que o médico não disse.",
+          },
+        },
+        required: ["modelo_id", "dados_clinicos"],
       },
     },
   },
@@ -548,6 +582,7 @@ type ToolCtx = {
   db: Db;
   medicoId: string | null;
   pendingAction: { value: unknown };
+  apiKey: string;
   // Preenchidos apenas no canal "paciente": identidade já resolvida pelo webhook,
   // nunca decidida pela IA a partir do texto da conversa.
   canal: "interno" | "paciente";
@@ -827,8 +862,62 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         .select("id")
         .single();
       if (error) return { erro: error.message };
-      ctx.pendingAction.value = { type: "criar_atendimento", consulta_id: data.id, paciente_id: paciente.paciente_id };
+      ctx.pendingAction.value = {
+        type: "criar_atendimento",
+        consulta_id: data.id,
+        paciente_id: paciente.paciente_id,
+        paciente_nome: paciente.name,
+      };
       return { criado: true, atendimento_id: data.id, paciente_nome: paciente.name };
+    }
+
+    case "listar_modelos_anamnese": {
+      if (!medicoId) return { erro: "Usuário não identificado na sessão." };
+      const { data, error } = await db
+        .from("anamnese_models")
+        .select("id,name")
+        .eq("user_id", medicoId)
+        .order("created_at", { ascending: true });
+      if (error) return { erro: error.message };
+      if (!data || !data.length) {
+        return {
+          modelos: [],
+          instrucao:
+            "O médico ainda não tem nenhum modelo de anamnese cadastrado. Avise que é preciso cadastrar um modelo (nome + prompt) na tela de Anamnese do MediCopilot antes de gerar.",
+        };
+      }
+      return {
+        modelos: data.map((m) => ({ id: m.id, nome: m.name })),
+        instrucao:
+          data.length === 1
+            ? "Há só um modelo cadastrado — pode usá-lo diretamente, mas confirme com o médico antes de gerar."
+            : "Apresente os nomes destes modelos ao médico e pergunte qual ele quer usar antes de chamar gerar_anamnese.",
+      };
+    }
+
+    case "gerar_anamnese": {
+      if (!medicoId) return { erro: "Usuário não identificado na sessão." };
+      const modeloId = String(args.modelo_id || "").trim();
+      const dados = String(args.dados_clinicos || "").trim();
+      if (!modeloId) return { erro: "Escolha um modelo (use listar_modelos_anamnese)." };
+      if (!dados) return { erro: "Faltam dados clínicos para basear a anamnese." };
+      const { data: modelo, error: mErro } = await db
+        .from("anamnese_models")
+        .select("id,name,prompt")
+        .eq("id", modeloId)
+        .eq("user_id", medicoId)
+        .maybeSingle();
+      if (mErro) return { erro: mErro.message };
+      if (!modelo) return { erro: "Modelo de anamnese não encontrado." };
+      const texto = await callGatewayPlain(
+        [
+          { role: "system", content: modelo.prompt },
+          { role: "user", content: dados },
+        ],
+        ctx.apiKey,
+      );
+      ctx.pendingAction.value = { type: "gerar_anamnese", modelo_usado: modelo.name, texto };
+      return { gerado: true, modelo_usado: modelo.name, anamnese: texto };
     }
 
     case "gerar_receita": {
@@ -1212,6 +1301,27 @@ async function callGateway(messages: ChatMessage[], apiKey: string, toolset: Too
   return data.choices?.[0]?.message ?? ({ role: "assistant", content: "" } as ChatMessage);
 }
 
+// Geração de texto simples, sem tool-calling (ex.: anamnese a partir de um prompt
+// cadastrado pelo médico) — igual ao callGateway usado no modo "anamnese" de chat-ia.ts,
+// sem o campo "tools" para não confundir o gateway com uma lista vazia.
+async function callGatewayPlain(messages: ChatMessage[], apiKey: string): Promise<string> {
+  const res = await fetch(GATEWAY_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Lovable-API-Key": apiKey,
+      "X-Lovable-AIG-SDK": "raw",
+    },
+    body: JSON.stringify({ model: MODEL, messages }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Response(`AI gateway error ${res.status}: ${text}`, { status: res.status });
+  }
+  const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+  return (data.choices?.[0]?.message?.content ?? "").trim();
+}
+
 async function gerarTitulo(primeiraMsg: string, apiKey: string): Promise<string> {
   try {
     const res = await fetch(GATEWAY_URL, {
@@ -1295,6 +1405,7 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
           db: supabaseAdmin,
           medicoId: body.user_id || null,
           pendingAction,
+          apiKey,
           canal,
           pacienteFixoId: body.paciente_id || null,
           pacienteFixoNome: body.paciente_nome || null,

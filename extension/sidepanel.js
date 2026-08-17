@@ -92,12 +92,165 @@
     const cs = getComputedStyle(el);
     const lineHeight = parseFloat(cs.lineHeight) || 18;
     const paddingV = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+    // box-sizing é border-box: a altura definida via style.height precisa incluir a borda,
+    // mas scrollHeight NUNCA inclui a borda — por isso somamos borderV de volta, senão o
+    // texto da última linha visível fica cortado por ~2px.
     const borderV = (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
+    const minHeight = Math.round(lineHeight + paddingV + borderV);
     const maxHeight = Math.round(lineHeight * MAX_TEXTAREA_LINES + paddingV + borderV);
     el.style.height = "auto";
-    const next = Math.min(el.scrollHeight, maxHeight);
+    const contentHeight = el.scrollHeight + borderV;
+    const next = Math.max(minHeight, Math.min(contentHeight, maxHeight));
     el.style.height = next + "px";
-    el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
+    el.style.overflowY = contentHeight > maxHeight ? "auto" : "hidden";
+  }
+
+  // Envia o conteúdo atual do campo (usado pelo submit do form e pelo atalho Enter).
+  function submitComposer() {
+    const el = $("ch-inp");
+    const v = el.value.trim();
+    if (!v) return;
+    el.value = "";
+    autoResizeComposer();
+    send(v);
+  }
+
+  /* ---------- anexos gerados pela IA (receita, exames, anamnese) ---------- */
+  function escHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  }
+
+  function attachmentCard(kind, title, subtitle, buttons) {
+    const div = document.createElement("div");
+    div.className = "bubble ia attachment";
+    const head = document.createElement("div");
+    head.className = "attachment-head";
+    head.innerHTML = `<span class="attachment-icon">${kind}</span><div><div class="attachment-title">${escHtml(title)}</div><div class="attachment-sub">${escHtml(subtitle)}</div></div>`;
+    div.appendChild(head);
+    const row = document.createElement("div");
+    row.className = "attachment-actions";
+    buttons.forEach((b) => {
+      const btn = document.createElement("button");
+      btn.className = "attachment-btn";
+      btn.textContent = b.label;
+      btn.onclick = b.onClick;
+      row.appendChild(btn);
+    });
+    div.appendChild(row);
+    $("msgs").appendChild(div);
+    $("msgs").scrollTop = $("msgs").scrollHeight;
+    return div;
+  }
+
+  function openHtmlDoc(html) {
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
+  async function docHeader(titulo) {
+    const perfil = await MC_AUTH.profile();
+    const meta = perfil?.user_metadata || {};
+    const doctorName = meta.full_name || meta.name || (perfil?.email || "").split("@")[0] || "Médico responsável";
+    const doctorCrm = meta.crm || meta.CRM || "";
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #0369a1;padding-bottom:10px;margin-bottom:18px;">
+        <div>
+          <div style="font-size:19px;font-weight:700;color:#0f172a;">${escHtml(titulo)}</div>
+          <div style="font-size:12px;color:#64748b;">Emitido em ${escHtml(new Date().toLocaleString("pt-BR"))}</div>
+        </div>
+        <div style="text-align:right;font-size:12px;color:#334155;">
+          <div style="font-weight:600;">${escHtml(doctorName)}</div>
+          ${doctorCrm ? `<div>CRM ${escHtml(doctorCrm)}</div>` : ""}
+        </div>
+      </div>`;
+  }
+
+  function docBase(bodyHtml) {
+    return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Documento — MediCopilot</title>
+      <style>
+        body{font:14px/1.5 -apple-system,"Segoe UI",system-ui,sans-serif;color:#0f172a;max-width:720px;margin:32px auto;padding:0 20px;}
+        .field{margin-bottom:14px;}
+        .field b{display:block;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.03em;}
+        .rx-item{border-bottom:1px solid #e2e8f0;padding:10px 0;}
+        .rx-item b{font-size:15px;color:#0f172a;text-transform:none;letter-spacing:0;}
+        .muted{color:#64748b;}
+        @media print{body{margin:0;}}
+      </style></head><body>${bodyHtml}
+      <p class="muted" style="margin-top:28px;font-size:11px;">Documento gerado pelo assistente do MediCopilot a partir da extensão de navegador.</p>
+      </body></html>`;
+  }
+
+  async function buildReceitaDoc(a) {
+    const itens = (a.medicamentos || [])
+      .map(
+        (m, i) =>
+          `<div class="rx-item"><b>${i + 1}. ${escHtml(m.nome)}${m.apresentacao ? " — " + escHtml(m.apresentacao) : ""}</b>` +
+          `<div>${escHtml([m.quantidade, m.posologia].filter(Boolean).join(" — ") || "—")}</div></div>`,
+      )
+      .join("");
+    const header = await docHeader("Receita médica");
+    return docBase(
+      header +
+        `<div class="field"><b>Paciente</b>${escHtml(a.paciente_nome || "—")}</div>` +
+        `<div class="field"><b>CPF</b>${escHtml(a.paciente_cpf || "—")} &nbsp; <b style="display:inline">Idade</b> ${escHtml(a.paciente_idade ?? "—")}</div>` +
+        `<div class="field"><b>Prescrição</b>${itens || "<i>Nenhum medicamento informado.</i>"}</div>`,
+    );
+  }
+
+  async function buildExameDoc(a) {
+    const itens = (a.exames || [])
+      .map((e, i) => `<div class="rx-item"><b>${i + 1}. ${escHtml(e.nome)}</b>${e.instrucoes ? `<div>${escHtml(e.instrucoes)}</div>` : ""}</div>`)
+      .join("");
+    const header = await docHeader("Solicitação de exames");
+    return docBase(
+      header +
+        `<div class="field"><b>Paciente</b>${escHtml(a.paciente_nome || "—")}</div>` +
+        `<div class="field"><b>CPF</b>${escHtml(a.paciente_cpf || "—")} &nbsp; <b style="display:inline">Idade</b> ${escHtml(a.paciente_idade ?? "—")}</div>` +
+        `<div class="field"><b>Caráter</b>${a.carater === "urgente" ? "Urgente" : "Eletivo"}${a.jejum ? " · Jejum necessário" : ""}</div>` +
+        (a.indicacao_clinica ? `<div class="field"><b>Indicação clínica</b>${escHtml(a.indicacao_clinica)}</div>` : "") +
+        (a.cid ? `<div class="field"><b>CID</b>${escHtml(a.cid)} ${escHtml(a.cid_descricao || "")}</div>` : "") +
+        `<div class="field"><b>Exames solicitados</b>${itens || "<i>Nenhum exame informado.</i>"}</div>` +
+        (a.preparo ? `<div class="field"><b>Preparo</b>${escHtml(a.preparo)}</div>` : "") +
+        (a.observacoes ? `<div class="field"><b>Observações</b>${escHtml(a.observacoes)}</div>` : ""),
+    );
+  }
+
+  async function buildAnamneseDoc(a) {
+    const header = await docHeader("Anamnese — " + (a.modelo_usado || ""));
+    return docBase(header + `<div class="field" style="white-space:pre-wrap;">${escHtml(a.texto || "")}</div>`);
+  }
+
+  async function handleAction(action) {
+    if (!action || !action.type) return;
+    if (action.type === "gerar_receita") {
+      attachmentCard("💊", "Receita — " + (action.paciente_nome || "paciente"), "Toque para abrir e imprimir/salvar como PDF", [
+        { label: "Abrir receita", onClick: async () => openHtmlDoc(await buildReceitaDoc(action)) },
+      ]);
+    } else if (action.type === "gerar_solicitacao_exame") {
+      attachmentCard("🧪", "Solicitação de exames — " + (action.paciente_nome || "paciente"), "Toque para abrir e imprimir/salvar como PDF", [
+        { label: "Abrir solicitação", onClick: async () => openHtmlDoc(await buildExameDoc(action)) },
+      ]);
+    } else if (action.type === "gerar_anamnese") {
+      attachmentCard("📋", "Anamnese — " + (action.modelo_usado || ""), "Toque para abrir/imprimir ou copiar o texto", [
+        { label: "Abrir", onClick: async () => openHtmlDoc(await buildAnamneseDoc(action)) },
+        {
+          label: "Copiar texto",
+          onClick: async (ev) => {
+            try {
+              await navigator.clipboard.writeText(action.texto || "");
+              const btn = ev.target;
+              const old = btn.textContent;
+              btn.textContent = "Copiado!";
+              setTimeout(() => (btn.textContent = old), 1500);
+            } catch {}
+          },
+        },
+      ]);
+    } else if (action.type === "criar_atendimento") {
+      attachmentCard("🩺", "Novo atendimento criado", (action.paciente_nome || "paciente") + " — rascunho pronto no MediCopilot.", []);
+    }
   }
 
   /* ---------- microfone (transcrição ao vivo via Deepgram) ----------
@@ -288,6 +441,7 @@
       const reply = (data.reply || "").trim() || "Não consegui responder agora.";
       setBubbleText(pending, reply);
       history.push({ role: "assistant", content: reply });
+      await handleAction(data.action);
     } catch (e) {
       setBubbleText(pending, "Erro ao falar com o assistente: " + (e?.message || e));
     }
@@ -334,13 +488,16 @@
   };
   $("ch-mic").onclick = () => dgMic.toggle();
   $("ch-inp").addEventListener("input", autoResizeComposer);
+  $("ch-inp").addEventListener("keydown", (e) => {
+    // Enter envia; Shift+Enter quebra linha — comportamento usual de chat.
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      submitComposer();
+    }
+  });
   $("ch-form").addEventListener("submit", (e) => {
     e.preventDefault();
-    const v = $("ch-inp").value.trim();
-    if (!v) return;
-    $("ch-inp").value = "";
-    autoResizeComposer();
-    send(v);
+    submitComposer();
   });
   chrome.tabs.onActivated.addListener(() => lerTela());
 

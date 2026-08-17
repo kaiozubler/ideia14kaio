@@ -71,3 +71,21 @@ body {
 .mic-status {
   font-size: 11px; color: #b91c1c; padding: 2px 2px 0; min-height: 14px;
 }
+.bubble.attachment {
+  display: flex; flex-direction: column; gap: 8px; max-width: 92%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(240,249,255,0.9));
+  border: 1px solid rgba(3, 105, 161, 0.18);
+}
+.attachment-head { display: flex; gap: 9px; align-items: center; }
+.attachment-icon {
+  width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex: 0 0 auto;
+  background: rgba(3, 105, 161, 0.1); font-size: 15px;
+}
+.attachment-title { font-weight: 600; font-size: 13px; color: #0f172a; }
+.attachment-sub { font-size: 11px; color: #64748b; }
+.attachment-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.attachment-btn {
+  border: 1px solid rgba(3, 105, 161, 0.3); background: #fff; color: #0369a1;
+  border-radius: 9px; padding: 6px 10px; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.attachment-btn:hover { background: rgba(3, 105, 161, 0.06); }

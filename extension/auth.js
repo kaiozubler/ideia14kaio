@@ -38,6 +38,7 @@ const MC_AUTH = (() => {
       refresh_token: data.refresh_token,
       expires_at: Date.now() + (data.expires_in || 3600) * 1000,
       email: data.user?.email || email,
+      user_metadata: data.user?.user_metadata || {},
       authAt: Date.now(),
     };
     await write(s);
@@ -51,9 +52,17 @@ const MC_AUTH = (() => {
       access_token: data.access_token,
       refresh_token: data.refresh_token || s.refresh_token,
       expires_at: Date.now() + (data.expires_in || 3600) * 1000,
+      user_metadata: data.user?.user_metadata || s.user_metadata || {},
     };
     await write(next);
     return next;
+  }
+
+  // Devolve { email, user_metadata } da sessão salva (sem validar/renovar o token).
+  async function profile() {
+    const s = await read();
+    if (!s) return null;
+    return { email: s.email, user_metadata: s.user_metadata || {} };
   }
 
   // Devolve um access_token válido ou null (quando é preciso autenticar de novo).
@@ -74,5 +83,5 @@ const MC_AUTH = (() => {
     return s.access_token;
   }
 
-  return { signIn, token, read, clear };
+  return { signIn, token, read, clear, profile };
 })();
