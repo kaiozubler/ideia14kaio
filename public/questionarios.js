@@ -518,7 +518,17 @@
   document.addEventListener("click", (e) => {
     const root = document.getElementById("s-questionarios");
     if (!root || root.style.display === "none") return;
-    const t = e.target.closest("[data-gomeus],[data-back],[data-new],[data-edit],[data-toggle],[data-clear],[data-viewresp],[data-vclose],[data-vbg],[data-mclose],[data-mbg],[data-msave],[data-idset],[data-qadd],[data-qdel],[data-qtype],[data-optadd],[data-optdel],[data-scalepreset],[data-copylink],[data-share],[data-sclose],[data-sbg],[data-smode],[data-psel],[data-sbulk],[data-wasend],[data-aiopen],[data-aiclose],[data-aigen],[data-aibg],[data-campo-add-toggle],[data-campo-add],[data-campo-remove]");
+    // Fecha o modal correspondente SOMENTE quando o clique acontece
+    // exatamente no fundo (fora da caixa do modal) — checagem isolada,
+    // não depende do closest() combinado abaixo.
+    if (e.target.classList && e.target.classList.contains("qz-modal-bg")) {
+      const bd = e.target.dataset;
+      if (bd.mbg) { S.modal = null; return render(); }
+      if (bd.vbg) { S.viewResponse = null; return render(); }
+      if (bd.sbg) { S.shareModal = null; return render(); }
+      if (bd.aibg) { S.aiModal = null; return render(); }
+    }
+    const t = e.target.closest("[data-gomeus],[data-back],[data-new],[data-edit],[data-toggle],[data-clear],[data-viewresp],[data-vclose],[data-mclose],[data-msave],[data-idset],[data-qadd],[data-qdel],[data-qtype],[data-optadd],[data-optdel],[data-scalepreset],[data-copylink],[data-share],[data-sclose],[data-smode],[data-psel],[data-sbulk],[data-wasend],[data-aiopen],[data-aiclose],[data-aigen],[data-campo-add-toggle],[data-campo-add],[data-campo-remove]");
     if (!t) return;
     const d = t.dataset;
     if (d.gomeus) { S.screen = "formularios"; return render(); }
@@ -528,11 +538,11 @@
     if (d.toggle) { return toggleFormActive(d.toggle); }
     if (d.clear) { S.search = ""; return render(); }
     if (d.viewresp) { S.viewResponse = S.responses.find((r) => r.id === d.viewresp) || null; return render(); }
-    if (d.vclose || (d.vbg && e.target === t)) { S.viewResponse = null; return render(); }
-    if (d.mclose || (d.mbg && e.target === t)) { S.modal = null; return render(); }
+    if (d.vclose) { S.viewResponse = null; return render(); }
+    if (d.mclose) { S.modal = null; return render(); }
     if (d.msave) return saveForm();
     if (d.aiopen) { S.aiModal = { obs: "", loading: false, error: "" }; return render(); }
-    if (d.aiclose || (d.aibg && e.target === t)) { S.aiModal = null; return render(); }
+    if (d.aiclose) { S.aiModal = null; return render(); }
     if (d.aigen) return generateWithAI();
     if (d.idset !== undefined && S.modal) { S.modal.anonimo = d.idset === "1"; return render(); }
     if (d.campoAddToggle && S.modal) { S.modal.campoPickerOpen = !S.modal.campoPickerOpen; return render(); }
@@ -563,7 +573,7 @@
       return;
     }
     if (d.share) { S.shareModal = { formId: d.share, mode: "individual", query: "", patients: [], selected: [], sending: false }; return render(); }
-    if (d.sclose || (d.sbg && e.target === t)) { S.shareModal = null; return render(); }
+    if (d.sclose) { S.shareModal = null; return render(); }
     if (d.smode && S.shareModal) { S.shareModal.mode = d.smode; S.shareModal.selected = []; return render(); }
     if (d.psel && S.shareModal) {
       const id = d.psel; const sel = S.shareModal.selected;
