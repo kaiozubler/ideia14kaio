@@ -2173,6 +2173,7 @@ export type Database = {
             }[]
           }
       consolidar_interacoes_crfmg: { Args: never; Returns: number }
+      formulario_publico: { Args: { p_id: string }; Returns: Json }
       gerar_tarefas_protocolo: {
         Args: { p_vinculo_id: string }
         Returns: undefined
