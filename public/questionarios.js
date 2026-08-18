@@ -66,6 +66,11 @@
 
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const uid = () => "q" + Math.random().toString(36).slice(2, 9);
+  // IDs vindos do banco são UUID de verdade; perguntas novas (ainda não salvas)
+  // usam o formato local gerado por uid() ("q" + 7 chars). É assim que
+  // diferenciamos "atualizar" de "inserir" ao salvar uma edição.
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const isUuid = (v) => UUID_RE.test(String(v || ""));
   const sbc = () => window.sb || window.__sb;
   const brDateTime = (iso) => { if (!iso) return "—"; const d = new Date(iso); return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); };
 
@@ -142,19 +147,19 @@
     }
     m.saving = true; render();
     let id = m.id;
+    const isEdit = !!id;
     const camposCadastro = Array.from(new Set([...CAMPOS_CADASTRO_OBRIGATORIOS, ...(m.anonimo ? [] : m.camposCadastro || [])]));
     const payload = { titulo: m.titulo.trim(), descricao: m.descricao.trim() || null, anonimo: m.anonimo, ativo: m.ativo !== false, campos_cadastro: m.anonimo ? [] : camposCadastro };
-    if (id) {
+    if (isEdit) {
       const { error } = await sb.from("questionarios").update(payload).eq("id", id);
       if (error) { m.saving = false; render(); return toast("Falha ao salvar: " + error.message); }
-      const { error: delErr } = await sb.from("questionario_perguntas").delete().eq("questionario_id", id);
-      if (delErr) { m.saving = false; render(); return toast("Falha ao atualizar perguntas: " + delErr.message); }
     } else {
       const { data, error } = await sb.from("questionarios").insert(payload).select("id").single();
       if (error) { m.saving = false; render(); return toast("Falha ao criar: " + error.message); }
       id = data.id;
     }
-    const rows = m.perguntas.map((p, i) => ({
+
+    const linhaDe = (p, i) => ({
       questionario_id: id, ordem: i, tipo: p.tipo, enunciado: p.enunciado.trim(),
       longa: p.tipo === "texto" ? !!p.longa : false,
       opcoes: (p.tipo === "unica" || p.tipo === "multipla") ? p.opcoes.filter((o) => o.trim()) : null,
@@ -162,9 +167,43 @@
       escala_label_min: p.tipo === "escala" ? (p.escalaLabelMin || null) : null,
       escala_label_max: p.tipo === "escala" ? (p.escalaLabelMax || null) : null,
       obrigatoria: !!p.obrigatoria,
-    }));
-    const { error: insErr } = await sb.from("questionario_perguntas").insert(rows);
-    if (insErr) { m.saving = false; render(); return toast("Falha ao salvar perguntas: " + insErr.message); }
+    });
+
+    if (isEdit) {
+      // IMPORTANTE: não apagamos e recriamos todas as perguntas — isso deixava
+      // o link público exibindo perguntas antigas "fantasma" quando o DELETE
+      // não batia com todas as linhas (RLS), e apagava em cascata o histórico
+      // de respostas já recebidas (questionario_resposta_itens -> ON DELETE
+      // CASCADE) mesmo numa edição simples de texto. Em vez disso:
+      // - pergunta com id de banco (UUID) -> UPDATE (preserva id e respostas)
+      // - pergunta nova (id local, "qXXXXXXX") -> INSERT
+      // - pergunta removida pelo usuário -> DELETE só dela
+      const existentes = m.perguntas.filter((p) => isUuid(p.id));
+      const novas = m.perguntas.filter((p) => !isUuid(p.id));
+      const idsManter = existentes.map((p) => p.id);
+
+      const delQuery = sb.from("questionario_perguntas").delete().eq("questionario_id", id);
+      const { error: delErr } = idsManter.length ? await delQuery.not("id", "in", `(${idsManter.join(",")})`) : await delQuery;
+      if (delErr) { m.saving = false; render(); return toast("Falha ao remover perguntas antigas: " + delErr.message); }
+
+      for (let i = 0; i < m.perguntas.length; i++) {
+        const p = m.perguntas[i];
+        if (isUuid(p.id)) {
+          const { error: upErr } = await sb.from("questionario_perguntas").update(linhaDe(p, i)).eq("id", p.id);
+          if (upErr) { m.saving = false; render(); return toast("Falha ao atualizar pergunta: " + upErr.message); }
+        }
+      }
+      if (novas.length) {
+        const rows = m.perguntas.map((p, i) => ({ p, i })).filter(({ p }) => !isUuid(p.id)).map(({ p, i }) => linhaDe(p, i));
+        const { error: insErr } = await sb.from("questionario_perguntas").insert(rows);
+        if (insErr) { m.saving = false; render(); return toast("Falha ao salvar novas perguntas: " + insErr.message); }
+      }
+    } else {
+      const rows = m.perguntas.map((p, i) => linhaDe(p, i));
+      const { error: insErr } = await sb.from("questionario_perguntas").insert(rows);
+      if (insErr) { m.saving = false; render(); return toast("Falha ao salvar perguntas: " + insErr.message); }
+    }
+
     S.modal = null;
     await load();
     toast("Formulário salvo com sucesso.");
