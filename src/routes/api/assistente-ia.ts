@@ -90,6 +90,11 @@ ANAMNESE
 - Quando o médico pedir para gerar/criar uma anamnese, NUNCA escreva o texto da anamnese você mesmo. Primeiro chame listar_modelos_anamnese. Se vier mais de um modelo, mostre os nomes em uma lista curta e pergunte qual ele quer usar; NÃO chame gerar_anamnese até ele responder. Se vier só um modelo, confirme rapidamente que é esse mesmo antes de seguir. Se não houver nenhum modelo, avise e não invente um prompt.
 - Depois de saber o modelo escolhido, reúna em "dados_clinicos" apenas o que o médico já contou nesta conversa (ou no contexto da tela) sobre o paciente — nunca invente sintomas, histórico ou queixas. Se ainda não houver dados clínicos suficientes, peça-os antes de chamar gerar_anamnese.
 - Chame gerar_anamnese com o modelo_id e os dados_clinicos, e devolva o texto gerado ao médico na íntegra.
+- Depois de mostrar o texto, pergunte se ele quer salvar essa anamnese no cadastro do paciente (isso cria um atendimento já concluído). Só chame salvar_anamnese_atendimento após confirmação explícita, passando o texto exatamente como foi gerado.
+
+ARQUIVOS E ANEXOS
+- Documentos (receita, atestado/declaração, solicitação de exames) aparecem para o médico como um anexo separado na interface, gerado automaticamente pela tool — você nunca "anexa" nada dentro da sua resposta em texto. NUNCA escreva blocos simulando um arquivo (ex.: "[ARQUIVO: receita.pdf]", links falsos, nomes de arquivo inventados) — isso não existe e engana o médico.
+- Se o médico pedir o arquivo de novo ou disser que não viu o anexo, chame reenviar_documento com o documento_id (retornado quando o documento foi gerado) para fazer o anexo aparecer de novo — não descreva o conteúdo em texto como substituto.
 
 NUNCA ANUNCIE SUCESSO QUE NÃO ACONTECEU
 - Se uma tool devolver um campo "erro" ou "faltam_dados_paciente" (por exemplo, CPF ou idade ausentes), você NUNCA deve dizer ao usuário que o documento/ação foi concluído com sucesso.
@@ -270,6 +275,22 @@ const tools: ToolDef[] = [
   {
     type: "function",
     function: {
+      name: "salvar_anamnese_atendimento",
+      description:
+        "Salva uma anamnese já gerada no cadastro do paciente, criando um atendimento (consulta) concluído. Só chame depois que o médico confirmar explicitamente que quer salvar — nunca salve sem essa confirmação.",
+      parameters: {
+        type: "object",
+        properties: {
+          paciente_id: { type: "string" },
+          anamnese_texto: { type: "string", description: "O texto EXATO da anamnese gerada por gerar_anamnese, sem resumir ou alterar." },
+        },
+        required: ["paciente_id", "anamnese_texto"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "gerar_receita",
       description:
         "Gera uma receita médica com um ou mais medicamentos. Exige nome, CPF e idade do paciente. Se houver 2+ medicamentos, verifica interação automaticamente.",
@@ -363,6 +384,40 @@ const tools: ToolDef[] = [
           },
         },
         required: ["paciente_nome", "paciente_cpf", "paciente_idade", "exames"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "gerar_atestado",
+      description: "Gera um atestado médico ou uma declaração de comparecimento para o paciente.",
+      parameters: {
+        type: "object",
+        properties: {
+          paciente_id: { type: "string" },
+          paciente_nome: { type: "string" },
+          tipo: { type: "string", enum: ["atestado", "declaracao"], description: "Padrão: atestado" },
+          dias: { type: "number", description: "Dias de afastamento (só para tipo=atestado)" },
+          cid: { type: "string", description: "CID, se aplicável" },
+          observacao: { type: "string" },
+        },
+        required: ["paciente_nome", "tipo"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "reenviar_documento",
+      description:
+        "Reexibe, como anexo no chat, um documento (receita, atestado/declaração ou solicitação de exames) já gerado nesta conversa. Use quando o médico pedir o arquivo de novo, em vez de descrevê-lo ou fingir que está anexando algo em texto.",
+      parameters: {
+        type: "object",
+        properties: {
+          documento_id: { type: "string", description: "id retornado quando o documento foi gerado (documento_id)" },
+        },
+        required: ["documento_id"],
       },
     },
   },
@@ -920,6 +975,46 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
       return { gerado: true, modelo_usado: modelo.name, anamnese: texto };
     }
 
+    case "salvar_anamnese_atendimento": {
+      if (!medicoId) return { erro: "Usuário não identificado na sessão." };
+      const pacienteId = String(args.paciente_id || "").trim();
+      const texto = String(args.anamnese_texto || "").trim();
+      if (!pacienteId) return { erro: "Paciente não identificado." };
+      if (!texto) return { erro: "Texto da anamnese vazio — gere a anamnese antes de salvar." };
+      const { data: paciente, error: pErro } = await db
+        .from("pacientes")
+        .select("paciente_id,name")
+        .eq("paciente_id", pacienteId)
+        .eq("user_id", medicoId)
+        .maybeSingle();
+      if (pErro) return { erro: pErro.message };
+      if (!paciente) return { erro: "Cadastro de paciente não encontrado." };
+      const now = new Date();
+      const dateStr = fmtHora(now.toISOString()).split(" ")[0];
+      const { data, error } = await db
+        .from("consulta")
+        .insert({
+          paciente_id: paciente.paciente_id,
+          id_medico: medicoId,
+          started_at: now.toISOString(),
+          title: `Consulta — ${dateStr}`,
+          acao: "Consulta",
+          resumo: "Anamnese registrada via assistente.",
+          notas: "Sem anotações.",
+          anamnese_ia: texto,
+        })
+        .select("id")
+        .single();
+      if (error) return { erro: error.message };
+      ctx.pendingAction.value = {
+        type: "salvar_anamnese_atendimento",
+        consulta_id: data.id,
+        paciente_id: paciente.paciente_id,
+        paciente_nome: paciente.name,
+      };
+      return { salvo: true, atendimento_id: data.id, paciente_nome: paciente.name };
+    }
+
     case "gerar_receita": {
       const medicamentos = Array.isArray(args.medicamentos) ? args.medicamentos : [];
       if (!medicamentos.length) return { erro: "Informe ao menos um medicamento." };
@@ -980,6 +1075,29 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
           .single();
         documentoId = data?.id ?? null;
       }
+      let arquivo: { arquivo_path: string; arquivo_nome: string } | null = null;
+      if (medicoId && documentoId) {
+        const { buildReceitaPdf } = await import("@/lib/documentos/pdfBuilder.server");
+        const { getDoctorInfo, attachPdfToDocumento } = await import("@/lib/documentos/attach.server");
+        try {
+          const doctor = await getDoctorInfo(db, medicoId);
+          const bytes = await buildReceitaPdf({
+            doctor,
+            pacienteNome: args.paciente_nome,
+            pacienteCpf: args.paciente_cpf,
+            pacienteIdade: args.paciente_idade,
+            medicamentos,
+          });
+          arquivo = await attachPdfToDocumento(db, {
+            medicoId,
+            documentoId,
+            bytes,
+            filename: `receita-${documentoId}.pdf`,
+          });
+        } catch (e) {
+          console.error("[gerar_receita] falha ao gerar PDF:", e);
+        }
+      }
       ctx.pendingAction.value = {
         type: "gerar_receita",
         documento_id: documentoId,
@@ -988,8 +1106,10 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         paciente_cpf: args.paciente_cpf || null,
         paciente_idade: args.paciente_idade ?? null,
         medicamentos,
+        arquivo_path: arquivo?.arquivo_path || null,
+        arquivo_nome: arquivo?.arquivo_nome || null,
       };
-      return { gerado: true, documento_id: documentoId, medicamentos: medicamentos.length };
+      return { gerado: true, documento_id: documentoId, medicamentos: medicamentos.length, arquivo_anexado: !!arquivo };
     }
 
     case "buscar_medicamento": {
@@ -1111,6 +1231,36 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
           .single();
         documentoId = data?.id ?? null;
       }
+      let arquivo: { arquivo_path: string; arquivo_nome: string } | null = null;
+      if (medicoId && documentoId) {
+        const { buildSolicitacaoExamePdf } = await import("@/lib/documentos/pdfBuilder.server");
+        const { getDoctorInfo, attachPdfToDocumento } = await import("@/lib/documentos/attach.server");
+        try {
+          const doctor = await getDoctorInfo(db, medicoId);
+          const bytes = await buildSolicitacaoExamePdf({
+            doctor,
+            pacienteNome: args.paciente_nome,
+            pacienteCpf: args.paciente_cpf,
+            pacienteIdade: args.paciente_idade,
+            carater,
+            jejum: !!args.jejum,
+            indicacaoClinica: args.indicacao_clinica || null,
+            cid: args.cid || null,
+            cidDescricao: args.cid_descricao || null,
+            preparo: args.preparo || null,
+            observacoes: args.observacoes || null,
+            exames: examesValidados,
+          });
+          arquivo = await attachPdfToDocumento(db, {
+            medicoId,
+            documentoId,
+            bytes,
+            filename: `solicitacao-exames-${documentoId}.pdf`,
+          });
+        } catch (e) {
+          console.error("[gerar_solicitacao_exame] falha ao gerar PDF:", e);
+        }
+      }
       ctx.pendingAction.value = {
         type: "gerar_solicitacao_exame",
         documento_id: documentoId,
@@ -1126,12 +1276,15 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         preparo: args.preparo || null,
         observacoes: args.observacoes || null,
         exames: examesValidados,
+        arquivo_path: arquivo?.arquivo_path || null,
+        arquivo_nome: arquivo?.arquivo_nome || null,
       };
       return {
         gerado: true,
         documento_id: documentoId,
         exames: examesValidados.length,
         nao_encontrados: naoEncontrados.length ? naoEncontrados : undefined,
+        arquivo_anexado: !!arquivo,
       };
     }
 
@@ -1158,14 +1311,78 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
           .single();
         documentoId = data?.id ?? null;
       }
+      let arquivo: { arquivo_path: string; arquivo_nome: string } | null = null;
+      if (medicoId && documentoId) {
+        const { buildAtestadoPdf } = await import("@/lib/documentos/pdfBuilder.server");
+        const { getDoctorInfo, attachPdfToDocumento } = await import("@/lib/documentos/attach.server");
+        try {
+          const doctor = await getDoctorInfo(db, medicoId);
+          const bytes = await buildAtestadoPdf({
+            doctor,
+            pacienteNome: args.paciente_nome,
+            tipo,
+            dias: args.dias,
+            cid: args.cid,
+            observacao: args.observacao,
+          });
+          arquivo = await attachPdfToDocumento(db, {
+            medicoId,
+            documentoId,
+            bytes,
+            filename: `${tipo}-${documentoId}.pdf`,
+          });
+        } catch (e) {
+          console.error("[gerar_atestado] falha ao gerar PDF:", e);
+        }
+      }
       ctx.pendingAction.value = {
         type: "gerar_atestado",
         documento_id: documentoId,
         paciente_id: args.paciente_id || null,
         paciente_nome: args.paciente_nome || null,
         ...conteudo,
+        arquivo_path: arquivo?.arquivo_path || null,
+        arquivo_nome: arquivo?.arquivo_nome || null,
       };
-      return { gerado: true, documento_id: documentoId, ...conteudo };
+      return { gerado: true, documento_id: documentoId, ...conteudo, arquivo_anexado: !!arquivo };
+    }
+
+    case "reenviar_documento": {
+      const documentoId = String(args.documento_id || "").trim();
+      if (!documentoId) return { erro: "Informe o documento_id do documento a reenviar." };
+      const query = db.from("documentos_paciente").select("id,tipo,paciente_id,paciente_nome,conteudo,arquivo_path,arquivo_nome");
+      const { data: docRow, error } = medicoId
+        ? await query.eq("id", documentoId).eq("id_medico", medicoId).maybeSingle()
+        : await query.eq("id", documentoId).maybeSingle();
+      if (error) return { erro: error.message };
+      if (!docRow) return { erro: "Documento não encontrado." };
+      const conteudo = (docRow.conteudo || {}) as Record<string, unknown>;
+      const base = {
+        documento_id: docRow.id,
+        paciente_id: docRow.paciente_id,
+        paciente_nome: docRow.paciente_nome,
+        arquivo_path: docRow.arquivo_path,
+        arquivo_nome: docRow.arquivo_nome,
+      };
+      if (docRow.tipo === "receita") {
+        ctx.pendingAction.value = { type: "gerar_receita", ...base, ...conteudo };
+      } else if (docRow.tipo === "solicitacao_exame") {
+        ctx.pendingAction.value = {
+          type: "gerar_solicitacao_exame",
+          ...base,
+          carater: conteudo.carater,
+          jejum: conteudo.jejum_necessario,
+          indicacao_clinica: conteudo.indicacao_clinica,
+          cid: conteudo.cid_code,
+          cid_descricao: conteudo.cid_description,
+          preparo: conteudo.preparo,
+          observacoes: conteudo.observacoes,
+          exames: conteudo.itens,
+        };
+      } else {
+        ctx.pendingAction.value = { type: "gerar_atestado", ...base, ...conteudo };
+      }
+      return { reenviado: true };
     }
 
     case "enviar_mensagem": {

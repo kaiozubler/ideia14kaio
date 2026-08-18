@@ -30,6 +30,14 @@
       </header>
       <div id="ctx" class="ctx">Contexto da tela: <span id="ctx-info">lendo…</span></div>
       <div id="msgs" class="msgs"></div>
+      <div class="chips" id="ch-chips">
+        <button class="chip" type="button" data-prompt="Agendar um paciente">📅 Agendar paciente</button>
+        <button class="chip" type="button" data-prompt="Gerar uma receita">💊 Gerar receita</button>
+        <button class="chip" type="button" data-prompt="Gerar um atestado">📄 Atestado/declaração</button>
+        <button class="chip" type="button" data-prompt="Gerar uma anamnese">📋 Gerar anamnese</button>
+        <button class="chip" type="button" data-prompt="Quantos pacientes eu já atendi hoje?">📊 Pacientes hoje</button>
+        <button class="chip" type="button" data-prompt="Qual o horário do meu próximo paciente?">🕒 Próximo paciente</button>
+      </div>
       <form id="ch-form" class="composer">
         <textarea id="ch-inp" rows="1" placeholder="Pergunte algo sobre a tela ou o paciente…"></textarea>
         <button class="send" type="submit" title="Enviar">➤</button>

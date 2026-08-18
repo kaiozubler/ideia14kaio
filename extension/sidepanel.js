@@ -1,7 +1,7 @@
 /* Painel lateral: captura o conteúdo da tela ativa (somente leitura) e conversa
    com o assistente de IA do MediCopilot, que acessa o banco do sistema. */
 (() => {
-  const { APP_URL } = window.MC_CONFIG;
+  const { APP_URL, SUPABASE_URL, SUPABASE_KEY } = window.MC_CONFIG;
   const $ = (id) => document.getElementById(id);
   let history = [];
   let conversaId = null;
@@ -115,6 +115,14 @@
     send(v);
   }
 
+  // Botões flutuantes de sugestão (iguais aos do Assistente IA do app principal):
+  // preenchem o campo com o prompt e enviam direto, sem exigir digitação.
+  function quickPrompt(text) {
+    $("ch-inp").value = text;
+    autoResizeComposer();
+    submitComposer();
+  }
+
   /* ---------- anexos gerados pela IA (receita, exames, anamnese) ---------- */
   function escHtml(s) {
     return String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -147,6 +155,16 @@
     const url = URL.createObjectURL(blob);
     window.open(url, "_blank");
     setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
+  // Como openHtmlDoc, mas devolve a URL em vez de abrir — usado como alternativa
+  // (fallback client-side) quando ainda não há um PDF real anexado ao documento.
+  async function urlFor(buildHtml) {
+    const html = await buildHtml();
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return url;
   }
 
   async function docHeader(titulo) {
@@ -222,15 +240,59 @@
     return docBase(header + `<div class="field" style="white-space:pre-wrap;">${escHtml(a.texto || "")}</div>`);
   }
 
+  async function buildAtestadoDoc(a) {
+    const label = a.tipo === "declaracao" ? "Declaração de comparecimento" : "Atestado médico";
+    const header = await docHeader(label);
+    const corpo =
+      a.tipo === "declaracao"
+        ? `Declaro, para os devidos fins, que o(a) paciente <b>${escHtml(a.paciente_nome || "—")}</b> esteve sob meus cuidados profissionais nesta data.`
+        : `Atesto que o(a) paciente <b>${escHtml(a.paciente_nome || "—")}</b> necessita de afastamento de suas atividades por <b>${escHtml(a.dias ?? "—")}</b> dia(s)${a.cid ? ", CID " + escHtml(a.cid) : ""}.`;
+    return docBase(
+      header +
+        `<div class="field" style="font-size:15px;line-height:1.7;">${corpo}</div>` +
+        (a.observacao ? `<div class="field"><b>Observações</b>${escHtml(a.observacao)}</div>` : ""),
+    );
+  }
+
+  async function getSignedFileUrl(path) {
+    if (!path) return null;
+    try {
+      const token = await MC_AUTH.token();
+      if (!token) return null;
+      const r = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/documentos-arquivos/${encodeURIComponent(path)}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ expiresIn: 300 }),
+      });
+      if (!r.ok) return null;
+      const data = await r.json();
+      if (!data.signedURL) return null;
+      return `${SUPABASE_URL}/storage/v1${data.signedURL}`;
+    } catch {
+      return null;
+    }
+  }
+
   async function handleAction(action) {
     if (!action || !action.type) return;
     if (action.type === "gerar_receita") {
-      attachmentCard("💊", "Receita — " + (action.paciente_nome || "paciente"), "Toque para abrir e imprimir/salvar como PDF", [
-        { label: "Abrir receita", onClick: async () => openHtmlDoc(await buildReceitaDoc(action)) },
+      const nome = "Receita — " + (action.paciente_nome || "paciente");
+      const signed = await getSignedFileUrl(action.arquivo_path);
+      attachmentCard("💊", nome, signed ? "PDF pronto — toque para abrir" : "Toque para abrir e imprimir/salvar como PDF", [
+        { label: signed ? "Abrir PDF" : "Abrir receita", onClick: async () => window.open(signed || (await urlFor(() => buildReceitaDoc(action))), "_blank") },
       ]);
     } else if (action.type === "gerar_solicitacao_exame") {
-      attachmentCard("🧪", "Solicitação de exames — " + (action.paciente_nome || "paciente"), "Toque para abrir e imprimir/salvar como PDF", [
-        { label: "Abrir solicitação", onClick: async () => openHtmlDoc(await buildExameDoc(action)) },
+      const nome = "Solicitação de exames — " + (action.paciente_nome || "paciente");
+      const signed = await getSignedFileUrl(action.arquivo_path);
+      attachmentCard("🧪", nome, signed ? "PDF pronto — toque para abrir" : "Toque para abrir e imprimir/salvar como PDF", [
+        { label: signed ? "Abrir PDF" : "Abrir solicitação", onClick: async () => window.open(signed || (await urlFor(() => buildExameDoc(action))), "_blank") },
+      ]);
+    } else if (action.type === "gerar_atestado") {
+      const label = action.tipo === "declaracao" ? "Declaração" : "Atestado";
+      const nome = label + " — " + (action.paciente_nome || "paciente");
+      const signed = await getSignedFileUrl(action.arquivo_path);
+      attachmentCard(action.tipo === "declaracao" ? "📄" : "🩹", nome, signed ? "PDF pronto — toque para abrir" : "Toque para abrir e imprimir/salvar como PDF", [
+        { label: signed ? "Abrir PDF" : "Abrir " + label.toLowerCase(), onClick: async () => window.open(signed || (await urlFor(() => buildAtestadoDoc(action))), "_blank") },
       ]);
     } else if (action.type === "gerar_anamnese") {
       attachmentCard("📋", "Anamnese — " + (action.modelo_usado || ""), "Toque para abrir/imprimir ou copiar o texto", [
@@ -250,6 +312,8 @@
       ]);
     } else if (action.type === "criar_atendimento") {
       attachmentCard("🩺", "Novo atendimento criado", (action.paciente_nome || "paciente") + " — rascunho pronto no MediCopilot.", []);
+    } else if (action.type === "salvar_anamnese_atendimento") {
+      attachmentCard("✅", "Anamnese salva no cadastro", (action.paciente_nome || "paciente") + " — atendimento concluído registrado.", []);
     }
   }
 
@@ -487,6 +551,9 @@
     showAuth("Você saiu da extensão.");
   };
   $("ch-mic").onclick = () => dgMic.toggle();
+  $("ch-chips").querySelectorAll(".chip").forEach((btn) => {
+    btn.addEventListener("click", () => quickPrompt(btn.dataset.prompt));
+  });
   $("ch-inp").addEventListener("input", autoResizeComposer);
   $("ch-inp").addEventListener("keydown", (e) => {
     // Enter envia; Shift+Enter quebra linha — comportamento usual de chat.
