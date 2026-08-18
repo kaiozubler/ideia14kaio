@@ -669,6 +669,7 @@
                                                       .tl-type.exame{background:#edf2fe;color:#2d4da3;border:0.5px solid #c5d3f7}
                                                       .tl-type.cadastro{background:#fef8e1;color:#7a5c00;border:0.5px solid #f3dfa0}
                                                       .tl-type.anexo{background:#f5effe;color:#5a2da1;border:0.5px solid #d0b5f7}
+                                                      .tl-type.questionario{background:#e6fbf6;color:#0d7d6f;border:0.5px solid #a7e8dc}
 
                                                       /* INDICADORES */
                                                       .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
@@ -6645,7 +6646,7 @@
                                                               return {id:a.id,id_medico:a.id_medico||null,title:a.title||('Consulta — '+dateStr),date:dateStr,hora:timeStr,startedAt:a.started_at||d.toISOString(),acao:a.acao||'Consulta',resumo:a.resumo||'Atendimento registrado.',notas:a.notas||'Sem anotações.',notaPersonal:a.nota_personal||'',anamneseIa:a.anamnese_ia||''};
                                                             }
                                                             function mapExameRow(e){return {id:e.id,nome:e.nome,tipo:e.tipo||'Outro',data:e.data||'',obs:e.obs||'',resultado:e.resultado||'',arquivoPath:e.arquivo_path||null,file:e.file_name||'—',validade:e.validade||'',validadeDias:e.validade_dias||null,tussId:e.tuss_procedimento_id||null,statusTuss:e.status_tuss||'nao_aplicavel',resultadoOriginal:e.resultado_original||'',resultadoEstruturado:e.resultado_estruturado||null,protocoloTarefaId:e.protocolo_tarefa_id||null,statusProtocolo:e.status_protocolo||'sem_protocolo'};}
-                                                            function mapTimelineRow(ev){return {id:ev.id,date:ev.event_date,type:ev.type,icon:ev.icon,title:ev.title,sub:ev.sub||''};}
+                                                            function mapTimelineRow(ev){return {id:ev.id,date:ev.event_date,type:ev.type,icon:ev.icon,title:ev.title,sub:ev.sub||'',refType:ev.ref_type||null,refId:ev.ref_id||null};}
                                                             async function loadPatientRecords(id){
                                                               const [atRes,exRes,tlRes]=await Promise.all([
                                                                 sb.from('consulta').select('*').eq('paciente_id',id).order('started_at',{ascending:false}),
@@ -8455,14 +8456,25 @@ showAtendList();
                                                               const e=exames.find(x=>x.id===id);
                                                               if(!e)return null;
                                                               if(!e.tussId||!e.resultadoEstruturado)return null;
-                                                              const {data,error}=await sb.rpc('avaliar_resultado_exame',{
-                                                                p_exame_id:id,
-                                                                p_paciente_id:currentPatient.id,
-                                                                p_tuss_procedimento_id:e.tussId,
-                                                                p_resultado:e.resultadoEstruturado
-                                                              });
-                                                              if(error){console.warn('Motor de protocolos',error);return null;}
-                                                              const rows=data||[];
+                                                              let rows=[];
+                                                              try{
+                                                                const {data:sess}=await sb.auth.getSession();
+                                                                const token=sess&&sess.session&&sess.session.access_token;
+                                                                if(!token)return null;
+                                                                const res=await fetch('/api/protocolos/avaliar-exame',{
+                                                                  method:'POST',
+                                                                  headers:{'content-type':'application/json',authorization:'Bearer '+token},
+                                                                  body:JSON.stringify({
+                                                                    exameId:id,
+                                                                    pacienteId:currentPatient.id,
+                                                                    tussProcedimentoId:e.tussId,
+                                                                    resultado:e.resultadoEstruturado
+                                                                  })
+                                                                });
+                                                                if(!res.ok){console.warn('Motor de protocolos',res.status);return null;}
+                                                                const j=await res.json();
+                                                                rows=j.rows||[];
+                                                              }catch(err){console.warn('Motor de protocolos',err);return null;}
                                                               const {data:row}=await sb.from('exames').select('*').eq('id',id).single();
                                                               if(row){const i=exames.findIndex(x=>x.id===id);if(i>=0)exames[i]=mapExameRow(row);}
                                                               renderExames();
@@ -8540,7 +8552,7 @@ showAtendList();
                                                             /* ========== TIMELINE ========== */
                                                             function renderTimeline(){
                                                               const el=document.getElementById('timeline-list');if(!el)return;
-                                                              const labelMap={atend:'Atendimento',exame:'Exame',cadastro:'Cadastro',anexo:'Anexo'};
+                                                              const labelMap={atend:'Atendimento',exame:'Exame',cadastro:'Cadastro',anexo:'Anexo',receita:'Receita',questionario:'Formulário'};
                                                               el.innerHTML='<div class="tl-wrap">'+timelineEvents.map(ev=>`
                                                                 <div class="tl-item">
                                                                   <div class="tl-left"><div class="tl-dot ${ev.type==='atend'?'filled':''}"></div><div class="tl-line"></div></div>
@@ -8549,6 +8561,7 @@ showAtendList();
                                                                     <div class="tl-card">
                                                                       <div class="tl-card-title"><i class="ti ${ev.icon}"></i>${ev.title}<span class="tl-type ${ev.type}">${labelMap[ev.type]||ev.type}</span></div>
                                                                       <div class="tl-card-sub">${ev.sub}</div>
+                                                                      ${ev.refType==='questionario_resposta'&&ev.refId?`<button type="button" onclick="window.mostrarRespostaQuestionario&&window.mostrarRespostaQuestionario('${ev.refId}')" style="margin-top:8px;padding:4px 10px;border-radius:10px;border:1px solid rgba(203,213,225,.8);background:rgba(255,255,255,.7);color:#0d9488;font-size:11.5px;font-weight:600;cursor:pointer">Ver resposta →</button>`:''}
                                                                     </div>
                                                                   </div>
                                                                 </div>`).join('')+'</div>';

@@ -1559,6 +1559,7 @@ export type Database = {
           escala_max: number | null
           escala_min: number | null
           id: string
+          longa: boolean
           obrigatoria: boolean
           opcoes: Json | null
           ordem: number
@@ -1573,6 +1574,7 @@ export type Database = {
           escala_max?: number | null
           escala_min?: number | null
           id?: string
+          longa?: boolean
           obrigatoria?: boolean
           opcoes?: Json | null
           ordem?: number
@@ -1587,6 +1589,7 @@ export type Database = {
           escala_max?: number | null
           escala_min?: number | null
           id?: string
+          longa?: boolean
           obrigatoria?: boolean
           opcoes?: Json | null
           ordem?: number
@@ -2226,10 +2229,6 @@ export type Database = {
           specialty: string
           status: string
         }[]
-      }
-      resposta_de_formulario_ativo: {
-        Args: { p_resposta_id: string }
-        Returns: boolean
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
