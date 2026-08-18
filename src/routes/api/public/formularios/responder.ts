@@ -289,6 +289,17 @@ export const Route = createFileRoute("/api/public/formularios/responder")({
                 ref_id: resp.id,
               });
               if (tlErr) console.warn("[formularios:responder] falha ao registrar timeline", tlErr);
+
+              // Marca o cadastro como atualizado para que o resumo do
+              // prontuário usado pela IA (resumo_prontuario) seja
+              // regenerado na próxima abertura do paciente — sem isso, o
+              // resumo em cache (válido por até 60 dias) não refletiria as
+              // respostas recém-chegadas.
+              const { error: touchErr } = await supabaseAdmin
+                .from("pacientes")
+                .update({ updated_at: now.toISOString() })
+                .eq("paciente_id", pacienteIdResolvido);
+              if (touchErr) console.warn("[formularios:responder] falha ao atualizar timestamp do paciente", touchErr);
             } catch (linkErr) {
               // Nunca falha o envio da resposta do paciente por causa do
               // vínculo com o prontuário — a resposta já está salva.
