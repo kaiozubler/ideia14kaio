@@ -378,7 +378,7 @@
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <span class="qz-lbl" style="text-transform:uppercase;letter-spacing:.08em;margin:0">Campos do cadastro</span>
       </div>
-      <div class="qz-card" style="padding:12px 14px;position:relative">
+      <div class="qz-card" style="padding:12px 14px;position:relative;z-index:${m.campoPickerOpen ? 40 : 1}">
         <div style="font-size:11.5px;color:#64748b;margin-bottom:10px">O paciente confirma/preenche estes dados antes das perguntas. Nome, CPF, telefone e e-mail são sempre pedidos.</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px">
           ${selecionados.map((id) => {
