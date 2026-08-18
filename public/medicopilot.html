@@ -4564,6 +4564,34 @@
           </button>
         </div>
       </div>
+      <!-- PRONTUÁRIO VAZIO AO SALVAR -->
+      <div class="modal" id="m-prontuario-vazio" style="display:none">
+        <div class="mhd">
+          <span class="mhd-title"
+            ><i class="ti ti-file-alert" style="font-size:14px;margin-right:5px;color:#d97706"></i>Prontuário sem
+            anotações</span
+          ><button class="mclose" onclick="continuarEditandoProntuarioVazio()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody">
+          <p style="font-size:12.5px;color:var(--n400);margin:0">
+            Este atendimento ainda não tem nada escrito no prontuário. A transcrição e a conversa com a IA já estão
+            salvas no rascunho, mas para registrar o atendimento é preciso decidir o que fazer com ele: continuar
+            preenchendo, descartar o rascunho, ou deixar a IA gerar um resumo automático (a partir da transcrição e
+            da conversa) e salvá-lo no prontuário.
+          </p>
+        </div>
+        <div class="mfoot" style="flex-wrap:wrap">
+          <button class="btn" id="mpv-descartar-btn" onclick="descartarRascunhoAoSalvarVazio()">
+            <i class="ti ti-trash"></i> Descartar rascunho
+          </button>
+          <button class="btn" id="mpv-continuar-btn" onclick="continuarEditandoProntuarioVazio()">
+            Continuar editando
+          </button>
+          <button class="btn primary" id="mpv-resumo-btn" onclick="salvarComResumoProntuarioVazio()">
+            <i class="ti ti-sparkles"></i> Salvar com resumo
+          </button>
+        </div>
+      </div>
       <!-- ADD EXAME -->
       <div class="modal" id="m-add-exame" style="display:none">
         <div class="mhd">
@@ -8002,6 +8030,7 @@
                                                                 const npta=document.getElementById('nota-personal-ta');if(npta)npta.value='';
                                                                 aiChatHistory=[];
                                                                 iniciarConsultaEResumo();
+                                                                criarRascunhoInicial();
                                                               }else{
                                                                 const pa=document.getElementById('pront-area');if(pa)pa.value=atendEmAndamento.pront;
                                                                 const npta=document.getElementById('nota-personal-ta');if(npta)npta.value=atendEmAndamento.notaPessoal;
@@ -8013,7 +8042,116 @@
                                                                 setTimeout(()=>{if(!listening&&typeof toggleListen==='function')toggleListen();},600);
                                                               }
                                                             }
+                                                            /* Cria o registro de "Rascunho" no banco assim que o atendimento é iniciado
+                                                               (clique em "Novo atendimento"), mesmo que o médico ainda não tenha digitado
+                                                               nada no campo Prontuário. Antes, o rascunho só nascia quando markAtendDirty()
+                                                               era disparado pela digitação no Prontuário — deixando transcrição/conversa
+                                                               com a IA sem nenhum atendimento salvo por trás caso o usuário saísse antes de
+                                                               escrever algo lá. Com isso, todo atendimento iniciado já existe como Rascunho
+                                                               desde o primeiro instante, e segue sendo reescrito a cada alteração normalmente. */
+                                                            async function criarRascunhoInicial(){
+                                                              if(!currentPatient||!currentUser)return;
+                                                              atendEmAndamento.dirty=true;
+                                                              updateAtendProgress();
+                                                              saveAtendState();
+                                                              saveAtendDraft();
+                                                              updateSaveStatus('saving');
+                                                              try{
+                                                                await saveAtendInternal({finalize:false});
+                                                                updateSaveStatus('saved');
+                                                              }catch(e){
+                                                                console.warn('Falha ao criar rascunho inicial do atendimento',e);
+                                                                updateSaveStatus('error');
+                                                              }
+                                                            }
                                                             async function saveAtendFromProgress(){const pa=document.getElementById('pront-area');if(pa)atendEmAndamento.pront=pa.value;await saveAtendInternal({finalize:true});}
+
+                                                            /* ========== SALVAR ATENDIMENTO SEM NADA NO PRONTUÁRIO ==========
+                                                               Quando o médico tenta finalizar um atendimento com o Prontuário
+                                                               ainda vazio (mas possivelmente com transcrição e/ou conversa com a
+                                                               IA já registradas), saveAtendInternal() abre este modal em vez de
+                                                               salvar direto, oferecendo 3 caminhos: continuar editando, descartar
+                                                               o rascunho, ou deixar a IA resumir automaticamente a transcrição/
+                                                               conversa e gravar esse resumo no prontuário antes de finalizar. */
+                                                            let _pendingSaveOptsVazio=null;
+                                                            function abrirModalProntuarioVazio(opts){
+                                                              _pendingSaveOptsVazio=opts||{finalize:true};
+                                                              openModal('prontuario-vazio');
+                                                            }
+                                                            function continuarEditandoProntuarioVazio(){
+                                                              _pendingSaveOptsVazio=null;
+                                                              closeModal();
+                                                              updateSaveStatus('dirty');
+                                                            }
+                                                            async function descartarRascunhoAoSalvarVazio(){
+                                                              _pendingSaveOptsVazio=null;
+                                                              closeModal();
+                                                              const idDescartado=window._idConsultaAtual;
+                                                              stopAtendAutoSave();
+                                                              clearAtendDraft();
+                                                              window._idConsultaAtual=null;
+                                                              atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[]};
+                                                              if(idDescartado){
+                                                                try{
+                                                                  await sb.from('consulta').delete().eq('id',idDescartado);
+                                                                  atendimentos=atendimentos.filter(a=>a.id!==idDescartado);
+                                                                }catch(e){console.warn('Falha ao descartar rascunho',e);}
+                                                              }
+                                                              updateAtendProgress();
+                                                              renderAtendimentos();
+                                                              showAtendList();
+                                                              showToast&&showToast('Rascunho descartado','success');
+                                                            }
+                                                            /* Reaproveita a mesma infraestrutura de geração de anamnese por IA
+                                                               (modelo padrão de anamnese + buildAnamneseContext/ContextBlock, que já
+                                                               reúnem prontuário, transcrição e diálogo com a IA do atendimento) para
+                                                               gerar um resumo automático, sem exigir que o médico abra o painel de
+                                                               anamnese manualmente. */
+                                                            async function gerarResumoAutomaticoAtendimento(){
+                                                              const models=await fetchAnamneseModels();
+                                                              if(!models||!models.length)return'';
+                                                              const model=models.find(m=>m.is_default)||models[0];
+                                                              const sources=model.sources||inferSourcesFromPrompt(model.prompt||'');
+                                                              const ctx=buildAnamneseContext();
+                                                              const basePrompt=applyAnamneseVars(model.prompt,ctx);
+                                                              const ctxBlock=buildAnamneseContextBlock(sources);
+                                                              const systemPrompt=basePrompt+'\n\n---\n# CONTEXTO DISPONÍVEL\n\n'+(ctxBlock||'(nenhuma fonte de contexto selecionada)');
+                                                              const userContent='Gere a resposta agora, seguindo estritamente as instruções acima. '
+                                                                +'Use apenas os dados já fornecidos no prompt do sistema; não invente nem complemente '
+                                                                +'com informações ausentes.';
+                                                              const r=await fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})});
+                                                              if(!r.ok)throw new Error(await r.text());
+                                                              const d=await r.json();
+                                                              const txt=(d.reply||d.resumo||'').trim();
+                                                              window.__lastAnamnese=txt;
+                                                              return txt;
+                                                            }
+                                                            async function salvarComResumoProntuarioVazio(){
+                                                              const opts=Object.assign({},_pendingSaveOptsVazio||{finalize:true},{prontuarioVazioResolvido:true});
+                                                              _pendingSaveOptsVazio=null;
+                                                              const btnResumo=document.getElementById('mpv-resumo-btn');
+                                                              const btnDescartar=document.getElementById('mpv-descartar-btn');
+                                                              const btnContinuar=document.getElementById('mpv-continuar-btn');
+                                                              const origHtml=btnResumo?btnResumo.innerHTML:'';
+                                                              [btnResumo,btnDescartar,btnContinuar].forEach(b=>{if(b)b.disabled=true;});
+                                                              if(btnResumo)btnResumo.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Gerando resumo...';
+                                                              try{
+                                                                const resumoTxt=await gerarResumoAutomaticoAtendimento();
+                                                                const pa=document.getElementById('pront-area');
+                                                                const textoFinal=resumoTxt?('[Resumo automático — IA]\n'+mdToPlain(resumoTxt)):'Atendimento registrado.';
+                                                                if(pa){pa.value=pa.value?pa.value+'\n\n'+textoFinal:textoFinal;}
+                                                                atendEmAndamento.pront=pa?pa.value:textoFinal;
+                                                                closeModal();
+                                                                [btnResumo,btnDescartar,btnContinuar].forEach(b=>{if(b)b.disabled=false;});
+                                                                if(btnResumo)btnResumo.innerHTML=origHtml;
+                                                                await saveAtendInternal(opts);
+                                                              }catch(e){
+                                                                console.error('Falha ao gerar resumo automático do atendimento',e);
+                                                                showToast&&showToast('Não foi possível gerar o resumo automaticamente: '+(e.message||e),'error');
+                                                                [btnResumo,btnDescartar,btnContinuar].forEach(b=>{if(b)b.disabled=false;});
+                                                                if(btnResumo)btnResumo.innerHTML=origHtml;
+                                                              }
+                                                            }
                                                             /* ========== IDENTIFICAÇÃO DO PACIENTE AO SALVAR ==========
                                                                Atendimentos iniciados sem vínculo a um paciente (botão "Iniciar
                                                                atendimento") precisam ter nome, CPF e telefone confirmados antes do
@@ -8127,6 +8265,13 @@
                                                               if(finalize&&precisaIdentificarPaciente()){
                                                                 abrirModalIdentificarPaciente(opts);
                                                                 return{deferred:true};
+                                                              }
+                                                              if(finalize&&!(opts&&opts.prontuarioVazioResolvido)){
+                                                                const prontCheck=(atendEmAndamento.pront||document.getElementById('pront-area')?.value||'').trim();
+                                                                if(!prontCheck){
+                                                                  abrirModalProntuarioVazio(opts);
+                                                                  return{deferred:true};
+                                                                }
                                                               }
                                                                   if(finalize&&!(opts&&opts.infoCompChecked)){
                                       const opts2=Object.assign({},opts,{infoCompChecked:true});
