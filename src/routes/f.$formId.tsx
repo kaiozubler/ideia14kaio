@@ -119,13 +119,7 @@ function PublicForm() {
   useEffect(() => {
     let vivo = true;
     (async () => {
-      const { data, error } = await sb
-        .from("questionarios")
-        .select(
-          "id,titulo,descricao,anonimo,ativo,campos_cadastro,questionario_perguntas(id,ordem,tipo,enunciado,opcoes,escala_min,escala_max,escala_label_min,escala_label_max,obrigatoria)",
-        )
-        .eq("id", formId)
-        .maybeSingle();
+      const { data, error } = await (sb as any).rpc("formulario_publico", { p_id: formId });
       if (!vivo) return;
       setCarregando(false);
       if (error || !data) return setErro("Formulário não encontrado ou indisponível.");
