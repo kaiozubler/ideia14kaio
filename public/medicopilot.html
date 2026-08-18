@@ -11438,18 +11438,29 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                                   <div class="cf-section-body">${cfRenderBody(c.key)}</div>
                                                                 </div>`;
                                                               }).join('');
-                                                              // observer for vistos
-                                                              // observer for vistos — delay prevents marking all sections on initial render
+                                                      // observer for vistos — marca os campos à medida que o usuário rola a tela de revisão
                                                       if(window.__cfObs)window.__cfObs.disconnect();
                                                       requestAnimationFrame(()=>{
                                                         let ready=false;
-                                                        setTimeout(()=>{ready=true;},600);
+                                                        setTimeout(()=>{ready=true;},150);
                                                         window.__cfObs=new IntersectionObserver((ents)=>{
                                                           if(!ready)return;
                                                           let changed=false;
-                                                          ents.forEach(e=>{if(e.isIntersecting){const k=e.target.dataset.key;if(!condState.vistos[k]){condState.vistos[k]=true;changed=true;}}});
-                                                          if(changed)cfUpdateConduFooter();
-                                                        },{root:scroll,threshold:.35});
+                                                          // Ordena por proximidade do topo do container (mais visível primeiro)
+                                                          const sorted=[...ents].sort((a,b)=>a.boundingClientRect.top-b.boundingClientRect.top);
+                                                          sorted.forEach(e=>{
+                                                            const k=e.target.dataset.key;
+                                                            if(!k)return;
+                                                            // Marca como visto se a seção está ativa e intersectando o viewport do scroll
+                                                            if(condState.ativados[k] && e.isIntersecting && !condState.vistos[k]){
+                                                              condState.vistos[k]=true;changed=true;
+                                                            }
+                                                          });
+                                                          if(changed){
+                                                            cfRenderCondutaNav(); // atualiza badges laterais sem re-renderizar o conteúdo
+                                                            cfUpdateConduFooter();
+                                                          }
+                                                        },{root:scroll,rootMargin:'0px 0px -45% 0px',threshold:0});
                                                         scroll.querySelectorAll('.cf-section').forEach(el=>window.__cfObs.observe(el));
                                                       });
                                                       cfUpdateConduFooter();
