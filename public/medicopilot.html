@@ -11465,6 +11465,35 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                       });
                                                       cfUpdateConduFooter();
                                                             }
+                                                            function cfRenderCondutaNav(){
+                                                              // Atualiza badges e estado "visto" na navegação lateral sem re-renderizar o conteúdo
+                                                              document.querySelectorAll('#cf-nav-list .cf-nav-item').forEach((item,idx)=>{
+                                                                const c=CF_CAMPOS[idx]; if(!c)return;
+                                                                const vi=!!condState.vistos[c.key], at=!!condState.ativados[c.key];
+                                                                const btn=item.querySelector('.cf-nav-btn');
+                                                                const badge=item.querySelector('.cf-nav-badge');
+                                                                if(btn)btn.classList.toggle('visto',vi);
+                                                                if(badge)badge.style.background=vi?'linear-gradient(135deg,#34d399,#059669)':(at?c.grad:'rgba(203,213,225,.5)');
+                                                              });
+                                                              // Atualiza cabeçalhos das seções no painel de revisão
+                                                              document.querySelectorAll('#cf-cond-scroll .cf-section').forEach(sec=>{
+                                                                const k=sec.dataset.key; if(!k)return;
+                                                                const c=CF_CAMPOS.find(x=>x.key===k); if(!c)return;
+                                                                const vi=!!condState.vistos[k];
+                                                                const hd=sec.querySelector('.cf-section-hd'); if(!hd)return;
+                                                                const badge=hd.querySelector('.cf-nav-badge');
+                                                                const title=hd.querySelector('span[style*="font-weight:700"]');
+                                                                const tag=hd.querySelector('.cf-pill-tag, span:last-child');
+                                                                if(badge)badge.style.background=vi?'linear-gradient(135deg,#34d399,#059669)':c.grad;
+                                                                if(title)title.style.color=vi?'#065f46':'#1e293b';
+                                                                if(tag && !tag.classList.contains('cf-pill-tag')){
+                                                                  tag.className='cf-pill-tag';
+                                                                  tag.textContent='✓ revisado';
+                                                                } else if(tag){
+                                                                  tag.textContent='✓ revisado';
+                                                                }
+                                                              });
+                                                            }
                                                             function cfRenderBody(key){
                                                         const s=condState;
                                                         const escH=v=>(String(v||'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
