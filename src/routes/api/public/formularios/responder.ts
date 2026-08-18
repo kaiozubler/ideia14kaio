@@ -85,6 +85,25 @@ const COLUNAS_DIRETAS = [
   "dados_clinicos",
 ] as const;
 
+// Campos estruturados de endereço — usados para montar o texto concatenado
+// abaixo (ver buildEnderecoConcat).
+const ENDERECO_CAMPOS = ["cep", "logradouro", "numero", "complemento", "bairro", "cidade", "uf"] as const;
+
+// A tela de cadastro (medicopilot.html) grava os campos de endereço separados
+// (cep/logradouro/numero/...) E TAMBÉM um texto concatenado em "endereco" —
+// é esse campo "endereco" que a listagem/ficha do paciente exibe (mapPatientRow
+// só lê p.endereco, nunca os campos separados). Precisamos montar o mesmo
+// texto aqui, ou o endereço preenchido pelo paciente no formulário fica
+// gravado nas colunas separadas mas invisível na ficha do paciente.
+// Mantém EXATAMENTE a mesma lógica de buildEnderecoConcat() do app principal.
+function buildEnderecoConcat(a: Record<string, string | undefined>): string | null {
+  let parte1 = [a.logradouro, a.numero].filter(Boolean).join(", ");
+  if (a.complemento) parte1 = [parte1, a.complemento].filter(Boolean).join(" - ");
+  let parte2 = [a.cidade, a.uf].filter(Boolean).join("/");
+  if (a.bairro) parte2 = [a.bairro, parte2].filter(Boolean).join(", ");
+  return [parte1, parte2].filter(Boolean).join(" - ") || null;
+}
+
 // Campos que mapeiam pra dentro de info_complementar (jsonb).
 const INFO_COMPLEMENTAR_MAP: Record<string, string> = {
   ic_peso: "peso",
@@ -171,6 +190,7 @@ export const Route = createFileRoute("/api/public/formularios/responder")({
           if (!form.anonimo && !pacienteIdResolvido && nome && cpfDigits.length === 11) {
             // CPF não corresponde a nenhum paciente cadastrado: cria um novo
             // cadastro com todos os dados informados no formulário.
+            const enderecoNovo = buildEnderecoConcat(colunasExtras);
             const { data: novoPaciente, error: novoErr } = await supabaseAdmin
               .from("pacientes")
               .insert({
@@ -181,6 +201,7 @@ export const Route = createFileRoute("/api/public/formularios/responder")({
                 convenio: colunasExtras.convenio || "Particular",
                 user_id: form.user_id,
                 ...colunasExtras,
+                ...(enderecoNovo ? { endereco: enderecoNovo } : {}),
                 ...(Object.keys(infoComplementarExtras).length ? { info_complementar: infoComplementarExtras } : {}),
               })
               .select("paciente_id")
@@ -193,7 +214,7 @@ export const Route = createFileRoute("/api/public/formularios/responder")({
             try {
               const { data: existente } = await supabaseAdmin
                 .from("pacientes")
-                .select([...COLUNAS_DIRETAS, "info_complementar"].join(","))
+                .select([...COLUNAS_DIRETAS, "endereco", "info_complementar"].join(","))
                 .eq("paciente_id", pacienteIdResolvido)
                 .maybeSingle();
               if (existente) {
@@ -201,6 +222,20 @@ export const Route = createFileRoute("/api/public/formularios/responder")({
                 const updateCols: Record<string, string> = {};
                 for (const col of COLUNAS_DIRETAS) {
                   if (colunasExtras[col] && !ex[col]) updateCols[col] = colunasExtras[col];
+                }
+                // "endereco" é o texto concatenado que a ficha do paciente
+                // exibe (ver comentário em buildEnderecoConcat). Só recalcula
+                // se ainda estiver em branco no cadastro — nunca sobrescreve
+                // um endereço já preenchido pela clínica — usando o valor
+                // final de cada campo estruturado (o que acabou de ser
+                // completado agora + o que já existia no cadastro).
+                if (!ex.endereco) {
+                  const enderecoAtualizado = buildEnderecoConcat(
+                    Object.fromEntries(
+                      ENDERECO_CAMPOS.map((c) => [c, (updateCols[c] as string | undefined) ?? (ex[c] as string | undefined)]),
+                    ),
+                  );
+                  if (enderecoAtualizado) updateCols.endereco = enderecoAtualizado;
                 }
                 const infoAtual = (ex.info_complementar as Record<string, unknown>) || {};
                 const infoMerge = { ...infoAtual };
