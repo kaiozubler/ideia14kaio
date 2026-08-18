@@ -1701,6 +1701,7 @@ export type Database = {
         Row: {
           anonimo: boolean
           ativo: boolean
+          campos_cadastro: Json
           created_at: string
           descricao: string | null
           id: string
@@ -1710,6 +1711,7 @@ export type Database = {
         Insert: {
           anonimo?: boolean
           ativo?: boolean
+          campos_cadastro?: Json
           created_at?: string
           descricao?: string | null
           id?: string
@@ -1719,6 +1721,7 @@ export type Database = {
         Update: {
           anonimo?: boolean
           ativo?: boolean
+          campos_cadastro?: Json
           created_at?: string
           descricao?: string | null
           id?: string
@@ -1868,6 +1871,8 @@ export type Database = {
           icon: string
           id: string
           paciente_id: string
+          ref_id: string | null
+          ref_type: string | null
           sub: string | null
           title: string
           type: string
@@ -1879,6 +1884,8 @@ export type Database = {
           icon: string
           id?: string
           paciente_id: string
+          ref_id?: string | null
+          ref_type?: string | null
           sub?: string | null
           title: string
           type: string
@@ -1890,6 +1897,8 @@ export type Database = {
           icon?: string
           id?: string
           paciente_id?: string
+          ref_id?: string | null
+          ref_type?: string | null
           sub?: string | null
           title?: string
           type?: string
