@@ -214,7 +214,7 @@ export const Route = createFileRoute("/api/public/formularios/responder")({
                 if (Object.keys(updateCols).length || infoMudou) {
                   const { error: updErr } = await supabaseAdmin
                     .from("pacientes")
-                    .update({ ...updateCols, ...(infoMudou ? { info_complementar: infoMerge } : {}) })
+                    .update({ ...updateCols, ...(infoMudou ? { info_complementar: infoMerge as any } : {}) })
                     .eq("paciente_id", pacienteIdResolvido);
                   if (updErr) console.warn("[formularios:responder] falha ao completar cadastro do paciente", updErr);
                 }

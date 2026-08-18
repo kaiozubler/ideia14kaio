@@ -11438,21 +11438,61 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                                   <div class="cf-section-body">${cfRenderBody(c.key)}</div>
                                                                 </div>`;
                                                               }).join('');
-                                                              // observer for vistos
-                                                              // observer for vistos — delay prevents marking all sections on initial render
+                                                      // observer for vistos — marca os campos à medida que o usuário rola a tela de revisão
                                                       if(window.__cfObs)window.__cfObs.disconnect();
                                                       requestAnimationFrame(()=>{
                                                         let ready=false;
-                                                        setTimeout(()=>{ready=true;},600);
+                                                        setTimeout(()=>{ready=true;},150);
                                                         window.__cfObs=new IntersectionObserver((ents)=>{
                                                           if(!ready)return;
                                                           let changed=false;
-                                                          ents.forEach(e=>{if(e.isIntersecting){const k=e.target.dataset.key;if(!condState.vistos[k]){condState.vistos[k]=true;changed=true;}}});
-                                                          if(changed)cfUpdateConduFooter();
-                                                        },{root:scroll,threshold:.35});
+                                                          // Ordena por proximidade do topo do container (mais visível primeiro)
+                                                          const sorted=[...ents].sort((a,b)=>a.boundingClientRect.top-b.boundingClientRect.top);
+                                                          sorted.forEach(e=>{
+                                                            const k=e.target.dataset.key;
+                                                            if(!k)return;
+                                                            // Marca como visto se a seção está ativa e intersectando o viewport do scroll
+                                                            if(condState.ativados[k] && e.isIntersecting && !condState.vistos[k]){
+                                                              condState.vistos[k]=true;changed=true;
+                                                            }
+                                                          });
+                                                          if(changed){
+                                                            cfRenderCondutaNav(); // atualiza badges laterais sem re-renderizar o conteúdo
+                                                            cfUpdateConduFooter();
+                                                          }
+                                                        },{root:scroll,rootMargin:'0px 0px -45% 0px',threshold:0});
                                                         scroll.querySelectorAll('.cf-section').forEach(el=>window.__cfObs.observe(el));
                                                       });
                                                       cfUpdateConduFooter();
+                                                            }
+                                                            function cfRenderCondutaNav(){
+                                                              // Atualiza badges e estado "visto" na navegação lateral sem re-renderizar o conteúdo
+                                                              document.querySelectorAll('#cf-nav-list .cf-nav-item').forEach((item,idx)=>{
+                                                                const c=CF_CAMPOS[idx]; if(!c)return;
+                                                                const vi=!!condState.vistos[c.key], at=!!condState.ativados[c.key];
+                                                                const btn=item.querySelector('.cf-nav-btn');
+                                                                const badge=item.querySelector('.cf-nav-badge');
+                                                                if(btn)btn.classList.toggle('visto',vi);
+                                                                if(badge)badge.style.background=vi?'linear-gradient(135deg,#34d399,#059669)':(at?c.grad:'rgba(203,213,225,.5)');
+                                                              });
+                                                              // Atualiza cabeçalhos das seções no painel de revisão
+                                                              document.querySelectorAll('#cf-cond-scroll .cf-section').forEach(sec=>{
+                                                                const k=sec.dataset.key; if(!k)return;
+                                                                const c=CF_CAMPOS.find(x=>x.key===k); if(!c)return;
+                                                                const vi=!!condState.vistos[k];
+                                                                const hd=sec.querySelector('.cf-section-hd'); if(!hd)return;
+                                                                const badge=hd.querySelector('.cf-nav-badge');
+                                                                const title=hd.querySelector('span[style*="font-weight:700"]');
+                                                                const tag=hd.querySelector('.cf-pill-tag, span:last-child');
+                                                                if(badge)badge.style.background=vi?'linear-gradient(135deg,#34d399,#059669)':c.grad;
+                                                                if(title)title.style.color=vi?'#065f46':'#1e293b';
+                                                                if(tag && !tag.classList.contains('cf-pill-tag')){
+                                                                  tag.className='cf-pill-tag';
+                                                                  tag.textContent='✓ revisado';
+                                                                } else if(tag){
+                                                                  tag.textContent='✓ revisado';
+                                                                }
+                                                              });
                                                             }
                                                             function cfRenderBody(key){
                                                         const s=condState;
