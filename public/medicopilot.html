@@ -9778,6 +9778,12 @@ showAtendList();
                                                                   return;
                                                                 }
                                                                 const mensagens=[{role:'user',content:'[Comando de voz captado durante a consulta — identifique e execute imediatamente a ação solicitada]\n'+comando}];
+                                                                const p=currentPatient||{};
+                                                                let pacienteIdade=null;
+                                                                try{
+                                                                  const y=parseInt((p.dob||'').split('/')[2]);
+                                                                  if(y)pacienteIdade=new Date().getFullYear()-y;
+                                                                }catch{}
                                                                 const res=await fetch('/api/assistente-ia',{
                                                                   method:'POST',headers:{'Content-Type':'application/json'},
                                                                   body:JSON.stringify({
@@ -9785,8 +9791,11 @@ showAtendList();
                                                                     messages:mensagens,
                                                                     user_id:(typeof iaAssistUserId==='function')?iaAssistUserId():null,
                                                                     conversa_id:null,
-                                                                    paciente_id:(currentPatient&&currentPatient.id)||null,
-                                                                    paciente_nome:(currentPatient&&currentPatient.name)||null
+                                                                    comando_voz:true,
+                                                                    paciente_id:p.id||null,
+                                                                    paciente_nome:p.name||null,
+                                                                    paciente_cpf:p.cpf||null,
+                                                                    paciente_idade:pacienteIdade
                                                                   })
                                                                 });
                                                                 if(!res.ok)throw new Error(await res.text());
