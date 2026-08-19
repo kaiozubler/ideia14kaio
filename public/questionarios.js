@@ -103,7 +103,7 @@
         .select("id,titulo,descricao,anonimo,ativo,exigir_auth_email,created_at,campos_cadastro,questionario_perguntas(id,ordem,tipo,enunciado,longa,opcoes,escala_min,escala_max,escala_label_min,escala_label_max,obrigatoria)")
         .order("created_at", { ascending: false }),
       sb.from("questionario_respostas")
-        .select("id,questionario_id,paciente_nome,paciente_telefone,paciente_email,paciente_cpf,respondido_em,questionarios(titulo,anonimo),questionario_resposta_itens(id,valor_texto,valor_opcoes,valor_escala,questionario_perguntas(enunciado,tipo))")
+        .select("id,questionario_id,paciente_nome,paciente_telefone,paciente_email,paciente_cpf,email_verificado,respondido_em,questionarios(titulo,anonimo),questionario_resposta_itens(id,valor_texto,valor_opcoes,valor_escala,questionario_perguntas(enunciado,tipo))")
         .order("respondido_em", { ascending: false }),
     ]);
     if (e1) console.error("load questionarios", e1);
@@ -126,6 +126,7 @@
       anonimo: !!(r.questionarios && r.questionarios.anonimo),
       pacienteNome: r.paciente_nome || "", pacienteTelefone: r.paciente_telefone || "",
       pacienteEmail: r.paciente_email || "", pacienteCpf: r.paciente_cpf || "",
+      emailVerificado: !!r.email_verificado,
       respondidoEm: r.respondido_em,
       itens: (r.questionario_resposta_itens || []).map((it) => ({
         enunciado: (it.questionario_perguntas && it.questionario_perguntas.enunciado) || "",
@@ -281,7 +282,7 @@
     return `<div class="qz-card" style="padding:0;overflow:auto"><table class="qz-table">
       <thead><tr><th>Paciente</th><th>Formulário</th><th>Data</th><th>Identificação</th><th></th></tr></thead>
       <tbody>${rows.map((r) => `<tr>
-        <td>${r.anonimo ? '<span style="color:#94a3b8">Anônimo</span>' : esc(r.pacienteNome || "—")}</td>
+        <td>${r.anonimo ? '<span style="color:#94a3b8">Anônimo</span>' : `${esc(r.pacienteNome || "—")}${r.emailVerificado ? ' <span title="Email verificado" style="color:#16a34a">✅</span>' : ""}`}</td>
         <td>${esc(r.questionarioTitulo)}</td>
         <td style="white-space:nowrap;color:#64748b">${brDateTime(r.respondidoEm)}</td>
         <td><span class="qz-tag ${r.anonimo ? "anon" : "nom"}">${r.anonimo ? "Anônimo" : "Nominal"}</span></td>
@@ -299,6 +300,7 @@
         <div class="qz-card" style="padding:12px 14px;margin-bottom:14px">
           <div style="font-size:12.5px;color:#1e293b"><b>${esc(r.pacienteNome || "—")}</b></div>
           <div style="font-size:11.5px;color:#64748b;margin-top:4px">📞 ${esc(r.pacienteTelefone || "—")} · ✉️ ${esc(r.pacienteEmail || "—")} · CPF ${esc(r.pacienteCpf || "—")}</div>
+          ${r.emailVerificado ? `<div style="font-size:11px;color:#16a34a;margin-top:8px;display:flex;align-items:center;gap:5px">✅ Assinado por ${esc(r.pacienteEmail)} (email verificado)</div>` : ""}
         </div>`}
         <div style="font-size:11px;color:#94a3b8;margin-bottom:10px">Respondido em ${brDateTime(r.respondidoEm)}</div>
         ${r.itens.map((it) => `<div class="qz-answer">
@@ -701,7 +703,7 @@
     holder.querySelector("[data-standalone-bg]").onclick = (e) => { if (e.target === e.currentTarget) closeStandalone(); };
 
     const { data, error } = await sb.from("questionario_respostas")
-      .select("id,paciente_nome,paciente_telefone,paciente_email,paciente_cpf,respondido_em,questionarios(titulo,anonimo),questionario_resposta_itens(valor_texto,valor_opcoes,valor_escala,questionario_perguntas(enunciado,tipo))")
+      .select("id,paciente_nome,paciente_telefone,paciente_email,paciente_cpf,email_verificado,respondido_em,questionarios(titulo,anonimo),questionario_resposta_itens(valor_texto,valor_opcoes,valor_escala,questionario_perguntas(enunciado,tipo))")
       .eq("id", respostaId).maybeSingle();
     if (error || !data) { holder.innerHTML = ""; return toast("Não foi possível carregar essa resposta."); }
     const r = {
@@ -709,6 +711,7 @@
       anonimo: !!(data.questionarios && data.questionarios.anonimo),
       pacienteNome: data.paciente_nome || "", pacienteTelefone: data.paciente_telefone || "",
       pacienteEmail: data.paciente_email || "", pacienteCpf: data.paciente_cpf || "",
+      emailVerificado: !!data.email_verificado,
       respondidoEm: data.respondido_em,
       itens: (data.questionario_resposta_itens || []).map((it) => ({
         enunciado: (it.questionario_perguntas && it.questionario_perguntas.enunciado) || "",
@@ -723,6 +726,7 @@
         <div class="qz-card" style="padding:12px 14px;margin-bottom:14px">
           <div style="font-size:12.5px;color:#1e293b"><b>${esc(r.pacienteNome || "—")}</b></div>
           <div style="font-size:11.5px;color:#64748b;margin-top:4px">📞 ${esc(r.pacienteTelefone || "—")} · ✉️ ${esc(r.pacienteEmail || "—")} · CPF ${esc(r.pacienteCpf || "—")}</div>
+          ${r.emailVerificado ? `<div style="font-size:11px;color:#16a34a;margin-top:8px;display:flex;align-items:center;gap:5px">✅ Assinado por ${esc(r.pacienteEmail)} (email verificado)</div>` : ""}
         </div>`}
         <div style="font-size:11px;color:#94a3b8;margin-bottom:10px">Respondido em ${brDateTime(r.respondidoEm)}</div>
         ${r.itens.map((it) => `<div class="qz-answer">

@@ -180,6 +180,10 @@ export const Route = createFileRoute("/api/public/formularios/responder")({
           const cpfFormatado = cpfDigits.length === 11 ? formatCpf(cpfDigits) : "";
 
           // Autenticação por email: valida o código antes de qualquer gravação.
+          // emailVerificado fica gravado na própria resposta (não só no
+          // formulário), pra exibir o selo "Assinado por..." mesmo se a
+          // configuração do formulário for desligada depois.
+          let emailVerificado = false;
           if (form.exigir_auth_email) {
             const emailNorm = email.toLowerCase();
             if (!emailNorm || !body.codigo) return Response.json({ error: "code_required" }, { status: 400 });
@@ -208,6 +212,7 @@ export const Route = createFileRoute("/api/public/formularios/responder")({
                 .update({ verificado: true })
                 .eq("id", registro.id);
             }
+            emailVerificado = true;
           }
 
           // Cruza o CPF informado com os pacientes já cadastrados deste médico
@@ -320,7 +325,7 @@ export const Route = createFileRoute("/api/public/formularios/responder")({
 
           const { data: resp, error: rErr } = await supabaseAdmin
             .from("questionario_respostas")
-            .insert({ questionario_id: form.id, ...identificacao })
+            .insert({ questionario_id: form.id, ...identificacao, email_verificado: emailVerificado })
             .select("id")
             .single();
           if (rErr) throw rErr;
