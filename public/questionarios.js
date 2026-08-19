@@ -871,7 +871,7 @@
     if (e.target.id === "qz-tq") { S.tsearch = e.target.value; const p = e.target.selectionStart; render(); const n = document.getElementById("qz-tq"); if (n) { n.focus(); n.setSelectionRange(p, p); } return; }
     if (e.target.id === "tz-m-titulo" && S.termoModal) { S.termoModal.titulo = e.target.value; return; }
     if (e.target.id === "tz-m-checkbox" && S.termoModal) { S.termoModal.checkboxLabel = e.target.value; return; }
-    if (e.target.id === "tz-m-corpo" && S.termoModal) { S.termoModal.corpo = e.target.value; const p = e.target.selectionStart; render(); const n = document.getElementById("tz-m-corpo"); if (n) { n.focus(); n.setSelectionRange(p, p); } return; }
+    if (e.target.id === "tz-m-corpo" && S.termoModal) { S.termoModal.corpo = e.target.value; return; }
     if (e.target.id === "qz-m-titulo" && S.modal) { S.modal.titulo = e.target.value; return; }
     if (e.target.id === "qz-m-desc" && S.modal) { S.modal.descricao = e.target.value; return; }
     if (e.target.id === "qz-ai-obs" && S.aiModal) { S.aiModal.obs = e.target.value; return; }
