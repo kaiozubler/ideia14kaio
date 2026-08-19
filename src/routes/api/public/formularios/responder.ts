@@ -15,6 +15,9 @@ const ItemSchema = z.object({
 const BodySchema = z.object({
   questionario_id: z.string().uuid(),
   paciente_id: z.string().uuid().nullable().optional(),
+  // Código de 4 dígitos enviado por email — obrigatório quando o formulário
+  // exige autenticação por email (questionarios.exigir_auth_email).
+  codigo: z.string().regex(/^\d{4}$/).optional(),
   // Campos do cadastro selecionados no construtor (ex.: name, cpf, telefone,
   // email, data_nascimento, ic_peso...) — ver CAMPO_CATALOG em f.$formId.tsx
   // e CAMPOS_CADASTRO em public/questionarios.js.
@@ -64,6 +67,21 @@ function flattenRespostas(perguntas: PerguntaRef[], itens: ItemGravado[]): strin
     })
     .filter(Boolean);
   return linhas.join("\n\n");
+}
+
+// Mesma leitura das respostas, em pares pergunta/valor — usada na cópia
+// enviada por email ao paciente.
+function linhasRespostas(perguntas: PerguntaRef[], itens: ItemGravado[]): { pergunta: string; valor: string }[] {
+  const porId = new Map(perguntas.map((p) => [p.id, p]));
+  return itens.flatMap((it) => {
+    const p = porId.get(it.pergunta_id);
+    if (!p) return [];
+    let valor = "—";
+    if (p.tipo === "escala") valor = it.valor_escala != null ? String(it.valor_escala) : "—";
+    else if (p.tipo === "unica" || p.tipo === "multipla") valor = it.valor_opcoes?.length ? it.valor_opcoes.join(", ") : "—";
+    else valor = it.valor_texto?.trim() || "—";
+    return [{ pergunta: p.enunciado, valor }];
+  });
 }
 
 // Campos do cadastro que mapeiam direto pra colunas de "pacientes".
@@ -139,7 +157,7 @@ export const Route = createFileRoute("/api/public/formularios/responder")({
 
           const { data: form, error: formErr } = await supabaseAdmin
             .from("questionarios")
-            .select("id,ativo,anonimo,titulo,user_id")
+            .select("id,ativo,anonimo,titulo,user_id,exigir_auth_email")
             .eq("id", body.questionario_id)
             .maybeSingle();
           if (formErr) throw formErr;
@@ -160,6 +178,37 @@ export const Route = createFileRoute("/api/public/formularios/responder")({
           const email = (campos.email || "").trim();
           const cpfDigits = onlyDigits(campos.cpf);
           const cpfFormatado = cpfDigits.length === 11 ? formatCpf(cpfDigits) : "";
+
+          // Autenticação por email: valida o código antes de qualquer gravação.
+          if (form.exigir_auth_email) {
+            const emailNorm = email.toLowerCase();
+            if (!emailNorm || !body.codigo) return Response.json({ error: "code_required" }, { status: 400 });
+            const { data: registro, error: codErr } = await supabaseAdmin
+              .from("questionario_email_codigos")
+              .select("id,codigo,expira_em,tentativas,verificado")
+              .eq("questionario_id", form.id)
+              .eq("email", emailNorm)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (codErr) throw codErr;
+            if (!registro) return Response.json({ error: "code_required" }, { status: 400 });
+            if (registro.tentativas >= 6) return Response.json({ error: "code_blocked" }, { status: 429 });
+            const expirado = new Date(registro.expira_em).getTime() < Date.now();
+            if (registro.codigo !== body.codigo || expirado) {
+              await supabaseAdmin
+                .from("questionario_email_codigos")
+                .update({ tentativas: registro.tentativas + 1 })
+                .eq("id", registro.id);
+              return Response.json({ error: expirado ? "code_expired" : "code_invalid" }, { status: 400 });
+            }
+            if (!registro.verificado) {
+              await supabaseAdmin
+                .from("questionario_email_codigos")
+                .update({ verificado: true })
+                .eq("id", registro.id);
+            }
+          }
 
           // Cruza o CPF informado com os pacientes já cadastrados deste médico
           // (mesmo dono do formulário) — habilita ligar a resposta ao
@@ -339,6 +388,22 @@ export const Route = createFileRoute("/api/public/formularios/responder")({
               // Nunca falha o envio da resposta do paciente por causa do
               // vínculo com o prontuário — a resposta já está salva.
               console.warn("[formularios:responder] falha ao vincular ao prontuário/timeline", linkErr);
+            }
+          }
+
+          // Formulários com autenticação por email recebem a cópia das
+          // respostas no email confirmado pelo paciente.
+          if (form.exigir_auth_email && email) {
+            try {
+              const { sendEmail, respostasEmailHtml } = await import("@/lib/email/send.server");
+              await sendEmail({
+                to: email,
+                subject: `Cópia das suas respostas — ${form.titulo}`,
+                html: respostasEmailHtml(form.titulo, nome, linhasRespostas(perguntasRef, itensGravados)),
+              });
+            } catch (mailErr) {
+              // A resposta já está salva — o envio da cópia não pode falhar o fluxo.
+              console.warn("[formularios:responder] falha ao enviar cópia por email", mailErr);
             }
           }
 

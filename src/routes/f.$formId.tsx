@@ -40,6 +40,7 @@ type Form = {
   descricao: string | null;
   anonimo: boolean;
   ativo: boolean;
+  exigir_auth_email: boolean;
   campos_cadastro: string[] | null;
   questionario_perguntas: Pergunta[];
 };
@@ -111,6 +112,12 @@ function PublicForm() {
   const [ok, setOk] = useState(false);
   const [ident, setIdent] = useState<Record<string, string>>({});
   const [respostas, setRespostas] = useState<Record<string, string | string[] | number>>({});
+  // Autenticação por email (código de 4 dígitos)
+  const [codigoEnviado, setCodigoEnviado] = useState(false);
+  const [codigo, setCodigo] = useState("");
+  const [emailAutenticado, setEmailAutenticado] = useState("");
+  const [enviandoCodigo, setEnviandoCodigo] = useState(false);
+  const [aviso, setAviso] = useState("");
   const pacienteId = useMemo(() => {
     if (typeof window === "undefined") return null;
     return new URLSearchParams(window.location.search).get("p");
@@ -150,6 +157,7 @@ function PublicForm() {
   async function enviar() {
     if (!form) return;
     setErro("");
+    setAviso("");
     if (!form.anonimo) {
       const nome = (ident.name || "").trim();
       const tel = onlyDigits(ident.telefone || "");
@@ -166,6 +174,15 @@ function PublicForm() {
       const vazio =
         v === undefined || v === "" || (Array.isArray(v) && v.length === 0) || (p.tipo === "escala" && v === undefined);
       if (vazio) return setErro('Responda a pergunta obrigatória: "' + p.enunciado + '"');
+    }
+
+    const exigeCodigo = !!form.exigir_auth_email && !form.anonimo;
+    const emailInformado = (ident.email || "").trim().toLowerCase();
+    if (exigeCodigo && (!codigoEnviado || emailAutenticado !== emailInformado)) {
+      return pedirCodigo(emailInformado);
+    }
+    if (exigeCodigo && codigo.trim().length !== 4) {
+      return setErro("Informe o código de 4 dígitos enviado para o seu email.");
     }
 
     setEnviando(true);
@@ -193,6 +210,7 @@ function PublicForm() {
     const body = {
       questionario_id: form.id,
       itens,
+      ...(exigeCodigo ? { codigo: codigo.trim() } : {}),
       ...(form.anonimo ? {} : { paciente_id: pacienteId || null, campos }),
     };
     try {
@@ -205,6 +223,10 @@ function PublicForm() {
       if (!res.ok) {
         const j = (await res.json().catch(() => ({}))) as { error?: string };
         if (j.error === "form_unavailable") return setErro("Este formulário não está mais aceitando respostas.");
+        if (j.error === "code_invalid") return setErro("Código incorreto. Confira o email e tente novamente.");
+        if (j.error === "code_expired") return setErro("O código expirou. Solicite um novo código.");
+        if (j.error === "code_required") return setErro("Confirme seu email com o código de 4 dígitos.");
+        if (j.error === "code_blocked") return setErro("Muitas tentativas. Solicite um novo código.");
         return setErro("Não foi possível enviar suas respostas. Tente novamente.");
       }
       setOk(true);
@@ -213,6 +235,37 @@ function PublicForm() {
       setErro("Não foi possível enviar suas respostas. Verifique sua conexão e tente novamente.");
     }
   }
+
+  async function pedirCodigo(emailInformado: string) {
+    if (!form) return;
+    setErro("");
+    setAviso("");
+    setEnviandoCodigo(true);
+    try {
+      const res = await fetch("/api/public/formularios/codigo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionario_id: form.id, email: emailInformado }),
+      });
+      setEnviandoCodigo(false);
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        if (j.error === "rate_limited") return setErro("Muitas solicitações. Aguarde alguns minutos e tente novamente.");
+        if (j.error === "email_not_configured")
+          return setErro("O envio de emails ainda não está configurado nesta clínica. Avise a equipe.");
+        return setErro("Não foi possível enviar o código para o seu email. Tente novamente.");
+      }
+      setCodigo("");
+      setCodigoEnviado(true);
+      setEmailAutenticado(emailInformado);
+      setAviso("Enviamos um código de 4 dígitos para " + emailInformado + ". Digite-o abaixo para confirmar o envio.");
+    } catch {
+      setEnviandoCodigo(false);
+      setErro("Não foi possível enviar o código. Verifique sua conexão e tente novamente.");
+    }
+  }
+
+  const exigeCodigo = !!form?.exigir_auth_email && !form?.anonimo;
 
   return (
     <div className="pf-bg">
@@ -366,8 +419,38 @@ function PublicForm() {
             </section>
 
             {erro && <p className="pf-err">{erro}</p>}
-            <button className="pf-btn" onClick={enviar} disabled={enviando}>
-              {enviando ? "Enviando…" : "Enviar respostas"}
+            {exigeCodigo && aviso && <p className="pf-ok">{aviso}</p>}
+            {exigeCodigo && codigoEnviado && (
+              <div className="pf-code">
+                <label className="pf-lbl">Código de confirmação</label>
+                <input
+                  className="pf-in pf-code-in"
+                  inputMode="numeric"
+                  maxLength={4}
+                  value={codigo}
+                  onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  placeholder="0000"
+                />
+                <button
+                  type="button"
+                  className="pf-link"
+                  onClick={() => pedirCodigo((ident.email || "").trim().toLowerCase())}
+                  disabled={enviandoCodigo}
+                >
+                  {enviandoCodigo ? "Enviando…" : "Reenviar código"}
+                </button>
+              </div>
+            )}
+            <button className="pf-btn" onClick={enviar} disabled={enviando || enviandoCodigo}>
+              {enviando
+                ? "Enviando…"
+                : enviandoCodigo
+                  ? "Enviando código…"
+                  : exigeCodigo && !codigoEnviado
+                    ? "Confirmar email e continuar"
+                    : exigeCodigo
+                      ? "Confirmar código e enviar"
+                      : "Enviar respostas"}
             </button>
             <p className="pf-foot">Suas informações são enviadas com segurança para a sua clínica.</p>
           </>
@@ -417,6 +500,11 @@ const CSS = `
 .pf-btn{width:100%;padding:13px;border:none;border-radius:16px;font-size:15px;font-weight:700;color:#fff;background:linear-gradient(135deg,#34d399,#0d9488);box-shadow:0 10px 26px rgba(13,148,136,.35);cursor:pointer}
 .pf-btn:disabled{opacity:.65;cursor:default}
 .pf-err{margin:0 0 12px;padding:10px 12px;border-radius:12px;font-size:13px;color:#b91c1c;background:rgba(254,226,226,.8);border:1px solid rgba(252,165,165,.8)}
+.pf-ok{margin:0 0 12px;padding:10px 12px;border-radius:12px;font-size:13px;color:#0f766e;background:rgba(209,250,229,.8);border:1px solid rgba(153,246,228,.9)}
+.pf-code{margin:0 0 12px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.65);border:1px solid rgba(255,255,255,.9);border-left:3px solid #99f6e4}
+.pf-code-in{max-width:150px;text-align:center;font-size:22px;letter-spacing:.28em;font-weight:700}
+.pf-link{display:block;margin-top:8px;background:none;border:none;padding:0;font-size:12px;font-weight:600;color:#0d9488;cursor:pointer;text-decoration:underline}
+.pf-link:disabled{opacity:.6;cursor:default}
 .pf-foot{font-size:11px;color:#94a3b8;text-align:center;margin:12px 0 0}
 .pf-done{text-align:center;padding:26px 6px}
 .pf-done h1{font-size:20px;color:#0f172a;margin:14px 0 6px}

@@ -39,6 +39,7 @@ import { Route as ApiTussBuscarRouteImport } from './routes/api/tuss/buscar'
 import { Route as ApiTussCriarRouteImport } from './routes/api/tuss/criar'
 import { Route as ApiPublicExtensaoChatRouteImport } from './routes/api/public/extensao/chat'
 import { Route as ApiPublicExtensaoDeepgramTokenRouteImport } from './routes/api/public/extensao/deepgram-token'
+import { Route as ApiPublicFormulariosCodigoRouteImport } from './routes/api/public/formularios/codigo'
 import { Route as ApiPublicFormulariosResponderRouteImport } from './routes/api/public/formularios/responder'
 import { Route as ApiPublicHooksSyncInteracoesRouteImport } from './routes/api/public/hooks/sync-interacoes'
 import { Route as ApiPublicHooksSyncTussRouteImport } from './routes/api/public/hooks/sync-tuss'
@@ -201,6 +202,12 @@ const ApiPublicExtensaoDeepgramTokenRoute =
     path: '/api/public/extensao/deepgram-token',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicFormulariosCodigoRoute =
+  ApiPublicFormulariosCodigoRouteImport.update({
+    id: '/api/public/formularios/codigo',
+    path: '/api/public/formularios/codigo',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicFormulariosResponderRoute =
   ApiPublicFormulariosResponderRouteImport.update({
     id: '/api/public/formularios/responder',
@@ -261,6 +268,7 @@ export interface FileRoutesByFullPath {
   '/api/tuss/criar': typeof ApiTussCriarRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
+  '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
   '/api/public/formularios/responder': typeof ApiPublicFormulariosResponderRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
@@ -298,6 +306,7 @@ export interface FileRoutesByTo {
   '/api/tuss/criar': typeof ApiTussCriarRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
+  '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
   '/api/public/formularios/responder': typeof ApiPublicFormulariosResponderRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
@@ -336,6 +345,7 @@ export interface FileRoutesById {
   '/api/tuss/criar': typeof ApiTussCriarRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
+  '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
   '/api/public/formularios/responder': typeof ApiPublicFormulariosResponderRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
@@ -375,6 +385,7 @@ export interface FileRouteTypes {
     | '/api/tuss/criar'
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
+    | '/api/public/formularios/codigo'
     | '/api/public/formularios/responder'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
@@ -412,6 +423,7 @@ export interface FileRouteTypes {
     | '/api/tuss/criar'
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
+    | '/api/public/formularios/codigo'
     | '/api/public/formularios/responder'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
@@ -449,6 +461,7 @@ export interface FileRouteTypes {
     | '/api/tuss/criar'
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
+    | '/api/public/formularios/codigo'
     | '/api/public/formularios/responder'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
@@ -487,6 +500,7 @@ export interface RootRouteChildren {
   ApiTussCriarRoute: typeof ApiTussCriarRoute
   ApiPublicExtensaoChatRoute: typeof ApiPublicExtensaoChatRoute
   ApiPublicExtensaoDeepgramTokenRoute: typeof ApiPublicExtensaoDeepgramTokenRoute
+  ApiPublicFormulariosCodigoRoute: typeof ApiPublicFormulariosCodigoRoute
   ApiPublicFormulariosResponderRoute: typeof ApiPublicFormulariosResponderRoute
   ApiPublicHooksSyncInteracoesRoute: typeof ApiPublicHooksSyncInteracoesRoute
   ApiPublicHooksSyncTussRoute: typeof ApiPublicHooksSyncTussRoute
@@ -706,6 +720,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensaoDeepgramTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/formularios/codigo': {
+      id: '/api/public/formularios/codigo'
+      path: '/api/public/formularios/codigo'
+      fullPath: '/api/public/formularios/codigo'
+      preLoaderRoute: typeof ApiPublicFormulariosCodigoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/formularios/responder': {
       id: '/api/public/formularios/responder'
       path: '/api/public/formularios/responder'
@@ -775,6 +796,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTussCriarRoute: ApiTussCriarRoute,
   ApiPublicExtensaoChatRoute: ApiPublicExtensaoChatRoute,
   ApiPublicExtensaoDeepgramTokenRoute: ApiPublicExtensaoDeepgramTokenRoute,
+  ApiPublicFormulariosCodigoRoute: ApiPublicFormulariosCodigoRoute,
   ApiPublicFormulariosResponderRoute: ApiPublicFormulariosResponderRoute,
   ApiPublicHooksSyncInteracoesRoute: ApiPublicHooksSyncInteracoesRoute,
   ApiPublicHooksSyncTussRoute: ApiPublicHooksSyncTussRoute,

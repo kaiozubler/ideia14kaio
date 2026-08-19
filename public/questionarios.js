@@ -100,7 +100,7 @@
     S.loading = true; render();
     const [{ data: forms, error: e1 }, { data: resp, error: e2 }] = await Promise.all([
       sb.from("questionarios")
-        .select("id,titulo,descricao,anonimo,ativo,created_at,campos_cadastro,questionario_perguntas(id,ordem,tipo,enunciado,longa,opcoes,escala_min,escala_max,escala_label_min,escala_label_max,obrigatoria)")
+        .select("id,titulo,descricao,anonimo,ativo,exigir_auth_email,created_at,campos_cadastro,questionario_perguntas(id,ordem,tipo,enunciado,longa,opcoes,escala_min,escala_max,escala_label_min,escala_label_max,obrigatoria)")
         .order("created_at", { ascending: false }),
       sb.from("questionario_respostas")
         .select("id,questionario_id,paciente_nome,paciente_telefone,paciente_email,paciente_cpf,respondido_em,questionarios(titulo,anonimo),questionario_resposta_itens(id,valor_texto,valor_opcoes,valor_escala,questionario_perguntas(enunciado,tipo))")
@@ -110,6 +110,7 @@
     if (e2) console.error("load questionario_respostas", e2);
     S.forms = (forms || []).map((f) => ({
       id: f.id, titulo: f.titulo, descricao: f.descricao || "", anonimo: !!f.anonimo, ativo: f.ativo !== false,
+      exigirAuthEmail: !!f.exigir_auth_email,
       createdAt: f.created_at,
       camposCadastro: Array.isArray(f.campos_cadastro) && f.campos_cadastro.length ? f.campos_cadastro : [...CAMPOS_CADASTRO_OBRIGATORIOS],
       perguntas: (f.questionario_perguntas || []).sort((a, b) => (a.ordem || 0) - (b.ordem || 0)).map((p) => ({
@@ -149,7 +150,7 @@
     let id = m.id;
     const isEdit = !!id;
     const camposCadastro = Array.from(new Set([...CAMPOS_CADASTRO_OBRIGATORIOS, ...(m.anonimo ? [] : m.camposCadastro || [])]));
-    const payload = { titulo: m.titulo.trim(), descricao: m.descricao.trim() || null, anonimo: m.anonimo, ativo: m.ativo !== false, campos_cadastro: m.anonimo ? [] : camposCadastro };
+    const payload = { titulo: m.titulo.trim(), descricao: m.descricao.trim() || null, anonimo: m.anonimo, ativo: m.ativo !== false, campos_cadastro: m.anonimo ? [] : camposCadastro, exigir_auth_email: m.anonimo ? false : !!m.exigirAuthEmail };
     if (isEdit) {
       const { error } = await sb.from("questionarios").update(payload).eq("id", id);
       if (error) { m.saving = false; render(); return toast("Falha ao salvar: " + error.message); }
@@ -398,6 +399,7 @@
         </div>
         ${!m.anonimo ? `<div class="qz-nom-note">Formulários nominais exibem automaticamente a logo e o nome da clínica antes das perguntas.</div>` : ""}
         ${!m.anonimo ? camposCadastroHtml(m) : ""}
+        ${!m.anonimo ? authEmailHtml(m) : ""}
         <div style="display:flex;align-items:center;justify-content:space-between;margin:18px 0 10px">
           <span class="qz-lbl" style="text-transform:uppercase;letter-spacing:.08em;margin:0">Perguntas (${m.perguntas.length})</span>
         </div>
@@ -407,6 +409,15 @@
       <div class="qz-modal-f"><button class="qz-btn ghost" data-mclose="1">Cancelar</button>
       <button class="qz-btn primary" data-msave="1" ${m.saving ? "disabled" : ""}>${m.saving ? "Salvando…" : "Salvar formulário"}</button></div>
     </div></div>`;
+  }
+
+  function authEmailHtml(m) {
+    const on = !!m.exigirAuthEmail;
+    return `<div class="qz-authbox ${on ? "on" : ""}" data-authemail="1">
+      <span class="qz-check ${on ? "on" : ""}">${on ? "✓" : ""}</span>
+      <div><b>Exigir autenticação por email</b>
+        <span>Antes de finalizar, o paciente recebe um código de 4 dígitos no email informado e precisa confirmá-lo. Ao concluir, uma cópia das respostas é enviada para o mesmo email.</span>
+      </div></div>`;
   }
 
   function camposCadastroHtml(m) {
@@ -544,10 +555,10 @@
 
   /* ---------- HELPERS DE ESTADO DO CONSTRUTOR ---------- */
   function newQuestion() { return { id: uid(), tipo: "texto", enunciado: "", longa: false, opcoes: ["", ""], escalaMin: 1, escalaMax: 5, escalaLabelMin: "", escalaLabelMax: "", obrigatoria: true }; }
-  function openNewForm() { S.modal = { id: null, titulo: "", descricao: "", anonimo: false, ativo: true, camposCadastro: [...CAMPOS_CADASTRO_OBRIGATORIOS], campoPickerOpen: false, perguntas: [newQuestion()], saving: false }; render(); }
+  function openNewForm() { S.modal = { id: null, titulo: "", descricao: "", anonimo: false, ativo: true, exigirAuthEmail: false, camposCadastro: [...CAMPOS_CADASTRO_OBRIGATORIOS], campoPickerOpen: false, perguntas: [newQuestion()], saving: false }; render(); }
   function openEditForm(id) {
     const f = S.forms.find((x) => x.id === id); if (!f) return;
-    S.modal = { id: f.id, titulo: f.titulo, descricao: f.descricao, anonimo: f.anonimo, ativo: f.ativo, saving: false,
+    S.modal = { id: f.id, titulo: f.titulo, descricao: f.descricao, anonimo: f.anonimo, ativo: f.ativo, saving: false, exigirAuthEmail: !!f.exigirAuthEmail,
       camposCadastro: f.camposCadastro && f.camposCadastro.length ? [...f.camposCadastro] : [...CAMPOS_CADASTRO_OBRIGATORIOS], campoPickerOpen: false,
       perguntas: f.perguntas.map((p) => ({ ...p, opcoes: p.opcoes && p.opcoes.length ? [...p.opcoes] : ["", ""] })) };
     render();
@@ -567,7 +578,7 @@
       if (bd.sbg) { S.shareModal = null; return render(); }
       if (bd.aibg) { S.aiModal = null; return render(); }
     }
-    const t = e.target.closest("[data-gomeus],[data-back],[data-new],[data-edit],[data-toggle],[data-clear],[data-viewresp],[data-vclose],[data-mclose],[data-msave],[data-idset],[data-qadd],[data-qdel],[data-qtype],[data-optadd],[data-optdel],[data-scalepreset],[data-copylink],[data-share],[data-sclose],[data-smode],[data-psel],[data-sbulk],[data-wasend],[data-aiopen],[data-aiclose],[data-aigen],[data-campo-add-toggle],[data-campo-add],[data-campo-remove]");
+    const t = e.target.closest("[data-gomeus],[data-back],[data-new],[data-edit],[data-toggle],[data-clear],[data-viewresp],[data-vclose],[data-mclose],[data-msave],[data-idset],[data-qadd],[data-qdel],[data-qtype],[data-optadd],[data-optdel],[data-scalepreset],[data-copylink],[data-share],[data-sclose],[data-smode],[data-psel],[data-sbulk],[data-wasend],[data-aiopen],[data-aiclose],[data-aigen],[data-campo-add-toggle],[data-campo-add],[data-campo-remove],[data-authemail]");
     if (!t) return;
     const d = t.dataset;
     if (d.gomeus) { S.screen = "formularios"; return render(); }
@@ -584,6 +595,7 @@
     if (d.aiclose) { S.aiModal = null; return render(); }
     if (d.aigen) return generateWithAI();
     if (d.idset !== undefined && S.modal) { S.modal.anonimo = d.idset === "1"; return render(); }
+    if (d.authemail !== undefined && S.modal) { S.modal.exigirAuthEmail = !S.modal.exigirAuthEmail; return render(); }
     if (d.campoAddToggle && S.modal) { S.modal.campoPickerOpen = !S.modal.campoPickerOpen; return render(); }
     if (d.campoAdd && S.modal) {
       if (!S.modal.camposCadastro.includes(d.campoAdd)) S.modal.camposCadastro.push(d.campoAdd);
