@@ -41,6 +41,14 @@ export function codigoEmailHtml(titulo: string, codigo: string): string {
   );
 }
 
+export function termoAssinadoEmailHtml(titulo: string, nome: string, textoFinal: string): string {
+  return layout(
+    titulo,
+    `<p style="font-size:14px;color:#334155;margin:0 0 16px">${nome ? escapeHtml(nome) + ', s' : 'S'}ua assinatura foi registrada com sucesso. Segue abaixo a cópia do termo que você assinou:</p>
+     <div style="padding:14px 16px;border-left:3px solid #99f6e4;background:#f8fafc;border-radius:10px;font-size:13.5px;color:#0f172a;white-space:pre-wrap">${escapeHtml(textoFinal)}</div>`,
+  );
+}
+
 export function respostasEmailHtml(titulo: string, nome: string, linhas: { pergunta: string; valor: string }[]): string {
   const itens = linhas
     .map(

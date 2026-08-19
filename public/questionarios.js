@@ -50,8 +50,20 @@
   ];
   const CAMPO_CADASTRO_BY_ID = Object.fromEntries(CAMPOS_CADASTRO.map((c) => [c.id, c]));
 
+  // Variáveis disponíveis no corpo dos Termos de Ciência — substituídas na
+  // hora da assinatura (ver renderCorpo() em src/routes/t.$termoId.tsx e
+  // src/routes/api/public/termos/assinar.ts, que mantêm a MESMA lista).
+  const TERMO_VARS = [
+    { k: "paciente_nome", label: "Nome do paciente" },
+    { k: "paciente_cpf", label: "CPF do paciente" },
+    { k: "paciente_email", label: "Email do paciente" },
+    { k: "medico_nome", label: "Nome do médico" },
+    { k: "data_assinatura", label: "Data da assinatura" },
+  ];
+  const TERMO_CORPO_PADRAO = "Eu, {paciente_nome}, portador(a) do CPF {paciente_cpf}, declaro estar ciente e de acordo com os termos abaixo, apresentados pelo(a) médico(a) {medico_nome} em {data_assinatura}.\n\n[Descreva aqui o conteúdo do termo de ciência...]";
+
   const S = {
-    screen: "respostas", // 'respostas' | 'formularios'
+    screen: "respostas", // 'respostas' | 'formularios' | 'termos' | 'termoassinaturas'
     loading: true,
     forms: [], responses: [],
     search: "", fsearch: "",
@@ -62,6 +74,12 @@
     viewResponse: null,    // resposta aberta em detalhe
     dd: null,
     toastMsg: null,
+    // ---- Termos de ciência ----
+    termos: [], termoAssinaturas: [],
+    tsearch: "",
+    termoModal: null,          // construtor de termo (novo/editar)
+    termoAssinaturasView: null, // { termoId, termoTitulo }
+    viewAssinatura: null,       // assinatura de termo aberta em detalhe
   };
 
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -93,21 +111,32 @@
     const base = publicOrigin() + "/f/" + formId;
     return pacienteId ? base + "?p=" + pacienteId : base;
   }
+  function publicLinkTermo(termoId) {
+    return publicOrigin() + "/t/" + termoId;
+  }
 
   /* ---------- DATA ---------- */
   async function load() {
     const sb = sbc(); if (!sb) { S.loading = false; return render(); }
     S.loading = true; render();
-    const [{ data: forms, error: e1 }, { data: resp, error: e2 }] = await Promise.all([
+    const [{ data: forms, error: e1 }, { data: resp, error: e2 }, { data: termos, error: e3 }, { data: assinaturas, error: e4 }] = await Promise.all([
       sb.from("questionarios")
         .select("id,titulo,descricao,anonimo,ativo,exigir_auth_email,created_at,campos_cadastro,questionario_perguntas(id,ordem,tipo,enunciado,longa,opcoes,escala_min,escala_max,escala_label_min,escala_label_max,obrigatoria)")
         .order("created_at", { ascending: false }),
       sb.from("questionario_respostas")
         .select("id,questionario_id,paciente_nome,paciente_telefone,paciente_email,paciente_cpf,email_verificado,respondido_em,questionarios(titulo,anonimo),questionario_resposta_itens(id,valor_texto,valor_opcoes,valor_escala,questionario_perguntas(enunciado,tipo))")
         .order("respondido_em", { ascending: false }),
+      sb.from("termos")
+        .select("id,titulo,corpo,checkbox_label,ativo,created_at")
+        .order("created_at", { ascending: false }),
+      sb.from("termo_assinaturas")
+        .select("id,termo_id,paciente_nome,paciente_cpf,paciente_email,texto_final,checkbox_aceito,email_verificado,assinado_em")
+        .order("assinado_em", { ascending: false }),
     ]);
     if (e1) console.error("load questionarios", e1);
     if (e2) console.error("load questionario_respostas", e2);
+    if (e3) console.error("load termos", e3);
+    if (e4) console.error("load termo_assinaturas", e4);
     S.forms = (forms || []).map((f) => ({
       id: f.id, titulo: f.titulo, descricao: f.descricao || "", anonimo: !!f.anonimo, ativo: f.ativo !== false,
       exigirAuthEmail: !!f.exigir_auth_email,
@@ -135,6 +164,17 @@
       })),
     }));
     S.forms.forEach((f) => { f.respostasCount = S.responses.filter((r) => r.questionarioId === f.id).length; });
+
+    S.termos = (termos || []).map((t) => ({
+      id: t.id, titulo: t.titulo, corpo: t.corpo || "", checkboxLabel: t.checkbox_label || "", ativo: t.ativo !== false, createdAt: t.created_at,
+    }));
+    S.termoAssinaturas = (assinaturas || []).map((a) => ({
+      id: a.id, termoId: a.termo_id, pacienteNome: a.paciente_nome || "", pacienteCpf: a.paciente_cpf || "",
+      pacienteEmail: a.paciente_email || "", textoFinal: a.texto_final || "", checkboxAceito: !!a.checkbox_aceito,
+      emailVerificado: !!a.email_verificado, assinadoEm: a.assinado_em,
+    }));
+    S.termos.forEach((t) => { t.assinaturasCount = S.termoAssinaturas.filter((a) => a.termoId === t.id).length; });
+
     S.loading = false; render();
   }
 
@@ -215,6 +255,39 @@
     const sb = sbc(); const f = S.forms.find((x) => x.id === id); if (!sb || !f) return;
     await sb.from("questionarios").update({ ativo: !f.ativo }).eq("id", id);
     await load();
+  }
+
+  /* ---------- TERMOS DE CIÊNCIA: SALVAR / ATIVAR / EXCLUIR ---------- */
+  async function saveTermo() {
+    const sb = sbc(); const m = S.termoModal; if (!sb || !m) return;
+    if (!m.titulo.trim()) return alert("Dê um nome ao termo.");
+    if (!m.corpo.trim()) return alert("Escreva o texto do termo.");
+    if (!m.checkboxLabel.trim()) return alert("Descreva o texto do checkbox de aceite.");
+    m.saving = true; render();
+    const payload = { titulo: m.titulo.trim(), corpo: m.corpo, checkbox_label: m.checkboxLabel.trim(), ativo: m.ativo !== false };
+    const { error } = m.id
+      ? await sb.from("termos").update(payload).eq("id", m.id)
+      : await sb.from("termos").insert(payload);
+    if (error) { m.saving = false; render(); return toast("Falha ao salvar: " + error.message); }
+    S.termoModal = null;
+    await load();
+    toast("Termo salvo com sucesso.");
+  }
+
+  async function toggleTermoActive(id) {
+    const sb = sbc(); const t = S.termos.find((x) => x.id === id); if (!sb || !t) return;
+    await sb.from("termos").update({ ativo: !t.ativo }).eq("id", id);
+    await load();
+  }
+
+  async function deleteTermo(id) {
+    const t = S.termos.find((x) => x.id === id); if (!t) return;
+    if (!confirm('Excluir o termo "' + t.titulo + '"? As assinaturas já registradas também serão apagadas. Essa ação não pode ser desfeita.')) return;
+    const sb = sbc(); if (!sb) return;
+    const { error } = await sb.from("termos").delete().eq("id", id);
+    if (error) return toast("Falha ao excluir: " + error.message);
+    await load();
+    toast("Termo excluído.");
   }
 
   /* ---------- COMPARTILHAR ---------- */
@@ -317,7 +390,10 @@
         <div style="display:flex;gap:12px;align-items:center">
           <div class="qz-pill" style="width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:18px">📝</div>
           <div><h1>Questionários</h1><p>Respostas de formulários enviados aos pacientes</p></div></div>
-        <button class="qz-btn qz-pill" data-gomeus="1">📋 Meus formulários</button></div>
+        <div style="display:flex;gap:8px">
+          <button class="qz-btn qz-pill" data-gomeus="1">📋 Meus formulários</button>
+          <button class="qz-btn qz-pill" data-gotermos="1">📄 Meus termos</button>
+        </div></div>
       ${statsHtml()}${toolbarHtml()}${tableHtml(rows)}`;
   }
 
@@ -351,6 +427,94 @@
           <button class="qz-btn ghost" style="font-size:12px" data-copylink="${f.id}">🔗 Copiar link</button>
           <button class="qz-btn ghost" style="font-size:12px" data-share="${f.id}">📤 Compartilhar</button>
         </div></div>`).join("") : `<div class="qz-empty">🔍 Nenhum formulário encontrado${S.fsearch ? ' para "' + esc(S.fsearch) + '"' : ""}</div>`}`;
+  }
+
+  /* ---------- RENDER: MEUS TERMOS ---------- */
+  function termosListHtml() {
+    const q = S.tsearch.toLowerCase();
+    const list = S.termos.filter((t) => t.titulo.toLowerCase().includes(q));
+    return `<div class="qz-head">
+        <div style="display:flex;gap:12px;align-items:center">
+          <button class="qz-btn qz-pill ghost" data-back="1">←</button>
+          <div><h1>Meus termos</h1><p>${S.termos.length} termo(s) de ciência criado(s)</p></div></div>
+        <button class="qz-btn primary" data-newtermo="1">+ Novo termo</button></div>
+      <div class="qz-search qz-pill" style="margin-bottom:18px"><span>🔍</span><input id="qz-tq" placeholder="Buscar termo..." value="${esc(S.tsearch)}"></div>
+      ${list.length ? list.map((t) => `<div class="qz-card qz-flist-card ${t.ativo ? "" : "inactive"}">
+        <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:12px">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <h3 style="margin:0;font-size:15px;font-weight:700;color:#1e293b">${esc(t.titulo)}</h3>
+              <span class="qz-tag nom">✉️ Email obrigatório</span>
+              <span class="qz-tag ${t.ativo ? "on" : "off"}">${t.ativo ? "Ativo" : "Inativo"}</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0">
+            <button class="qz-btn qz-pill" data-toggletermo="${t.id}" title="${t.ativo ? "Inativar" : "Ativar"}">${t.ativo ? "🟢" : "⭕"}</button>
+            <button class="qz-btn qz-pill" data-edittermo="${t.id}">✏️ Editar</button></div></div>
+        <div class="qz-metrics">
+          <div class="qz-metric violet"><div class="n">${t.assinaturasCount || 0}</div><div class="t">Assinaturas</div></div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.5);padding-top:10px">
+          <button class="qz-btn ghost" style="font-size:12px" data-copylinktermo="${t.id}">🔗 Copiar link</button>
+          <button class="qz-btn ghost" style="font-size:12px" data-viewassinaturas="${t.id}">📄 Ver assinaturas</button>
+          <button class="qz-btn ghost" style="font-size:12px;color:#b91c1c" data-deltermo="${t.id}">🗑️ Excluir</button>
+        </div></div>`).join("") : `<div class="qz-empty">🔍 Nenhum termo encontrado${S.tsearch ? ' para "' + esc(S.tsearch) + '"' : ""}</div>`}`;
+  }
+
+  function termoModalHtml() {
+    const m = S.termoModal; if (!m) return "";
+    return `<div class="qz-modal-bg" data-mtbg="1"><div class="qz-modal">
+      <div class="qz-modal-h"><h2>${m.id ? "Editar termo" : "Novo termo"}</h2>
+        <button class="qz-btn ghost" data-mtclose="1" style="padding:2px 10px">×</button></div>
+      <div class="qz-modal-b">
+        <div style="margin-bottom:14px"><span class="qz-lbl">Nome do termo</span>
+          <input class="qz-in" id="tz-m-titulo" value="${esc(m.titulo)}" placeholder="Ex: Termo de consentimento — procedimento X"></div>
+        <div class="qz-nom-note">Este termo sempre exige autenticação por email: o paciente só assina depois de confirmar um código de 4 dígitos enviado ao email informado.</div>
+        <div style="margin:14px 0 8px"><span class="qz-lbl">Texto do termo</span></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+          ${TERMO_VARS.map((v) => `<button class="qz-btn ghost" style="font-size:11px;padding:4px 9px" data-varinsert="${v.k}" title="Inserir no texto">+ {${v.k}} <span style="color:#94a3b8">(${v.label})</span></button>`).join("")}
+        </div>
+        <textarea class="qz-in" id="tz-m-corpo" rows="10" style="font-family:inherit;line-height:1.55">${esc(m.corpo)}</textarea>
+        <div style="margin:16px 0 8px"><span class="qz-lbl">Texto do checkbox de aceite</span></div>
+        <input class="qz-in" id="tz-m-checkbox" value="${esc(m.checkboxLabel)}" placeholder="Ex: Li e estou de acordo com os termos acima.">
+      </div>
+      <div class="qz-modal-f"><button class="qz-btn ghost" data-mtclose="1">Cancelar</button>
+      <button class="qz-btn primary" data-mtsave="1" ${m.saving ? "disabled" : ""}>${m.saving ? "Salvando…" : "Salvar termo"}</button></div>
+    </div></div>`;
+  }
+
+  /* ---------- RENDER: ASSINATURAS DE UM TERMO ---------- */
+  function termoAssinaturasHtml() {
+    const v = S.termoAssinaturasView; if (!v) return "";
+    const rows = S.termoAssinaturas.filter((a) => a.termoId === v.termoId);
+    return `<div class="qz-head">
+        <div style="display:flex;gap:12px;align-items:center">
+          <button class="qz-btn qz-pill ghost" data-backtermos="1">←</button>
+          <div><h1>${esc(v.termoTitulo)}</h1><p>${rows.length} assinatura(s) registrada(s)</p></div></div></div>
+      ${rows.length ? `<div class="qz-card" style="padding:0;overflow:auto"><table class="qz-table">
+        <thead><tr><th>Paciente</th><th>CPF</th><th>Data</th><th></th></tr></thead>
+        <tbody>${rows.map((a) => `<tr>
+          <td>${esc(a.pacienteNome || "—")}${a.emailVerificado ? ' <span title="Email verificado" style="color:#16a34a">✅</span>' : ""}</td>
+          <td>${esc(a.pacienteCpf || "—")}</td>
+          <td style="white-space:nowrap;color:#64748b">${brDateTime(a.assinadoEm)}</td>
+          <td><button class="qz-btn ghost" style="padding:4px 10px;font-size:12px" data-viewassin="${a.id}">Ver termo assinado →</button></td>
+        </tr>`).join("")}</tbody>
+      </table></div>` : `<div class="qz-empty">📭 Nenhuma assinatura registrada ainda.</div>`}`;
+  }
+
+  function viewAssinaturaModalHtml() {
+    const a = S.viewAssinatura; if (!a) return "";
+    return `<div class="qz-modal-bg" data-vabg="1"><div class="qz-modal sm">
+      <div class="qz-modal-h"><h2>Termo assinado</h2><button class="qz-btn ghost" data-vaclose="1" style="padding:2px 10px">×</button></div>
+      <div class="qz-modal-b">
+        <div class="qz-card" style="padding:12px 14px;margin-bottom:14px">
+          <div style="font-size:12.5px;color:#1e293b"><b>${esc(a.pacienteNome || "—")}</b></div>
+          <div style="font-size:11.5px;color:#64748b;margin-top:4px">✉️ ${esc(a.pacienteEmail || "—")} · CPF ${esc(a.pacienteCpf || "—")}</div>
+          ${a.emailVerificado ? `<div style="font-size:11px;color:#16a34a;margin-top:8px;display:flex;align-items:center;gap:5px">✅ Assinado por ${esc(a.pacienteEmail)} (email verificado)</div>` : ""}
+        </div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:10px">Assinado em ${brDateTime(a.assinadoEm)}</div>
+        <div style="padding:14px 16px;border-radius:14px;background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.85);border-left:3px solid #99f6e4;font-size:13.5px;line-height:1.6;color:#1e293b;white-space:pre-wrap">${esc(a.textoFinal || "—")}</div>
+      </div>
+    </div></div>`;
   }
 
   /* ---------- CONSTRUTOR DE PERGUNTAS ---------- */
@@ -547,7 +711,11 @@
     const el = document.getElementById("s-questionarios"); if (!el) return;
     const modalScrolls = Array.from(document.querySelectorAll(".qz-modal-b")).map((n) => n.scrollTop);
     const pageY = window.scrollY;
-    el.innerHTML = `<div class="qz-wrap">${S.loading ? '<div class="qz-empty">Carregando questionários…</div>' : (S.screen === "formularios" ? myFormsHtml() : respostasHtml())}${builderModalHtml()}${aiModalHtml()}${shareModalHtml()}${respostaModalHtml()}
+    const screenHtml = S.screen === "formularios" ? myFormsHtml()
+      : S.screen === "termos" ? termosListHtml()
+      : S.screen === "termoassinaturas" ? termoAssinaturasHtml()
+      : respostasHtml();
+    el.innerHTML = `<div class="qz-wrap">${S.loading ? '<div class="qz-empty">Carregando questionários…</div>' : screenHtml}${builderModalHtml()}${aiModalHtml()}${shareModalHtml()}${respostaModalHtml()}${termoModalHtml()}${viewAssinaturaModalHtml()}
       ${S.toastMsg ? `<div class="qz-pill" style="position:fixed;bottom:20px;right:20px;padding:10px 16px;background:#1e293b;color:#fff;font-size:12.5px;z-index:3000">${esc(S.toastMsg)}</div>` : ""}
     </div>`;
     const newModalBodies = document.querySelectorAll(".qz-modal-b");
@@ -566,6 +734,16 @@
     render();
   }
 
+  function openNewTermo() {
+    S.termoModal = { id: null, titulo: "", corpo: TERMO_CORPO_PADRAO, checkboxLabel: "Li e estou de acordo com os termos acima.", ativo: true, saving: false };
+    render();
+  }
+  function openEditTermo(id) {
+    const t = S.termos.find((x) => x.id === id); if (!t) return;
+    S.termoModal = { id: t.id, titulo: t.titulo, corpo: t.corpo, checkboxLabel: t.checkboxLabel, ativo: t.ativo, saving: false };
+    render();
+  }
+
   /* ---------- EVENTOS ---------- */
   document.addEventListener("click", (e) => {
     const root = document.getElementById("s-questionarios");
@@ -579,12 +757,45 @@
       if (bd.vbg) { S.viewResponse = null; return render(); }
       if (bd.sbg) { S.shareModal = null; return render(); }
       if (bd.aibg) { S.aiModal = null; return render(); }
+      if (bd.mtbg) { S.termoModal = null; return render(); }
+      if (bd.vabg) { S.viewAssinatura = null; return render(); }
     }
-    const t = e.target.closest("[data-gomeus],[data-back],[data-new],[data-edit],[data-toggle],[data-clear],[data-viewresp],[data-vclose],[data-mclose],[data-msave],[data-idset],[data-qadd],[data-qdel],[data-qtype],[data-optadd],[data-optdel],[data-scalepreset],[data-copylink],[data-share],[data-sclose],[data-smode],[data-psel],[data-sbulk],[data-wasend],[data-aiopen],[data-aiclose],[data-aigen],[data-campo-add-toggle],[data-campo-add],[data-campo-remove],[data-authemail]");
+    const t = e.target.closest("[data-gomeus],[data-back],[data-new],[data-edit],[data-toggle],[data-clear],[data-viewresp],[data-vclose],[data-mclose],[data-msave],[data-idset],[data-qadd],[data-qdel],[data-qtype],[data-optadd],[data-optdel],[data-scalepreset],[data-copylink],[data-share],[data-sclose],[data-smode],[data-psel],[data-sbulk],[data-wasend],[data-aiopen],[data-aiclose],[data-aigen],[data-campo-add-toggle],[data-campo-add],[data-campo-remove],[data-authemail],[data-gotermos],[data-backtermos],[data-newtermo],[data-edittermo],[data-toggletermo],[data-deltermo],[data-copylinktermo],[data-viewassinaturas],[data-viewassin],[data-vaclose],[data-mtclose],[data-mtsave],[data-varinsert]");
     if (!t) return;
     const d = t.dataset;
     if (d.gomeus) { S.screen = "formularios"; return render(); }
     if (d.back) { S.screen = "respostas"; return render(); }
+    if (d.gotermos) { S.screen = "termos"; return render(); }
+    if (d.backtermos) { S.screen = "termos"; S.termoAssinaturasView = null; return render(); }
+    if (d.newtermo) { return openNewTermo(); }
+    if (d.edittermo) { return openEditTermo(d.edittermo); }
+    if (d.toggletermo) { return toggleTermoActive(d.toggletermo); }
+    if (d.deltermo) { return deleteTermo(d.deltermo); }
+    if (d.copylinktermo) {
+      const link = publicLinkTermo(d.copylinktermo);
+      navigator.clipboard && navigator.clipboard.writeText(link).then(() => toast("Link copiado!")).catch(() => toast(link));
+      return;
+    }
+    if (d.viewassinaturas) {
+      const tm = S.termos.find((x) => x.id === d.viewassinaturas); if (!tm) return;
+      S.termoAssinaturasView = { termoId: tm.id, termoTitulo: tm.titulo };
+      S.screen = "termoassinaturas"; return render();
+    }
+    if (d.viewassin) { S.viewAssinatura = S.termoAssinaturas.find((a) => a.id === d.viewassin) || null; return render(); }
+    if (d.vaclose) { S.viewAssinatura = null; return render(); }
+    if (d.mtclose) { S.termoModal = null; return render(); }
+    if (d.mtsave) return saveTermo();
+    if (d.varinsert && S.termoModal) {
+      const token = "{" + d.varinsert + "}";
+      const ta = document.getElementById("tz-m-corpo");
+      const start = ta ? ta.selectionStart : S.termoModal.corpo.length;
+      const end = ta ? ta.selectionEnd : S.termoModal.corpo.length;
+      const val = S.termoModal.corpo;
+      S.termoModal.corpo = val.slice(0, start) + token + val.slice(end);
+      render();
+      requestAnimationFrame(() => { const n = document.getElementById("tz-m-corpo"); if (n) { n.focus(); const pos = start + token.length; n.setSelectionRange(pos, pos); } });
+      return;
+    }
     if (d.new) { return openNewForm(); }
     if (d.edit) { return openEditForm(d.edit); }
     if (d.toggle) { return toggleFormActive(d.toggle); }
@@ -657,6 +868,10 @@
     if (!root || root.style.display === "none") return;
     if (e.target.id === "qz-q") { S.search = e.target.value; const p = e.target.selectionStart; render(); const n = document.getElementById("qz-q"); if (n) { n.focus(); n.setSelectionRange(p, p); } return; }
     if (e.target.id === "qz-fq") { S.fsearch = e.target.value; const p = e.target.selectionStart; render(); const n = document.getElementById("qz-fq"); if (n) { n.focus(); n.setSelectionRange(p, p); } return; }
+    if (e.target.id === "qz-tq") { S.tsearch = e.target.value; const p = e.target.selectionStart; render(); const n = document.getElementById("qz-tq"); if (n) { n.focus(); n.setSelectionRange(p, p); } return; }
+    if (e.target.id === "tz-m-titulo" && S.termoModal) { S.termoModal.titulo = e.target.value; return; }
+    if (e.target.id === "tz-m-checkbox" && S.termoModal) { S.termoModal.checkboxLabel = e.target.value; return; }
+    if (e.target.id === "tz-m-corpo" && S.termoModal) { S.termoModal.corpo = e.target.value; const p = e.target.selectionStart; render(); const n = document.getElementById("tz-m-corpo"); if (n) { n.focus(); n.setSelectionRange(p, p); } return; }
     if (e.target.id === "qz-m-titulo" && S.modal) { S.modal.titulo = e.target.value; return; }
     if (e.target.id === "qz-m-desc" && S.modal) { S.modal.descricao = e.target.value; return; }
     if (e.target.id === "qz-ai-obs" && S.aiModal) { S.aiModal.obs = e.target.value; return; }
