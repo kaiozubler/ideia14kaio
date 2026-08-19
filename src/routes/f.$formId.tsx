@@ -500,6 +500,11 @@ const CSS = `
 .pf-btn{width:100%;padding:13px;border:none;border-radius:16px;font-size:15px;font-weight:700;color:#fff;background:linear-gradient(135deg,#34d399,#0d9488);box-shadow:0 10px 26px rgba(13,148,136,.35);cursor:pointer}
 .pf-btn:disabled{opacity:.65;cursor:default}
 .pf-err{margin:0 0 12px;padding:10px 12px;border-radius:12px;font-size:13px;color:#b91c1c;background:rgba(254,226,226,.8);border:1px solid rgba(252,165,165,.8)}
+.pf-ok{margin:0 0 12px;padding:10px 12px;border-radius:12px;font-size:13px;color:#0f766e;background:rgba(209,250,229,.8);border:1px solid rgba(153,246,228,.9)}
+.pf-code{margin:0 0 12px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.65);border:1px solid rgba(255,255,255,.9);border-left:3px solid #99f6e4}
+.pf-code-in{max-width:150px;text-align:center;font-size:22px;letter-spacing:.28em;font-weight:700}
+.pf-link{display:block;margin-top:8px;background:none;border:none;padding:0;font-size:12px;font-weight:600;color:#0d9488;cursor:pointer;text-decoration:underline}
+.pf-link:disabled{opacity:.6;cursor:default}
 .pf-foot{font-size:11px;color:#94a3b8;text-align:center;margin:12px 0 0}
 .pf-done{text-align:center;padding:26px 6px}
 .pf-done h1{font-size:20px;color:#0f172a;margin:14px 0 6px}
