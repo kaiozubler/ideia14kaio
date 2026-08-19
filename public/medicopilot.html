@@ -4127,6 +4127,9 @@
               <button class="vc-dockbtn" id="vc-dock-share" onclick="callToggleShare()" title="Compartilhar tela">
                 <i class="ti ti-screen-share"></i>
               </button>
+              <button class="vc-dockbtn" id="vc-dock-blur" onclick="callToggleBlur()" title="Desfocar meu fundo">
+                <i class="ti ti-shadow"></i>
+              </button>
               <button
                 class="vc-dockbtn"
                 id="vc-dock-transcribe"
@@ -17735,6 +17738,8 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               if(joinBtn) joinBtn.disabled=true;
                                                               await destroyDailyCallObject();
                                                               window.__vcJoined=false;
+                                                              window.__vcBlurOn=false;
+                                                              const blurBtn=document.getElementById('vc-dock-blur'); if(blurBtn) blurBtn.classList.remove('active');
                                                               // Libera o microfone que a transcrição presencial (Deepgram) possa estar segurando,
                                                               // senão o Daily não consegue abrir o mesmo dispositivo e cai em mic-in-use.
                                                               if(typeof dgLive!=='undefined' && (dgLive.active || dgLive.starting)){
@@ -17901,6 +17906,34 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               const btn=document.getElementById('vc-dock-cam');
                                                               if(btn) btn.classList.toggle('active', !cur);
                                                               renderVcGrid();
+                                                            }
+                                                            async function callToggleBlur(){
+                                                              const cf=window.__vcCallFrame; if(!cf) return;
+                                                              const btn=document.getElementById('vc-dock-blur');
+                                                              try{
+                                                                const support = (typeof cf.supportedBrowser==='function') ? cf.supportedBrowser() : null;
+                                                                if(support && support.supportsVideoProcessing===false){
+                                                                  if(typeof toast==='function') toast('Seu navegador não suporta desfoque de fundo.');
+                                                                  return;
+                                                                }
+                                                                if(btn) btn.disabled=true;
+                                                                const turningOn=!window.__vcBlurOn;
+                                                                await cf.updateInputSettings({
+                                                                  video: {
+                                                                    processor: turningOn
+                                                                      ? { type:'background-blur', config:{ strength:0.6 } }
+                                                                      : { type:'none' }
+                                                                  }
+                                                                });
+                                                                window.__vcBlurOn=turningOn;
+                                                                if(btn) btn.classList.toggle('active', turningOn);
+                                                                if(typeof toast==='function') toast(turningOn ? 'Desfoque de fundo ativado.' : 'Desfoque de fundo desativado.');
+                                                              }catch(e){
+                                                                console.warn('Falha ao alternar desfoque de fundo:', e);
+                                                                if(typeof toast==='function') toast('Não foi possível alternar o desfoque de fundo.');
+                                                              }finally{
+                                                                if(btn) btn.disabled=false;
+                                                              }
                                                             }
                                                             async function callToggleShare(){
                                                               const cf=window.__vcCallFrame; if(!cf) return;
