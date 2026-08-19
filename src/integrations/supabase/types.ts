@@ -1512,6 +1512,47 @@ export type Database = {
         }
         Relationships: []
       }
+      questionario_email_codigos: {
+        Row: {
+          codigo: string
+          created_at: string
+          email: string
+          expira_em: string
+          id: string
+          questionario_id: string
+          tentativas: number
+          verificado: boolean
+        }
+        Insert: {
+          codigo: string
+          created_at?: string
+          email: string
+          expira_em: string
+          id?: string
+          questionario_id: string
+          tentativas?: number
+          verificado?: boolean
+        }
+        Update: {
+          codigo?: string
+          created_at?: string
+          email?: string
+          expira_em?: string
+          id?: string
+          questionario_id?: string
+          tentativas?: number
+          verificado?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questionario_email_codigos_questionario_id_fkey"
+            columns: ["questionario_id"]
+            isOneToOne: false
+            referencedRelation: "questionarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       questionario_envios: {
         Row: {
           enviado_em: string
@@ -1704,6 +1745,7 @@ export type Database = {
           campos_cadastro: Json
           created_at: string
           descricao: string | null
+          exigir_auth_email: boolean
           id: string
           titulo: string
           user_id: string
@@ -1714,6 +1756,7 @@ export type Database = {
           campos_cadastro?: Json
           created_at?: string
           descricao?: string | null
+          exigir_auth_email?: boolean
           id?: string
           titulo: string
           user_id?: string
@@ -1724,6 +1767,7 @@ export type Database = {
           campos_cadastro?: Json
           created_at?: string
           descricao?: string | null
+          exigir_auth_email?: boolean
           id?: string
           titulo?: string
           user_id?: string
