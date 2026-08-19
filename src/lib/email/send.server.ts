@@ -3,7 +3,7 @@
 type SendArgs = { to: string; subject: string; html: string };
 
 export async function sendEmail({ to, subject, html }: SendArgs): Promise<void> {
-  const apiKey = process.env['RESEND_API_KEY'];
+  const apiKey = process.env['re_Yo4REuHH_4eNTDEizeRtkkcfbQ2Ajdyf4'];
   if (!apiKey) throw new Error('email_not_configured');
   const from = process.env['EMAIL_FROM'] || 'MediCopilot <onboarding@resend.dev>';
 
