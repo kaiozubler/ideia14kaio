@@ -15,6 +15,9 @@ const ItemSchema = z.object({
 const BodySchema = z.object({
   questionario_id: z.string().uuid(),
   paciente_id: z.string().uuid().nullable().optional(),
+  // Código de 4 dígitos enviado por email — obrigatório quando o formulário
+  // exige autenticação por email (questionarios.exigir_auth_email).
+  codigo: z.string().regex(/^\d{4}$/).optional(),
   // Campos do cadastro selecionados no construtor (ex.: name, cpf, telefone,
   // email, data_nascimento, ic_peso...) — ver CAMPO_CATALOG em f.$formId.tsx
   // e CAMPOS_CADASTRO em public/questionarios.js.
@@ -139,7 +142,7 @@ export const Route = createFileRoute("/api/public/formularios/responder")({
 
           const { data: form, error: formErr } = await supabaseAdmin
             .from("questionarios")
-            .select("id,ativo,anonimo,titulo,user_id")
+            .select("id,ativo,anonimo,titulo,user_id,exigir_auth_email")
             .eq("id", body.questionario_id)
             .maybeSingle();
           if (formErr) throw formErr;
@@ -160,6 +163,37 @@ export const Route = createFileRoute("/api/public/formularios/responder")({
           const email = (campos.email || "").trim();
           const cpfDigits = onlyDigits(campos.cpf);
           const cpfFormatado = cpfDigits.length === 11 ? formatCpf(cpfDigits) : "";
+
+          // Autenticação por email: valida o código antes de qualquer gravação.
+          if (form.exigir_auth_email) {
+            const emailNorm = email.toLowerCase();
+            if (!emailNorm || !body.codigo) return Response.json({ error: "code_required" }, { status: 400 });
+            const { data: registro, error: codErr } = await supabaseAdmin
+              .from("questionario_email_codigos")
+              .select("id,codigo,expira_em,tentativas,verificado")
+              .eq("questionario_id", form.id)
+              .eq("email", emailNorm)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (codErr) throw codErr;
+            if (!registro) return Response.json({ error: "code_required" }, { status: 400 });
+            if (registro.tentativas >= 6) return Response.json({ error: "code_blocked" }, { status: 429 });
+            const expirado = new Date(registro.expira_em).getTime() < Date.now();
+            if (registro.codigo !== body.codigo || expirado) {
+              await supabaseAdmin
+                .from("questionario_email_codigos")
+                .update({ tentativas: registro.tentativas + 1 })
+                .eq("id", registro.id);
+              return Response.json({ error: expirado ? "code_expired" : "code_invalid" }, { status: 400 });
+            }
+            if (!registro.verificado) {
+              await supabaseAdmin
+                .from("questionario_email_codigos")
+                .update({ verificado: true })
+                .eq("id", registro.id);
+            }
+          }
 
           // Cruza o CPF informado com os pacientes já cadastrados deste médico
           // (mesmo dono do formulário) — habilita ligar a resposta ao
