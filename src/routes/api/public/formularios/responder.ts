@@ -69,6 +69,21 @@ function flattenRespostas(perguntas: PerguntaRef[], itens: ItemGravado[]): strin
   return linhas.join("\n\n");
 }
 
+// Mesma leitura das respostas, em pares pergunta/valor — usada na cópia
+// enviada por email ao paciente.
+function linhasRespostas(perguntas: PerguntaRef[], itens: ItemGravado[]): { pergunta: string; valor: string }[] {
+  const porId = new Map(perguntas.map((p) => [p.id, p]));
+  return itens.flatMap((it) => {
+    const p = porId.get(it.pergunta_id);
+    if (!p) return [];
+    let valor = "—";
+    if (p.tipo === "escala") valor = it.valor_escala != null ? String(it.valor_escala) : "—";
+    else if (p.tipo === "unica" || p.tipo === "multipla") valor = it.valor_opcoes?.length ? it.valor_opcoes.join(", ") : "—";
+    else valor = it.valor_texto?.trim() || "—";
+    return [{ pergunta: p.enunciado, valor }];
+  });
+}
+
 // Campos do cadastro que mapeiam direto pra colunas de "pacientes".
 const COLUNAS_DIRETAS = [
   "data_nascimento",
@@ -373,6 +388,22 @@ export const Route = createFileRoute("/api/public/formularios/responder")({
               // Nunca falha o envio da resposta do paciente por causa do
               // vínculo com o prontuário — a resposta já está salva.
               console.warn("[formularios:responder] falha ao vincular ao prontuário/timeline", linkErr);
+            }
+          }
+
+          // Formulários com autenticação por email recebem a cópia das
+          // respostas no email confirmado pelo paciente.
+          if (form.exigir_auth_email && email) {
+            try {
+              const { sendEmail, respostasEmailHtml } = await import("@/lib/email/send.server");
+              await sendEmail({
+                to: email,
+                subject: `Cópia das suas respostas — ${form.titulo}`,
+                html: respostasEmailHtml(form.titulo, nome, linhasRespostas(perguntasRef, itensGravados)),
+              });
+            } catch (mailErr) {
+              // A resposta já está salva — o envio da cópia não pode falhar o fluxo.
+              console.warn("[formularios:responder] falha ao enviar cópia por email", mailErr);
             }
           }
 
