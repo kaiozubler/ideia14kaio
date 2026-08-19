@@ -2992,8 +2992,9 @@
                         <div class="csep"></div>
                         <div
                           class="sug-grp"
+                          id="sug-grp"
                           title="Pedir sugestão à IA"
-                          style="display:inline-flex;align-items:stretch;border:0.5px solid rgba(252,211,77,.7);border-radius:10px;background:linear-gradient(180deg,rgba(255,251,235,.85),rgba(254,249,195,.85));backdrop-filter:blur(10px) saturate(180%);overflow:visible;height:28px;position:relative;box-shadow:0 2px 8px -2px rgba(180,140,0,.18)"
+                          style="display:none;align-items:stretch;border:0.5px solid rgba(252,211,77,.7);border-radius:10px;background:linear-gradient(180deg,rgba(255,251,235,.85),rgba(254,249,195,.85));backdrop-filter:blur(10px) saturate(180%);overflow:visible;height:28px;position:relative;box-shadow:0 2px 8px -2px rgba(180,140,0,.18)"
                         >
                           <span
                             style="position:absolute;top:-7px;left:8px;font-size:8.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#92400e;background:linear-gradient(180deg,#fef9c3,#fde68a);padding:1px 5px;border-radius:4px;line-height:1;z-index:1;box-shadow:0 1px 2px rgba(0,0,0,.06)"
@@ -3017,6 +3018,15 @@
                             <i class="ti ti-help"></i> Dúvida
                           </button>
                         </div>
+                        <button
+                          class="btn sm"
+                          id="executar-btn"
+                          onclick="executarComandoVoz()"
+                          title="Executar o comando de voz falado na consulta"
+                          style="display:none;background:linear-gradient(135deg,#fb923c,#ea580c);border-color:rgba(234,88,12,.5);color:#fff"
+                        >
+                          <i class="ti ti-player-play" id="executar-btn-ico"></i> <span id="executar-btn-lbl">Executar</span>
+                        </button>
                         <button
                           class="btn sm"
                           id="toggle-bbl-btn"
@@ -9335,8 +9345,10 @@ showAtendList();
                                                             /* ========== AI PANEL — TRANSCRIPTION ========== */
                                                             let transState=0; // 0=collapsed(2lines), 1=expanded(5lines), 2=full(20lines)
                                                             let transcriptLog=[];
+                                                            let transcriptTimeline=[]; // [{text, ts}] usado pelo botão "Executar" p/ pegar a janela recente
                                                             let bubblesVisible=true;
                                                             let pinnedBbls=[];
+                                                            let __transcricaoAvisoMostrado=false; // evita repetir o aviso ao paciente a cada retomada
 
                                                             /* ========== DEEPGRAM LIVE TRANSCRIPTION ========== */
                                                             const dgLive = {
@@ -9509,6 +9521,7 @@ showAtendList();
 
                                                             function addTranscriptLine(text){
                                                               transcriptLog.push(text);
+                                                              transcriptTimeline.push({text:text,ts:Date.now()});
                                                               const content=document.getElementById('trans-content');
                                                               if(!content)return;
                                                               const line=document.createElement('div');
@@ -9528,7 +9541,9 @@ showAtendList();
                                                               clearInterval(transcriptInterval);
                                                               if(dgLive.active || dgLive.starting){ dgLive.stop(); }
                                                               bblCount=0;sugIdx=0;aiRespIdx=0;transcriptIdx=0;
-                                                              transcriptLog=[];pinnedBbls=[];bubblesVisible=true;
+                                                              transcriptLog=[];transcriptTimeline=[];pinnedBbls=[];bubblesVisible=true;
+                                                              __transcricaoAvisoMostrado=false;
+                                                              setSugestaoExecutarVisibility(false);
                                                               clearAiSuggestionQueue();
                                                               stopCopilotoLoop();
                                                               copTranscriptCursor=0;copLastSummary='';copFirstRun=true;copBusy=false;
@@ -9553,10 +9568,30 @@ showAtendList();
                                                               const orb=document.getElementById('orb');
                                                               const oi=document.getElementById('orb-icon');
                                                               const ol=document.getElementById('orb-lbl');
+                                                              if(state==='listening'){
+                                                                setSugestaoExecutarVisibility(true);
+                                                                if(!__transcricaoAvisoMostrado){
+                                                                  __transcricaoAvisoMostrado=true;
+                                                                  queueAiPanelItem('ia','Avise o paciente que essa consulta está sendo transcrita');
+                                                                }
+                                                              }else{
+                                                                setSugestaoExecutarVisibility(false);
+                                                                if(state==='idle'){ __transcricaoAvisoMostrado=false; }
+                                                              }
                                                               if(!ow)return;
                                                               if(state==='listening'){ow.classList.add('live');orb.classList.add('live');oi.className='ti ti-player-pause';ol.textContent='Escutando...';ol.className='orb-lbl live';}
                                                               else if(state==='paused'){ow.classList.remove('live');orb.classList.remove('live');oi.className='ti ti-microphone';ol.textContent='Pausado';ol.className='orb-lbl';}
                                                               else{ow.classList.remove('live');orb.classList.remove('live');oi.className='ti ti-microphone';ol.textContent='Toque para iniciar';ol.className='orb-lbl';}
+                                                            }
+
+                                                            /* Mostra/oculta o grupo de Sugestão (Conduta/Dúvida) e o botão Executar —
+                                                               ambos só devem aparecer enquanto a consulta está sendo transcrita,
+                                                               seja presencial (Deepgram) ou por chamada de vídeo (Daily). */
+                                                            function setSugestaoExecutarVisibility(show){
+                                                              const grp=document.getElementById('sug-grp');
+                                                              if(grp)grp.style.display=show?'inline-flex':'none';
+                                                              const exec=document.getElementById('executar-btn');
+                                                              if(exec)exec.style.display=show?'inline-flex':'none';
                                                             }
 
                                                             function setListenBtnState(state){
@@ -9708,6 +9743,76 @@ showAtendList();
                                                               if(layer)layer.classList.toggle('hidden-bbl',!bubblesVisible);
                                                               const icon=document.getElementById('toggle-bbl-icon');
                                                               if(icon)icon.className=bubblesVisible?'ti ti-eye':'ti ti-eye-off';
+                                                            }
+
+                                                            /* ========== BOTÃO "EXECUTAR" — comando de voz ========== */
+                                                            // Junta as falas da janela [agora-10s ... até] o instante informado (por padrão,
+                                                            // "agora"), usada para montar o comando enviado à IA.
+                                                            function getTranscriptWindowText(secondsBack, untilTs){
+                                                              const until=untilTs||Date.now();
+                                                              const cutoff=until-secondsBack*1000;
+                                                              return transcriptTimeline.filter(function(e){return e.ts>=cutoff&&e.ts<=until;})
+                                                                .map(function(e){return e.text;}).join('\n').trim();
+                                                            }
+
+                                                            let __executarBusy=false;
+                                                            async function executarComandoVoz(){
+                                                              if(__executarBusy)return;
+                                                              if(!listening){ if(typeof toast==='function')toast('Inicie a transcrição para usar o Executar.'); return; }
+                                                              __executarBusy=true;
+                                                              const btn=document.getElementById('executar-btn');
+                                                              const ico=document.getElementById('executar-btn-ico');
+                                                              const lbl=document.getElementById('executar-btn-lbl');
+                                                              if(btn)btn.disabled=true;
+                                                              if(ico)ico.className='ti ti-loader-2';
+                                                              if(lbl)lbl.textContent='Aguarde...';
+                                                              const clickTs=Date.now();
+                                                              try{
+                                                                // Espera 3s após o clique para capturar também a fala dita logo em
+                                                                // seguida (ex.: o médico termina a frase depois de já ter clicado).
+                                                                await new Promise(function(r){setTimeout(r,3000);});
+                                                                // Janela final: 10s antes do clique até 3s depois dele.
+                                                                const comando=getTranscriptWindowText(13, clickTs+3000);
+                                                                if(!comando){
+                                                                  queueAiPanelItem('ia','Não identifiquei nenhuma fala recente para executar.');
+                                                                  return;
+                                                                }
+                                                                const mensagens=[{role:'user',content:'[Comando de voz captado durante a consulta — identifique e execute imediatamente a ação solicitada]\n'+comando}];
+                                                                const res=await fetch('/api/assistente-ia',{
+                                                                  method:'POST',headers:{'Content-Type':'application/json'},
+                                                                  body:JSON.stringify({
+                                                                    mode:'assistente_global',
+                                                                    messages:mensagens,
+                                                                    user_id:(typeof iaAssistUserId==='function')?iaAssistUserId():null,
+                                                                    conversa_id:null,
+                                                                    paciente_id:(currentPatient&&currentPatient.id)||null,
+                                                                    paciente_nome:(currentPatient&&currentPatient.name)||null
+                                                                  })
+                                                                });
+                                                                if(!res.ok)throw new Error(await res.text());
+                                                                const data=await res.json();
+                                                                if(data&&data.action){
+                                                                  // Mesmo tratamento de ação usado pelo assistente global (abre a
+                                                                  // pré-visualização/modal do documento gerado — receita, exames, etc.)
+                                                                  const id=iaAssistRegisterAttachment(
+                                                                    data.action.type==='gerar_receita'?'receita':data.action.type==='gerar_solicitacao_exame'?'exame':'atestado',
+                                                                    data.action
+                                                                  );
+                                                                  await iaAssistOpenPreview(id);
+                                                                  queueAiPanelItem('ia',(data.reply&&data.reply.trim())||'Comando executado.');
+                                                                }else if(data&&data.reply){
+                                                                  queueAiPanelItem('ia',data.reply);
+                                                                }else{
+                                                                  queueAiPanelItem('ia','Não consegui identificar uma ação executável nesse comando.');
+                                                                }
+                                                              }catch(e){
+                                                                queueAiPanelItem('ia','⚠️ Erro ao executar comando de voz: '+(e.message||e));
+                                                              }finally{
+                                                                __executarBusy=false;
+                                                                if(btn)btn.disabled=false;
+                                                                if(ico)ico.className='ti ti-player-play';
+                                                                if(lbl)lbl.textContent='Executar';
+                                                              }
                                                             }
 
                                                             async function suggestAction(kind){
