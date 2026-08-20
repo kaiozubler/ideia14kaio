@@ -24,10 +24,28 @@
       <header class="head">
         <div class="brand"><span class="logo">MC</span><b>Assistente</b></div>
         <div class="head-actions">
+          <button id="ch-hist" class="ghost" title="Histórico de conversas (7 dias)" aria-label="Histórico">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M12 7v5l3.5 2" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </button>
           <button id="ch-new" class="ghost" title="Nova conversa">＋</button>
           <button id="ch-out" class="ghost" title="Sair">⏻</button>
         </div>
       </header>
+      <!-- Painel de histórico (sobrepõe o chat) -->
+      <aside id="hist" class="hist hidden">
+        <div class="hist-head">
+          <b>Histórico (últimos 7 dias)</b>
+          <button id="hist-close" class="ghost" title="Fechar">✕</button>
+        </div>
+        <div id="hist-empty" class="hist-empty hidden">Nenhuma conversa recente.</div>
+        <ul id="hist-list" class="hist-list"></ul>
+        <div class="hist-foot">
+          <button id="hist-clear" class="link-btn">Limpar todo o histórico</button>
+        </div>
+      </aside>
       <div id="ctx" class="ctx">Contexto da tela: <span id="ctx-info">lendo…</span></div>
       <div id="msgs" class="msgs"></div>
       <div class="chips" id="ch-chips">
@@ -55,6 +73,7 @@
 
     <script src="config.js"></script>
     <script src="auth.js"></script>
+    <script src="history.js"></script>
     <script src="sidepanel.js"></script>
   </body>
 </html>

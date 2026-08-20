@@ -1908,6 +1908,131 @@ export type Database = {
         }
         Relationships: []
       }
+      termo_assinaturas: {
+        Row: {
+          assinado_em: string
+          checkbox_aceito: boolean
+          email_verificado: boolean
+          id: string
+          paciente_cpf: string
+          paciente_email: string
+          paciente_id: string | null
+          paciente_nome: string
+          termo_id: string
+          texto_final: string
+        }
+        Insert: {
+          assinado_em?: string
+          checkbox_aceito?: boolean
+          email_verificado?: boolean
+          id?: string
+          paciente_cpf: string
+          paciente_email: string
+          paciente_id?: string | null
+          paciente_nome: string
+          termo_id: string
+          texto_final: string
+        }
+        Update: {
+          assinado_em?: string
+          checkbox_aceito?: boolean
+          email_verificado?: boolean
+          id?: string
+          paciente_cpf?: string
+          paciente_email?: string
+          paciente_id?: string | null
+          paciente_nome?: string
+          termo_id?: string
+          texto_final?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "termo_assinaturas_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["paciente_id"]
+          },
+          {
+            foreignKeyName: "termo_assinaturas_termo_id_fkey"
+            columns: ["termo_id"]
+            isOneToOne: false
+            referencedRelation: "termos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      termo_email_codigos: {
+        Row: {
+          codigo: string
+          created_at: string
+          email: string
+          expira_em: string
+          id: string
+          tentativas: number
+          termo_id: string
+          verificado: boolean
+        }
+        Insert: {
+          codigo: string
+          created_at?: string
+          email: string
+          expira_em: string
+          id?: string
+          tentativas?: number
+          termo_id: string
+          verificado?: boolean
+        }
+        Update: {
+          codigo?: string
+          created_at?: string
+          email?: string
+          expira_em?: string
+          id?: string
+          tentativas?: number
+          termo_id?: string
+          verificado?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "termo_email_codigos_termo_id_fkey"
+            columns: ["termo_id"]
+            isOneToOne: false
+            referencedRelation: "termos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      termos: {
+        Row: {
+          ativo: boolean
+          checkbox_label: string
+          corpo: string
+          created_at: string
+          id: string
+          titulo: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          checkbox_label?: string
+          corpo: string
+          created_at?: string
+          id?: string
+          titulo: string
+          user_id?: string
+        }
+        Update: {
+          ativo?: boolean
+          checkbox_label?: string
+          corpo?: string
+          created_at?: string
+          id?: string
+          titulo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       timeline_events: {
         Row: {
           created_at: string
@@ -2295,6 +2420,7 @@ export type Database = {
         Returns: undefined
       }
       sobrenome_paciente: { Args: { nome: string }; Returns: string }
+      termo_publico: { Args: { p_id: string }; Returns: Json }
       unaccent: { Args: { "": string }; Returns: string }
       verificar_interacoes: {
         Args: { p_termos: string[] }

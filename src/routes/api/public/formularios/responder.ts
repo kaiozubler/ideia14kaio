@@ -325,7 +325,7 @@ export const Route = createFileRoute("/api/public/formularios/responder")({
 
           const { data: resp, error: rErr } = await supabaseAdmin
             .from("questionario_respostas")
-            .insert({ questionario_id: form.id, ...identificacao, email_verificado: emailVerificado })
+            .insert({ questionario_id: form.id, ...identificacao, email_verificado: emailVerificado } as never)
             .select("id")
             .single();
           if (rErr) throw rErr;

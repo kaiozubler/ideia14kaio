@@ -21,6 +21,7 @@ import { Route as ApiMapaFamiliarIaRouteImport } from './routes/api/mapa-familia
 import { Route as ApiWhatsappConviteRouteImport } from './routes/api/whatsapp-convite'
 import { Route as ApiWhatsappWebhookRouteImport } from './routes/api/whatsapp-webhook'
 import { Route as FFormIdRouteImport } from './routes/f.$formId'
+import { Route as TTermoIdRouteImport } from './routes/t.$termoId'
 import { Route as ApiBryCancelEnvelopeRouteImport } from './routes/api/bry/cancel-envelope'
 import { Route as ApiBryCreateEnvelopeRouteImport } from './routes/api/bry/create-envelope'
 import { Route as ApiBryDownloadDocumentRouteImport } from './routes/api/bry/download-document'
@@ -35,6 +36,7 @@ import { Route as ApiSignatureAuthenticateRouteImport } from './routes/api/signa
 import { Route as ApiSignatureCredentialRouteImport } from './routes/api/signature/credential'
 import { Route as ApiSignatureLocalCertificateRouteImport } from './routes/api/signature/local-certificate'
 import { Route as ApiSignatureSignRouteImport } from './routes/api/signature/sign'
+import { Route as ApiTermosGerarIaRouteImport } from './routes/api/termos/gerar-ia'
 import { Route as ApiTussBuscarRouteImport } from './routes/api/tuss/buscar'
 import { Route as ApiTussCriarRouteImport } from './routes/api/tuss/criar'
 import { Route as ApiPublicExtensaoChatRouteImport } from './routes/api/public/extensao/chat'
@@ -44,6 +46,8 @@ import { Route as ApiPublicFormulariosResponderRouteImport } from './routes/api/
 import { Route as ApiPublicHooksSyncInteracoesRouteImport } from './routes/api/public/hooks/sync-interacoes'
 import { Route as ApiPublicHooksSyncTussRouteImport } from './routes/api/public/hooks/sync-tuss'
 import { Route as ApiPublicSignatureCallbackRouteImport } from './routes/api/public/signature/callback'
+import { Route as ApiPublicTermosAssinarRouteImport } from './routes/api/public/termos/assinar'
+import { Route as ApiPublicTermosCodigoRouteImport } from './routes/api/public/termos/codigo'
 import { Route as ApiPublicWebhooksBryRouteImport } from './routes/api/public/webhooks/bry'
 
 const IndexRoute = IndexRouteImport.update({
@@ -105,6 +109,11 @@ const ApiWhatsappWebhookRoute = ApiWhatsappWebhookRouteImport.update({
 const FFormIdRoute = FFormIdRouteImport.update({
   id: '/f/$formId',
   path: '/f/$formId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TTermoIdRoute = TTermoIdRouteImport.update({
+  id: '/t/$termoId',
+  path: '/t/$termoId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBryCancelEnvelopeRoute = ApiBryCancelEnvelopeRouteImport.update({
@@ -181,6 +190,11 @@ const ApiSignatureSignRoute = ApiSignatureSignRouteImport.update({
   path: '/api/signature/sign',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTermosGerarIaRoute = ApiTermosGerarIaRouteImport.update({
+  id: '/api/termos/gerar-ia',
+  path: '/api/termos/gerar-ia',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTussBuscarRoute = ApiTussBuscarRouteImport.update({
   id: '/api/tuss/buscar',
   path: '/api/tuss/buscar',
@@ -231,6 +245,16 @@ const ApiPublicSignatureCallbackRoute =
     path: '/api/public/signature/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicTermosAssinarRoute = ApiPublicTermosAssinarRouteImport.update({
+  id: '/api/public/termos/assinar',
+  path: '/api/public/termos/assinar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicTermosCodigoRoute = ApiPublicTermosCodigoRouteImport.update({
+  id: '/api/public/termos/codigo',
+  path: '/api/public/termos/codigo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicWebhooksBryRoute = ApiPublicWebhooksBryRouteImport.update({
   id: '/api/public/webhooks/bry',
   path: '/api/public/webhooks/bry',
@@ -250,6 +274,7 @@ export interface FileRoutesByFullPath {
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
   '/f/$formId': typeof FFormIdRoute
+  '/t/$termoId': typeof TTermoIdRoute
   '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
@@ -264,6 +289,7 @@ export interface FileRoutesByFullPath {
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
+  '/api/termos/gerar-ia': typeof ApiTermosGerarIaRoute
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/tuss/criar': typeof ApiTussCriarRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
@@ -273,6 +299,8 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
+  '/api/public/termos/assinar': typeof ApiPublicTermosAssinarRoute
+  '/api/public/termos/codigo': typeof ApiPublicTermosCodigoRoute
   '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
 }
 export interface FileRoutesByTo {
@@ -288,6 +316,7 @@ export interface FileRoutesByTo {
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
   '/f/$formId': typeof FFormIdRoute
+  '/t/$termoId': typeof TTermoIdRoute
   '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
@@ -302,6 +331,7 @@ export interface FileRoutesByTo {
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
+  '/api/termos/gerar-ia': typeof ApiTermosGerarIaRoute
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/tuss/criar': typeof ApiTussCriarRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
@@ -311,6 +341,8 @@ export interface FileRoutesByTo {
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
+  '/api/public/termos/assinar': typeof ApiPublicTermosAssinarRoute
+  '/api/public/termos/codigo': typeof ApiPublicTermosCodigoRoute
   '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
 }
 export interface FileRoutesById {
@@ -327,6 +359,7 @@ export interface FileRoutesById {
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
   '/f/$formId': typeof FFormIdRoute
+  '/t/$termoId': typeof TTermoIdRoute
   '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
@@ -341,6 +374,7 @@ export interface FileRoutesById {
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
+  '/api/termos/gerar-ia': typeof ApiTermosGerarIaRoute
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/tuss/criar': typeof ApiTussCriarRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
@@ -350,6 +384,8 @@ export interface FileRoutesById {
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
+  '/api/public/termos/assinar': typeof ApiPublicTermosAssinarRoute
+  '/api/public/termos/codigo': typeof ApiPublicTermosCodigoRoute
   '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
 }
 export interface FileRouteTypes {
@@ -367,6 +403,7 @@ export interface FileRouteTypes {
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
     | '/f/$formId'
+    | '/t/$termoId'
     | '/api/bry/cancel-envelope'
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
@@ -381,6 +418,7 @@ export interface FileRouteTypes {
     | '/api/signature/credential'
     | '/api/signature/local-certificate'
     | '/api/signature/sign'
+    | '/api/termos/gerar-ia'
     | '/api/tuss/buscar'
     | '/api/tuss/criar'
     | '/api/public/extensao/chat'
@@ -390,6 +428,8 @@ export interface FileRouteTypes {
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
+    | '/api/public/termos/assinar'
+    | '/api/public/termos/codigo'
     | '/api/public/webhooks/bry'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -405,6 +445,7 @@ export interface FileRouteTypes {
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
     | '/f/$formId'
+    | '/t/$termoId'
     | '/api/bry/cancel-envelope'
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
@@ -419,6 +460,7 @@ export interface FileRouteTypes {
     | '/api/signature/credential'
     | '/api/signature/local-certificate'
     | '/api/signature/sign'
+    | '/api/termos/gerar-ia'
     | '/api/tuss/buscar'
     | '/api/tuss/criar'
     | '/api/public/extensao/chat'
@@ -428,6 +470,8 @@ export interface FileRouteTypes {
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
+    | '/api/public/termos/assinar'
+    | '/api/public/termos/codigo'
     | '/api/public/webhooks/bry'
   id:
     | '__root__'
@@ -443,6 +487,7 @@ export interface FileRouteTypes {
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
     | '/f/$formId'
+    | '/t/$termoId'
     | '/api/bry/cancel-envelope'
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
@@ -457,6 +502,7 @@ export interface FileRouteTypes {
     | '/api/signature/credential'
     | '/api/signature/local-certificate'
     | '/api/signature/sign'
+    | '/api/termos/gerar-ia'
     | '/api/tuss/buscar'
     | '/api/tuss/criar'
     | '/api/public/extensao/chat'
@@ -466,6 +512,8 @@ export interface FileRouteTypes {
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
+    | '/api/public/termos/assinar'
+    | '/api/public/termos/codigo'
     | '/api/public/webhooks/bry'
   fileRoutesById: FileRoutesById
 }
@@ -482,6 +530,7 @@ export interface RootRouteChildren {
   ApiWhatsappConviteRoute: typeof ApiWhatsappConviteRoute
   ApiWhatsappWebhookRoute: typeof ApiWhatsappWebhookRoute
   FFormIdRoute: typeof FFormIdRoute
+  TTermoIdRoute: typeof TTermoIdRoute
   ApiBryCancelEnvelopeRoute: typeof ApiBryCancelEnvelopeRoute
   ApiBryCreateEnvelopeRoute: typeof ApiBryCreateEnvelopeRoute
   ApiBryDownloadDocumentRoute: typeof ApiBryDownloadDocumentRoute
@@ -496,6 +545,7 @@ export interface RootRouteChildren {
   ApiSignatureCredentialRoute: typeof ApiSignatureCredentialRoute
   ApiSignatureLocalCertificateRoute: typeof ApiSignatureLocalCertificateRoute
   ApiSignatureSignRoute: typeof ApiSignatureSignRoute
+  ApiTermosGerarIaRoute: typeof ApiTermosGerarIaRoute
   ApiTussBuscarRoute: typeof ApiTussBuscarRoute
   ApiTussCriarRoute: typeof ApiTussCriarRoute
   ApiPublicExtensaoChatRoute: typeof ApiPublicExtensaoChatRoute
@@ -505,6 +555,8 @@ export interface RootRouteChildren {
   ApiPublicHooksSyncInteracoesRoute: typeof ApiPublicHooksSyncInteracoesRoute
   ApiPublicHooksSyncTussRoute: typeof ApiPublicHooksSyncTussRoute
   ApiPublicSignatureCallbackRoute: typeof ApiPublicSignatureCallbackRoute
+  ApiPublicTermosAssinarRoute: typeof ApiPublicTermosAssinarRoute
+  ApiPublicTermosCodigoRoute: typeof ApiPublicTermosCodigoRoute
   ApiPublicWebhooksBryRoute: typeof ApiPublicWebhooksBryRoute
 }
 
@@ -592,6 +644,13 @@ declare module '@tanstack/react-router' {
       path: '/f/$formId'
       fullPath: '/f/$formId'
       preLoaderRoute: typeof FFormIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/t/$termoId': {
+      id: '/t/$termoId'
+      path: '/t/$termoId'
+      fullPath: '/t/$termoId'
+      preLoaderRoute: typeof TTermoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/bry/cancel-envelope': {
@@ -692,6 +751,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSignatureSignRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/termos/gerar-ia': {
+      id: '/api/termos/gerar-ia'
+      path: '/api/termos/gerar-ia'
+      fullPath: '/api/termos/gerar-ia'
+      preLoaderRoute: typeof ApiTermosGerarIaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/tuss/buscar': {
       id: '/api/tuss/buscar'
       path: '/api/tuss/buscar'
@@ -755,6 +821,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSignatureCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/termos/assinar': {
+      id: '/api/public/termos/assinar'
+      path: '/api/public/termos/assinar'
+      fullPath: '/api/public/termos/assinar'
+      preLoaderRoute: typeof ApiPublicTermosAssinarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/termos/codigo': {
+      id: '/api/public/termos/codigo'
+      path: '/api/public/termos/codigo'
+      fullPath: '/api/public/termos/codigo'
+      preLoaderRoute: typeof ApiPublicTermosCodigoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/webhooks/bry': {
       id: '/api/public/webhooks/bry'
       path: '/api/public/webhooks/bry'
@@ -778,6 +858,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiWhatsappConviteRoute: ApiWhatsappConviteRoute,
   ApiWhatsappWebhookRoute: ApiWhatsappWebhookRoute,
   FFormIdRoute: FFormIdRoute,
+  TTermoIdRoute: TTermoIdRoute,
   ApiBryCancelEnvelopeRoute: ApiBryCancelEnvelopeRoute,
   ApiBryCreateEnvelopeRoute: ApiBryCreateEnvelopeRoute,
   ApiBryDownloadDocumentRoute: ApiBryDownloadDocumentRoute,
@@ -792,6 +873,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSignatureCredentialRoute: ApiSignatureCredentialRoute,
   ApiSignatureLocalCertificateRoute: ApiSignatureLocalCertificateRoute,
   ApiSignatureSignRoute: ApiSignatureSignRoute,
+  ApiTermosGerarIaRoute: ApiTermosGerarIaRoute,
   ApiTussBuscarRoute: ApiTussBuscarRoute,
   ApiTussCriarRoute: ApiTussCriarRoute,
   ApiPublicExtensaoChatRoute: ApiPublicExtensaoChatRoute,
@@ -801,6 +883,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksSyncInteracoesRoute: ApiPublicHooksSyncInteracoesRoute,
   ApiPublicHooksSyncTussRoute: ApiPublicHooksSyncTussRoute,
   ApiPublicSignatureCallbackRoute: ApiPublicSignatureCallbackRoute,
+  ApiPublicTermosAssinarRoute: ApiPublicTermosAssinarRoute,
+  ApiPublicTermosCodigoRoute: ApiPublicTermosCodigoRoute,
   ApiPublicWebhooksBryRoute: ApiPublicWebhooksBryRoute,
 }
 export const routeTree = rootRouteImport
