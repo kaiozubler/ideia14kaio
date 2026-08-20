@@ -126,10 +126,16 @@ function PublicForm() {
   useEffect(() => {
     let vivo = true;
     (async () => {
-      const { data, error } = await (sb as any).rpc("formulario_publico", { p_id: formId });
+      let data: unknown = null;
+      try {
+        const resp = await fetch(`/api/public/formularios/publico?id=${encodeURIComponent(formId)}`);
+        if (resp.ok) data = (await resp.json())?.formulario ?? null;
+      } catch {
+        data = null;
+      }
       if (!vivo) return;
       setCarregando(false);
-      if (error || !data) return setErro("Formulário não encontrado ou indisponível.");
+      if (!data) return setErro("Formulário não encontrado ou indisponível.");
       const f = data as unknown as Form;
       if (!f.ativo) return setErro("Este formulário não está mais aceitando respostas.");
       f.questionario_perguntas = (f.questionario_perguntas || []).sort((a, b) => (a.ordem || 0) - (b.ordem || 0));

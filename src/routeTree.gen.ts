@@ -42,12 +42,14 @@ import { Route as ApiTussCriarRouteImport } from './routes/api/tuss/criar'
 import { Route as ApiPublicExtensaoChatRouteImport } from './routes/api/public/extensao/chat'
 import { Route as ApiPublicExtensaoDeepgramTokenRouteImport } from './routes/api/public/extensao/deepgram-token'
 import { Route as ApiPublicFormulariosCodigoRouteImport } from './routes/api/public/formularios/codigo'
+import { Route as ApiPublicFormulariosPublicoRouteImport } from './routes/api/public/formularios/publico'
 import { Route as ApiPublicFormulariosResponderRouteImport } from './routes/api/public/formularios/responder'
 import { Route as ApiPublicHooksSyncInteracoesRouteImport } from './routes/api/public/hooks/sync-interacoes'
 import { Route as ApiPublicHooksSyncTussRouteImport } from './routes/api/public/hooks/sync-tuss'
 import { Route as ApiPublicSignatureCallbackRouteImport } from './routes/api/public/signature/callback'
 import { Route as ApiPublicTermosAssinarRouteImport } from './routes/api/public/termos/assinar'
 import { Route as ApiPublicTermosCodigoRouteImport } from './routes/api/public/termos/codigo'
+import { Route as ApiPublicTermosPublicoRouteImport } from './routes/api/public/termos/publico'
 import { Route as ApiPublicWebhooksBryRouteImport } from './routes/api/public/webhooks/bry'
 
 const IndexRoute = IndexRouteImport.update({
@@ -222,6 +224,12 @@ const ApiPublicFormulariosCodigoRoute =
     path: '/api/public/formularios/codigo',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicFormulariosPublicoRoute =
+  ApiPublicFormulariosPublicoRouteImport.update({
+    id: '/api/public/formularios/publico',
+    path: '/api/public/formularios/publico',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicFormulariosResponderRoute =
   ApiPublicFormulariosResponderRouteImport.update({
     id: '/api/public/formularios/responder',
@@ -253,6 +261,11 @@ const ApiPublicTermosAssinarRoute = ApiPublicTermosAssinarRouteImport.update({
 const ApiPublicTermosCodigoRoute = ApiPublicTermosCodigoRouteImport.update({
   id: '/api/public/termos/codigo',
   path: '/api/public/termos/codigo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicTermosPublicoRoute = ApiPublicTermosPublicoRouteImport.update({
+  id: '/api/public/termos/publico',
+  path: '/api/public/termos/publico',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicWebhooksBryRoute = ApiPublicWebhooksBryRouteImport.update({
@@ -295,12 +308,14 @@ export interface FileRoutesByFullPath {
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
   '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
+  '/api/public/formularios/publico': typeof ApiPublicFormulariosPublicoRoute
   '/api/public/formularios/responder': typeof ApiPublicFormulariosResponderRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
   '/api/public/termos/assinar': typeof ApiPublicTermosAssinarRoute
   '/api/public/termos/codigo': typeof ApiPublicTermosCodigoRoute
+  '/api/public/termos/publico': typeof ApiPublicTermosPublicoRoute
   '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
 }
 export interface FileRoutesByTo {
@@ -337,12 +352,14 @@ export interface FileRoutesByTo {
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
   '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
+  '/api/public/formularios/publico': typeof ApiPublicFormulariosPublicoRoute
   '/api/public/formularios/responder': typeof ApiPublicFormulariosResponderRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
   '/api/public/termos/assinar': typeof ApiPublicTermosAssinarRoute
   '/api/public/termos/codigo': typeof ApiPublicTermosCodigoRoute
+  '/api/public/termos/publico': typeof ApiPublicTermosPublicoRoute
   '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
 }
 export interface FileRoutesById {
@@ -380,12 +397,14 @@ export interface FileRoutesById {
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
   '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
+  '/api/public/formularios/publico': typeof ApiPublicFormulariosPublicoRoute
   '/api/public/formularios/responder': typeof ApiPublicFormulariosResponderRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
   '/api/public/termos/assinar': typeof ApiPublicTermosAssinarRoute
   '/api/public/termos/codigo': typeof ApiPublicTermosCodigoRoute
+  '/api/public/termos/publico': typeof ApiPublicTermosPublicoRoute
   '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
 }
 export interface FileRouteTypes {
@@ -424,12 +443,14 @@ export interface FileRouteTypes {
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
     | '/api/public/formularios/codigo'
+    | '/api/public/formularios/publico'
     | '/api/public/formularios/responder'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
     | '/api/public/termos/assinar'
     | '/api/public/termos/codigo'
+    | '/api/public/termos/publico'
     | '/api/public/webhooks/bry'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -466,12 +487,14 @@ export interface FileRouteTypes {
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
     | '/api/public/formularios/codigo'
+    | '/api/public/formularios/publico'
     | '/api/public/formularios/responder'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
     | '/api/public/termos/assinar'
     | '/api/public/termos/codigo'
+    | '/api/public/termos/publico'
     | '/api/public/webhooks/bry'
   id:
     | '__root__'
@@ -508,12 +531,14 @@ export interface FileRouteTypes {
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
     | '/api/public/formularios/codigo'
+    | '/api/public/formularios/publico'
     | '/api/public/formularios/responder'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
     | '/api/public/termos/assinar'
     | '/api/public/termos/codigo'
+    | '/api/public/termos/publico'
     | '/api/public/webhooks/bry'
   fileRoutesById: FileRoutesById
 }
@@ -551,12 +576,14 @@ export interface RootRouteChildren {
   ApiPublicExtensaoChatRoute: typeof ApiPublicExtensaoChatRoute
   ApiPublicExtensaoDeepgramTokenRoute: typeof ApiPublicExtensaoDeepgramTokenRoute
   ApiPublicFormulariosCodigoRoute: typeof ApiPublicFormulariosCodigoRoute
+  ApiPublicFormulariosPublicoRoute: typeof ApiPublicFormulariosPublicoRoute
   ApiPublicFormulariosResponderRoute: typeof ApiPublicFormulariosResponderRoute
   ApiPublicHooksSyncInteracoesRoute: typeof ApiPublicHooksSyncInteracoesRoute
   ApiPublicHooksSyncTussRoute: typeof ApiPublicHooksSyncTussRoute
   ApiPublicSignatureCallbackRoute: typeof ApiPublicSignatureCallbackRoute
   ApiPublicTermosAssinarRoute: typeof ApiPublicTermosAssinarRoute
   ApiPublicTermosCodigoRoute: typeof ApiPublicTermosCodigoRoute
+  ApiPublicTermosPublicoRoute: typeof ApiPublicTermosPublicoRoute
   ApiPublicWebhooksBryRoute: typeof ApiPublicWebhooksBryRoute
 }
 
@@ -793,6 +820,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicFormulariosCodigoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/formularios/publico': {
+      id: '/api/public/formularios/publico'
+      path: '/api/public/formularios/publico'
+      fullPath: '/api/public/formularios/publico'
+      preLoaderRoute: typeof ApiPublicFormulariosPublicoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/formularios/responder': {
       id: '/api/public/formularios/responder'
       path: '/api/public/formularios/responder'
@@ -833,6 +867,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/termos/codigo'
       fullPath: '/api/public/termos/codigo'
       preLoaderRoute: typeof ApiPublicTermosCodigoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/termos/publico': {
+      id: '/api/public/termos/publico'
+      path: '/api/public/termos/publico'
+      fullPath: '/api/public/termos/publico'
+      preLoaderRoute: typeof ApiPublicTermosPublicoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/webhooks/bry': {
@@ -879,12 +920,14 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicExtensaoChatRoute: ApiPublicExtensaoChatRoute,
   ApiPublicExtensaoDeepgramTokenRoute: ApiPublicExtensaoDeepgramTokenRoute,
   ApiPublicFormulariosCodigoRoute: ApiPublicFormulariosCodigoRoute,
+  ApiPublicFormulariosPublicoRoute: ApiPublicFormulariosPublicoRoute,
   ApiPublicFormulariosResponderRoute: ApiPublicFormulariosResponderRoute,
   ApiPublicHooksSyncInteracoesRoute: ApiPublicHooksSyncInteracoesRoute,
   ApiPublicHooksSyncTussRoute: ApiPublicHooksSyncTussRoute,
   ApiPublicSignatureCallbackRoute: ApiPublicSignatureCallbackRoute,
   ApiPublicTermosAssinarRoute: ApiPublicTermosAssinarRoute,
   ApiPublicTermosCodigoRoute: ApiPublicTermosCodigoRoute,
+  ApiPublicTermosPublicoRoute: ApiPublicTermosPublicoRoute,
   ApiPublicWebhooksBryRoute: ApiPublicWebhooksBryRoute,
 }
 export const routeTree = rootRouteImport
