@@ -460,6 +460,25 @@ export const Route = createFileRoute("/api/chat-ia")({
           const history = Array.isArray(body.messages) ? body.messages : [];
           const resumo = (body.resumo_prontuario || "").trim();
 
+          // Base de conhecimento local do médico (opcional): se ele tiver bases
+          // ativas para o chat_ai, isso injeta o índice delas + os trechos que
+          // batem com a última mensagem do usuário. Ver src/lib/base-conhecimento.
+          const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+          let medicoId: string | null = null;
+          if (token) {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { data: userData } = await supabaseAdmin.auth.getUser(token);
+            medicoId = userData.user?.id ?? null;
+          }
+          const ultimaMensagemUsuario =
+            [...history].reverse().find((m) => m?.role === "user")?.content ?? "";
+          const { montarContextoBaseConhecimento } = await import("@/lib/base-conhecimento/buscar.server");
+          const contextoBaseConhecimento = await montarContextoBaseConhecimento({
+            medicoId,
+            mensagem: ultimaMensagemUsuario,
+            ia: "chat_ai",
+          });
+
           let analiseExame: AnaliseExame | null = null;
           if (body.anexo?.base64) {
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -491,7 +510,8 @@ export const Route = createFileRoute("/api/chat-ia")({
             (analiseExame
               ? `\n\n=== ANÁLISE DE EXAME (IA de exames) — arquivo "${body.anexo?.nome || "anexo"}" ===\n` +
                 JSON.stringify(analiseExame, null, 2)
-              : "");
+              : "") +
+            contextoBaseConhecimento;
           const messages: ChatMessage[] = [
             { role: "system", content: systemContent },
             ...history.filter(
