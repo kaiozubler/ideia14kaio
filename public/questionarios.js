@@ -464,7 +464,10 @@
     const m = S.termoModal; if (!m) return "";
     return `<div class="qz-modal-bg" data-mtbg="1"><div class="qz-modal">
       <div class="qz-modal-h"><h2>${m.id ? "Editar termo" : "Novo termo"}</h2>
-        <button class="qz-btn ghost" data-mtclose="1" style="padding:2px 10px">×</button></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="qz-btn violet" data-aiopen="1">✨ Criar com IA</button>
+          <button class="qz-btn ghost" data-mtclose="1" style="padding:2px 10px">×</button>
+        </div></div>
       <div class="qz-modal-b">
         <div style="margin-bottom:14px"><span class="qz-lbl">Nome do termo</span>
           <input class="qz-in" id="tz-m-titulo" value="${esc(m.titulo)}" placeholder="Ex: Termo de consentimento — procedimento X"></div>
@@ -653,26 +656,53 @@
   /* ---------- CRIAR COM IA ---------- */
   function aiModalHtml() {
     const a = S.aiModal; if (!a) return "";
+    const isTermo = a.kind === "termo";
     return `<div class="qz-modal-bg" data-aibg="1" style="z-index:2200"><div class="qz-modal sm">
-      <div class="qz-modal-h"><h2>✨ Criar formulário com IA</h2>
+      <div class="qz-modal-h"><h2>✨ Criar ${isTermo ? "termo" : "formulário"} com IA</h2>
         <button class="qz-btn ghost" data-aiclose="1" style="padding:2px 10px">×</button></div>
       <div class="qz-modal-b">
-        <p style="font-size:12px;color:#64748b;margin:0 0 14px">Descreva o formulário que você quer (público, objetivo, o que perguntar). A IA monta o título, a descrição e as perguntas já estruturadas.</p>
+        <p style="font-size:12px;color:#64748b;margin:0 0 14px">${isTermo
+          ? "Descreva o procedimento/atendimento e o contexto do termo. Um especialista jurídico em saúde e LGPD monta o título, o texto completo (já com as variáveis do paciente) e o texto do checkbox de aceite."
+          : "Descreva o formulário que você quer (público, objetivo, o que perguntar). A IA monta o título, a descrição e as perguntas já estruturadas."}</p>
         <div><span class="qz-lbl">Instruções para a IA</span>
-          <textarea class="qz-in" rows="7" id="qz-ai-obs" style="resize:vertical" placeholder="Ex: formulário de avaliação pós-consulta de hipertensão, perguntando se está tomando a medicação corretamente, se sentiu efeitos colaterais, nível de dor de 0 a 10 e satisfação com o atendimento de 1 a 5...">${esc(a.obs || "")}</textarea></div>
+          <textarea class="qz-in" rows="7" id="qz-ai-obs" style="resize:vertical" placeholder="${isTermo
+            ? "Ex: termo de consentimento para aplicação de toxina botulínica (botox) com fins estéticos, mencionando riscos comuns, alternativas e uso de imagem para prontuário..."
+            : "Ex: formulário de avaliação pós-consulta de hipertensão, perguntando se está tomando a medicação corretamente, se sentiu efeitos colaterais, nível de dor de 0 a 10 e satisfação com o atendimento de 1 a 5..."}">${esc(a.obs || "")}</textarea></div>
         ${a.error ? `<div style="margin-top:12px;font-size:12px;color:#b91c1c">${esc(a.error)}</div>` : ""}
-        ${a.loading ? `<div style="margin-top:12px;font-size:12px;color:#7c3aed">Gerando formulário…</div>` : ""}
+        ${a.loading ? `<div style="margin-top:12px;font-size:12px;color:#7c3aed">Gerando ${isTermo ? "termo" : "formulário"}…</div>` : ""}
       </div>
       <div class="qz-modal-f"><button class="qz-btn ghost" data-aiclose="1">Cancelar</button>
-      <button class="qz-btn violet" data-aigen="1" ${a.loading ? "disabled" : ""}>${a.loading ? "Gerando…" : "Gerar formulário"}</button></div>
+      <button class="qz-btn violet" data-aigen="1" ${a.loading ? "disabled" : ""}>${a.loading ? "Gerando…" : `Gerar ${isTermo ? "termo" : "formulário"}`}</button></div>
     </div></div>`;
   }
 
   async function generateWithAI() {
     const a = S.aiModal; if (!a || a.loading) return;
     a.obs = (document.getElementById("qz-ai-obs") || {}).value || a.obs || "";
-    if (!a.obs.trim()) { a.error = "Escreva uma instrução descrevendo o formulário."; return render(); }
+    if (!a.obs.trim()) { a.error = "Escreva uma instrução descrevendo o " + (a.kind === "termo" ? "termo" : "formulário") + "."; return render(); }
     a.loading = true; a.error = ""; render();
+
+    if (a.kind === "termo") {
+      try {
+        const res = await fetch("/api/termos/gerar-ia", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ observacao: a.obs }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const d = await res.json();
+
+        if (!S.termoModal) S.termoModal = { id: null, titulo: "", corpo: TERMO_CORPO_PADRAO, checkboxLabel: "Li e estou de acordo com os termos acima.", ativo: true, saving: false };
+        if (d.titulo) S.termoModal.titulo = d.titulo;
+        if (d.corpo) S.termoModal.corpo = d.corpo;
+        if (d.checkbox_label) S.termoModal.checkboxLabel = d.checkbox_label;
+
+        S.aiModal = null; render();
+      } catch (err) {
+        a.loading = false; a.error = String((err && err.message) || err); render();
+      }
+      return;
+    }
+
     try {
       const res = await fetch("/api/questionarios/gerar-ia", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -804,7 +834,7 @@
     if (d.vclose) { S.viewResponse = null; return render(); }
     if (d.mclose) { S.modal = null; return render(); }
     if (d.msave) return saveForm();
-    if (d.aiopen) { S.aiModal = { obs: "", loading: false, error: "" }; return render(); }
+    if (d.aiopen) { S.aiModal = { obs: "", loading: false, error: "", kind: S.termoModal ? "termo" : "form" }; return render(); }
     if (d.aiclose) { S.aiModal = null; return render(); }
     if (d.aigen) return generateWithAI();
     if (d.idset !== undefined && S.modal) { S.modal.anonimo = d.idset === "1"; return render(); }
