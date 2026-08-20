@@ -26,6 +26,8 @@
     <script src="questionarios.js?v=1" defer></script>
     <link rel="stylesheet" href="faturamento.css?v=2" />
     <script src="faturamento.js?v=2" defer></script>
+    <link rel="stylesheet" href="base-conhecimento.css?v=1" />
+    <script src="base-conhecimento.js?v=1" defer></script>
     <link rel="stylesheet" href="mapa-familiar.css" />
     <style>
                                                       *{box-sizing:border-box;margin:0;padding:0}
@@ -2192,6 +2194,9 @@
               <div class="sb-item" id="nav-copiloto" onclick="goScreen('copiloto')">
                 <i class="ti ti-stethoscope"></i><span class="sb-lbl">Copiloto de consulta</span>
               </div>
+              <div class="sb-item" id="nav-base-conhecimento" onclick="goScreen('base-conhecimento')">
+                <i class="ti ti-database"></i><span class="sb-lbl">Base de conhecimento</span>
+              </div>
             </div>
           </div>
         </nav>
@@ -3824,6 +3829,9 @@
               </div>
             </div>
           </div>
+
+          <!-- SCREEN: BASE DE CONHECIMENTO -->
+          <div id="s-base-conhecimento" style="display:none"></div>
 
           <!-- SCREEN: ANAMNESE -->
           <div id="s-anamnese" style="display:none">
@@ -6136,7 +6144,7 @@
                                                               const leavingPatientDetail=name!=='patient-detail'&&document.getElementById('s-patient-detail')?.style.display!=='none';
                                                               if(leavingPatientDetail&&currentPatient&&atendEmAndamento&&atendEmAndamento.dirty){saveAtendState();saveAtendDraft();stopAtendAutoSave();}
                                                               if(name!=='patient-detail')updateCadastroFloatBar(null);
-                                                              ['atendimentos','patients','patient-detail','receitas','agenda','indicadores','secretaria','anamnese','copiloto','configuracoes','equipe','clinica','mapa-familiar'].forEach(s=>{
+                                                              ['atendimentos','patients','patient-detail','receitas','agenda','indicadores','secretaria','anamnese','copiloto','base-conhecimento','configuracoes','equipe','clinica','mapa-familiar'].forEach(s=>{
                                                                 const el=document.getElementById('s-'+s);
                                                                 if(el)el.style.display='none';
                                                               });
@@ -6146,7 +6154,7 @@
                                                               document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
                                                               const nav=document.getElementById('nav-'+name);
                                                               if(nav)nav.classList.add('active');
-                                                              const titles={atendimentos:'Atendimentos',patients:'Pacientes',conversas:'Conversas',agenda:'Agenda',receitas:'Receitas e Atestados',protocolos:'Protocolos',questionarios:'Questionário',faturamento:'Faturamento',indicadores:'Indicadores',secretaria:'Secretária digital',anamnese:'Gerador de Anamnese',copiloto:'Copiloto de consulta',configuracoes:'Configurações',equipe:'Minha equipe',clinica:'Minha clínica','mapa-familiar':'Mapa Familiar'};
+                                                              const titles={atendimentos:'Atendimentos',patients:'Pacientes',conversas:'Conversas',agenda:'Agenda',receitas:'Receitas e Atestados',protocolos:'Protocolos',questionarios:'Questionário',faturamento:'Faturamento',indicadores:'Indicadores',secretaria:'Secretária digital',anamnese:'Gerador de Anamnese',copiloto:'Copiloto de consulta','base-conhecimento':'Base de conhecimento',configuracoes:'Configurações',equipe:'Minha equipe',clinica:'Minha clínica','mapa-familiar':'Mapa Familiar'};
                                                               const pt=document.getElementById('page-title');
                                                               pt.textContent=titles[name]||'Paciente';
                                                               pt.style.cursor='';
@@ -6165,7 +6173,8 @@
                                                               if(name==='protocolos'&&typeof initProtocolos==='function')initProtocolos();
                                                               if(name==='questionarios'&&typeof initQuestionarios==='function')initQuestionarios();
                                                               if(name==='faturamento'&&typeof initFaturamento==='function')initFaturamento();
-                                                              if(['secretaria','anamnese','copiloto'].includes(name)){
+                                                              if(name==='base-conhecimento'&&typeof initBaseConhecimento==='function')initBaseConhecimento();
+                                                              if(['secretaria','anamnese','copiloto','base-conhecimento'].includes(name)){
                                                                 const g=document.getElementById('grp-ia');if(g)g.classList.add('open');
                                                               }
                                                             }
