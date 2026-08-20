@@ -70,10 +70,16 @@ function PublicTermo() {
   useEffect(() => {
     let vivo = true;
     (async () => {
-      const { data, error } = await (sb as any).rpc("termo_publico", { p_id: termoId });
+      let data: unknown = null;
+      try {
+        const resp = await fetch(`/api/public/termos/publico?id=${encodeURIComponent(termoId)}`);
+        if (resp.ok) data = (await resp.json())?.termo ?? null;
+      } catch {
+        data = null;
+      }
       if (!vivo) return;
       setCarregando(false);
-      if (error || !data) return setErro("Termo não encontrado ou indisponível.");
+      if (!data) return setErro("Termo não encontrado ou indisponível.");
       const t = data as unknown as Termo;
       if (!t.ativo) return setErro("Este termo não está mais disponível para assinatura.");
       setTermo(t);
