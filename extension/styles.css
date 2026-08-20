@@ -7,7 +7,7 @@ body {
   height: 100vh;
 }
 .hidden { display: none !important; }
-.screen { display: flex; flex-direction: column; height: 100vh; padding: 14px; gap: 8px; }
+.screen { position: relative; display: flex; flex-direction: column; height: 100vh; padding: 14px; gap: 8px; }
 .brand { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .logo {
   width: 26px; height: 26px; border-radius: 9px; display: grid; place-items: center;

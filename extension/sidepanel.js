@@ -5,6 +5,7 @@
   const $ = (id) => document.getElementById(id);
   let history = [];
   let conversaId = null;
+  let localConvId = null; // id da conversa no histórico local (chrome.storage)
   let contexto = "";
 
   /* ---------- captura da tela ---------- */
@@ -79,6 +80,7 @@
   function reset() {
     history = [];
     conversaId = null;
+    localConvId = null;
     $("msgs").innerHTML = "";
     if (dgMic.active || dgMic.starting) dgMic.stop();
     bubble("assistant", "Como posso ajudar? Posso analisar o que está na tela e agir no seu MediCopilot.");
@@ -477,6 +479,7 @@
     bubble("user", text);
     history.push({ role: "user", content: text });
     const pending = bubble("assistant", "Analisando…");
+    await persistirHistorico();
     contexto = await lerTela();
     try {
       const res = await fetch(`${APP_URL}/api/public/extensao/chat`, {
@@ -505,14 +508,100 @@
       const reply = (data.reply || "").trim() || "Não consegui responder agora.";
       setBubbleText(pending, reply);
       history.push({ role: "assistant", content: reply });
+      await persistirHistorico();
       await handleAction(data.action);
     } catch (e) {
       setBubbleText(pending, "Erro ao falar com o assistente: " + (e?.message || e));
     }
   }
 
+  /* ---------- histórico de conversas ---------- */
+  async function persistirHistorico() {
+    try {
+      localConvId = await MC_HISTORY.salvar(localConvId, history, conversaId);
+    } catch {}
+  }
+
+  function tempoRelativo(ts) {
+    const d = Date.now() - (ts || 0);
+    const min = Math.floor(d / 60000);
+    if (min < 1) return "agora mesmo";
+    if (min < 60) return `há ${min} min`;
+    const h = Math.floor(d / 3600000);
+    if (h < 24) return `há ${h}h`;
+    return `há ${Math.floor(d / 86400000)}d`;
+  }
+
+  function abrirConversa(conv) {
+    if (dgMic.active || dgMic.starting) dgMic.stop();
+    localConvId = conv.id;
+    conversaId = conv.conversaId || null;
+    history = (conv.messages || []).map((m) => ({ role: m.role, content: m.content }));
+    $("msgs").innerHTML = "";
+    history.forEach((m) => bubble(m.role, m.content));
+    fecharHistorico();
+  }
+
+  function renderHistorico(lista) {
+    const ul = $("hist-list");
+    ul.innerHTML = "";
+    $("hist-empty").classList.toggle("hidden", lista.length > 0);
+    lista.forEach((conv) => {
+      const li = document.createElement("li");
+      li.className = "hist-item" + (conv.id === localConvId ? " atual" : "");
+
+      const main = document.createElement("div");
+      main.className = "hist-item-main";
+      const t = document.createElement("div");
+      t.className = "hist-item-title";
+      t.textContent = conv.titulo || "Conversa";
+      const meta = document.createElement("div");
+      meta.className = "hist-item-meta";
+      meta.textContent = tempoRelativo(conv.updatedAt) + (conv.favorito ? " • favorita" : "");
+      main.appendChild(t);
+      main.appendChild(meta);
+      main.onclick = () => abrirConversa(conv);
+
+      const fav = document.createElement("button");
+      fav.className = "hist-act" + (conv.favorito ? " fav" : "");
+      fav.title = conv.favorito ? "Remover dos favoritos" : "Favoritar (não expira)";
+      fav.textContent = conv.favorito ? "★" : "☆";
+      fav.onclick = async (e) => {
+        e.stopPropagation();
+        await MC_HISTORY.favoritar(conv.id, !conv.favorito);
+        abrirHistorico();
+      };
+
+      const del = document.createElement("button");
+      del.className = "hist-act";
+      del.title = "Excluir conversa";
+      del.textContent = "🗑";
+      del.onclick = async (e) => {
+        e.stopPropagation();
+        await MC_HISTORY.excluir(conv.id);
+        if (conv.id === localConvId) reset();
+        abrirHistorico();
+      };
+
+      li.appendChild(main);
+      li.appendChild(fav);
+      li.appendChild(del);
+      ul.appendChild(li);
+    });
+  }
+
+  async function abrirHistorico() {
+    renderHistorico(await MC_HISTORY.listar());
+    $("hist").classList.remove("hidden");
+  }
+
+  function fecharHistorico() {
+    $("hist").classList.add("hidden");
+  }
+
   /* ---------- telas ---------- */
   function showAuth(msg) {
+    fecharHistorico();
     $("chat").classList.add("hidden");
     $("auth").classList.remove("hidden");
     $("au-msg").textContent = msg || "";
@@ -520,6 +609,9 @@
   async function showChat() {
     $("auth").classList.add("hidden");
     $("chat").classList.remove("hidden");
+    try {
+      await MC_HISTORY.expurgar();
+    } catch {}
     reset();
     contexto = await lerTela();
   }
@@ -544,7 +636,17 @@
   $("au-pass").addEventListener("keydown", (e) => {
     if (e.key === "Enter") $("au-btn").click();
   });
-  $("ch-new").onclick = reset;
+  $("ch-hist").onclick = abrirHistorico;
+  $("hist-close").onclick = fecharHistorico;
+  $("hist-clear").onclick = async () => {
+    if (!confirm("Apagar todo o histórico de conversas?")) return;
+    await MC_HISTORY.limparTudo();
+    renderHistorico([]);
+  };
+  $("ch-new").onclick = () => {
+    fecharHistorico();
+    reset();
+  };
   $("ch-out").onclick = async () => {
     if (dgMic.active || dgMic.starting) await dgMic.stop();
     await MC_AUTH.clear();
