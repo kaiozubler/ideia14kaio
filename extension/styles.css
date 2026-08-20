@@ -101,3 +101,28 @@ body {
   border-radius: 9px; padding: 6px 10px; font-size: 12px; font-weight: 600; cursor: pointer;
 }
 .attachment-btn:hover { background: rgba(3, 105, 161, 0.06); }
+/* ---------- histórico de conversas ---------- */
+.hist {
+  position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column;
+  padding: 14px; gap: 8px; background: linear-gradient(160deg, #f4f7fb, #e5ebf2);
+}
+.hist-head { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+.hist-list { list-style: none; margin: 0; padding: 0; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.hist-item {
+  background: rgba(255, 255, 255, 0.85); border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px; padding: 8px 10px; cursor: pointer; display: flex; gap: 8px; align-items: center;
+}
+.hist-item:hover { background: #fff; }
+.hist-item.atual { border-color: rgba(3, 105, 161, 0.45); }
+.hist-item-main { flex: 1; min-width: 0; }
+.hist-item-title { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-item-meta { font-size: 11px; color: #64748b; }
+.hist-act {
+  border: 0; background: transparent; cursor: pointer; font-size: 13px; line-height: 1;
+  padding: 4px; border-radius: 8px; color: #64748b; flex: 0 0 auto;
+}
+.hist-act:hover { background: rgba(0, 0, 0, 0.06); }
+.hist-act.fav { color: #f59e0b; }
+.hist-empty { color: #64748b; text-align: center; padding: 20px 8px; font-size: 12px; }
+.hist-foot { border-top: 1px solid rgba(15, 23, 42, 0.08); padding-top: 8px; }
+.link-btn { background: none; border: 0; color: #dc2626; font-size: 12px; cursor: pointer; padding: 0; }
