@@ -32,7 +32,7 @@
     S.loading = true; render();
     const [{ data: bases, error: e1 }, { data: atalhos, error: e2 }] = await Promise.all([
       sb.from("base_conhecimento")
-        .select("id,nome,descricao,tags,ias,ativo,created_at,base_conhecimento_itens(id,tipo,nome_original,tokens_estimados)")
+        .select("id,nome,descricao,tags,ias,ativo,created_at,base_conhecimento_itens(id,tipo,nome_original,tokens_estimados,status)")
         .order("created_at", { ascending: false }),
       sb.from("prompt_comandos").select("id,atalho,texto_completo,ias,created_at").order("created_at", { ascending: false }),
     ]);
@@ -86,12 +86,65 @@
     const chunks = dividirEmChunks(conteudo);
     const linhas = chunks.map((c, ordem) => ({
       base_id: baseId, medico_id: mid, tipo, nome_original: nomeOriginal || null,
-      conteudo: c, tokens_estimados: estimarTokens(c), ordem,
+      conteudo: c, tokens_estimados: estimarTokens(c), ordem, status: "processando",
     }));
-    const { error } = await sb.from("base_conhecimento_itens").insert(linhas);
+    const { data: inseridos, error } = await sb.from("base_conhecimento_itens").insert(linhas).select("id, conteudo");
     if (error) { console.error(error.message); if (typeof toast === "function") toast("Erro ao adicionar conteúdo"); return; }
     S.addingTextFor = null;
-    if (typeof toast === "function") toast("Conteúdo adicionado");
+    if (typeof toast === "function") toast("Conteúdo adicionado — gerando perguntas relacionadas…");
+    await load();
+    // Enriquecimento por IA roda em segundo plano (uma vez, aqui no upload —
+    // nunca a cada mensagem de chat). Não bloqueia a tela nem o load acima.
+    enriquecerItensComIA(baseId, inseridos || []);
+  }
+
+  async function enriquecerItensComIA(baseId, itensInseridos) {
+    if (!itensInseridos.length) return;
+    const sb = sbc(); if (!sb) return;
+
+    // Só pede sugestão de descrição se a base ainda não tem uma (não sobrescreve
+    // o que o médico já escreveu).
+    const base = S.bases.find((b) => b.id === baseId);
+    const precisaDescricao = !base || !(base.descricao || "").trim();
+
+    // Processa em lotes de 6 chunks (mesmo limite aplicado no servidor), pra
+    // manter cada chamada de IA pequena e o custo previsível.
+    for (let i = 0; i < itensInseridos.length; i += 6) {
+      const lote = itensInseridos.slice(i, i + 6);
+      try {
+        const res = await fetch("/api/base-conhecimento/gerar-metadados", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chunks: lote.map((it) => ({ id: it.id, conteudo: it.conteudo })),
+            gerar_descricao: precisaDescricao && i === 0,
+          }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const dados = await res.json();
+
+        const porId = new Map((dados.itens || []).map((it) => [it.id, it]));
+        await Promise.all(lote.map((it) => {
+          const gerado = porId.get(it.id);
+          return sb.from("base_conhecimento_itens").update({
+            perguntas_relacionadas: gerado && gerado.perguntas ? gerado.perguntas.join("\n") : null,
+            status: "pronto",
+          }).eq("id", it.id);
+        }));
+
+        if (precisaDescricao && i === 0 && dados.descricao_sugerida) {
+          // Checa de novo antes de gravar — o médico pode ter editado a
+          // descrição enquanto a IA processava.
+          const { data: atual } = await sb.from("base_conhecimento").select("descricao").eq("id", baseId).single();
+          if (atual && !(atual.descricao || "").trim()) {
+            await sb.from("base_conhecimento").update({ descricao: dados.descricao_sugerida }).eq("id", baseId);
+          }
+        }
+      } catch (err) {
+        console.error("[base-conhecimento] erro ao gerar metadados:", err);
+        await Promise.all(lote.map((it) => sb.from("base_conhecimento_itens").update({ status: "erro" }).eq("id", it.id)));
+      }
+    }
     await load();
   }
 
@@ -176,6 +229,8 @@
             <div style="display:flex;align-items:center;gap:8px;min-width:0">
               <i class="ti ${i.tipo === "arquivo" ? "ti-file-text" : "ti-align-left"}"></i>
               <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(i.nome_original || "Sem título")}</span>
+              ${i.status === "processando" ? '<span class="bk-tag" style="white-space:nowrap"><i class="ti ti-loader-2"></i> gerando perguntas…</span>' : ""}
+              ${i.status === "erro" ? '<span class="bk-tag" style="white-space:nowrap;color:#b45309">só busca por texto</span>' : ""}
             </div>
             <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
               <span class="bk-item-tok">~${fmtTok(i.tokens_estimados)} tok</span>
