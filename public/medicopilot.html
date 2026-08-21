@@ -26,6 +26,16 @@
     <script src="questionarios.js?v=5" defer></script>
     <link rel="stylesheet" href="faturamento.css?v=2" />
     <script src="faturamento.js?v=2" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.min.mjs" type="module"></script>
+    <script>
+      window.addEventListener("DOMContentLoaded", async () => {
+        try {
+          const pdfjsLib = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.min.mjs");
+          pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.worker.min.mjs";
+          window.__pdfjsLib = pdfjsLib;
+        } catch (e) { console.error("Falha ao carregar pdf.js", e); }
+      });
+    </script>
     <link rel="stylesheet" href="base-conhecimento.css?v=1" />
     <script src="base-conhecimento.js?v=1" defer></script>
     <link rel="stylesheet" href="mapa-familiar.css" />
