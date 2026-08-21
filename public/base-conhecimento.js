@@ -239,8 +239,8 @@
           </div>`).join("")}
       </div>
       <div class="bk-add-row">
-        <button class="bk-btn-ghost" data-upload-for="${b.id}"><i class="ti ti-upload"></i> Enviar arquivo (.txt/.md)</button>
-        <input type="file" accept=".txt,.md" style="display:none" id="bk-file-${b.id}" data-fileinput-for="${b.id}" />
+        <button class="bk-btn-ghost" data-upload-for="${b.id}"><i class="ti ti-upload"></i> Enviar arquivo (.pdf, .txt, .md)</button>
+        <input type="file" accept=".txt,.md,.pdf" style="display:none" id="bk-file-${b.id}" data-fileinput-for="${b.id}" />
         <button class="bk-btn-ghost" data-addtext-for="${b.id}"><i class="ti ti-file-plus"></i> Colar texto</button>
       </div>
       ${S.addingTextFor === b.id ? `
@@ -444,14 +444,42 @@
     }
   });
 
+  async function extrairTextoPDF(file) {
+    const pdfjsLib = window.__pdfjsLib;
+    if (!pdfjsLib) throw new Error("Leitor de PDF ainda carregando, tente de novo em alguns segundos.");
+    const buffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+    let texto = "";
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const content = await page.getTextContent();
+      const linha = content.items.map((it) => it.str).join(" ");
+      texto += linha + "\n\n";
+    }
+    return texto.trim();
+  }
+
   document.addEventListener("change", (e) => {
     const fi = e.target.closest("[data-fileinput-for]");
     if (!fi) return;
     const baseId = fi.dataset.fileinputFor;
     const file = fi.files && fi.files[0];
     if (!file) return;
+
+    if (/\.pdf$/i.test(file.name)) {
+      if (typeof toast === "function") toast("Lendo PDF… isso pode levar alguns segundos");
+      extrairTextoPDF(file)
+        .then((texto) => {
+          if (!texto) { if (typeof toast === "function") toast("Não consegui extrair texto desse PDF (pode ser um PDF escaneado/sem texto selecionável)"); return; }
+          adicionarItemTexto(baseId, "arquivo", file.name, texto);
+        })
+        .catch((err) => { console.error(err); if (typeof toast === "function") toast("Erro ao ler o PDF"); })
+        .finally(() => { fi.value = ""; });
+      return;
+    }
+
     if (!/\.(txt|md)$/i.test(file.name)) {
-      if (typeof toast === "function") toast("Por enquanto só .txt/.md são lidos automaticamente");
+      if (typeof toast === "function") toast("Formatos aceitos hoje: .pdf, .txt, .md");
       fi.value = ""; return;
     }
     const reader = new FileReader();
