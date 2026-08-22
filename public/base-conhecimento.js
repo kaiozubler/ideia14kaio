@@ -9,12 +9,26 @@
     creatingBase: false,
     creatingAtalho: false,
     addingTextFor: null, // base_id com o form "colar texto" aberto
+    novaBaseAnexos: [], // {id, tipo, nome, conteudo} — conteúdo já lido, aguardando a base ser criada
+    novaBaseAddingText: false,
   };
 
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const sbc = () => window.sb || window.__sb;
   const fmtTok = (n) => (n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(n || 0));
   const estimarTokens = (txt) => Math.max(1, Math.round((txt || "").length / 4));
+  const uid = () => "t" + Math.random().toString(36).slice(2, 9);
+
+  // O app usa window.showToast(msg,type) (ver medicopilot.html) — não existe
+  // nenhuma função global chamada "toast". As versões anteriores deste
+  // arquivo chamavam "toast(...)", que nunca existiu, então qualquer erro
+  // (ex.: falha ao salvar uma base) ficava só no console, invisível pro
+  // usuário. notify() sempre mostra algo, com fallback pra alert().
+  function notify(msg, tipo) {
+    if (typeof window.showToast === "function") return window.showToast(msg, tipo);
+    if (typeof window.toast === "function") return window.toast(msg);
+    alert(msg);
+  }
 
   const IA_LABEL = { chat_ai: "Chat IA", assistente_ai: "Assistente IA" };
   const IA_ICON = { chat_ai: "ti-message-circle", assistente_ai: "ti-robot" };
@@ -22,8 +36,9 @@
 
   async function medicoId() {
     const sb = sbc(); if (!sb) return null;
-    const { data } = await sb.auth.getUser();
-    return data.user ? data.user.id : null;
+    const { data, error } = await sb.auth.getUser();
+    if (error) console.error("[base-conhecimento] erro ao obter usuário:", error.message);
+    return data && data.user ? data.user.id : null;
   }
 
   /* ---------- DATA ---------- */
@@ -45,26 +60,28 @@
   }
 
   async function criarBase(payload) {
-    const sb = sbc(); const mid = await medicoId(); if (!sb || !mid) return;
-    const { error } = await sb.from("base_conhecimento").insert({ ...payload, medico_id: mid });
-    if (error) { console.error(error.message); if (typeof toast === "function") toast("Erro ao criar base"); return; }
-    S.creatingBase = false;
-    if (typeof toast === "function") toast("Base de conhecimento criada");
-    await load();
+    const sb = sbc();
+    if (!sb) { notify("Erro interno: cliente Supabase não encontrado"); return null; }
+    const mid = await medicoId();
+    if (!mid) { notify("Não consegui identificar seu usuário — tente recarregar a página e logar de novo"); return null; }
+    const { data, error } = await sb.from("base_conhecimento").insert({ ...payload, medico_id: mid }).select("id").single();
+    if (error) { console.error("[base-conhecimento] erro ao criar base:", error); notify("Erro ao criar base: " + error.message); return null; }
+    notify("Base de conhecimento criada");
+    return data.id;
   }
 
   async function atualizarBase(id, patch) {
     const sb = sbc(); if (!sb) return;
     const { error } = await sb.from("base_conhecimento").update(patch).eq("id", id);
-    if (error) { console.error(error.message); if (typeof toast === "function") toast("Erro ao atualizar"); return; }
+    if (error) { console.error(error.message); notify("Erro ao atualizar"); return; }
     await load();
   }
 
   async function excluirBase(id) {
     const sb = sbc(); if (!sb) return;
     const { error } = await sb.from("base_conhecimento").delete().eq("id", id);
-    if (error) { console.error(error.message); if (typeof toast === "function") toast("Erro ao excluir"); return; }
-    if (typeof toast === "function") toast("Base removida");
+    if (error) { console.error(error.message); notify("Erro ao excluir"); return; }
+    notify("Base removida");
     await load();
   }
 
@@ -89,9 +106,9 @@
       conteudo: c, tokens_estimados: estimarTokens(c), ordem, status: "processando",
     }));
     const { data: inseridos, error } = await sb.from("base_conhecimento_itens").insert(linhas).select("id, conteudo");
-    if (error) { console.error(error.message); if (typeof toast === "function") toast("Erro ao adicionar conteúdo"); return; }
+    if (error) { console.error(error.message); notify("Erro ao adicionar conteúdo"); return; }
     S.addingTextFor = null;
-    if (typeof toast === "function") toast("Conteúdo adicionado — gerando perguntas relacionadas…");
+    notify("Conteúdo adicionado — gerando perguntas relacionadas…");
     await load();
     // Enriquecimento por IA roda em segundo plano (uma vez, aqui no upload —
     // nunca a cada mensagem de chat). Não bloqueia a tela nem o load acima.
@@ -159,11 +176,11 @@
     const sb = sbc(); const mid = await medicoId(); if (!sb || !mid) return;
     const { error } = await sb.from("prompt_comandos").insert({ ...payload, medico_id: mid });
     if (error) {
-      if (error.code === "23505") { if (typeof toast === "function") toast("Você já tem um atalho com esse nome"); return; }
-      console.error(error.message); if (typeof toast === "function") toast("Erro ao criar atalho"); return;
+      if (error.code === "23505") { notify("Você já tem um atalho com esse nome"); return; }
+      console.error(error.message); notify("Erro ao criar atalho"); return;
     }
     S.creatingAtalho = false;
-    if (typeof toast === "function") toast("Atalho criado");
+    notify("Atalho criado");
     await load();
   }
 
@@ -171,14 +188,16 @@
     const sb = sbc(); if (!sb) return;
     const { error } = await sb.from("prompt_comandos").delete().eq("id", id);
     if (error) { console.error(error.message); return; }
-    if (typeof toast === "function") toast("Atalho removido");
+    notify("Atalho removido");
     await load();
   }
 
   /* ---------- RENDER ---------- */
-  function iaChips(ias, current) {
+  function iaChips(ias, selecionadas) {
+    const sel = selecionadas || [];
     return (ias || []).map((id) => {
-      const cls = id === current ? "active " + (id === "chat_ai" ? "chat" : "assist") : "";
+      const isActive = sel.includes(id);
+      const cls = isActive ? "active " + (id === "chat_ai" ? "chat" : "assist") : "";
       return `<button class="bk-chip ${cls}" data-selia="${id}"><i class="ti ${IA_ICON[id]}"></i> ${IA_LABEL[id]}</button>`;
     }).join("");
   }
@@ -268,14 +287,48 @@
           <div class="bk-hint">Curto e específico — ajuda a IA a reconhecer o assunto.</div>
         </div>
         <div class="bk-field"><label>Descrição</label>
-          <textarea class="bk-textarea" id="bk-nb-desc" rows="2" placeholder="Do que se trata..."></textarea>
+          <textarea class="bk-textarea" id="bk-nb-desc" rows="2" placeholder="Do que se trata... (deixe em branco pra IA sugerir a partir do 1º arquivo)"></textarea>
           <div class="bk-hint">Sempre enviada à IA (poucos tokens) pra ela saber que essa base existe.</div>
         </div>
         <div class="bk-field"><label>Tags (separadas por vírgula)</label>
           <input class="bk-input" id="bk-nb-tags" placeholder="cardiologia, protocolo" />
         </div>
         <div class="bk-field"><label>Usar em</label>
-          <div class="bk-chip-row" id="bk-nb-ias">${iaChips(["chat_ai", "assistente_ai"], null)}</div>
+          <div class="bk-chip-row" id="bk-nb-ias">${iaChips(["chat_ai", "assistente_ai"], ["chat_ai", "assistente_ai"])}</div>
+        </div>
+        <div class="bk-field"><label>Conteúdo (opcional — dá pra adicionar depois também)</label>
+          ${S.novaBaseAnexos.length === 0 ? '' : `
+            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
+              ${S.novaBaseAnexos.map((a) => `
+                <div class="bk-item-row">
+                  <div style="display:flex;align-items:center;gap:8px;min-width:0">
+                    <i class="ti ${a.tipo === "arquivo" ? "ti-file-text" : "ti-align-left"}"></i>
+                    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.nome)}</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+                    <span class="bk-item-tok">~${fmtTok(estimarTokens(a.conteudo))} tok</span>
+                    <button class="bk-icon-btn" data-del-newbase-anexo="${a.id}"><i class="ti ti-trash" style="font-size:13px"></i></button>
+                  </div>
+                </div>`).join("")}
+            </div>`}
+          <div class="bk-add-row" style="margin-top:0">
+            <button class="bk-btn-ghost" data-newbase-upload="1"><i class="ti ti-upload"></i> Enviar arquivo (.pdf, .txt, .md)</button>
+            <input type="file" accept=".txt,.md,.pdf" style="display:none" id="bk-newbase-file" data-newbase-fileinput="1" />
+            <button class="bk-btn-ghost" data-newbase-addtext="1"><i class="ti ti-file-plus"></i> Colar texto</button>
+          </div>
+          ${S.novaBaseAddingText ? `
+            <div class="cop-card" style="margin-top:10px;background:rgba(255,255,255,.55)">
+              <div class="bk-field"><label>Título</label>
+                <input class="bk-input" id="bk-nbtext-nome" placeholder="Ex: Observações sobre dose" />
+              </div>
+              <div class="bk-field"><label>Conteúdo</label>
+                <textarea class="bk-textarea" id="bk-nbtext-conteudo" rows="5" placeholder="Cole aqui..."></textarea>
+              </div>
+              <div class="bk-form-actions">
+                <button class="bk-btn-ghost" data-newbase-canceltext="1">Cancelar</button>
+                <button class="btn primary sm" data-newbase-savetext="1"><i class="ti ti-check"></i> Adicionar</button>
+              </div>
+            </div>` : ""}
         </div>
         <div class="bk-form-actions">
           <button class="bk-btn-ghost" data-cancelbase="1">Cancelar</button>
@@ -313,7 +366,7 @@
           <textarea class="bk-textarea" id="bk-na-texto" rows="3" placeholder="Texto que substitui o atalho ao enviar..."></textarea>
         </div>
         <div class="bk-field"><label>Disponível em</label>
-          <div class="bk-chip-row" id="bk-na-ias">${iaChips(["chat_ai", "assistente_ai"], null)}</div>
+          <div class="bk-chip-row" id="bk-na-ias">${iaChips(["chat_ai", "assistente_ai"], ["chat_ai", "assistente_ai"])}</div>
         </div>
         <div class="bk-form-actions">
           <button class="bk-btn-ghost" data-cancelatalho="1">Cancelar</button>
@@ -396,19 +449,57 @@
     if (selIa) { selIa.classList.toggle("active"); selIa.classList.toggle(selIa.dataset.selia === "chat_ai" ? "chat" : "assist"); return; }
 
     const newBase = e.target.closest("[data-newbase]");
-    if (newBase) { S.creatingBase = true; return render(); }
+    if (newBase) { S.creatingBase = true; S.novaBaseAnexos = []; S.novaBaseAddingText = false; return render(); }
     const cancelBase = e.target.closest("[data-cancelbase]");
-    if (cancelBase) { S.creatingBase = false; return render(); }
+    if (cancelBase) { S.creatingBase = false; S.novaBaseAnexos = []; S.novaBaseAddingText = false; return render(); }
     const saveBase = e.target.closest("[data-savebase]");
     if (saveBase) {
       const nome = (document.getElementById("bk-nb-nome") || {}).value || "";
-      if (!nome.trim()) { if (typeof toast === "function") toast("Dê um nome para a base"); return; }
+      if (!nome.trim()) { notify("Dê um nome para a base"); return; }
       const descricao = (document.getElementById("bk-nb-desc") || {}).value || "";
       const tags = ((document.getElementById("bk-nb-tags") || {}).value || "").split(",").map((t) => t.trim()).filter(Boolean);
       const iasEls = document.querySelectorAll("#bk-nb-ias [data-selia].active");
       const ias = Array.from(iasEls).map((b) => b.dataset.selia);
-      criarBase({ nome: nome.trim(), descricao: descricao.trim(), tags, ias: ias.length ? ias : ["chat_ai", "assistente_ai"] });
+      const anexosPendentes = S.novaBaseAnexos.slice();
+      (async () => {
+        const novoId = await criarBase({
+          nome: nome.trim(), descricao: descricao.trim(), tags,
+          ias: ias.length ? ias : ["chat_ai", "assistente_ai"],
+        });
+        if (!novoId) return; // erro já mostrado por criarBase()
+        S.creatingBase = false;
+        S.novaBaseAnexos = [];
+        S.novaBaseAddingText = false;
+        await load();
+        // Anexa o conteúdo que o médico já preparou antes de salvar a base —
+        // cada anexo entra no mesmo fluxo de chunking + perguntas por IA de
+        // sempre (adicionarItemTexto), só que agora já sabendo o base_id.
+        for (const a of anexosPendentes) {
+          await adicionarItemTexto(novoId, a.tipo, a.nome, a.conteudo);
+        }
+      })();
       return;
+    }
+
+    const delNewbaseAnexo = e.target.closest("[data-del-newbase-anexo]");
+    if (delNewbaseAnexo) {
+      S.novaBaseAnexos = S.novaBaseAnexos.filter((a) => a.id !== delNewbaseAnexo.dataset.delNewbaseAnexo);
+      return render();
+    }
+    const newbaseUpload = e.target.closest("[data-newbase-upload]");
+    if (newbaseUpload) { const inp = document.getElementById("bk-newbase-file"); if (inp) inp.click(); return; }
+    const newbaseAddText = e.target.closest("[data-newbase-addtext]");
+    if (newbaseAddText) { S.novaBaseAddingText = true; return render(); }
+    const newbaseCancelText = e.target.closest("[data-newbase-canceltext]");
+    if (newbaseCancelText) { S.novaBaseAddingText = false; return render(); }
+    const newbaseSaveText = e.target.closest("[data-newbase-savetext]");
+    if (newbaseSaveText) {
+      const nome = (document.getElementById("bk-nbtext-nome") || {}).value || "";
+      const conteudo = (document.getElementById("bk-nbtext-conteudo") || {}).value || "";
+      if (!nome.trim() || !conteudo.trim()) { notify("Preencha título e conteúdo"); return; }
+      S.novaBaseAnexos.push({ id: uid(), tipo: "texto", nome: nome.trim(), conteudo: conteudo.trim() });
+      S.novaBaseAddingText = false;
+      return render();
     }
 
     const uploadFor = e.target.closest("[data-upload-for]");
@@ -422,7 +513,7 @@
     if (saveText) {
       const nome = (document.getElementById("bk-newtext-nome") || {}).value || "";
       const conteudo = (document.getElementById("bk-newtext-conteudo") || {}).value || "";
-      if (!nome.trim() || !conteudo.trim()) { if (typeof toast === "function") toast("Preencha título e conteúdo"); return; }
+      if (!nome.trim() || !conteudo.trim()) { notify("Preencha título e conteúdo"); return; }
       adicionarItemTexto(saveText.dataset.savetextFor, "texto", nome.trim(), conteudo.trim());
       return;
     }
@@ -435,8 +526,8 @@
     if (saveAtalho) {
       const atalho = (document.getElementById("bk-na-atalho") || {}).value || "";
       const texto = (document.getElementById("bk-na-texto") || {}).value || "";
-      if (!/^\/\S+$/.test(atalho.trim())) { if (typeof toast === "function") toast("Atalho precisa começar com '/' e não ter espaços"); return; }
-      if (!texto.trim()) { if (typeof toast === "function") toast("Escreva o comando completo"); return; }
+      if (!/^\/\S+$/.test(atalho.trim())) { notify("Atalho precisa começar com '/' e não ter espaços"); return; }
+      if (!texto.trim()) { notify("Escreva o comando completo"); return; }
       const iasEls = document.querySelectorAll("#bk-na-ias [data-selia].active");
       const ias = Array.from(iasEls).map((b) => b.dataset.selia);
       criarAtalho({ atalho: atalho.trim(), texto_completo: texto.trim(), ias: ias.length ? ias : ["chat_ai", "assistente_ai"] });
@@ -459,32 +550,43 @@
     return texto.trim();
   }
 
+  // Lê um arquivo (.pdf via pdf.js, .txt/.md como texto puro) e retorna o
+  // conteúdo extraído. Lança erro para formato não suportado ou PDF sem
+  // texto selecionável — quem chama decide como avisar o usuário.
+  async function lerArquivoComoTexto(file) {
+    if (/\.pdf$/i.test(file.name)) {
+      notify("Lendo PDF… isso pode levar alguns segundos");
+      const texto = await extrairTextoPDF(file);
+      if (!texto) throw new Error("Não consegui extrair texto desse PDF (pode ser um PDF escaneado/sem texto selecionável)");
+      return texto;
+    }
+    if (/\.(txt|md)$/i.test(file.name)) {
+      return await file.text();
+    }
+    throw new Error("Formatos aceitos hoje: .pdf, .txt, .md");
+  }
+
   document.addEventListener("change", (e) => {
+    const nfi = e.target.closest("[data-newbase-fileinput]");
+    if (nfi) {
+      const file = nfi.files && nfi.files[0];
+      if (!file) return;
+      lerArquivoComoTexto(file)
+        .then((texto) => { S.novaBaseAnexos.push({ id: uid(), tipo: "arquivo", nome: file.name, conteudo: texto }); render(); })
+        .catch((err) => { console.error(err); notify(err.message || "Erro ao ler o arquivo"); })
+        .finally(() => { nfi.value = ""; });
+      return;
+    }
+
     const fi = e.target.closest("[data-fileinput-for]");
     if (!fi) return;
     const baseId = fi.dataset.fileinputFor;
     const file = fi.files && fi.files[0];
     if (!file) return;
-
-    if (/\.pdf$/i.test(file.name)) {
-      if (typeof toast === "function") toast("Lendo PDF… isso pode levar alguns segundos");
-      extrairTextoPDF(file)
-        .then((texto) => {
-          if (!texto) { if (typeof toast === "function") toast("Não consegui extrair texto desse PDF (pode ser um PDF escaneado/sem texto selecionável)"); return; }
-          adicionarItemTexto(baseId, "arquivo", file.name, texto);
-        })
-        .catch((err) => { console.error(err); if (typeof toast === "function") toast("Erro ao ler o PDF"); })
-        .finally(() => { fi.value = ""; });
-      return;
-    }
-
-    if (!/\.(txt|md)$/i.test(file.name)) {
-      if (typeof toast === "function") toast("Formatos aceitos hoje: .pdf, .txt, .md");
-      fi.value = ""; return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => { adicionarItemTexto(baseId, "arquivo", file.name, String(reader.result || "")); fi.value = ""; };
-    reader.readAsText(file);
+    lerArquivoComoTexto(file)
+      .then((texto) => adicionarItemTexto(baseId, "arquivo", file.name, texto))
+      .catch((err) => { console.error(err); notify(err.message || "Erro ao ler o arquivo"); })
+      .finally(() => { fi.value = ""; });
   });
 
   window.initBaseConhecimento = function () { render(); load(); };
