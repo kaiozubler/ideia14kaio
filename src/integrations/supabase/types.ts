@@ -187,6 +187,80 @@ export type Database = {
           },
         ]
       }
+      base_conhecimento: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          descricao: string
+          ias: string[] | null
+          id: string
+          medico_id: string | null
+          nome: string
+          tags: string[] | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao: string
+          ias?: string[] | null
+          id?: string
+          medico_id?: string | null
+          nome: string
+          tags?: string[] | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string
+          ias?: string[] | null
+          id?: string
+          medico_id?: string | null
+          nome?: string
+          tags?: string[] | null
+        }
+        Relationships: []
+      }
+      base_conhecimento_itens: {
+        Row: {
+          base_id: string | null
+          conteudo: string
+          created_at: string | null
+          id: string
+          nome_original: string | null
+          ordem: number | null
+          tipo: string | null
+          tokens_estimados: number | null
+        }
+        Insert: {
+          base_id?: string | null
+          conteudo: string
+          created_at?: string | null
+          id?: string
+          nome_original?: string | null
+          ordem?: number | null
+          tipo?: string | null
+          tokens_estimados?: number | null
+        }
+        Update: {
+          base_id?: string | null
+          conteudo?: string
+          created_at?: string | null
+          id?: string
+          nome_original?: string | null
+          ordem?: number | null
+          tipo?: string | null
+          tokens_estimados?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "base_conhecimento_itens_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "base_conhecimento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cid10: {
         Row: {
           codigo: string
@@ -1208,6 +1282,33 @@ export type Database = {
           uf?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      prompt_comandos: {
+        Row: {
+          atalho: string
+          created_at: string | null
+          ias: string[] | null
+          id: string
+          medico_id: string | null
+          texto_completo: string
+        }
+        Insert: {
+          atalho: string
+          created_at?: string | null
+          ias?: string[] | null
+          id?: string
+          medico_id?: string | null
+          texto_completo: string
+        }
+        Update: {
+          atalho?: string
+          created_at?: string | null
+          ias?: string[] | null
+          id?: string
+          medico_id?: string | null
+          texto_completo?: string
         }
         Relationships: []
       }
