@@ -9,7 +9,12 @@
 -- Fix: construir a consulta como OR entre os termos (qualquer um já
 -- qualifica o trecho), e deixar o ts_rank() ordenar pelos que têm mais
 -- termos em comum — muito mais tolerante a como a pergunta é formulada.
-create or replace function public.buscar_base_conhecimento(
+--
+-- Precisa de DROP explícito: CREATE OR REPLACE não permite mudar a
+-- assinatura de retorno (OUT params) de uma função já existente.
+drop function if exists public.buscar_base_conhecimento(uuid, text, text, int);
+
+create function public.buscar_base_conhecimento(
   p_medico_id uuid,
   p_mensagem text,
   p_ia text,
