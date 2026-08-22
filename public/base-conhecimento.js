@@ -576,7 +576,13 @@
 
   async function extrairTextoPDF(file) {
     const pdfjsLib = window.__pdfjsLib;
-    if (!pdfjsLib) throw new Error("Leitor de PDF ainda carregando, tente de novo em alguns segundos.");
+    if (!pdfjsLib) {
+      throw new Error(
+        window.__pdfjsLibErro
+          ? "Leitor de PDF não carregou: " + window.__pdfjsLibErro
+          : "Leitor de PDF ainda carregando, tente de novo em alguns segundos."
+      );
+    }
     const buffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
     let texto = "";

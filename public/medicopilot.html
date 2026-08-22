@@ -26,14 +26,30 @@
     <script src="questionarios.js?v=5" defer></script>
     <link rel="stylesheet" href="faturamento.css?v=2" />
     <script src="faturamento.js?v=2" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.min.mjs" type="module"></script>
     <script>
       window.addEventListener("DOMContentLoaded", async () => {
+        const BASE = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/";
         try {
-          const pdfjsLib = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.min.mjs");
-          pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.worker.min.mjs";
+          const pdfjsLib = await import(BASE + "pdf.min.mjs");
+          // Criar um Worker direto de uma URL de outra origem (o CDN) é
+          // bloqueado por vários navegadores/CSP. Baixando o script do worker
+          // e rodando via blob: (mesma origem, do ponto de vista do Worker)
+          // evita esse bloqueio na maioria dos ambientes.
+          let workerSrc = BASE + "pdf.worker.min.mjs";
+          try {
+            const res = await fetch(workerSrc);
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            const codigo = await res.text();
+            workerSrc = URL.createObjectURL(new Blob([codigo], { type: "text/javascript" }));
+          } catch (werr) {
+            console.warn("[pdf.js] não deu pra baixar o worker como blob, tentando URL direta do CDN", werr);
+          }
+          pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
           window.__pdfjsLib = pdfjsLib;
-        } catch (e) { console.error("Falha ao carregar pdf.js", e); }
+        } catch (e) {
+          console.error("[pdf.js] falha ao carregar", e);
+          window.__pdfjsLibErro = (e && e.message) || "falha desconhecida ao carregar o leitor de PDF";
+        }
       });
     </script>
     <link rel="stylesheet" href="base-conhecimento.css?v=1" />
