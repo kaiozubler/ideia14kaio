@@ -503,6 +503,8 @@
                                                       .bbl.usr{background:var(--g500);color:var(--white);border-bottom-right-radius:3px;align-self:flex-end;flex-direction:row-reverse}
                                                       .bbl.pinned{background:#fef9c3!important;border-color:#fde047!important;color:var(--n700)!important}
                                                       .bbl-text{flex:1;min-width:0;white-space:pre-wrap}
+                                                      .bbl-content{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+                                                      .bbl-content .bbl-text{flex:none}
                                                       .bbl-actions{display:flex;gap:2px;opacity:0;transition:opacity .14s;flex-shrink:0;margin-top:0}
                                                       .bbl:hover .bbl-actions{opacity:1}
                                                       .bbl-pin-btn{width:18px;height:18px;border-radius:3px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--n300)}
@@ -10672,7 +10674,11 @@ function spawnIaAssistBubble(type,text,fonteBaseConhecimento){
   const selo=(Array.isArray(fonteBaseConhecimento)&&fonteBaseConhecimento.length)
     ? `<div class="bk-fonte-badge" title="${iaEscHtml(fonteBaseConhecimento.join(', '))}"><i class="ti ti-database"></i> Base de conhecimento local: ${iaEscHtml(fonteBaseConhecimento.join(', '))}</div>`
     : '';
-  el.innerHTML=`<span class="bbl-text">${html}</span>${selo}`;
+  // .bbl é display:flex (linha). O texto e o selo precisam ficar DENTRO de um
+  // único item flex (em coluna) — se o selo virasse um segundo item na mesma
+  // linha do .bbl, ele espremia o texto numa coluna minúscula, quebrando uma
+  // palavra por linha.
+  el.innerHTML=`<div class="bbl-content"><span class="bbl-text">${html}</span>${selo}</div>`;
   layer.appendChild(el);
   iaAssistSyncBottomSpace();
   layer.scrollTop=layer.scrollHeight;
