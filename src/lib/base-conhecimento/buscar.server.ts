@@ -1,24 +1,36 @@
 export type IaAlvo = "chat_ai" | "assistente_ai";
 
+export type ResultadoContextoBaseConhecimento = {
+  /** Bloco de texto pronto pra concatenar ao system prompt (string vazia se não há bases ativas). */
+  texto: string;
+  /** Nomes das bases cujo conteúdo efetivamente bateu com a mensagem (vazio se nenhuma bateu). Use
+   * isso pra mostrar um selo "veio da base de conhecimento local" na tela — não dependa só da IA
+   * mencionar isso em texto. */
+  basesUsadas: string[];
+};
+
 /**
  * Monta o bloco de texto da base de conhecimento local do médico para
- * concatenar ao system prompt do chat_ai/assistente_ai.
+ * concatenar ao system prompt do chat_ai/assistente_ai, e informa quais
+ * bases efetivamente bateram com a mensagem (para sinalização visual na
+ * tela, independente do que a IA disser em texto).
  *
  * Custo de tokens: sempre inclui só o índice (nome + descrição das bases
  * ativas para essa IA — poucas dezenas de tokens no total). Só inclui o
  * conteúdo de fato quando a busca textual (FTS) encontra trechos relevantes
  * para a mensagem atual (via a função `buscar_base_conhecimento`).
  *
- * Retorna string vazia se o médico não tiver nenhuma base ativa para essa IA
+ * Retorna texto vazio se o médico não tiver nenhuma base ativa para essa IA
  * (não adiciona nada ao prompt nesse caso — zero custo extra).
  */
 export async function montarContextoBaseConhecimento(params: {
   medicoId: string | null;
   mensagem: string;
   ia: IaAlvo;
-}): Promise<string> {
+}): Promise<ResultadoContextoBaseConhecimento> {
+  const vazio: ResultadoContextoBaseConhecimento = { texto: "", basesUsadas: [] };
   const { medicoId, mensagem, ia } = params;
-  if (!medicoId || !mensagem.trim()) return "";
+  if (!medicoId || !mensagem.trim()) return vazio;
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -31,9 +43,9 @@ export async function montarContextoBaseConhecimento(params: {
 
   if (basesErr) {
     console.error("[base-conhecimento:buscar] erro ao listar bases:", basesErr.message);
-    return "";
+    return vazio;
   }
-  if (!bases || bases.length === 0) return "";
+  if (!bases || bases.length === 0) return vazio;
 
   const indice = bases.map((b) => `- "${b.nome}"${b.descricao ? ` — ${b.descricao}` : ""}`).join("\n");
 
@@ -51,7 +63,9 @@ export async function montarContextoBaseConhecimento(params: {
     `\n\n=== BASE DE CONHECIMENTO LOCAL DO MÉDICO ===\n` + `Bases ativas cadastradas por este médico:\n${indice}\n`;
 
   const hits = (trechos ?? []) as { base_nome: string; conteudo: string }[];
+  let basesUsadas: string[] = [];
   if (hits.length > 0) {
+    basesUsadas = Array.from(new Set(hits.map((h) => h.base_nome)));
     bloco +=
       `\nTrechos relevantes para esta mensagem:\n` +
       hits.map((t, i) => `[${i + 1}] (base: "${t.base_nome}")\n${t.conteudo}`).join("\n\n") +
@@ -63,5 +77,5 @@ export async function montarContextoBaseConhecimento(params: {
       ` conhecimento geral (não local), informe isso explicitamente (ex.: "não encontrei isso na sua` +
       ` base de conhecimento local, respondendo com conhecimento geral").`;
   }
-  return bloco;
+  return { texto: bloco, basesUsadas };
 }

@@ -50,3 +50,15 @@
 .bk-chip.active.chat{background:#ecfdf5;border-color:#a7f3d0;color:#059669}
 .bk-chip.active.assist{background:#f5f3ff;border-color:#ddd6fe;color:#7c3aed}
 .bk-form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
+
+/* Selo mostrado sob a resposta do Chat IA/Assistente IA quando ela usou
+   trechos da base de conhecimento local do médico (ver spawnIaAssistBubble
+   em medicopilot.html e fonte_base_conhecimento nas respostas da API). */
+.bk-fonte-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  margin-top:6px;padding:3px 10px;
+  border-radius:999px;font-size:10.5px;font-weight:600;
+  background:#ecfdf5;border:0.5px solid #a7f3d0;color:#059669;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.bk-fonte-badge .ti{font-size:12px}

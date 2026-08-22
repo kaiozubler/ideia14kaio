@@ -473,7 +473,7 @@ export const Route = createFileRoute("/api/chat-ia")({
           const ultimaMensagemUsuario =
             [...history].reverse().find((m) => m?.role === "user")?.content ?? "";
           const { montarContextoBaseConhecimento } = await import("@/lib/base-conhecimento/buscar.server");
-          const contextoBaseConhecimento = await montarContextoBaseConhecimento({
+          const resultadoBaseConhecimento = await montarContextoBaseConhecimento({
             medicoId,
             mensagem: ultimaMensagemUsuario,
             ia: "chat_ai",
@@ -511,7 +511,7 @@ export const Route = createFileRoute("/api/chat-ia")({
               ? `\n\n=== ANÁLISE DE EXAME (IA de exames) — arquivo "${body.anexo?.nome || "anexo"}" ===\n` +
                 JSON.stringify(analiseExame, null, 2)
               : "") +
-            contextoBaseConhecimento;
+            resultadoBaseConhecimento.texto;
           const messages: ChatMessage[] = [
             { role: "system", content: systemContent },
             ...history.filter(
@@ -519,7 +519,16 @@ export const Route = createFileRoute("/api/chat-ia")({
             ),
           ];
           const text = await callGateway(messages, apiKey);
-          return Response.json({ reply: text, analise_exame: analiseExame });
+          return Response.json({
+            reply: text,
+            analise_exame: analiseExame,
+            // Nomes das bases locais efetivamente usadas nesta resposta (vazio/ausente
+            // se nenhuma bateu) — a tela usa isso pra mostrar um selo visual, sem
+            // depender só da IA mencionar isso em texto.
+            fonte_base_conhecimento: resultadoBaseConhecimento.basesUsadas.length
+              ? resultadoBaseConhecimento.basesUsadas
+              : null,
+          });
         } catch (err) {
           if (err instanceof Response) return err;
           const msg = err instanceof Error ? err.message : "Unknown error";

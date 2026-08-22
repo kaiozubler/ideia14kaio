@@ -8003,12 +8003,19 @@
                                                               const inp=document.getElementById('adv-chat-inp');
                                                               if(inp)inp.value='';
                                                             }
-                                                            function appendAdvChat(role,text){
+                                                            function appendAdvChat(role,text,fonteBaseConhecimento){
         const log=document.getElementById('adv-chat-log');
         if(!log)return;
         const div=document.createElement('div');
         div.className='adv-chat-msg '+role;
         div.textContent=text;
+        if(Array.isArray(fonteBaseConhecimento)&&fonteBaseConhecimento.length){
+          const selo=document.createElement('div');
+          selo.className='bk-fonte-badge';
+          selo.title=fonteBaseConhecimento.join(', ');
+          selo.innerHTML='<i class="ti ti-database"></i> Base de conhecimento local: '+(typeof iaEscHtml==='function'?iaEscHtml(fonteBaseConhecimento.join(', ')):fonteBaseConhecimento.join(', '));
+          div.appendChild(selo);
+        }
         log.appendChild(div);
         log.scrollTop=log.scrollHeight;
       }
@@ -8031,7 +8038,7 @@
                                                                     :raw;
                                                                   if(loading)loading.remove();
                                                                   atendChatHistory.push({role:'assistant',content:reply});
-                                                                  appendAdvChat('assistant',reply);
+                                                                  appendAdvChat('assistant',reply,j.fonte_base_conhecimento);
                                                                   for(const b of withAction){
                                                                     try{ await iaExecuteAction(b.action); }catch(e){ console.warn('iaExecuteAction falhou',e); }
                                                                   }
@@ -10655,14 +10662,17 @@ function iaAssistQuickPrompt(text){
   if(inp)inp.value=text;
   sendIaAssistMsg();
 }
-function spawnIaAssistBubble(type,text){
+function spawnIaAssistBubble(type,text,fonteBaseConhecimento){
   const layer=document.getElementById('ia-assist-bubbles');if(!layer)return null;
   const html=fmtBubbleText(text);
   const id='ia-assist-bbl-'+Date.now()+'-'+Math.random().toString(36).slice(2,6);
   const el=document.createElement('div');
   el.className='bbl '+type;
   el.id=id;
-  el.innerHTML=`<span class="bbl-text">${html}</span>`;
+  const selo=(Array.isArray(fonteBaseConhecimento)&&fonteBaseConhecimento.length)
+    ? `<div class="bk-fonte-badge" title="${iaEscHtml(fonteBaseConhecimento.join(', '))}"><i class="ti ti-database"></i> Base de conhecimento local: ${iaEscHtml(fonteBaseConhecimento.join(', '))}</div>`
+    : '';
+  el.innerHTML=`<span class="bbl-text">${html}</span>${selo}`;
   layer.appendChild(el);
   iaAssistSyncBottomSpace();
   layer.scrollTop=layer.scrollHeight;
@@ -10707,7 +10717,7 @@ async function sendIaAssistMsg(){
     const reply=(d.reply||'').trim()||'(sem resposta)';
     iaAssistHistory.push({role:'assistant',content:reply});
     removeIaAssistTyping(typingId);
-    spawnIaAssistBubble('ia',reply);
+    spawnIaAssistBubble('ia',reply,d.fonte_base_conhecimento);
 if(d.action){
   iaAssistExecuteAction(d.action);
 }else if(/receita|atestado|declara[cç][aã]o/i.test(reply)&&/(gerad[ao]|criad[ao]|pronto|sucesso)/i.test(reply)){
