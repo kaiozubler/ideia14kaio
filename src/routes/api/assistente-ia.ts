@@ -1656,6 +1656,25 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
           });
         }
 
+        // Base de conhecimento local do médico (opcional): se ele tiver bases
+        // ativas pro assistente_ai, injeta o índice delas + os trechos que
+        // batem com a última mensagem. Só no canal interno (médico), não no
+        // canal paciente. Ver src/lib/base-conhecimento/buscar.server.ts.
+        let basesConhecimentoUsadas: string[] = [];
+        if (canal === "interno" && body.user_id) {
+          const ultimaMensagemUsuario = [...history].reverse().find((m) => m.role === "user")?.content ?? "";
+          if (ultimaMensagemUsuario.trim()) {
+            const { montarContextoBaseConhecimento } = await import("@/lib/base-conhecimento/buscar.server");
+            const resultadoBaseConhecimento = await montarContextoBaseConhecimento({
+              medicoId: body.user_id,
+              mensagem: ultimaMensagemUsuario,
+              ia: "assistente_ai",
+            });
+            if (resultadoBaseConhecimento.texto) messages.splice(1, 0, { role: "system", content: resultadoBaseConhecimento.texto });
+            basesConhecimentoUsadas = resultadoBaseConhecimento.basesUsadas;
+          }
+        }
+
         // Anexo recebido no chat interno: encaminha para a IA dedicada de exames e
         // injeta a análise no contexto, para o assistente conversar sobre ela.
         let analiseExame: AnaliseExame | null = null;
@@ -1707,6 +1726,10 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
                 action: pendingAction.value,
                 conversa_id: conversaId,
                 analise_exame: analiseExame,
+                // Nomes das bases locais efetivamente usadas nesta resposta (null se
+                // nenhuma bateu) — a tela usa isso pra mostrar um selo visual, sem
+                // depender só da IA mencionar isso em texto.
+                fonte_base_conhecimento: basesConhecimentoUsadas.length ? basesConhecimentoUsadas : null,
               });
             }
             for (const call of calls) {

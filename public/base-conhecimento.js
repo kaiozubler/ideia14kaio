@@ -47,9 +47,10 @@
   }
 
   /* ---------- DATA ---------- */
-  async function load() {
+  async function load(opts) {
+    const silent = opts && opts.silent;
     const sb = sbc(); if (!sb) return;
-    S.loading = true; render();
+    if (!silent) { S.loading = true; render(); }
     const [{ data: bases, error: e1 }, { data: atalhos, error: e2 }] = await Promise.all([
       sb.from("base_conhecimento")
         .select("id,nome,descricao,tags,ias,ativo,created_at,base_conhecimento_itens(id,tipo,nome_original,tokens_estimados,status)")
@@ -166,8 +167,11 @@
         console.error("[base-conhecimento] erro ao gerar metadados:", err);
         await Promise.all(lote.map((it) => sb.from("base_conhecimento_itens").update({ status: "erro" }).eq("id", it.id)));
       }
+      // Atualiza a tela a cada lote (silencioso, sem piscar "Carregando…"),
+      // pra dar feedback de progresso real em documentos com muitos chunks
+      // em vez de parecer travado até todos os lotes terminarem.
+      await load({ silent: true });
     }
-    await load();
   }
 
   async function excluirItem(id) {
