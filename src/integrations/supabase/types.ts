@@ -1793,6 +1793,7 @@ export type Database = {
       }
       questionario_respostas: {
         Row: {
+          email_verificado: boolean
           id: string
           paciente_cpf: string | null
           paciente_email: string | null
@@ -1803,6 +1804,7 @@ export type Database = {
           respondido_em: string
         }
         Insert: {
+          email_verificado?: boolean
           id?: string
           paciente_cpf?: string | null
           paciente_email?: string | null
@@ -1813,6 +1815,7 @@ export type Database = {
           respondido_em?: string
         }
         Update: {
+          email_verificado?: boolean
           id?: string
           paciente_cpf?: string | null
           paciente_email?: string | null
