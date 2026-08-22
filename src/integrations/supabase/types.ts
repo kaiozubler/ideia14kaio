@@ -2368,6 +2368,18 @@ export type Database = {
           tarefas_criadas: number
         }[]
       }
+      buscar_base_conhecimento: {
+        Args: {
+          p_ia: string
+          p_limit?: number
+          p_medico_id: string
+          p_mensagem: string
+        }
+        Returns: {
+          base_nome: string
+          conteudo: string
+        }[]
+      }
       buscar_cid10: {
         Args: { p_limit?: number; termo: string }
         Returns: {
