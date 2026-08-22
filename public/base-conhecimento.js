@@ -11,6 +11,11 @@
     addingTextFor: null, // base_id com o form "colar texto" aberto
     novaBaseAnexos: [], // {id, tipo, nome, conteudo} — conteúdo já lido, aguardando a base ser criada
     novaBaseAddingText: false,
+    // Nome/descrição/tags do formulário de nova base ficam aqui (não só no
+    // DOM) porque qualquer render() no meio do preenchimento — como o que
+    // acontece ao anexar um arquivo — reconstrói o formulário inteiro, e sem
+    // isso os valores digitados eram perdidos.
+    novaBaseCampos: { nome: "", descricao: "", tags: "", ias: ["chat_ai", "assistente_ai"] },
   };
 
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -283,18 +288,18 @@
       <div class="cop-card">
         <div class="cop-card-title" style="margin-bottom:12px"><i class="ti ti-plus" style="color:#7c3aed"></i> Nova base de conhecimento</div>
         <div class="bk-field"><label>Nome do tópico</label>
-          <input class="bk-input" id="bk-nb-nome" placeholder="Ex: Protocolo de enxaqueca da clínica" />
+          <input class="bk-input" id="bk-nb-nome" placeholder="Ex: Protocolo de enxaqueca da clínica" value="${esc(S.novaBaseCampos.nome)}" />
           <div class="bk-hint">Curto e específico — ajuda a IA a reconhecer o assunto.</div>
         </div>
         <div class="bk-field"><label>Descrição</label>
-          <textarea class="bk-textarea" id="bk-nb-desc" rows="2" placeholder="Do que se trata... (deixe em branco pra IA sugerir a partir do 1º arquivo)"></textarea>
+          <textarea class="bk-textarea" id="bk-nb-desc" rows="2" placeholder="Do que se trata... (deixe em branco pra IA sugerir a partir do 1º arquivo)">${esc(S.novaBaseCampos.descricao)}</textarea>
           <div class="bk-hint">Sempre enviada à IA (poucos tokens) pra ela saber que essa base existe.</div>
         </div>
         <div class="bk-field"><label>Tags (separadas por vírgula)</label>
-          <input class="bk-input" id="bk-nb-tags" placeholder="cardiologia, protocolo" />
+          <input class="bk-input" id="bk-nb-tags" placeholder="cardiologia, protocolo" value="${esc(S.novaBaseCampos.tags)}" />
         </div>
         <div class="bk-field"><label>Usar em</label>
-          <div class="bk-chip-row" id="bk-nb-ias">${iaChips(["chat_ai", "assistente_ai"], ["chat_ai", "assistente_ai"])}</div>
+          <div class="bk-chip-row" id="bk-nb-ias">${iaChips(["chat_ai", "assistente_ai"], S.novaBaseCampos.ias)}</div>
         </div>
         <div class="bk-field"><label>Conteúdo (opcional — dá pra adicionar depois também)</label>
           ${S.novaBaseAnexos.length === 0 ? '' : `
@@ -418,6 +423,16 @@
   }
 
   /* ---------- EVENTS ---------- */
+  // Mantém S.novaBaseCampos em dia enquanto o médico digita — sem isso, um
+  // render() disparado por outra ação (ex.: anexar um arquivo) reconstruiria
+  // o formulário com os valores antigos do estado, perdendo o que foi digitado
+  // depois. Não chama render() aqui: isso evitaria o cursor pular a cada tecla.
+  document.addEventListener("input", (e) => {
+    if (e.target.id === "bk-nb-nome") S.novaBaseCampos.nome = e.target.value;
+    else if (e.target.id === "bk-nb-desc") S.novaBaseCampos.descricao = e.target.value;
+    else if (e.target.id === "bk-nb-tags") S.novaBaseCampos.tags = e.target.value;
+  });
+
   document.addEventListener("click", (e) => {
     const root = document.getElementById("s-base-conhecimento");
     if (!root || root.style.display === "none") return;
@@ -446,36 +461,60 @@
     if (delAtalho) { if (confirm("Excluir este atalho?")) excluirAtalho(delAtalho.dataset.delAtalho); return; }
 
     const selIa = e.target.closest("[data-selia]");
-    if (selIa) { selIa.classList.toggle("active"); selIa.classList.toggle(selIa.dataset.selia === "chat_ai" ? "chat" : "assist"); return; }
+    if (selIa) {
+      selIa.classList.toggle("active");
+      selIa.classList.toggle(selIa.dataset.selia === "chat_ai" ? "chat" : "assist");
+      if (selIa.closest("#bk-nb-ias")) {
+        S.novaBaseCampos.ias = Array.from(document.querySelectorAll("#bk-nb-ias [data-selia].active")).map((b) => b.dataset.selia);
+      }
+      return;
+    }
 
     const newBase = e.target.closest("[data-newbase]");
-    if (newBase) { S.creatingBase = true; S.novaBaseAnexos = []; S.novaBaseAddingText = false; return render(); }
+    if (newBase) {
+      S.creatingBase = true; S.novaBaseAnexos = []; S.novaBaseAddingText = false;
+      S.novaBaseCampos = { nome: "", descricao: "", tags: "", ias: ["chat_ai", "assistente_ai"] };
+      return render();
+    }
     const cancelBase = e.target.closest("[data-cancelbase]");
-    if (cancelBase) { S.creatingBase = false; S.novaBaseAnexos = []; S.novaBaseAddingText = false; return render(); }
+    if (cancelBase) {
+      S.creatingBase = false; S.novaBaseAnexos = []; S.novaBaseAddingText = false;
+      S.novaBaseCampos = { nome: "", descricao: "", tags: "", ias: ["chat_ai", "assistente_ai"] };
+      return render();
+    }
     const saveBase = e.target.closest("[data-savebase]");
     if (saveBase) {
-      const nome = (document.getElementById("bk-nb-nome") || {}).value || "";
+      const nome = S.novaBaseCampos.nome || "";
       if (!nome.trim()) { notify("Dê um nome para a base"); return; }
-      const descricao = (document.getElementById("bk-nb-desc") || {}).value || "";
-      const tags = ((document.getElementById("bk-nb-tags") || {}).value || "").split(",").map((t) => t.trim()).filter(Boolean);
-      const iasEls = document.querySelectorAll("#bk-nb-ias [data-selia].active");
-      const ias = Array.from(iasEls).map((b) => b.dataset.selia);
+      const descricao = S.novaBaseCampos.descricao || "";
+      const tags = (S.novaBaseCampos.tags || "").split(",").map((t) => t.trim()).filter(Boolean);
+      const ias = S.novaBaseCampos.ias && S.novaBaseCampos.ias.length ? S.novaBaseCampos.ias : ["chat_ai", "assistente_ai"];
       const anexosPendentes = S.novaBaseAnexos.slice();
       (async () => {
-        const novoId = await criarBase({
-          nome: nome.trim(), descricao: descricao.trim(), tags,
-          ias: ias.length ? ias : ["chat_ai", "assistente_ai"],
-        });
+        let novoId;
+        try {
+          novoId = await criarBase({ nome: nome.trim(), descricao: descricao.trim(), tags, ias });
+        } catch (err) {
+          console.error("[base-conhecimento] exceção ao criar base:", err);
+          notify("Erro ao criar base: " + (err && err.message ? err.message : "erro inesperado"));
+          return;
+        }
         if (!novoId) return; // erro já mostrado por criarBase()
         S.creatingBase = false;
         S.novaBaseAnexos = [];
         S.novaBaseAddingText = false;
+        S.novaBaseCampos = { nome: "", descricao: "", tags: "", ias: ["chat_ai", "assistente_ai"] };
         await load();
         // Anexa o conteúdo que o médico já preparou antes de salvar a base —
         // cada anexo entra no mesmo fluxo de chunking + perguntas por IA de
         // sempre (adicionarItemTexto), só que agora já sabendo o base_id.
         for (const a of anexosPendentes) {
-          await adicionarItemTexto(novoId, a.tipo, a.nome, a.conteudo);
+          try {
+            await adicionarItemTexto(novoId, a.tipo, a.nome, a.conteudo);
+          } catch (err) {
+            console.error("[base-conhecimento] erro ao anexar item pendente:", err);
+            notify(`Base criada, mas houve erro ao anexar "${a.nome}": ` + (err && err.message ? err.message : "erro inesperado"));
+          }
         }
       })();
       return;
