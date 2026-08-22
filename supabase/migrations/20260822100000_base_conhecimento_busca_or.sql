@@ -11,8 +11,23 @@
 -- termos em comum — muito mais tolerante a como a pergunta é formulada.
 --
 -- Precisa de DROP explícito: CREATE OR REPLACE não permite mudar a
--- assinatura de retorno (OUT params) de uma função já existente.
-drop function if exists public.buscar_base_conhecimento(uuid, text, text, int);
+-- assinatura de retorno (OUT params) de uma função já existente. Em vez de
+-- escrever a assinatura (uuid, text, text, int) na mão — que já não bateu
+-- com a função real no banco uma vez — apagamos qualquer função chamada
+-- buscar_base_conhecimento no schema public, não importa a assinatura exata.
+do $$
+declare
+  r record;
+begin
+  for r in
+    select p.oid::regprocedure as assinatura
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'buscar_base_conhecimento'
+  loop
+    execute format('drop function %s', r.assinatura);
+  end loop;
+end $$;
 
 create function public.buscar_base_conhecimento(
   p_medico_id uuid,
