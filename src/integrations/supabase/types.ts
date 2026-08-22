@@ -226,8 +226,11 @@ export type Database = {
           conteudo: string
           created_at: string | null
           id: string
+          medico_id: string | null
           nome_original: string | null
           ordem: number | null
+          perguntas_relacionadas: string | null
+          status: string
           tipo: string | null
           tokens_estimados: number | null
         }
@@ -236,8 +239,11 @@ export type Database = {
           conteudo: string
           created_at?: string | null
           id?: string
+          medico_id?: string | null
           nome_original?: string | null
           ordem?: number | null
+          perguntas_relacionadas?: string | null
+          status?: string
           tipo?: string | null
           tokens_estimados?: number | null
         }
@@ -246,8 +252,11 @@ export type Database = {
           conteudo?: string
           created_at?: string | null
           id?: string
+          medico_id?: string | null
           nome_original?: string | null
           ordem?: number | null
+          perguntas_relacionadas?: string | null
+          status?: string
           tipo?: string | null
           tokens_estimados?: number | null
         }
@@ -2378,6 +2387,7 @@ export type Database = {
         Returns: {
           base_nome: string
           conteudo: string
+          rank: number
         }[]
       }
       buscar_cid10: {
