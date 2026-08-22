@@ -187,6 +187,80 @@ export type Database = {
           },
         ]
       }
+      base_conhecimento: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          descricao: string
+          ias: string[] | null
+          id: string
+          medico_id: string | null
+          nome: string
+          tags: string[] | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao: string
+          ias?: string[] | null
+          id?: string
+          medico_id?: string | null
+          nome: string
+          tags?: string[] | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string
+          ias?: string[] | null
+          id?: string
+          medico_id?: string | null
+          nome?: string
+          tags?: string[] | null
+        }
+        Relationships: []
+      }
+      base_conhecimento_itens: {
+        Row: {
+          base_id: string | null
+          conteudo: string
+          created_at: string | null
+          id: string
+          nome_original: string | null
+          ordem: number | null
+          tipo: string | null
+          tokens_estimados: number | null
+        }
+        Insert: {
+          base_id?: string | null
+          conteudo: string
+          created_at?: string | null
+          id?: string
+          nome_original?: string | null
+          ordem?: number | null
+          tipo?: string | null
+          tokens_estimados?: number | null
+        }
+        Update: {
+          base_id?: string | null
+          conteudo?: string
+          created_at?: string | null
+          id?: string
+          nome_original?: string | null
+          ordem?: number | null
+          tipo?: string | null
+          tokens_estimados?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "base_conhecimento_itens_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "base_conhecimento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cid10: {
         Row: {
           codigo: string
@@ -1211,6 +1285,33 @@ export type Database = {
         }
         Relationships: []
       }
+      prompt_comandos: {
+        Row: {
+          atalho: string
+          created_at: string | null
+          ias: string[] | null
+          id: string
+          medico_id: string | null
+          texto_completo: string
+        }
+        Insert: {
+          atalho: string
+          created_at?: string | null
+          ias?: string[] | null
+          id?: string
+          medico_id?: string | null
+          texto_completo: string
+        }
+        Update: {
+          atalho?: string
+          created_at?: string | null
+          ias?: string[] | null
+          id?: string
+          medico_id?: string | null
+          texto_completo?: string
+        }
+        Relationships: []
+      }
       protocolo_acoes: {
         Row: {
           auto_restart: boolean
@@ -1692,6 +1793,7 @@ export type Database = {
       }
       questionario_respostas: {
         Row: {
+          email_verificado: boolean
           id: string
           paciente_cpf: string | null
           paciente_email: string | null
@@ -1702,6 +1804,7 @@ export type Database = {
           respondido_em: string
         }
         Insert: {
+          email_verificado?: boolean
           id?: string
           paciente_cpf?: string | null
           paciente_email?: string | null
@@ -1712,6 +1815,7 @@ export type Database = {
           respondido_em?: string
         }
         Update: {
+          email_verificado?: boolean
           id?: string
           paciente_cpf?: string | null
           paciente_email?: string | null
@@ -2262,6 +2366,18 @@ export type Database = {
           regra_id: string
           status: string
           tarefas_criadas: number
+        }[]
+      }
+      buscar_base_conhecimento: {
+        Args: {
+          p_ia: string
+          p_limit?: number
+          p_medico_id: string
+          p_mensagem: string
+        }
+        Returns: {
+          base_nome: string
+          conteudo: string
         }[]
       }
       buscar_cid10: {

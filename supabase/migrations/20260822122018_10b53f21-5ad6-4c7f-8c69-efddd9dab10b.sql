@@ -1,0 +1,1 @@
+ALTER TABLE public.questionario_respostas ADD COLUMN IF NOT EXISTS email_verificado boolean NOT NULL DEFAULT false;

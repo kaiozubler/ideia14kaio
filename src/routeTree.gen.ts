@@ -22,6 +22,10 @@ import { Route as ApiWhatsappConviteRouteImport } from './routes/api/whatsapp-co
 import { Route as ApiWhatsappWebhookRouteImport } from './routes/api/whatsapp-webhook'
 import { Route as FFormIdRouteImport } from './routes/f.$formId'
 import { Route as TTermoIdRouteImport } from './routes/t.$termoId'
+import { Route as ApiBaseConhecimentoAtalhosRouteImport } from './routes/api/base-conhecimento/atalhos'
+import { Route as ApiBaseConhecimentoBasesRouteImport } from './routes/api/base-conhecimento/bases'
+import { Route as ApiBaseConhecimentoGerarMetadadosRouteImport } from './routes/api/base-conhecimento/gerar-metadados'
+import { Route as ApiBaseConhecimentoItensRouteImport } from './routes/api/base-conhecimento/itens'
 import { Route as ApiBryCancelEnvelopeRouteImport } from './routes/api/bry/cancel-envelope'
 import { Route as ApiBryCreateEnvelopeRouteImport } from './routes/api/bry/create-envelope'
 import { Route as ApiBryDownloadDocumentRouteImport } from './routes/api/bry/download-document'
@@ -118,6 +122,30 @@ const TTermoIdRoute = TTermoIdRouteImport.update({
   path: '/t/$termoId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBaseConhecimentoAtalhosRoute =
+  ApiBaseConhecimentoAtalhosRouteImport.update({
+    id: '/api/base-conhecimento/atalhos',
+    path: '/api/base-conhecimento/atalhos',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiBaseConhecimentoBasesRoute =
+  ApiBaseConhecimentoBasesRouteImport.update({
+    id: '/api/base-conhecimento/bases',
+    path: '/api/base-conhecimento/bases',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiBaseConhecimentoGerarMetadadosRoute =
+  ApiBaseConhecimentoGerarMetadadosRouteImport.update({
+    id: '/api/base-conhecimento/gerar-metadados',
+    path: '/api/base-conhecimento/gerar-metadados',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiBaseConhecimentoItensRoute =
+  ApiBaseConhecimentoItensRouteImport.update({
+    id: '/api/base-conhecimento/itens',
+    path: '/api/base-conhecimento/itens',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiBryCancelEnvelopeRoute = ApiBryCancelEnvelopeRouteImport.update({
   id: '/api/bry/cancel-envelope',
   path: '/api/bry/cancel-envelope',
@@ -288,6 +316,10 @@ export interface FileRoutesByFullPath {
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
   '/f/$formId': typeof FFormIdRoute
   '/t/$termoId': typeof TTermoIdRoute
+  '/api/base-conhecimento/atalhos': typeof ApiBaseConhecimentoAtalhosRoute
+  '/api/base-conhecimento/bases': typeof ApiBaseConhecimentoBasesRoute
+  '/api/base-conhecimento/gerar-metadados': typeof ApiBaseConhecimentoGerarMetadadosRoute
+  '/api/base-conhecimento/itens': typeof ApiBaseConhecimentoItensRoute
   '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
@@ -332,6 +364,10 @@ export interface FileRoutesByTo {
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
   '/f/$formId': typeof FFormIdRoute
   '/t/$termoId': typeof TTermoIdRoute
+  '/api/base-conhecimento/atalhos': typeof ApiBaseConhecimentoAtalhosRoute
+  '/api/base-conhecimento/bases': typeof ApiBaseConhecimentoBasesRoute
+  '/api/base-conhecimento/gerar-metadados': typeof ApiBaseConhecimentoGerarMetadadosRoute
+  '/api/base-conhecimento/itens': typeof ApiBaseConhecimentoItensRoute
   '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
@@ -377,6 +413,10 @@ export interface FileRoutesById {
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
   '/f/$formId': typeof FFormIdRoute
   '/t/$termoId': typeof TTermoIdRoute
+  '/api/base-conhecimento/atalhos': typeof ApiBaseConhecimentoAtalhosRoute
+  '/api/base-conhecimento/bases': typeof ApiBaseConhecimentoBasesRoute
+  '/api/base-conhecimento/gerar-metadados': typeof ApiBaseConhecimentoGerarMetadadosRoute
+  '/api/base-conhecimento/itens': typeof ApiBaseConhecimentoItensRoute
   '/api/bry/cancel-envelope': typeof ApiBryCancelEnvelopeRoute
   '/api/bry/create-envelope': typeof ApiBryCreateEnvelopeRoute
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
@@ -423,6 +463,10 @@ export interface FileRouteTypes {
     | '/api/whatsapp-webhook'
     | '/f/$formId'
     | '/t/$termoId'
+    | '/api/base-conhecimento/atalhos'
+    | '/api/base-conhecimento/bases'
+    | '/api/base-conhecimento/gerar-metadados'
+    | '/api/base-conhecimento/itens'
     | '/api/bry/cancel-envelope'
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
@@ -467,6 +511,10 @@ export interface FileRouteTypes {
     | '/api/whatsapp-webhook'
     | '/f/$formId'
     | '/t/$termoId'
+    | '/api/base-conhecimento/atalhos'
+    | '/api/base-conhecimento/bases'
+    | '/api/base-conhecimento/gerar-metadados'
+    | '/api/base-conhecimento/itens'
     | '/api/bry/cancel-envelope'
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
@@ -511,6 +559,10 @@ export interface FileRouteTypes {
     | '/api/whatsapp-webhook'
     | '/f/$formId'
     | '/t/$termoId'
+    | '/api/base-conhecimento/atalhos'
+    | '/api/base-conhecimento/bases'
+    | '/api/base-conhecimento/gerar-metadados'
+    | '/api/base-conhecimento/itens'
     | '/api/bry/cancel-envelope'
     | '/api/bry/create-envelope'
     | '/api/bry/download-document'
@@ -556,6 +608,10 @@ export interface RootRouteChildren {
   ApiWhatsappWebhookRoute: typeof ApiWhatsappWebhookRoute
   FFormIdRoute: typeof FFormIdRoute
   TTermoIdRoute: typeof TTermoIdRoute
+  ApiBaseConhecimentoAtalhosRoute: typeof ApiBaseConhecimentoAtalhosRoute
+  ApiBaseConhecimentoBasesRoute: typeof ApiBaseConhecimentoBasesRoute
+  ApiBaseConhecimentoGerarMetadadosRoute: typeof ApiBaseConhecimentoGerarMetadadosRoute
+  ApiBaseConhecimentoItensRoute: typeof ApiBaseConhecimentoItensRoute
   ApiBryCancelEnvelopeRoute: typeof ApiBryCancelEnvelopeRoute
   ApiBryCreateEnvelopeRoute: typeof ApiBryCreateEnvelopeRoute
   ApiBryDownloadDocumentRoute: typeof ApiBryDownloadDocumentRoute
@@ -678,6 +734,34 @@ declare module '@tanstack/react-router' {
       path: '/t/$termoId'
       fullPath: '/t/$termoId'
       preLoaderRoute: typeof TTermoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/base-conhecimento/atalhos': {
+      id: '/api/base-conhecimento/atalhos'
+      path: '/api/base-conhecimento/atalhos'
+      fullPath: '/api/base-conhecimento/atalhos'
+      preLoaderRoute: typeof ApiBaseConhecimentoAtalhosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/base-conhecimento/bases': {
+      id: '/api/base-conhecimento/bases'
+      path: '/api/base-conhecimento/bases'
+      fullPath: '/api/base-conhecimento/bases'
+      preLoaderRoute: typeof ApiBaseConhecimentoBasesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/base-conhecimento/gerar-metadados': {
+      id: '/api/base-conhecimento/gerar-metadados'
+      path: '/api/base-conhecimento/gerar-metadados'
+      fullPath: '/api/base-conhecimento/gerar-metadados'
+      preLoaderRoute: typeof ApiBaseConhecimentoGerarMetadadosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/base-conhecimento/itens': {
+      id: '/api/base-conhecimento/itens'
+      path: '/api/base-conhecimento/itens'
+      fullPath: '/api/base-conhecimento/itens'
+      preLoaderRoute: typeof ApiBaseConhecimentoItensRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/bry/cancel-envelope': {
@@ -900,6 +984,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiWhatsappWebhookRoute: ApiWhatsappWebhookRoute,
   FFormIdRoute: FFormIdRoute,
   TTermoIdRoute: TTermoIdRoute,
+  ApiBaseConhecimentoAtalhosRoute: ApiBaseConhecimentoAtalhosRoute,
+  ApiBaseConhecimentoBasesRoute: ApiBaseConhecimentoBasesRoute,
+  ApiBaseConhecimentoGerarMetadadosRoute:
+    ApiBaseConhecimentoGerarMetadadosRoute,
+  ApiBaseConhecimentoItensRoute: ApiBaseConhecimentoItensRoute,
   ApiBryCancelEnvelopeRoute: ApiBryCancelEnvelopeRoute,
   ApiBryCreateEnvelopeRoute: ApiBryCreateEnvelopeRoute,
   ApiBryDownloadDocumentRoute: ApiBryDownloadDocumentRoute,
