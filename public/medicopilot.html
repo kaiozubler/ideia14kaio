@@ -2677,7 +2677,20 @@
                 >
                   <i class="ti ti-brain"></i>
                 </button>
-                <button class="btn sm"><i class="ti ti-dots-vertical"></i></button>
+                <div class="dropdown" id="pth-dropdown" style="position:relative">
+                  <button class="btn sm" onclick="togglePthMenu(event)" title="Mais ações">
+                    <i class="ti ti-dots-vertical"></i>
+                  </button>
+                  <div
+                    class="dropdown-menu"
+                    id="pth-menu"
+                    style="display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:120;min-width:210px;background:#fff;border:0.5px solid var(--n200);border-radius:var(--r8);box-shadow:0 12px 32px rgba(0,0,0,.12);padding:5px"
+                  >
+                    <div class="dm-item" onclick="closePthMenu();openMigrarPaciente()">
+                      <i class="ti ti-transfer-in"></i> Migrar paciente
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -4554,6 +4567,34 @@
       </div>
 
       <!-- NOVO PACIENTE -->
+      <!-- MIGRAR PACIENTE -->
+      <div class="modal" id="m-migrar-paciente" style="display:none">
+        <div class="mhd">
+          <span class="mhd-title"><i class="ti ti-transfer-in"></i> Migrar paciente</span
+          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody">
+          <div
+            style="font-size:12px;color:#92400e;background:#fffbeb;border:0.5px solid #fde68a;border-radius:var(--r8);padding:9px 11px;margin-bottom:12px"
+          >
+            Todos os dados de <b id="mig-origem-nome">—</b> (consultas, exames, documentos, agendamentos,
+            protocolos, financeiro e timeline) serão vinculados ao paciente selecionado. O cadastro atual será
+            removido após a migração.
+          </div>
+          <div class="fld">
+            <label>Buscar paciente de destino</label>
+            <input
+              type="text"
+              id="mig-busca"
+              placeholder="Nome ou CPF (mín. 3 caracteres)"
+              oninput="migBuscar(this.value)"
+              autocomplete="off"
+            />
+          </div>
+          <div id="mig-lista" style="max-height:280px;overflow:auto;margin-top:6px"></div>
+        </div>
+      </div>
+
       <div class="modal" id="m-new-patient" style="display:none">
         <div class="mhd">
           <span class="mhd-title">Novo paciente</span
@@ -7103,7 +7144,72 @@
                                                                     <button class="ib" title="Adicionar mais um parente" onclick="addParentescoRow()" style="width:28px;height:28px;border-radius:var(--r6);border:0.5px solid var(--n200);background:#fff;display:flex;align-items:center;justify-content:center"><i class="ti ti-plus" style="font-size:13px"></i></button>
                                                                   </div>
                                                                 </div>`).join('');
-                                                            }
+                                                             }
+                                                             /* ========== MIGRAR PACIENTE ========== */
+                                                             function togglePthMenu(e){
+                                                               if(e)e.stopPropagation();
+                                                               const m=document.getElementById('pth-menu');
+                                                               if(m)m.style.display=(m.style.display==='block'?'none':'block');
+                                                             }
+                                                             function closePthMenu(){
+                                                               const m=document.getElementById('pth-menu');if(m)m.style.display='none';
+                                                             }
+                                                             document.addEventListener('click',function(e){
+                                                               const dd=document.getElementById('pth-dropdown');
+                                                               if(dd&&!dd.contains(e.target))closePthMenu();
+                                                             });
+                                                             let _migTimer=null;
+                                                             function openMigrarPaciente(){
+                                                               if(!currentPatient||!currentPatient.id){
+                                                                 if(typeof toast==='function')toast('Abra um paciente primeiro');
+                                                                 return;
+                                                               }
+                                                               const nm=document.getElementById('mig-origem-nome');
+                                                               if(nm)nm.textContent=currentPatient.name||currentPatient.nome||'este paciente';
+                                                               const b=document.getElementById('mig-busca');if(b)b.value='';
+                                                               const l=document.getElementById('mig-lista');
+                                                               if(l)l.innerHTML='<div style="font-size:12px;color:var(--n400);padding:8px 2px">Digite para buscar o paciente de destino.</div>';
+                                                               openModal('migrar-paciente');
+                                                               setTimeout(()=>{if(b)b.focus();},80);
+                                                             }
+                                                             function migBuscar(termo){
+                                                               clearTimeout(_migTimer);
+                                                               _migTimer=setTimeout(()=>migBuscarNow(termo),260);
+                                                             }
+                                                             async function migBuscarNow(termo){
+                                                               const l=document.getElementById('mig-lista');
+                                                               if(!l)return;
+                                                               const t=String(termo||'').trim();
+                                                               if(t.length<3){l.innerHTML='<div style="font-size:12px;color:var(--n400);padding:8px 2px">Digite ao menos 3 caracteres.</div>';return;}
+                                                               l.innerHTML='<div style="font-size:12px;color:var(--n400);padding:8px 2px">Buscando...</div>';
+                                                               const {data,error}=await sb.rpc('buscar_pacientes',{termo:t,p_limit:20});
+                                                               const rows=(error||!Array.isArray(data)?[]:data).filter(r=>!currentPatient||r.paciente_id!==currentPatient.id);
+                                                               if(!rows.length){l.innerHTML='<div style="font-size:12px;color:var(--n400);padding:8px 2px">Nenhum paciente encontrado.</div>';return;}
+                                                               l.innerHTML=rows.map(r=>`<div onclick="migConfirmar('${r.paciente_id}',${JSON.stringify(r.name||'').replace(/"/g,'&quot;')})" style="display:flex;align-items:center;gap:9px;padding:9px 11px;border:0.5px solid var(--n200);border-radius:var(--r8);margin-bottom:6px;cursor:pointer;background:#fff"><i class="ti ti-user" style="font-size:15px;color:var(--g600)"></i><div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;color:var(--n800)">${r.name||''}</div><div style="font-size:11px;color:var(--n400)">${r.cpf?'CPF '+r.cpf:''}${r.data_nascimento?(r.cpf?' · ':'')+r.data_nascimento.split('-').reverse().join('/'):''}</div></div><i class="ti ti-chevron-right" style="color:var(--n300)"></i></div>`).join('');
+                                                             }
+                                                             async function migConfirmar(destinoId,destinoNome){
+                                                               if(!currentPatient||!currentPatient.id)return;
+                                                               const origemNome=currentPatient.name||currentPatient.nome||'paciente atual';
+                                                               if(!confirm('Migrar todos os dados de "'+origemNome+'" para "'+destinoNome+'"?\n\nO cadastro de "'+origemNome+'" será removido. Esta ação não pode ser desfeita.'))return;
+                                                               const l=document.getElementById('mig-lista');
+                                                               if(l)l.innerHTML='<div style="font-size:12px;color:var(--n400);padding:8px 2px">Migrando dados, aguarde...</div>';
+                                                               try{
+                                                                 const {data:sess}=await sb.auth.getSession();
+                                                                 const token=sess&&sess.session?sess.session.access_token:null;
+                                                                 const res=await fetch('/api/pacientes/migrar',{
+                                                                   method:'POST',
+                                                                   headers:Object.assign({'Content-Type':'application/json'},token?{Authorization:'Bearer '+token}:{}),
+                                                                   body:JSON.stringify({origem_id:currentPatient.id,destino_id:destinoId})
+                                                                 });
+                                                                 const out=await res.json().catch(()=>({}));
+                                                                 if(!res.ok||!out.ok)throw new Error(out.error||'falha');
+                                                                 closeModal();
+                                                                 if(typeof toast==='function')toast('Paciente migrado para '+destinoNome);
+                                                                 if(typeof openPatient==='function')openPatient(destinoId);
+                                                               }catch(err){
+                                                                 if(l)l.innerHTML='<div style="font-size:12px;color:#b91c1c;padding:8px 2px">Não foi possível migrar: '+(err&&err.message||'erro')+'</div>';
+                                                               }
+                                                             }
                                                             function addParentescoRow(){
                                                               _parentescos.push({nome:'',cpf:'',parentesco:'',paciente_id:null,consanguineo:true});
                                                               renderParentescos();
