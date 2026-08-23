@@ -2,7 +2,7 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>MediCopilot</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -73,7 +73,11 @@
                                                       input,textarea,select{font-family:var(--font)}
                                                       ::-webkit-scrollbar{width:4px;height:4px}
                                                       ::-webkit-scrollbar-thumb{background:var(--n200);border-radius:4px}
-                                                      .shell{display:flex;height:100vh;overflow:hidden}
+                                                      /* 100vh nao reflete corretamente a viewport no Safari/iPadOS (barra de
+                                                         ferramentas dinamica), o que corta conteudo no rodape sem permitir
+                                                         rolagem para alcanca-lo. 100dvh corrige isso; 100vh fica como fallback
+                                                         para navegadores sem suporte. */
+                                                      .shell{display:flex;height:100vh;height:100dvh;overflow:hidden}
 
                                                       /* SIDEBAR */
                                                       .sidebar{width:56px;background:var(--white);border-right:0.5px solid var(--n150);display:flex;flex-direction:column;transition:width .22s cubic-bezier(.4,0,.2,1);overflow:hidden;z-index:200;flex-shrink:0}
@@ -124,7 +128,7 @@
                                                       .avatar span{font-size:11px;font-weight:600;color:var(--g700)}
 
                                                       .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-                                                      .content{flex:1;overflow-y:auto;padding:20px}
+                                                      .content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px}
 
                                                       /* BUTTONS */
                                                       .btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--r6);font-size:12px;font-weight:500;border:0.5px solid var(--n200);background:transparent;color:var(--n600);transition:all .14s;line-height:1}
@@ -249,7 +253,7 @@
                                                       .kcol-dot.at{background:var(--g500)}
                                                       .kcol-title{font-size:12px;font-weight:600;color:var(--n700);letter-spacing:-.01em}
                                                       .kcol-ct{font-size:10.5px;color:var(--n400);background:var(--n75);padding:2px 7px;border-radius:10px;margin-left:auto}
-                                                      .kcol-body{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+                                                      .kcol-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px;display:flex;flex-direction:column;gap:8px}
                                                       .kcard{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r8);padding:10px 12px;cursor:pointer;transition:all .12s}
                                                       .kcard:hover{border-color:var(--g300);box-shadow:0 2px 6px rgba(0,0,0,.04);transform:translateY(-1px)}
                                                       .kcard-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
@@ -323,7 +327,7 @@
                                                       .tab{padding:8px 16px;font-size:12px;color:var(--n500);cursor:pointer;border:0.5px solid var(--n200);background:var(--white);border-radius:999px;transition:all .16s ease;white-space:nowrap;line-height:1}
                                                       .tab:hover{color:var(--n700);background:var(--n50);border-color:var(--n300)}
                                                       .tab.on{color:#fff;background:linear-gradient(180deg,var(--g500),var(--g600));border-color:var(--g600);font-weight:600;box-shadow:0 4px 10px -2px rgba(16,128,80,.35),0 1px 2px rgba(0,0,0,.06)}
-                                                      .tab-body{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r16,16px);padding:16px;flex:1;overflow-y:auto;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+                                                      .tab-body{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r16,16px);padding:16px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;box-shadow:0 1px 2px rgba(0,0,0,.03)}
 
                                                       /* FORM */
                                                       .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -388,12 +392,27 @@
             .adv-chat-msg.user{background:var(--g500);color:#fff;border-bottom-right-radius:3px;align-self:flex-end}
             #adv-ai-card{position:relative}
             #adv-ai-card .panel-expand{top:8px;right:8px}
-            #adv-ai-card.adv-ai-expanded{position:fixed!important;inset:0!important;z-index:100000!important;max-height:100vh!important;border:none!important;border-radius:0!important;margin:0!important}
+            #adv-ai-card.adv-ai-expanded{position:fixed!important;inset:0!important;z-index:100000!important;max-height:100vh!important;max-height:100dvh!important;border:none!important;border-radius:0!important;margin:0!important}
 
             /* NOVO ATENDIMENTO SPLIT */
                                                       .split-wrap{display:grid;grid-template-columns:1fr 1fr;gap:14px;border:none;border-radius:0;overflow:visible;flex:1;min-height:0;position:relative}
                                                       .split-left{background:transparent;border:none;border-radius:16px;display:flex;flex-direction:column;overflow:visible;position:relative;box-shadow:none;padding:4px;transition:box-shadow .2s}
                                                       .split-right{background:transparent;border:none;border-radius:16px;display:flex;flex-direction:column;overflow:visible;position:relative;box-shadow:none;padding:4px;transition:box-shadow .2s}
+
+                                                      /* TABLET/IPAD: em telas mais estreitas os dois paineis (prontuario + IA)
+                                                         ficam apertados, os botoes da barra flutuante quebram linha e passam
+                                                         a ocupar mais altura do que o espaco reservado (padding-bottom fixo),
+                                                         sobrepondo e "cortando" o conteudo visualmente sem permitir rolagem
+                                                         ate ele. Em telas <=1080px empilhamos os paineis (cada um passa a
+                                                         rolar de forma independente com altura propria) e aumentamos a
+                                                         reserva de rodape como margem de seguranca. */
+                                                      @media (max-width:1080px){
+                                                        .split-wrap{grid-template-columns:1fr;grid-template-rows:minmax(320px,1fr) minmax(320px,1fr);overflow-y:auto;-webkit-overflow-scrolling:touch}
+                                                        .split-left,.split-right{min-height:340px}
+                                                        .ai-stage{padding-bottom:170px}
+                                                        .pront-area{padding-bottom:130px}
+                                                        .left-footer .lf-actions,.ai-ctrls{flex-wrap:wrap}
+                                                      }
                                                       #atend-novo-view .split-wrap.exp-left .split-left,
                                                 #atend-novo-view .split-wrap.exp-right .split-right{
                                                   position:fixed !important;inset:0 !important;z-index:100000 !important;
@@ -431,7 +450,7 @@
                                                       .nota-personal-note{font-size:10px;color:var(--n300);margin-top:3px;font-style:italic}
 
                                                       /* FOOTER */
-                                                      .left-footer{position:absolute;left:0;right:0;bottom:0;padding:8px 14px 12px 14px;display:flex;flex-direction:column;gap:6px;background:transparent;border:none;border-radius:0;z-index:50;pointer-events:none}
+                                                      .left-footer{position:absolute;left:0;right:0;bottom:0;padding:8px 14px calc(12px + env(safe-area-inset-bottom)) 14px;display:flex;flex-direction:column;gap:6px;background:transparent;border:none;border-radius:0;z-index:50;pointer-events:none}
                                                       .left-footer > *{pointer-events:auto}
                                                       .left-footer .lf-actions{align-self:flex-start;padding:5px 8px;background:rgba(255,255,255,.7);backdrop-filter:blur(16px) saturate(180%);border:0.5px solid rgba(255,255,255,.9);border-radius:12px;box-shadow:0 8px 22px -8px rgba(15,40,60,.22),0 2px 6px rgba(0,0,0,.06),inset 0 1px 0 rgba(255,255,255,.7)}
                                                       .lf-label{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--n400)}
@@ -489,7 +508,7 @@
                                                       .pin-strip-item:last-child{border-bottom:none}
                                                       .pin-strip-item .ti{font-size:11px;color:#d97706;flex-shrink:0;margin-top:1px}
                                                       /* BUBBLES SCROLL AREA */
-                                                      .bubbles-scroll{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:8px 10px;z-index:1;position:relative}
+                                                      .bubbles-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px;padding:8px 10px;z-index:1;position:relative}
                                                       .bubbles-scroll.hidden-bbl .bbl:not(.pinned){display:none}
                                                       .bbl{max-width:82%;padding:7px 10px;border-radius:12px;font-size:11.5px;line-height:1.45;pointer-events:auto;animation:popBbl .28s cubic-bezier(.175,.885,.32,1.275) both;position:relative;display:flex;align-items:flex-start;gap:5px;flex-shrink:0}
                                                       @keyframes popBbl{from{opacity:0;transform:scale(.78) translateY(6px)}to{opacity:1;transform:scale(1) translateY(0)}}
@@ -528,7 +547,7 @@
                                                       .orb-lbl.live{color:var(--g600);font-weight:500}
 
                                                       /* AI BOTTOM */
-                                                      .ai-bottom{position:absolute;left:0;right:0;bottom:0;padding:8px 12px 12px 12px;background:transparent;border:none;border-radius:0;z-index:20;overflow:visible;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+                                                      .ai-bottom{position:absolute;left:0;right:0;bottom:0;padding:8px 12px calc(12px + env(safe-area-inset-bottom)) 12px;background:transparent;border:none;border-radius:0;z-index:20;overflow:visible;display:flex;flex-direction:column;gap:8px;pointer-events:none}
                                                       .ai-bottom > *{pointer-events:auto}
 
                                                       /* RESUMO PANEL (inline no AI) */
@@ -843,7 +862,7 @@
                                                       .mclose{width:28px;height:28px;border-radius:var(--r4);border:none;background:transparent;cursor:pointer;color:var(--n300);display:flex;align-items:center;justify-content:center}
                                                       .mclose:hover{background:var(--n100);color:var(--n600)}
                                                       .mclose .ti{font-size:15px}
-                                                      .mbody{padding:16px 18px;overflow-y:auto;flex:1}
+                                                      .mbody{padding:16px 18px;overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1}
                                                       .mfoot{padding:11px 18px;border-top:0.5px solid var(--n150);display:flex;justify-content:flex-end;gap:7px;flex-shrink:0}
                                                       .ai-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:20px;background:var(--g50);color:var(--g700);border:0.5px solid var(--g200);margin-bottom:10px}
                                                       .ai-badge .ti{font-size:11px;color:var(--g500)}
@@ -1528,6 +1547,14 @@
                                                         flex:1;
                                                         min-height:0;
                                                         overflow:hidden;
+                                                      }
+                                                      /* iPad/tablet: barra flutuante (Retomar/Anamnese/Conduta/Video) quebra
+                                                         linha nessa largura e passa a ocupar mais altura do que a reserva
+                                                         fixa de rodape, sobrepondo as ultimas mensagens sem permitir rolar
+                                                         ate elas. Reservamos mais espaco e empilhamos os paineis. */
+                                                      @media (max-width:1080px){
+                                                        #s-patient-detail #atend-novo-view .ai-stage{padding-bottom:180px}
+                                                        #s-patient-detail #atend-novo-view .pront-area{padding-bottom:140px}
                                                       }
 
                                                       /* Form fields */
@@ -2432,7 +2459,7 @@
 
         <div class="content" id="content">
           <!-- SCREEN: ATENDIMENTOS (KANBAN) -->
-          <div id="s-atendimentos" style="display:block;height:calc(100vh - 94px)">
+          <div id="s-atendimentos" style="display:block;height:calc(100vh - 94px);height:calc(100dvh - 94px)">
             <div class="atd-wrap">
               <div class="atd-bar">
                 <div class="atd-search">
@@ -2621,7 +2648,7 @@
             </div>
           </div>
 
-          <div id="s-patient-detail" style="display:none;flex-direction:column;height:calc(100vh - 94px)">
+          <div id="s-patient-detail" style="display:none;flex-direction:column;height:calc(100vh - 94px);height:calc(100dvh - 94px)">
             <!-- PRINT HEADER (only visible on print) -->
             <div id="print-header" class="print-hd">
               <h2 id="print-name">—</h2>
@@ -3449,7 +3476,7 @@
           </div>
 
           <!-- SCREEN: CONVERSAS -->
-          <div id="s-conversas" style="display:none;margin:-20px;height:calc(100vh - 54px)">
+          <div id="s-conversas" style="display:none;margin:-20px;height:calc(100vh - 54px);height:calc(100dvh - 54px)">
             <div class="cv-wrap">
               <!-- COLUNA ESQUERDA -->
               <aside class="cv-col-left">
