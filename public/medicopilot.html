@@ -8667,7 +8667,8 @@ showAtendList();
                                                               const iaCs=(window.exameIaAnalise&&window.exameIaAnalise.cadastro_sugerido)||null;
                                                               if(iaCs){
                                                                 examePayload.tuss_procedimento_id=iaCs.tuss_procedimento_id||null;
-                                                                examePayload.codigo_tuss=iaCs.codigo_tuss||null;
+                                                                // Obs: 'exames' nao tem coluna 'codigo_tuss' (ela existe em tuss_procedimentos).
+                                                                // Guardamos so o vinculo (tuss_procedimento_id) + status; o codigo e resolvido via join quando exibido.
                                                                 examePayload.status_tuss=iaCs.status_tuss||'nao_aplicavel';
                                                                 examePayload.resultado_original=iaCs.resultado_original||examePayload.resultado||null;
                                                                 examePayload.resultado_estruturado=iaCs.resultado_estruturado||null;
@@ -8894,7 +8895,7 @@ showAtendList();
                                                               if(!(idx>=0&&idx<items.length))return;
                                                               const alvo=items[idx];
                                                               const nomeOriginal=(e.nome||termo).trim();
-                                                              const {error:upErr}=await sb.from('exames').update({tuss_procedimento_id:alvo.id,codigo_tuss:alvo.codigo_tuss,nome:alvo.nome,status_tuss:'vinculado'}).eq('id',id);
+                                                              const {error:upErr}=await sb.from('exames').update({tuss_procedimento_id:alvo.id,nome:alvo.nome,status_tuss:'vinculado'}).eq('id',id);
                                                               if(upErr){showToast('Erro ao vincular: '+upErr.message,'error');return;}
                                                               await sb.from('exame_alias').upsert({user_id:currentUser.id,texto_original:nomeOriginal,tuss_procedimento_id:alvo.id},{onConflict:'user_id,texto_original'});
                                                               const i=exames.findIndex(x=>x.id===id);
