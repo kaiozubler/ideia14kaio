@@ -72,17 +72,17 @@ async function handle(request: Request) {
 
   const movidos: Record<string, number> = {};
   for (const { tabela, coluna } of TABELAS) {
-    const { data, error } = await supabaseAdmin
-      .from(tabela)
+    const { data, error } = await (supabaseAdmin.from(tabela) as any)
       .update({ [coluna]: destino_id })
       .eq(coluna, origem_id)
-      .select("*", { count: "exact", head: false });
+      .select("id");
     if (error) {
       console.error(`[pacientes/migrar] ${tabela}:`, error.message);
       return Response.json({ error: "migration_failed", tabela }, { status: 500 });
     }
     movidos[tabela] = Array.isArray(data) ? data.length : 0;
   }
+
 
   // mescla campos textuais / listas do cadastro
   const asArray = (v: unknown) => (Array.isArray(v) ? v : []);
