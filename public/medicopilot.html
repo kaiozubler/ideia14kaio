@@ -609,6 +609,66 @@
                   .ia-prev-dlbtn{display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,#34d399,#059669);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer}
                   .ia-prev-dlbtn:hover{filter:brightness(1.06)}
                   .ia-prev-dlbtn:disabled{opacity:.6;cursor:default}
+                  .ia-prev-editbtn{display:flex;align-items:center;gap:6px;background:#fff;color:var(--n700);border:1px solid var(--n200);border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer;margin-right:auto}
+                  .ia-prev-editbtn:hover{background:var(--n75)}
+                  .ia-prev-reprobtn{display:flex;align-items:center;gap:6px;background:#fff;color:#7c3aed;border:1px solid #ddd6fe;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer}
+                  .ia-prev-reprobtn:hover{background:#f5f3ff}
+                  .ia-prev-reprobtn:disabled,.ia-prev-editbtn:disabled{opacity:.55;cursor:default}
+                  .ia-prev-reprobtn i.spin,.ia-prev-editbtn i.spin{animation:spin 1s linear infinite}
+                  .ia-prev-edit{display:none;background:#fff;border:0.5px solid var(--n200);border-radius:8px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+                  .ia-prev-edit.on{display:block}
+                  .ia-prev-edit .fld{margin-bottom:12px}
+                  .ia-prev-edit .fld label{display:block;font-size:11px;font-weight:600;color:var(--n500);margin-bottom:4px;text-transform:uppercase;letter-spacing:.03em}
+                  .ia-prev-edit .fld input,.ia-prev-edit .fld textarea,.ia-prev-edit .fld select{width:100%;border:1px solid var(--n200);border-radius:7px;padding:8px 10px;font-size:12.5px;font-family:var(--font);color:#1a1a1a}
+                  .ia-prev-edit .fld textarea{resize:vertical;min-height:60px}
+                  .ia-prev-edit-item{border:1px dashed var(--n200);border-radius:8px;padding:10px;margin-bottom:8px;position:relative}
+                  .ia-prev-edit-item .rm{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;border:none;background:var(--n100);color:var(--n500);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center}
+                  .ia-prev-edit-add{display:flex;align-items:center;gap:6px;background:none;border:1px dashed var(--n300);color:var(--n600);border-radius:7px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;width:100%;justify-content:center}
+                  .ia-prev-edit-add:hover{background:var(--n75)}
+                  .ia-prev-sheet.hidden-by-edit{display:none}
+
+                  /* ============ TASK TRAY — comandos executados durante a consulta ============ */
+                  .task-tray{display:flex;align-items:center;gap:8px;margin-left:auto;position:relative;padding-left:6px}
+                  .task-tray-bubbles{display:flex;flex-direction:row-reverse;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+                  @keyframes taskFloat{
+                    0%{transform:translateY(0) rotate(0deg);}
+                    22%{transform:translateY(-3px) rotate(-1.6deg);}
+                    48%{transform:translateY(1.5px) rotate(1.1deg);}
+                    74%{transform:translateY(-2px) rotate(-0.6deg);}
+                    100%{transform:translateY(0) rotate(0deg);}
+                  }
+                  @keyframes taskPopIn{
+                    0%{transform:scale(.4) translateY(6px);opacity:0;}
+                    65%{transform:scale(1.08) translateY(-2px);opacity:1;}
+                    100%{transform:scale(1) translateY(0);opacity:1;}
+                  }
+                  @keyframes taskRingPulse{
+                    0%{box-shadow:0 0 0 0 rgba(16,185,129,.55);}
+                    100%{box-shadow:0 0 0 9px rgba(16,185,129,0);}
+                  }
+                  .task-bubble{
+                    display:flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.7);
+                    background:#fff;border-radius:999px;padding:5px 12px 5px 5px;cursor:pointer;
+                    box-shadow:0 3px 10px rgba(15,23,42,.12);
+                    animation:taskFloat 3.4s ease-in-out infinite, taskPopIn .35s cubic-bezier(.34,1.56,.64,1) both;
+                    transition:box-shadow .15s,transform .15s;
+                  }
+                  .task-bubble:hover{box-shadow:0 6px 16px rgba(15,23,42,.18);transform:translateY(-2px) scale(1.03)}
+                  .task-bubble.tb-new{animation:taskFloat 3.4s ease-in-out infinite, taskPopIn .35s cubic-bezier(.34,1.56,.64,1) both, taskRingPulse 1.1s ease-out 3}
+                  .tb-badge{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;font-size:12px}
+                  .tb-lbl{font-size:11.5px;font-weight:700;color:var(--n700);white-space:nowrap}
+                  .tb-dot{width:6px;height:6px;border-radius:50%;background:#10b981;flex-shrink:0;box-shadow:0 0 0 2px rgba(16,185,129,.25)}
+
+                  .task-tray-menu-wrap{position:relative;display:none;align-items:center}
+                  .task-tray-menu-btn{width:30px;height:30px;border-radius:50%;border:1px solid var(--n200);background:#fff;color:var(--n500);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(15,23,42,.08)}
+                  .task-tray-menu-btn:hover{background:var(--n75);color:var(--n700)}
+                  .task-tray-dropdown{display:none;position:absolute;top:36px;right:0;background:#fff;border:0.5px solid var(--n200);border-radius:10px;box-shadow:0 12px 30px -8px rgba(0,0,0,.25);min-width:190px;padding:6px;z-index:50}
+                  .task-tray-dropdown.open{display:block}
+                  .task-tray-dropdown button{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;text-align:left;padding:8px 10px;font-size:12.5px;font-weight:600;color:var(--n700);border-radius:7px;cursor:pointer}
+                  .task-tray-dropdown button:hover{background:var(--n75)}
+                  .task-tray-dropdown button.danger{color:#dc2626}
+                  .task-tray-dropdown button.danger:hover{background:#fef2f2}
+                  .task-tray-dropdown hr{border:none;border-top:1px solid var(--n150);margin:4px 2px}
 
                                                       /* EXAMES */
                                                       .exame-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
@@ -2597,6 +2657,23 @@
               <div class="tab" onclick="openTab('agenda',this)">Agenda</div>
               <div class="tab" onclick="openTab('timeline',this)">Timeline</div>
               <div class="tab" onclick="openTab('prontuario',this)">Prontuário</div>
+
+              <!-- Balões de tarefas executadas por comando de voz durante a consulta —
+                   não interrompem o médico; ficam flutuando aqui até serem abertos. -->
+              <div class="task-tray" id="task-tray">
+                <div class="task-tray-bubbles" id="task-tray-bubbles"></div>
+                <div class="task-tray-menu-wrap" id="task-tray-menu-wrap">
+                  <button class="task-tray-menu-btn" onclick="toggleTaskTrayMenu(event)" title="Ações dos comandos gerados">
+                    <i class="ti ti-dots-vertical"></i>
+                  </button>
+                  <div class="task-tray-dropdown" id="task-tray-dropdown">
+                    <button onclick="taskTrayOrganizar()"><i class="ti ti-git-merge"></i> Organizar</button>
+                    <button onclick="taskTrayEnviar()"><i class="ti ti-send"></i> Enviar ao paciente</button>
+                    <hr />
+                    <button class="danger" onclick="taskTrayExcluir()"><i class="ti ti-trash"></i> Excluir</button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- TAB CADASTRO -->
@@ -4060,8 +4137,15 @@
         </div>
         <div class="ia-prev-body">
           <div class="ia-prev-sheet" id="ia-prev-sheet"></div>
+          <div class="ia-prev-edit" id="ia-prev-edit"></div>
         </div>
         <div class="ia-prev-foot">
+          <button class="ia-prev-editbtn" id="ia-prev-editbtn" onclick="iaAssistToggleEdit()">
+            <i class="ti ti-pencil"></i> <span>Editar</span>
+          </button>
+          <button class="ia-prev-reprobtn" id="ia-prev-reprobtn" onclick="iaAssistReprocessAttachment()">
+            <i class="ti ti-refresh"></i> Reprocessar
+          </button>
           <button class="ia-prev-dlbtn" onclick="iaAssistDownloadPreview()">
             <i class="ti ti-download"></i> Baixar PDF
           </button>
@@ -9792,14 +9876,13 @@ showAtendList();
                                                                 if(!res.ok)throw new Error(await res.text());
                                                                 const data=await res.json();
                                                                 if(data&&data.action){
-                                                                  // Mesmo tratamento de ação usado pelo assistente global (abre a
-                                                                  // pré-visualização/modal do documento gerado — receita, exames, etc.)
-                                                                  const id=iaAssistRegisterAttachment(
-                                                                    data.action.type==='gerar_receita'?'receita':data.action.type==='gerar_solicitacao_exame'?'exame':'atestado',
-                                                                    data.action
-                                                                  );
-                                                                  await iaAssistOpenPreview(id);
-                                                                  queueAiPanelItem('ia',(data.reply&&data.reply.trim())||'Comando executado.');
+                                                                  // Não abrimos mais o modal na hora — isso interromperia o médico
+                                                                  // no meio da consulta. Em vez disso, o comando vira um balão
+                                                                  // flutuante no task tray; o médico abre quando quiser.
+                                                                  const kind=taskKindFromActionType(data.action.type);
+                                                                  const id=iaAssistRegisterAttachment(kind,data.action);
+                                                                  spawnTaskBubble(kind,id);
+                                                                  queueAiPanelItem('ia',(data.reply&&data.reply.trim())||'Comando executado — veja o balão no canto superior direito.');
                                                                 }else if(data&&data.reply){
                                                                   queueAiPanelItem('ia',data.reply);
                                                                 }else{
@@ -10705,6 +10788,22 @@ if(d.action){
                           return id;
                         }
 
+                        // Mapeia o "type" retornado pela IA para o "kind" visual usado no
+                        // task tray e no modal de preview.
+                        function taskKindFromActionType(type){
+                          switch(type){
+                            case 'gerar_receita': return 'receita';
+                            case 'gerar_solicitacao_exame': return 'exame';
+                            case 'gerar_atestado': return 'atestado';
+                            case 'agendar_paciente':
+                            case 'convidar_agendamento_whatsapp': return 'agendamento';
+                            case 'gerar_anamnese': return 'anamnese';
+                            case 'gerar_orientacoes': return 'orientacoes';
+                            case 'gerar_laudo': return 'laudo';
+                            default: return 'documento';
+                          }
+                        }
+
                         function iaAssistAppendAttachmentCard(attachId,title,subtitle){
                           const layer=document.getElementById('ia-assist-bubbles');if(!layer)return;
                           const card=document.createElement('div');
@@ -10916,12 +11015,43 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                       +'<div class="ia-prev-sig">Assinatura do médico responsável</div>';
                   }
 
+                  // ---- Previews genéricos para os demais tipos de tarefa do task tray ----
+                  function iaAssistBuildAgendamentoHtml(att){
+                    let linhas='';
+                    if(att.data)linhas+='<div class="ia-prev-line"><span>Data</span><span>'+iaEscHtml(att.data)+'</span></div>';
+                    if(att.hora)linhas+='<div class="ia-prev-line"><span>Horário</span><span>'+iaEscHtml(att.hora)+'</span></div>';
+                    if(att.motivo)linhas+='<div class="ia-prev-line"><span>Motivo</span><span>'+iaEscHtml(att.motivo)+'</span></div>';
+                    if(att.telefone)linhas+='<div class="ia-prev-line"><span>Contato</span><span>'+iaEscHtml(att.telefone)+'</span></div>';
+                    return '<h2>Agendamento</h2>'
+                      +'<div class="ia-prev-meta">Paciente: '+iaEscHtml(att.paciente_nome||'—')+' · '+new Date().toLocaleDateString('pt-BR')+'</div>'
+                      +(linhas||'<div class="ia-prev-line">Sem detalhes adicionais</div>');
+                  }
+                  function iaAssistBuildOrientacoesHtml(att){
+                    return '<h2>Instruções ao paciente</h2>'
+                      +'<div class="ia-prev-meta">Paciente: '+iaEscHtml(att.paciente_nome||'—')+' · '+new Date().toLocaleDateString('pt-BR')+'</div>'
+                      +'<div style="font-size:12.5px;line-height:1.6;white-space:pre-wrap">'+iaEscHtml(att.texto||att.orientacoes||'Sem conteúdo.')+'</div>';
+                  }
+                  function iaAssistBuildLaudoHtml(att){
+                    return '<h2>Laudo</h2>'
+                      +'<div class="ia-prev-meta">Paciente: '+iaEscHtml(att.paciente_nome||'—')+' · '+new Date().toLocaleDateString('pt-BR')+'</div>'
+                      +'<div style="font-size:12.5px;line-height:1.6;white-space:pre-wrap">'+iaEscHtml(att.conteudo||att.texto||'Sem conteúdo.')+'</div>'
+                      +'<div class="ia-prev-sig">Assinatura do médico responsável</div>';
+                  }
+                  function iaAssistBuildAnamneseHtml(att){
+                    return '<h2>Anamnese</h2>'
+                      +'<div class="ia-prev-meta">Paciente: '+iaEscHtml(att.paciente_nome||'—')+' · '+new Date().toLocaleDateString('pt-BR')+'</div>'
+                      +'<div style="font-size:12.5px;line-height:1.6;white-space:pre-wrap">'+iaEscHtml(att.texto||'Sem conteúdo.')+'</div>';
+                  }
+
                   async function iaAssistOpenPreview(attachId){
                     const att=window.iaAssistAttachments[attachId];if(!att)return;
                     const titleEl=document.getElementById('ia-prev-title');
                     const sheetEl=document.getElementById('ia-prev-sheet');
                     sheetEl.dataset.attachId=attachId;
                     document.getElementById('ia-prev-modal').classList.add('open');
+                    // fecha qualquer edição pendente de uma abertura anterior
+                    iaAssistSetEditMode(false);
+                    sheetEl.classList.remove('hidden-by-edit');
                     if(att.kind==='receita'){
                       titleEl.textContent='Receita médica';
                       sheetEl.style.cssText='padding:0;border:none;box-shadow:none;background:transparent';
@@ -10999,14 +11129,352 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                         scaleWrap.style.width=(794*scale)+'px';
                         scaleWrap.style.height=(trueH*scale)+'px';
                       });
+                    }else if(att.kind==='agendamento'){
+                      titleEl.textContent='Agendamento';
+                      sheetEl.style.cssText='';
+                      sheetEl.innerHTML=iaAssistBuildAgendamentoHtml(att);
+                    }else if(att.kind==='orientacoes'){
+                      titleEl.textContent='Instruções ao paciente';
+                      sheetEl.style.cssText='';
+                      sheetEl.innerHTML=iaAssistBuildOrientacoesHtml(att);
+                    }else if(att.kind==='laudo'){
+                      titleEl.textContent='Laudo';
+                      sheetEl.style.cssText='';
+                      sheetEl.innerHTML=iaAssistBuildLaudoHtml(att);
+                    }else if(att.kind==='anamnese'){
+                      titleEl.textContent='Anamnese';
+                      sheetEl.style.cssText='';
+                      sheetEl.innerHTML=iaAssistBuildAnamneseHtml(att);
                     }else{
                       titleEl.textContent=att.tipo==='declaracao'?'Declaração':'Atestado';
                       sheetEl.style.cssText='';
                       sheetEl.innerHTML=iaAssistBuildAtestadoHtml(att);
                     }
+                    // "Baixar PDF" só existe hoje para receita/exame/atestado — para os
+                    // demais tipos ainda não há gerador de PDF dedicado.
+                    const dlbtn=document.querySelector('.ia-prev-dlbtn');
+                    if(dlbtn)dlbtn.style.display=['receita','exame','atestado'].includes(att.kind)?'':'none';
                   }
                   function closeIaAssistPreview(){
                     document.getElementById('ia-prev-modal').classList.remove('open');
+                    iaAssistSetEditMode(false);
+                  }
+
+                  /* ================================================================
+                     TASK TRAY — balões flutuantes dos comandos executados na consulta
+                     ================================================================
+                     Cada balão representa um documento/ação gerada por comando de voz
+                     (executarComandoVoz). Em vez de interromper o médico abrindo o
+                     modal na hora, o comando fica sinalizado aqui; o médico abre,
+                     edita e reprocessa quando quiser, sem perder o fio da consulta. */
+
+                  const TASK_KIND_CFG={
+                    receita:     {label:'Receita',    icon:'ti-prescription',     grad:'linear-gradient(135deg,#34d399,#059669)'},
+                    atestado:    {label:'Atestado',   icon:'ti-file-certificate', grad:'linear-gradient(135deg,#fbbf24,#d97706)'},
+                    exame:       {label:'Exames',     icon:'ti-flask',            grad:'linear-gradient(135deg,#60a5fa,#2563eb)'},
+                    agendamento: {label:'Agenda',     icon:'ti-calendar-event',   grad:'linear-gradient(135deg,#a78bfa,#7c3aed)'},
+                    orientacoes: {label:'Instruções', icon:'ti-notes',            grad:'linear-gradient(135deg,#f472b6,#db2777)'},
+                    laudo:       {label:'Laudo',      icon:'ti-report-medical',   grad:'linear-gradient(135deg,#67e8f9,#0891b2)'},
+                    anamnese:    {label:'Anamnese',   icon:'ti-file-text-ai',     grad:'linear-gradient(135deg,#94a3b8,#475569)'},
+                    documento:   {label:'Documento',  icon:'ti-file',             grad:'linear-gradient(135deg,#cbd5e1,#64748b)'}
+                  };
+
+                  window.taskTray=window.taskTray||[]; // [{id, attachId, kind, createdAt}]
+
+                  function spawnTaskBubble(kind, attachId){
+                    const item={id:'tt-'+Date.now()+'-'+Math.random().toString(36).slice(2,7), attachId, kind, createdAt:Date.now()};
+                    window.taskTray.push(item);
+                    renderTaskTray();
+                    return item.id;
+                  }
+
+                  function renderTaskTray(){
+                    const bubblesEl=document.getElementById('task-tray-bubbles');
+                    const menuWrap=document.getElementById('task-tray-menu-wrap');
+                    if(!bubblesEl||!menuWrap)return;
+                    menuWrap.style.display=window.taskTray.length?'flex':'none';
+                    bubblesEl.innerHTML=window.taskTray.map(function(item){
+                      const cfg=TASK_KIND_CFG[item.kind]||TASK_KIND_CFG.documento;
+                      const isNew=(Date.now()-item.createdAt)<8000;
+                      const delay=(-(Math.random()*3)).toFixed(2);
+                      const dur=(3+Math.random()*1.4).toFixed(2);
+                      return '<button class="task-bubble'+(isNew?' tb-new':'')+'" data-task-id="'+item.id+'" '
+                        +'style="animation-delay:'+delay+'s,0s'+(isNew?',0s':'')+';animation-duration:'+dur+'s,.35s'+(isNew?',1.1s':'')+'" '
+                        +'onclick="openTaskBubble(\''+item.id+'\')" title="'+iaEscHtml(cfg.label)+' — gerado agora, clique para abrir">'
+                        +'<span class="tb-badge" style="background:'+cfg.grad+'"><i class="ti '+cfg.icon+'"></i></span>'
+                        +'<span class="tb-lbl">'+iaEscHtml(cfg.label)+'</span>'
+                        +(isNew?'<span class="tb-dot"></span>':'')
+                        +'</button>';
+                    }).join('');
+                    // remove o destaque de "novo" depois de alguns segundos
+                    window.taskTray.forEach(function(item){
+                      if((Date.now()-item.createdAt)<8000){
+                        setTimeout(renderTaskTray,8000-(Date.now()-item.createdAt));
+                      }
+                    });
+                  }
+
+                  function openTaskBubble(taskId){
+                    const item=window.taskTray.find(function(t){return t.id===taskId;});
+                    if(!item)return;
+                    iaAssistOpenPreview(item.attachId);
+                  }
+
+                  function toggleTaskTrayMenu(ev){
+                    if(ev)ev.stopPropagation();
+                    const dd=document.getElementById('task-tray-dropdown');
+                    if(!dd)return;
+                    dd.classList.toggle('open');
+                  }
+                  document.addEventListener('click',function(ev){
+                    const dd=document.getElementById('task-tray-dropdown');
+                    const wrap=document.getElementById('task-tray-menu-wrap');
+                    if(dd&&dd.classList.contains('open')&&wrap&&!wrap.contains(ev.target)){
+                      dd.classList.remove('open');
+                    }
+                  });
+
+                  // "Organizar" — funde balões do mesmo tipo em um só (ex.: duas
+                  // receitas geradas na consulta viram uma receita única).
+                  function taskTrayOrganizar(){
+                    document.getElementById('task-tray-dropdown').classList.remove('open');
+                    const byKind={};
+                    window.taskTray.forEach(function(item){ (byKind[item.kind]=byKind[item.kind]||[]).push(item); });
+                    let fundidos=0;
+                    const novaLista=[];
+                    Object.keys(byKind).forEach(function(kind){
+                      const items=byKind[kind];
+                      if(items.length<2){ novaLista.push(items[0]); return; }
+                      const atts=items.map(function(i){return window.iaAssistAttachments[i.attachId];}).filter(Boolean);
+                      const base=Object.assign({},atts[0]);
+                      if(kind==='receita'){
+                        base.medicamentos=[].concat.apply([],atts.map(function(a){return a.medicamentos||[];}));
+                      }else if(kind==='exame'){
+                        base.exames=[].concat.apply([],atts.map(function(a){return a.exames||a.itens||[];}));
+                      }else if(kind==='atestado'){
+                        base.observacao=atts.map(function(a){return a.observacao;}).filter(Boolean).join(' · ');
+                        base.dias=Math.max.apply(null,atts.map(function(a){return Number(a.dias)||0;}))||base.dias;
+                      }else{
+                        base.texto=atts.map(function(a){return a.texto||a.observacao||a.conteudo;}).filter(Boolean).join('\n\n');
+                      }
+                      base.__built=null; // força reconstrução do preview/PDF com os dados fundidos
+                      const newId=iaAssistRegisterAttachment(kind,base);
+                      const merged={id:'tt-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),attachId:newId,kind,createdAt:Date.now()};
+                      novaLista.push(merged);
+                      fundidos+=items.length;
+                    });
+                    window.taskTray=novaLista;
+                    renderTaskTray();
+                    if(typeof showToast==='function')showToast(fundidos>novaLista.length?'Documentos semelhantes organizados em um só':'Nenhum documento semelhante para organizar','success');
+                  }
+
+                  // "Enviar ao paciente" — envia todos os documentos pendentes do tray.
+                  async function taskTrayEnviar(){
+                    document.getElementById('task-tray-dropdown').classList.remove('open');
+                    if(!window.taskTray.length)return;
+                    const contato=(currentPatient&&(currentPatient.tel||currentPatient.email)||'').trim();
+                    if(!contato){
+                      if(typeof showToast==='function')showToast('Paciente sem WhatsApp/e-mail cadastrado','error');
+                      return;
+                    }
+                    let ok=0, falhas=0;
+                    for(const item of window.taskTray.slice()){
+                      const att=window.iaAssistAttachments[item.attachId];
+                      if(!att)continue;
+                      try{
+                        await fetch('/api/enviar-documento',{
+                          method:'POST',headers:{'Content-Type':'application/json'},
+                          body:JSON.stringify({
+                            tipo:item.kind,
+                            canal:currentPatient&&currentPatient.tel?'whatsapp':'email',
+                            contato,
+                            paciente:(currentPatient&&currentPatient.name)||'Paciente',
+                            dados:att
+                          })
+                        });
+                        ok++;
+                      }catch(e){ falhas++; }
+                    }
+                    window.taskTray=[];
+                    renderTaskTray();
+                    if(typeof showToast==='function')showToast(falhas?('Enviado '+ok+' — falhou '+falhas):('Documentos enviados ao paciente ('+ok+')'),falhas?'error':'success');
+                  }
+
+                  // "Excluir" — limpa o tray (com confirmação, é destrutivo).
+                  function taskTrayExcluir(){
+                    document.getElementById('task-tray-dropdown').classList.remove('open');
+                    if(!window.taskTray.length)return;
+                    if(!confirm('Excluir todos os '+window.taskTray.length+' comando(s) gerado(s) nesta consulta? Essa ação não pode ser desfeita.'))return;
+                    window.taskTray=[];
+                    renderTaskTray();
+                    if(typeof showToast==='function')showToast('Comandos excluídos','success');
+                  }
+
+                  /* ================================================================
+                     EDITAR / REPROCESSAR — dentro do modal de preview (#ia-prev-modal)
+                     ================================================================ */
+
+                  function iaAssistSetEditMode(on){
+                    const sheetEl=document.getElementById('ia-prev-sheet');
+                    const editEl=document.getElementById('ia-prev-edit');
+                    const btn=document.getElementById('ia-prev-editbtn');
+                    if(!sheetEl||!editEl||!btn)return;
+                    if(on){
+                      sheetEl.classList.add('hidden-by-edit');
+                      editEl.classList.add('on');
+                      btn.innerHTML='<i class="ti ti-device-floppy"></i> <span>Salvar edição</span>';
+                    }else{
+                      sheetEl.classList.remove('hidden-by-edit');
+                      editEl.classList.remove('on');
+                      editEl.innerHTML='';
+                      btn.innerHTML='<i class="ti ti-pencil"></i> <span>Editar</span>';
+                    }
+                  }
+
+                  function iaAssistToggleEdit(){
+                    const editEl=document.getElementById('ia-prev-edit');
+                    const sheetEl=document.getElementById('ia-prev-sheet');
+                    const att=window.iaAssistAttachments[sheetEl.dataset.attachId];
+                    if(!att)return;
+                    const editing=editEl.classList.contains('on');
+                    if(editing){
+                      iaAssistSaveEdit(att);
+                    }else{
+                      editEl.innerHTML=iaAssistBuildEditForm(att);
+                      iaAssistSetEditMode(true);
+                    }
+                  }
+
+                  function iaAssistBuildEditForm(att){
+                    if(att.kind==='receita'){
+                      const items=att.medicamentos||[];
+                      return '<div id="ia-edit-meds">'+items.map(function(m,i){
+                        return '<div class="ia-prev-edit-item" data-idx="'+i+'">'
+                          +'<button class="rm" onclick="iaEditRemoveRow(this)"><i class="ti ti-x"></i></button>'
+                          +'<div class="fld"><label>Medicamento</label><input value="'+iaEscHtml(m.nome||'')+'" data-f="nome"/></div>'
+                          +'<div class="fld"><label>Apresentação</label><input value="'+iaEscHtml(m.apresentacao||'')+'" data-f="apresentacao"/></div>'
+                          +'<div class="fld"><label>Quantidade</label><input value="'+iaEscHtml(m.quantidade||'')+'" data-f="quantidade"/></div>'
+                          +'<div class="fld"><label>Posologia</label><textarea data-f="posologia">'+iaEscHtml(m.posologia||'')+'</textarea></div>'
+                          +'</div>';
+                      }).join('')+'</div>'
+                      +'<button class="ia-prev-edit-add" onclick="iaEditAddMed()"><i class="ti ti-plus"></i> Adicionar medicamento</button>';
+                    }
+                    if(att.kind==='atestado'){
+                      return '<div class="fld"><label>Tipo</label><select data-f="tipo"><option value="atestado"'+(att.tipo!=='declaracao'?' selected':'')+'>Atestado</option><option value="declaracao"'+(att.tipo==='declaracao'?' selected':'')+'>Declaração de comparecimento</option></select></div>'
+                        +'<div class="fld"><label>Dias de afastamento</label><input type="number" min="0" value="'+iaEscHtml(att.dias||'')+'" data-f="dias"/></div>'
+                        +'<div class="fld"><label>CID</label><input value="'+iaEscHtml(att.cid||'')+'" data-f="cid"/></div>'
+                        +'<div class="fld"><label>Observação</label><textarea data-f="observacao">'+iaEscHtml(att.observacao||'')+'</textarea></div>';
+                    }
+                    if(att.kind==='agendamento'){
+                      return '<div class="fld"><label>Data</label><input value="'+iaEscHtml(att.data||'')+'" data-f="data" placeholder="dd/mm/aaaa"/></div>'
+                        +'<div class="fld"><label>Horário</label><input value="'+iaEscHtml(att.hora||'')+'" data-f="hora" placeholder="hh:mm"/></div>'
+                        +'<div class="fld"><label>Motivo</label><input value="'+iaEscHtml(att.motivo||'')+'" data-f="motivo"/></div>';
+                    }
+                    if(att.kind==='exame'){
+                      const items=att.exames||att.itens||[];
+                      return '<div id="ia-edit-exames">'+items.map(function(ex,i){
+                        const nome=typeof ex==='string'?ex:(ex.nome||'');
+                        return '<div class="ia-prev-edit-item" data-idx="'+i+'">'
+                          +'<button class="rm" onclick="iaEditRemoveRow(this)"><i class="ti ti-x"></i></button>'
+                          +'<div class="fld"><label>Exame</label><input value="'+iaEscHtml(nome)+'" data-f="nome"/></div>'
+                          +'</div>';
+                      }).join('')+'</div>'
+                      +'<button class="ia-prev-edit-add" onclick="iaEditAddExame()"><i class="ti ti-plus"></i> Adicionar exame</button>';
+                    }
+                    // orientações, laudo, anamnese, documento genérico
+                    return '<div class="fld"><label>Conteúdo</label><textarea data-f="texto" style="min-height:200px">'+iaEscHtml(att.texto||att.conteudo||att.observacao||'')+'</textarea></div>';
+                  }
+
+                  function iaEditRemoveRow(btn){ btn.closest('.ia-prev-edit-item').remove(); }
+                  function iaEditAddMed(){
+                    const wrap=document.getElementById('ia-edit-meds');if(!wrap)return;
+                    const div=document.createElement('div');
+                    div.className='ia-prev-edit-item';
+                    div.innerHTML='<button class="rm" onclick="iaEditRemoveRow(this)"><i class="ti ti-x"></i></button>'
+                      +'<div class="fld"><label>Medicamento</label><input data-f="nome"/></div>'
+                      +'<div class="fld"><label>Apresentação</label><input data-f="apresentacao"/></div>'
+                      +'<div class="fld"><label>Quantidade</label><input data-f="quantidade"/></div>'
+                      +'<div class="fld"><label>Posologia</label><textarea data-f="posologia"></textarea></div>';
+                    wrap.appendChild(div);
+                  }
+                  function iaEditAddExame(){
+                    const wrap=document.getElementById('ia-edit-exames');if(!wrap)return;
+                    const div=document.createElement('div');
+                    div.className='ia-prev-edit-item';
+                    div.innerHTML='<button class="rm" onclick="iaEditRemoveRow(this)"><i class="ti ti-x"></i></button>'
+                      +'<div class="fld"><label>Exame</label><input data-f="nome"/></div>';
+                    wrap.appendChild(div);
+                  }
+
+                  function iaAssistSaveEdit(att){
+                    const editEl=document.getElementById('ia-prev-edit');
+                    if(att.kind==='receita'){
+                      att.medicamentos=Array.from(editEl.querySelectorAll('#ia-edit-meds .ia-prev-edit-item')).map(function(row){
+                        const g=function(f){return row.querySelector('[data-f="'+f+'"]').value.trim();};
+                        return {nome:g('nome'),apresentacao:g('apresentacao'),quantidade:g('quantidade'),posologia:g('posologia')};
+                      }).filter(function(m){return m.nome;});
+                    }else if(att.kind==='exame'){
+                      att.exames=Array.from(editEl.querySelectorAll('#ia-edit-exames .ia-prev-edit-item')).map(function(row){
+                        return {nome:row.querySelector('[data-f="nome"]').value.trim()};
+                      }).filter(function(e){return e.nome;});
+                    }else if(att.kind==='atestado'){
+                      ['tipo','dias','cid','observacao'].forEach(function(f){
+                        const el=editEl.querySelector('[data-f="'+f+'"]');if(el)att[f]=el.value.trim();
+                      });
+                    }else if(att.kind==='agendamento'){
+                      ['data','hora','motivo'].forEach(function(f){
+                        const el=editEl.querySelector('[data-f="'+f+'"]');if(el)att[f]=el.value.trim();
+                      });
+                    }else{
+                      const el=editEl.querySelector('[data-f="texto"]');
+                      if(el)att.texto=el.value.trim();
+                    }
+                    att.__built=null; // invalida cache do preview/PDF para reconstruir com os novos dados
+                    const sheetEl=document.getElementById('ia-prev-sheet');
+                    iaAssistSetEditMode(false);
+                    iaAssistOpenPreview(sheetEl.dataset.attachId);
+                    if(typeof showToast==='function')showToast('Alterações salvas','success');
+                  }
+
+                  // "Reprocessar" — reenvia o documento atual para a IA revisar/melhorar,
+                  // mantendo os dados já preenchidos como contexto.
+                  async function iaAssistReprocessAttachment(){
+                    const sheetEl=document.getElementById('ia-prev-sheet');
+                    const attachId=sheetEl.dataset.attachId;
+                    const att=window.iaAssistAttachments[attachId];
+                    if(!att)return;
+                    const btn=document.getElementById('ia-prev-reprobtn');
+                    const orig=btn.innerHTML;
+                    btn.disabled=true;
+                    btn.innerHTML='<i class="ti ti-loader-2 spin"></i> Reprocessando...';
+                    try{
+                      const {kind,...dados}=att;
+                      const mensagens=[{role:'user',content:'[Reprocessamento solicitado pelo médico — revise e, se necessário, corrija/melhore os dados abaixo deste documento gerado durante a consulta, mantendo a mesma estrutura]\n'+JSON.stringify(dados)}];
+                      const res=await fetch('/api/assistente-ia',{
+                        method:'POST',headers:{'Content-Type':'application/json'},
+                        body:JSON.stringify({
+                          mode:'assistente_global',
+                          messages:mensagens,
+                          user_id:(typeof iaAssistUserId==='function')?iaAssistUserId():null,
+                          conversa_id:null,
+                          paciente_id:(currentPatient&&currentPatient.id)||null,
+                          paciente_nome:(currentPatient&&currentPatient.name)||null
+                        })
+                      });
+                      if(!res.ok)throw new Error(await res.text());
+                      const data=await res.json();
+                      if(data&&data.action){
+                        Object.assign(att,data.action);
+                      }
+                      att.__built=null;
+                      await iaAssistOpenPreview(attachId);
+                      if(typeof showToast==='function')showToast('Documento reprocessado pela IA','success');
+                    }catch(e){
+                      if(typeof showToast==='function')showToast('Erro ao reprocessar: '+(e.message||e),'error');
+                    }finally{
+                      btn.disabled=false;
+                      btn.innerHTML=orig;
+                    }
                   }
 
                   // Gera o PDF real da receita fora da tela, exatamente como openReceitaPDF já
