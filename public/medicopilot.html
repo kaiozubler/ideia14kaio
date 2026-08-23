@@ -4063,7 +4063,7 @@
                   id="ia-assist-inp"
                   type="text"
                   placeholder="Peça algo à IA ou tire uma dúvida..."
-                  onkeydown="if(event.key==='Enter')sendIaAssistMsg()"
+                  onkeydown="iaAssistInputEnter(event)"
                 />
                 <input
                   type="file"
@@ -10659,11 +10659,85 @@ async function iaAssistToggleFavorito(id,favorito){
   }catch(e){console.warn('[ia-assist] falha ao favoritar',e);}
 }
 
+function iaAssistInputEnter(event){
+  if(event.key!=='Enter') return;
+  const box=document.getElementById('ia-assist-atalho-sugestoes');
+  if(box){
+    const primeiro=box.querySelector('div');
+    if(primeiro){ primeiro.dispatchEvent(new MouseEvent('mousedown')); return; }
+  }
+  sendIaAssistMsg();
+}
 function iaAssistQuickPrompt(text){
   const inp=document.getElementById('ia-assist-inp');
   if(inp)inp.value=text;
   sendIaAssistMsg();
 }
+
+/* Autocomplete de atalhos de comando ("/algo") no input do Assistente IA.
+   Os atalhos são cadastrados na tela "Base de conhecimento" (tabela
+   prompt_comandos) — aqui só listamos e, ao escolher um, substituímos o
+   texto digitado pelo comando completo antes de enviar. */
+let _iaAssistAtalhosCache=null;
+window.iaAssistInvalidarCacheAtalhos=function(){ _iaAssistAtalhosCache=null; };
+async function iaAssistCarregarAtalhos(){
+  if(_iaAssistAtalhosCache) return _iaAssistAtalhosCache;
+  const sb=window.sb||window.__sb;
+  if(!sb) return [];
+  try{
+    const {data,error}=await sb.from('prompt_comandos').select('atalho,texto_completo,ias').order('atalho');
+    if(error){ console.error('[atalhos] erro ao carregar',error.message); return []; }
+    _iaAssistAtalhosCache=(data||[]).filter(a=>Array.isArray(a.ias)&&a.ias.includes('assistente_ai'));
+    return _iaAssistAtalhosCache;
+  }catch(e){ console.error('[atalhos] erro ao carregar',e); return []; }
+}
+function iaAssistFecharSugestoesAtalho(){
+  const el=document.getElementById('ia-assist-atalho-sugestoes');
+  if(el) el.remove();
+}
+async function iaAssistMostrarSugestoesAtalho(prefixo){
+  const todos=await iaAssistCarregarAtalhos();
+  const termo=('/'+prefixo).toLowerCase();
+  const filtrados=todos.filter(a=>a.atalho.toLowerCase().startsWith(termo));
+  iaAssistFecharSugestoesAtalho();
+  if(!filtrados.length) return;
+  const inp=document.getElementById('ia-assist-inp');
+  const wrap=inp&&inp.closest('.ai-input-row');
+  if(!inp||!wrap) return;
+  wrap.style.position='relative';
+  const box=document.createElement('div');
+  box.id='ia-assist-atalho-sugestoes';
+  box.style.cssText='position:absolute;left:0;right:0;bottom:calc(100% + 6px);background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 10px 28px rgba(15,23,42,.14);max-height:200px;overflow-y:auto;z-index:60;';
+  filtrados.slice(0,6).forEach(a=>{
+    const item=document.createElement('div');
+    item.style.cssText='padding:8px 12px;cursor:pointer;font-size:12.5px;border-bottom:1px solid #f1f5f9';
+    item.onmouseenter=()=>{item.style.background='#f8fafc'};
+    item.onmouseleave=()=>{item.style.background=''};
+    const iaEsc=(typeof iaEscHtml==='function')?iaEscHtml:(s)=>String(s??'');
+    item.innerHTML=`<div style="font-weight:700;color:#059669">${iaEsc(a.atalho)}</div><div style="color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${iaEsc(a.texto_completo)}</div>`;
+    // mousedown (não click) pra disparar antes do input perder o foco
+    item.addEventListener('mousedown',(e)=>{
+      e.preventDefault();
+      inp.value=a.texto_completo;
+      iaAssistFecharSugestoesAtalho();
+      inp.focus();
+    });
+    box.appendChild(item);
+  });
+  wrap.appendChild(box);
+}
+document.addEventListener('input',function(e){
+  if(e.target&&e.target.id==='ia-assist-inp'){
+    const m=e.target.value.match(/^\/(\S*)$/);
+    if(m) iaAssistMostrarSugestoesAtalho(m[1]);
+    else iaAssistFecharSugestoesAtalho();
+  }
+});
+document.addEventListener('click',function(e){
+  if(e.target&&e.target.id!=='ia-assist-inp'&&!e.target.closest('#ia-assist-atalho-sugestoes')){
+    iaAssistFecharSugestoesAtalho();
+  }
+});
 function spawnIaAssistBubble(type,text,fonteBaseConhecimento){
   const layer=document.getElementById('ia-assist-bubbles');if(!layer)return null;
   const html=fmtBubbleText(text);
