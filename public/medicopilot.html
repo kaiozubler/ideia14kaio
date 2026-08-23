@@ -4567,6 +4567,34 @@
       </div>
 
       <!-- NOVO PACIENTE -->
+      <!-- MIGRAR PACIENTE -->
+      <div class="modal" id="m-migrar-paciente" style="display:none">
+        <div class="mhd">
+          <span class="mhd-title"><i class="ti ti-transfer-in"></i> Migrar paciente</span
+          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody">
+          <div
+            style="font-size:12px;color:#92400e;background:#fffbeb;border:0.5px solid #fde68a;border-radius:var(--r8);padding:9px 11px;margin-bottom:12px"
+          >
+            Todos os dados de <b id="mig-origem-nome">—</b> (consultas, exames, documentos, agendamentos,
+            protocolos, financeiro e timeline) serão vinculados ao paciente selecionado. O cadastro atual será
+            removido após a migração.
+          </div>
+          <div class="fld">
+            <label>Buscar paciente de destino</label>
+            <input
+              type="text"
+              id="mig-busca"
+              placeholder="Nome ou CPF (mín. 3 caracteres)"
+              oninput="migBuscar(this.value)"
+              autocomplete="off"
+            />
+          </div>
+          <div id="mig-lista" style="max-height:280px;overflow:auto;margin-top:6px"></div>
+        </div>
+      </div>
+
       <div class="modal" id="m-new-patient" style="display:none">
         <div class="mhd">
           <span class="mhd-title">Novo paciente</span
