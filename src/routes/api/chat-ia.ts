@@ -472,7 +472,9 @@ export const Route = createFileRoute("/api/chat-ia")({
           }
           const ultimaMensagemUsuario =
             [...history].reverse().find((m) => m?.role === "user")?.content ?? "";
-          const { montarContextoBaseConhecimento } = await import("@/lib/base-conhecimento/buscar.server");
+          const { montarContextoBaseConhecimento, MARCADOR_BASE_LOCAL_USADA } = await import(
+            "@/lib/base-conhecimento/buscar.server"
+          );
           const resultadoBaseConhecimento = await montarContextoBaseConhecimento({
             medicoId,
             mensagem: ultimaMensagemUsuario,
@@ -518,16 +520,23 @@ export const Route = createFileRoute("/api/chat-ia")({
               (m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string",
             ),
           ];
-          const text = await callGateway(messages, apiKey);
+          const textoBruto = await callGateway(messages, apiKey);
+          // A busca por palavra-chave não entende contexto — ela pode achar um trecho
+          // "candidato" que na verdade não tem relação com a pergunta. Quem decide se o
+          // conteúdo é realmente relevante é a própria IA, sinalizando isso com o
+          // marcador (que removemos do texto antes de exibir).
+          const usouBaseLocal = textoBruto.includes(MARCADOR_BASE_LOCAL_USADA);
+          const text = textoBruto.replaceAll(MARCADOR_BASE_LOCAL_USADA, "").trimEnd();
           return Response.json({
             reply: text,
             analise_exame: analiseExame,
-            // Nomes das bases locais efetivamente usadas nesta resposta (vazio/ausente
-            // se nenhuma bateu) — a tela usa isso pra mostrar um selo visual, sem
-            // depender só da IA mencionar isso em texto.
-            fonte_base_conhecimento: resultadoBaseConhecimento.basesUsadas.length
-              ? resultadoBaseConhecimento.basesUsadas
-              : null,
+            // Nomes das bases locais que a IA confirmou ter usado nesta resposta (null
+            // se nenhuma, ou se a IA considerou os trechos candidatos irrelevantes) — a
+            // tela usa isso pra mostrar um selo visual.
+            fonte_base_conhecimento:
+              usouBaseLocal && resultadoBaseConhecimento.basesCandidatas.length
+                ? resultadoBaseConhecimento.basesCandidatas
+                : null,
           });
         } catch (err) {
           if (err instanceof Response) return err;

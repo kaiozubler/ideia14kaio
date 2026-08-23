@@ -1661,17 +1661,21 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
         // batem com a última mensagem. Só no canal interno (médico), não no
         // canal paciente. Ver src/lib/base-conhecimento/buscar.server.ts.
         let basesConhecimentoUsadas: string[] = [];
+        let marcadorBaseLocal: string | null = null;
         if (canal === "interno" && body.user_id) {
           const ultimaMensagemUsuario = [...history].reverse().find((m) => m.role === "user")?.content ?? "";
           if (ultimaMensagemUsuario.trim()) {
-            const { montarContextoBaseConhecimento } = await import("@/lib/base-conhecimento/buscar.server");
+            const { montarContextoBaseConhecimento, MARCADOR_BASE_LOCAL_USADA } = await import(
+              "@/lib/base-conhecimento/buscar.server"
+            );
+            marcadorBaseLocal = MARCADOR_BASE_LOCAL_USADA;
             const resultadoBaseConhecimento = await montarContextoBaseConhecimento({
               medicoId: body.user_id,
               mensagem: ultimaMensagemUsuario,
               ia: "assistente_ai",
             });
             if (resultadoBaseConhecimento.texto) messages.splice(1, 0, { role: "system", content: resultadoBaseConhecimento.texto });
-            basesConhecimentoUsadas = resultadoBaseConhecimento.basesUsadas;
+            basesConhecimentoUsadas = resultadoBaseConhecimento.basesCandidatas;
           }
         }
 
@@ -1716,7 +1720,11 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
             messages.push(msg);
             const calls = msg.tool_calls ?? [];
             if (!calls.length) {
-              const reply = (msg.content || "").trim();
+              const replyBruto = (msg.content || "").trim();
+              // A busca por palavra-chave não entende contexto — o marcador é como a
+              // própria IA confirma que o conteúdo candidato era mesmo relevante.
+              const usouBaseLocal = !!marcadorBaseLocal && replyBruto.includes(marcadorBaseLocal);
+              const reply = marcadorBaseLocal ? replyBruto.replaceAll(marcadorBaseLocal, "").trimEnd() : replyBruto;
               const conversaId =
                 canal === "paciente"
                   ? body.conversa_id || null
@@ -1726,10 +1734,10 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
                 action: pendingAction.value,
                 conversa_id: conversaId,
                 analise_exame: analiseExame,
-                // Nomes das bases locais efetivamente usadas nesta resposta (null se
-                // nenhuma bateu) — a tela usa isso pra mostrar um selo visual, sem
-                // depender só da IA mencionar isso em texto.
-                fonte_base_conhecimento: basesConhecimentoUsadas.length ? basesConhecimentoUsadas : null,
+                // Nomes das bases locais que a IA confirmou ter usado nesta resposta
+                // (null se nenhuma, ou se ela considerou os trechos candidatos
+                // irrelevantes) — a tela usa isso pra mostrar um selo visual.
+                fonte_base_conhecimento: usouBaseLocal && basesConhecimentoUsadas.length ? basesConhecimentoUsadas : null,
               });
             }
             for (const call of calls) {
