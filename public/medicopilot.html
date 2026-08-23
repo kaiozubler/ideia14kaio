@@ -2168,6 +2168,35 @@
       .cop-chk.cop-off{opacity:.45;pointer-events:none}
       .cop-note{margin-top:10px;border-radius:14px;padding:10px 13px;font-size:11px;line-height:1.6}
       .cop-note.amber{background:#fffbeb;border:0.5px solid #fde68a;color:#92400e}
+      .cop-note.blue{background:#eff6ff;border:0.5px solid #bfdbfe;color:#1e40af}
+      /* ===== COPILOTO — AUTOMAÇÃO POR COMANDO DE VOZ ===== */
+      .cv-info{display:flex;align-items:flex-start;gap:8px}
+      .cv-info i{font-size:14px;color:#3b82f6;margin-top:1px;flex-shrink:0}
+      .cv-badge{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:#4f46e5;background:#eef2ff;border:0.5px solid #c7d2fe;border-radius:999px;padding:3px 9px;margin-top:6px}
+      .cv-badge i{font-size:12px}
+      .cv-rules{display:flex;flex-direction:column;gap:10px}
+      .cv-empty{font-size:11.5px;color:var(--n400);font-style:italic;padding:2px 2px 2px}
+      .cv-rule{border:0.5px solid var(--n150);border-radius:14px;background:rgba(255,255,255,.65);padding:12px 12px}
+      .cv-rule-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+      .cv-kw-input{flex:1 1 210px;min-width:170px;height:34px;border:0.5px solid var(--n200);border-radius:var(--r6);padding:0 12px;font-size:12.5px;color:var(--n700);background:var(--n50);outline:none;transition:border-color .14s,background .14s}
+      .cv-kw-input:focus{border-color:#7c3aed;background:#fff}
+      .cv-select{height:34px;border:0.5px solid var(--n200);border-radius:var(--r6);padding:0 9px;font-size:12px;color:var(--n700);background:var(--n50);outline:none;transition:border-color .14s,background .14s;max-width:210px}
+      .cv-select:focus{border-color:#7c3aed;background:#fff}
+      .cv-ib{width:30px;height:30px;border-radius:var(--r6);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:0.5px solid var(--n200);background:#fff;color:var(--n500);cursor:pointer;transition:all .14s}
+      .cv-ib:hover{border-color:var(--n300);color:var(--n700)}
+      .cv-ib.branch{border-color:#ddd6fe;color:#7c3aed;background:#faf5ff}
+      .cv-ib.branch:hover{border-color:#7c3aed}
+      .cv-ib.add{color:#4f46e5}
+      .cv-ib.add:hover{border-color:#4f46e5;background:#eef2ff}
+      .cv-ib.del{border-color:#fecaca;color:#b91c1c;background:#fef2f2}
+      .cv-ib.del:hover{border-color:#dc2626;background:#fee2e2}
+      .cv-branch-wrap{margin-top:9px;padding-left:24px;display:flex;flex-direction:column;gap:6px}
+      .cv-branch-row{display:flex;align-items:center;gap:7px}
+      .cv-branch-row .ti-corner-down-right{font-size:14px;color:var(--n300);flex-shrink:0}
+      .cv-branch-input{flex:1;height:30px;border:0.5px solid var(--n200);border-radius:var(--r6);padding:0 10px;font-size:11.5px;color:var(--n700);background:var(--n50);outline:none}
+      .cv-branch-input:focus{border-color:#7c3aed;background:#fff}
+      .cv-branch-x{width:24px;height:24px;border-radius:var(--r6);display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:#b91c1c;cursor:pointer;flex-shrink:0}
+      .cv-branch-x:hover{background:#fef2f2}
       /* ---- Login Liquid Glass ---- */
       .lg-blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;pointer-events:none}
       .lg-blob-a{width:420px;height:420px;left:-90px;top:-80px;background:radial-gradient(circle,#7ee7b0,transparent 70%)}
@@ -3971,6 +4000,46 @@
                       automaticamente. Se confirmado, a IA envia uma mensagem ao paciente para combinar o agendamento.
                     </div>
                   </div>
+                </div>
+              </div>
+
+              <!-- AUTOMAÇÃO POR COMANDO DE VOZ -->
+              <div class="cop-card">
+                <div class="cop-card-hd">
+                  <div class="cop-ico-box sm" style="background:linear-gradient(135deg,#818cf8,#4f46e5)">
+                    <i class="ti ti-microphone-2"></i>
+                  </div>
+                  <div style="flex:1">
+                    <div class="cop-card-title">
+                      Automação por comando de voz
+                      <i class="ti ti-info-circle" style="font-size:12px;color:var(--n400);cursor:help;margin-left:2px"
+                         title="Configure palavras ditas durante o atendimento para disparar ações do copiloto automaticamente, sem precisar clicar em nada."></i>
+                    </div>
+                    <div class="cop-card-desc">Diga uma palavra-chave durante a consulta e o copiloto executa a ação vinculada a ela.</div>
+                    <div class="cv-badge" title="A cada 2 segundos o sistema reavalia os últimos 15 segundos de fala em busca de palavras-chave configuradas.">
+                      <i class="ti ti-refresh"></i> Verifica a cada 2s · janela de 15s retroativos
+                    </div>
+                  </div>
+                  <input type="checkbox" id="cop-voice-enabled" role="switch" class="cop-switch" style="accent-color:#4f46e5"
+                         onchange="updateCopVoiceEnabledState()" title="Ativar/desativar automação por comando de voz" />
+                </div>
+
+                <div id="cop-voice-body" class="cop-card-body">
+                  <div class="cop-sep"></div>
+
+                  <div class="cop-note blue cv-info">
+                    <i class="ti ti-bulb"></i>
+                    <span>
+                      As palavras-chave são reconhecidas de forma <strong>exata</strong> (sem variações). Use o ícone de
+                      ramificação <i class="ti ti-subtask" style="font-size:11px;color:#7c3aed"></i> para exigir uma ou mais
+                      palavras <strong>condicionantes</strong> — ex: a palavra <strong>"Agendar"</strong> com o condicionante
+                      <strong>"WhatsApp"</strong> só dispara o comando se as duas forem ditas dentro da mesma janela de 15
+                      segundos. Uma frase inteira também pode ser usada como palavra-chave única e não aceita variação,
+                      ex: <strong>"farei uma receita"</strong>.
+                    </span>
+                  </div>
+
+                  <div id="cv-rules" class="cv-rules"></div>
                 </div>
               </div>
 
@@ -6475,6 +6544,7 @@
                                                               const lbl=document.getElementById('cop-freq-lbl');lbl.textContent=f.value+'min';
                                                               f.oninput=()=>lbl.textContent=f.value+'min';
                                                               updateCopTipoHint();updateCopEnabledState();
+                                                              loadCopVoiceCfg();
                                                             }
                                                             function saveCopilotoCfg(){
                                                               const chk=id=>!!document.getElementById(id)?.checked;
@@ -6493,9 +6563,266 @@
                                                               };
                                                               localStorage.setItem('copilotoCfg',JSON.stringify(cfg));
                                                               applyCopilotoCfgToUI();
+                                                              saveCopVoiceCfg();
                                                               const chip=document.getElementById('cop-saved-chip');
                                                               if(chip){chip.style.display='inline-flex';setTimeout(()=>{chip.style.display='none';},2200);}
-                                                              if(typeof toast==='function')toast('Configurações salvas');
+                                                              if(typeof showToast==='function')showToast('Configurações salvas','success');
+                                                            }
+
+                                                            /* ========== AUTOMAÇÃO POR COMANDO DE VOZ ========== */
+                                                            // Estrutura de configuração: cada regra tem uma palavra-chave principal
+                                                            // (exata), uma lista de palavras condicionantes (todas precisam ocorrer
+                                                            // dentro da mesma janela retroativa para o comando disparar), a ação
+                                                            // vinculada e o modo de execução (executar / pedir confirmação / gerar
+                                                            // pendência). A implementação de cada ação em si (gerar receita, enviar
+                                                            // mensagem etc.) será feita em uma próxima etapa — aqui apenas o
+                                                            // cadastro das regras e o motor de gatilho (varredura a cada 2s, janela
+                                                            // de 15s) já ficam funcionando.
+                                                            const COP_VOICE_ACTIONS=[
+                                                              {value:'gerar_receita',label:'Gerar receita'},
+                                                              {value:'enviar_receita',label:'Enviar receita'},
+                                                              {value:'gerar_atestado',label:'Gerar atestado'},
+                                                              {value:'enviar_atestado',label:'Enviar atestado'},
+                                                              {value:'agendar_paciente',label:'Agendar paciente'},
+                                                              {value:'enviar_msg_agendamento',label:'Enviar mensagem de novo agendamento'},
+                                                              {value:'responder_pergunta',label:'Responder pergunta'},
+                                                              {value:'fazer_pesquisa',label:'Fazer pesquisa'},
+                                                              {value:'analise_ia',label:'Análise pela IA'},
+                                                            ];
+                                                            const COP_VOICE_ACTION_LABELS=Object.fromEntries(COP_VOICE_ACTIONS.map(a=>[a.value,a.label]));
+                                                            const COP_VOICE_WINDOW_MS=15000; // janela retroativa de busca
+                                                            const COP_VOICE_SCAN_MS=2000;    // frequência de varredura
+
+                                                            let _copVoiceRules=[];
+                                                            function _cvNewId(){return 'cv'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+                                                            function _cvEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+                                                            function _cvNorm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();}
+
+                                                            function getCopVoiceCfg(){
+                                                              let cfg={};try{cfg=JSON.parse(localStorage.getItem('copVoiceCfg')||'{}');}catch(e){}
+                                                              return {
+                                                                enabled: cfg.enabled===true, // desativado por padrão
+                                                                rules: Array.isArray(cfg.rules)?cfg.rules:[],
+                                                              };
+                                                            }
+                                                            function loadCopVoiceCfg(){
+                                                              const en=document.getElementById('cop-voice-enabled');
+                                                              if(!en)return;
+                                                              const cfg=getCopVoiceCfg();
+                                                              en.checked=cfg.enabled;
+                                                              _copVoiceRules=(cfg.rules||[]).map(r=>({
+                                                                id:r.id||_cvNewId(),
+                                                                keyword:r.keyword||'',
+                                                                branches:Array.isArray(r.branches)?r.branches.slice():[],
+                                                                action:r.action||'',
+                                                                exec:r.exec||'executar',
+                                                              }));
+                                                              renderCopVoiceRules();
+                                                              updateCopVoiceEnabledState();
+                                                            }
+                                                            function saveCopVoiceCfg(){
+                                                              const en=document.getElementById('cop-voice-enabled');
+                                                              if(!en)return;
+                                                              const cfg={
+                                                                enabled:!!en.checked,
+                                                                rules:_copVoiceRules
+                                                                  .map(r=>({
+                                                                    id:r.id,
+                                                                    keyword:(r.keyword||'').trim(),
+                                                                    branches:(r.branches||[]).map(b=>(b||'').trim()).filter(Boolean),
+                                                                    action:r.action||'',
+                                                                    exec:r.exec||'executar',
+                                                                  }))
+                                                                  .filter(r=>r.keyword),
+                                                              };
+                                                              localStorage.setItem('copVoiceCfg',JSON.stringify(cfg));
+                                                              applyCopVoiceScannerState();
+                                                            }
+                                                            function updateCopVoiceEnabledState(){
+                                                              const en=document.getElementById('cop-voice-enabled');
+                                                              const body=document.getElementById('cop-voice-body');
+                                                              if(!en||!body)return;
+                                                              body.classList.toggle('cop-off',!en.checked);
+                                                            }
+
+                                                            function _cvRuleTpl(r){
+                                                              const has=String(r.keyword||'').trim().length>0;
+                                                              const actionsHtml=COP_VOICE_ACTIONS.map(a=>`<option value="${a.value}"${r.action===a.value?' selected':''}>${a.label}</option>`).join('');
+                                                              const branches=Array.isArray(r.branches)?r.branches:[];
+                                                              const branchesHtml=branches.map((b,bi)=>`
+                                                                <div class="cv-branch-row">
+                                                                  <i class="ti ti-corner-down-right"></i>
+                                                                  <input type="text" class="cv-branch-input" id="cv-branch-${r.id}-${bi}"
+                                                                    placeholder="Palavra-chave condicionante (ex: WhatsApp)" value="${_cvEsc(b)}"
+                                                                    oninput="copVoiceBranchInput('${r.id}',${bi},this.value)" />
+                                                                  <button type="button" class="cv-branch-x" title="Remover condicionante" onclick="removeCopVoiceBranch('${r.id}',${bi})">
+                                                                    <i class="ti ti-x"></i>
+                                                                  </button>
+                                                                </div>`).join('');
+                                                              return `
+                                                              <div class="cv-rule">
+                                                                <div class="cv-rule-row">
+                                                                  <input type="text" class="cv-kw-input" id="cv-kw-${r.id}"
+                                                                    placeholder='Palavra-chave exata (ex: "Agendar" ou "farei uma receita")'
+                                                                    value="${_cvEsc(r.keyword)}" oninput="copVoiceKeywordInput('${r.id}',this.value)" />
+                                                                  <button type="button" class="cv-ib branch" id="cv-branch-btn-${r.id}"
+                                                                    title="Adicionar palavra-chave condicionante (precisa ocorrer junto, na mesma janela de 15s)"
+                                                                    style="display:${has?'flex':'none'}" onclick="addCopVoiceBranch('${r.id}')">
+                                                                    <i class="ti ti-subtask"></i>
+                                                                  </button>
+                                                                  <span id="cv-action-wrap-${r.id}" style="display:${has?'inline-flex':'none'}">
+                                                                    <select class="cv-select" id="cv-action-${r.id}" onchange="copVoiceActionChange('${r.id}',this.value)">
+                                                                      <option value="">Ação ao detectar...</option>
+                                                                      ${actionsHtml}
+                                                                    </select>
+                                                                  </span>
+                                                                  <span id="cv-exec-wrap-${r.id}" style="display:${r.action?'inline-flex':'none'}">
+                                                                    <select class="cv-select" id="cv-exec-${r.id}" onchange="copVoiceExecChange('${r.id}',this.value)"
+                                                                      title="Executar: dispara direto. Pedir confirmação: aguarda o médico confirmar. Gerar pendência: registra para revisão posterior.">
+                                                                      <option value="executar"${r.exec==='executar'?' selected':''}>Executar</option>
+                                                                      <option value="confirmar"${r.exec==='confirmar'?' selected':''}>Pedir confirmação</option>
+                                                                      <option value="pendencia"${r.exec==='pendencia'?' selected':''}>Gerar pendência</option>
+                                                                    </select>
+                                                                  </span>
+                                                                  <button type="button" class="cv-ib add" title="Adicionar novo comando" onclick="addCopVoiceRule()">
+                                                                    <i class="ti ti-plus"></i>
+                                                                  </button>
+                                                                  <button type="button" class="cv-ib del" title="Excluir comando" onclick="removeCopVoiceRule('${r.id}')">
+                                                                    <i class="ti ti-trash"></i>
+                                                                  </button>
+                                                                </div>
+                                                                ${branches.length?`<div class="cv-branch-wrap">${branchesHtml}</div>`:''}
+                                                              </div>`;
+                                                            }
+                                                            function renderCopVoiceRules(){
+                                                              const box=document.getElementById('cv-rules');
+                                                              if(!box)return;
+                                                              if(!_copVoiceRules.length){
+                                                                box.innerHTML='<div class="cv-empty">Nenhum comando de voz configurado ainda.</div>'
+                                                                  +'<button type="button" class="cv-ib add" style="width:auto;padding:0 12px;gap:6px;font-size:12px;font-weight:600" onclick="addCopVoiceRule()">'
+                                                                  +'<i class="ti ti-plus"></i> Adicionar comando</button>';
+                                                                return;
+                                                              }
+                                                              box.innerHTML=_copVoiceRules.map(_cvRuleTpl).join('');
+                                                            }
+                                                            function addCopVoiceRule(){
+                                                              const r={id:_cvNewId(),keyword:'',branches:[],action:'',exec:'executar'};
+                                                              _copVoiceRules.push(r);
+                                                              renderCopVoiceRules();
+                                                              const el=document.getElementById('cv-kw-'+r.id);
+                                                              if(el)el.focus();
+                                                            }
+                                                            function removeCopVoiceRule(id){
+                                                              _copVoiceRules=_copVoiceRules.filter(r=>r.id!==id);
+                                                              renderCopVoiceRules();
+                                                            }
+                                                            function addCopVoiceBranch(id){
+                                                              const r=_copVoiceRules.find(x=>x.id===id);if(!r)return;
+                                                              if(!Array.isArray(r.branches))r.branches=[];
+                                                              r.branches.push('');
+                                                              renderCopVoiceRules();
+                                                              const idx=r.branches.length-1;
+                                                              const el=document.getElementById('cv-branch-'+id+'-'+idx);
+                                                              if(el)el.focus();
+                                                            }
+                                                            function removeCopVoiceBranch(id,idx){
+                                                              const r=_copVoiceRules.find(x=>x.id===id);if(!r)return;
+                                                              r.branches.splice(idx,1);
+                                                              renderCopVoiceRules();
+                                                            }
+                                                            function copVoiceKeywordInput(id,value){
+                                                              const r=_copVoiceRules.find(x=>x.id===id);if(!r)return;
+                                                              r.keyword=value;
+                                                              const has=value.trim().length>0;
+                                                              const bBtn=document.getElementById('cv-branch-btn-'+id);if(bBtn)bBtn.style.display=has?'flex':'none';
+                                                              const aWrap=document.getElementById('cv-action-wrap-'+id);if(aWrap)aWrap.style.display=has?'inline-flex':'none';
+                                                              if(!has){
+                                                                const eWrap=document.getElementById('cv-exec-wrap-'+id);if(eWrap)eWrap.style.display='none';
+                                                              }
+                                                            }
+                                                            function copVoiceActionChange(id,value){
+                                                              const r=_copVoiceRules.find(x=>x.id===id);if(!r)return;
+                                                              r.action=value;
+                                                              const eWrap=document.getElementById('cv-exec-wrap-'+id);if(eWrap)eWrap.style.display=value?'inline-flex':'none';
+                                                            }
+                                                            function copVoiceExecChange(id,value){
+                                                              const r=_copVoiceRules.find(x=>x.id===id);if(r)r.exec=value;
+                                                            }
+                                                            function copVoiceBranchInput(id,idx,value){
+                                                              const r=_copVoiceRules.find(x=>x.id===id);if(!r||r.branches[idx]===undefined)return;
+                                                              r.branches[idx]=value;
+                                                            }
+
+                                                            /* ---- Motor de gatilho: varre a cada 2s a janela de 15s retroativos ---- */
+                                                            let copVoiceScanTimer=null;
+                                                            let _copVoiceLastFired={};
+                                                            let copVoicePendencias=[];
+
+                                                            function applyCopVoiceScannerState(){
+                                                              // Reavalia se o motor deve estar rodando (chamado ao salvar config
+                                                              // e nas transições de início/pausa/retomada da gravação).
+                                                              if(typeof listening!=='undefined'&&listening){
+                                                                startCopVoiceScanner();
+                                                              } else {
+                                                                stopCopVoiceScanner();
+                                                              }
+                                                            }
+                                                            function startCopVoiceScanner(){
+                                                              stopCopVoiceScanner();
+                                                              const cfg=getCopVoiceCfg();
+                                                              if(!cfg.enabled||!cfg.rules.length)return;
+                                                              copVoiceScanTimer=setInterval(()=>{
+                                                                if(typeof listening==='undefined'||!listening)return;
+                                                                scanCopVoiceCommands();
+                                                              },COP_VOICE_SCAN_MS);
+                                                            }
+                                                            function stopCopVoiceScanner(){
+                                                              if(copVoiceScanTimer){clearInterval(copVoiceScanTimer);copVoiceScanTimer=null;}
+                                                            }
+                                                            function scanCopVoiceCommands(){
+                                                              const cfg=getCopVoiceCfg();
+                                                              if(!cfg.enabled||!cfg.rules.length)return;
+                                                              if(typeof transcriptTimeline==='undefined')return;
+                                                              const now=Date.now();
+                                                              const recent=transcriptTimeline.filter(e=>now-e.ts<=COP_VOICE_WINDOW_MS);
+                                                              if(!recent.length)return;
+                                                              const haystack=_cvNorm(recent.map(e=>e.text).join(' \n '));
+                                                              if(!haystack)return;
+                                                              cfg.rules.forEach(rule=>{
+                                                                const kw=_cvNorm(rule.keyword);
+                                                                if(!kw||!haystack.includes(kw))return;
+                                                                const branches=(rule.branches||[]).map(_cvNorm).filter(Boolean);
+                                                                if(!branches.every(b=>haystack.includes(b)))return;
+                                                                // evita disparar repetidamente a mesma regra enquanto a fala que
+                                                                // originou o match ainda estiver dentro da janela retroativa
+                                                                const last=_copVoiceLastFired[rule.id]||0;
+                                                                if(now-last<COP_VOICE_WINDOW_MS)return;
+                                                                _copVoiceLastFired[rule.id]=now;
+                                                                fireCopVoiceCommand(rule);
+                                                              });
+                                                            }
+                                                            function fireCopVoiceCommand(rule){
+                                                              const label=COP_VOICE_ACTION_LABELS[rule.action]||rule.action||'Ação';
+                                                              const kwLabel=[rule.keyword].concat(rule.branches||[]).filter(Boolean).join(' + ');
+                                                              if(rule.exec==='confirmar'){
+                                                                if(typeof showToast==='function')showToast('Comando de voz detectado: "'+kwLabel+'" → '+label+' (aguardando confirmação do médico)','info');
+                                                                // A UI de confirmação (aceitar/recusar) será implementada na próxima etapa.
+                                                              } else if(rule.exec==='pendencia'){
+                                                                copVoicePendencias.push({id:_cvNewId(),ts:Date.now(),keyword:kwLabel,action:rule.action,label:label});
+                                                                if(typeof showToast==='function')showToast('Pendência gerada por voz: '+label,'success');
+                                                                // A listagem dessas pendências será implementada na próxima etapa.
+                                                              } else {
+                                                                if(typeof showToast==='function')showToast('Comando de voz disparado: "'+kwLabel+'" → '+label,'success');
+                                                                // A execução de cada ação (gerar receita, enviar mensagem etc.) será implementada na próxima etapa.
+                                                                if(typeof executeCopVoiceAction==='function')executeCopVoiceAction(rule);
+                                                              }
+                                                            }
+                                                            function executeCopVoiceAction(rule){
+                                                              // Placeholder — cada ação (gerar receita, enviar receita, gerar/enviar
+                                                              // atestado, agendar paciente, enviar mensagem de agendamento,
+                                                              // responder pergunta, fazer pesquisa, análise pela IA) será
+                                                              // implementada na próxima etapa.
+                                                              console.log('[copiloto-voz] executar (stub):',rule.action,rule);
                                                             }
                                                             /* Reflete o estado do copiloto no atendimento: sem copiloto, o painel da IA
                                                                (chat_ia) sai da tela e o prontuário ocupa a largura inteira. */
@@ -9808,6 +10135,7 @@ showAtendList();
                                                               setSugestaoExecutarVisibility(false);
                                                               clearAiSuggestionQueue();
                                                               stopCopilotoLoop();
+                                                              stopCopVoiceScanner();_copVoiceLastFired={};
                                                               copTranscriptCursor=0;copLastSummary='';copFirstRun=true;copBusy=false;
                                                               const bl=document.getElementById('bubbles-layer');
                                                               if(bl){
@@ -9891,6 +10219,7 @@ showAtendList();
                                                                 const ph=document.getElementById('orb-center-placeholder');
                                                                 if(ph){ph.style.transition='opacity .4s';ph.style.opacity='0.35';ph.style.pointerEvents='none';}
                                                                 startCopilotoLoop();
+                                                                startCopVoiceScanner();
                                                               }else if(listening&&!aiPaused){
                                                                 listening=false;aiPaused=true;
                                                                 clearInterval(transcriptInterval);
@@ -9900,6 +10229,7 @@ showAtendList();
                                                                 const lbl=document.getElementById('trans-lbl');if(lbl){lbl.textContent='Pausado — histórico preservado';lbl.className='trans-lbl';}
                                                                 addTranscriptLine('[ Gravação pausada ]');
                                                                 stopCopilotoLoop();
+                                                                stopCopVoiceScanner();
                                                               }else if(!listening&&aiPaused){
                                                                 listening=true;aiPaused=false;
                                                                 setOrbState('listening');setListenBtnState('listening');
@@ -9914,6 +10244,7 @@ showAtendList();
                                                                 }
                                                                 addTranscriptLine('[ Gravação retomada ]');
                                                                 startCopilotoLoop();
+                                                                startCopVoiceScanner();
                                                               }
                                                             }
                                                             function pauseAI(){toggleListen();}
