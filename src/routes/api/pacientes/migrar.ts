@@ -72,7 +72,9 @@ async function handle(request: Request) {
 
   const movidos: Record<string, number> = {};
   for (const { tabela, coluna } of TABELAS) {
-    const { data, error } = await (supabaseAdmin.from(tabela) as any)
+    const admin = supabaseAdmin as unknown as { from: (t: string) => any };
+    const { data, error } = await admin
+      .from(tabela)
       .update({ [coluna]: destino_id })
       .eq(coluna, origem_id)
       .select("id");
