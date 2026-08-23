@@ -2677,7 +2677,20 @@
                 >
                   <i class="ti ti-brain"></i>
                 </button>
-                <button class="btn sm"><i class="ti ti-dots-vertical"></i></button>
+                <div class="dropdown" id="pth-dropdown" style="position:relative">
+                  <button class="btn sm" onclick="togglePthMenu(event)" title="Mais ações">
+                    <i class="ti ti-dots-vertical"></i>
+                  </button>
+                  <div
+                    class="dropdown-menu"
+                    id="pth-menu"
+                    style="display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:120;min-width:210px;background:#fff;border:0.5px solid var(--n200);border-radius:var(--r8);box-shadow:0 12px 32px rgba(0,0,0,.12);padding:5px"
+                  >
+                    <div class="dm-item" onclick="closePthMenu();openMigrarPaciente()">
+                      <i class="ti ti-transfer-in"></i> Migrar paciente
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
