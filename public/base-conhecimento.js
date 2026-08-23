@@ -190,6 +190,7 @@
     }
     S.creatingAtalho = false;
     notify("Atalho criado");
+    if (typeof window.iaAssistInvalidarCacheAtalhos === "function") window.iaAssistInvalidarCacheAtalhos();
     await load();
   }
 
@@ -198,6 +199,7 @@
     const { error } = await sb.from("prompt_comandos").delete().eq("id", id);
     if (error) { console.error(error.message); return; }
     notify("Atalho removido");
+    if (typeof window.iaAssistInvalidarCacheAtalhos === "function") window.iaAssistInvalidarCacheAtalhos();
     await load();
   }
 
