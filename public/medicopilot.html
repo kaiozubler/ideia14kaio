@@ -2111,6 +2111,15 @@
       .cop-chk.cop-off{opacity:.45;pointer-events:none}
       .cop-note{margin-top:10px;border-radius:14px;padding:10px 13px;font-size:11px;line-height:1.6}
       .cop-note.amber{background:#fffbeb;border:0.5px solid #fde68a;color:#92400e}
+      .cop-kw-wrap{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+      .cop-kw-tag{display:flex;align-items:center;gap:6px;background:#eef2ff;border:0.5px solid #c7d2fe;color:#4338ca;font-size:12px;font-weight:600;padding:5px 6px 5px 12px;border-radius:999px}
+      .cop-kw-tag button{width:16px;height:16px;border-radius:50%;border:none;background:rgba(67,56,202,.12);color:#4338ca;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:10px;flex-shrink:0}
+      .cop-kw-tag button:hover{background:rgba(67,56,202,.22)}
+      .cop-kw-addrow{display:flex;gap:8px}
+      .cop-kw-addrow input{flex:1;border:1px solid var(--n200);border-radius:8px;padding:8px 11px;font-size:12.5px;font-family:var(--font)}
+      .cop-kw-addrow button{background:linear-gradient(135deg,#818cf8,#4f46e5);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+      .cop-kw-addrow button:hover{filter:brightness(1.06)}
+      .cop-kw-empty{font-size:11.5px;color:var(--n400);font-style:italic;margin-bottom:6px}
       /* ---- Login Liquid Glass ---- */
       .lg-blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;pointer-events:none}
       .lg-blob-a{width:420px;height:420px;left:-90px;top:-80px;background:radial-gradient(circle,#7ee7b0,transparent 70%)}
@@ -3813,6 +3822,34 @@
                     <input type="range" id="cop-freq" min="5" max="20" step="1" value="8" style="width:100%;accent-color:#10b981" />
                     <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--n400);margin-top:4px">
                       <span>5min</span><span>20min</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- PALAVRA-CHAVE DE COMANDO -->
+              <div class="cop-card">
+                <div class="cop-card-hd">
+                  <div class="cop-ico-box sm" style="background:linear-gradient(135deg,#818cf8,#4f46e5)">
+                    <i class="ti ti-keyboard"></i>
+                  </div>
+                  <div style="flex:1">
+                    <div class="cop-card-title">Palavra-chave de comando</div>
+                    <div class="cop-card-desc">Ao ouvir uma das palavras abaixo durante a transcrição, o copiloto executa o comando de voz automaticamente — sem precisar clicar em "Executar".</div>
+                  </div>
+                  <input type="checkbox" id="cop-kw-enabled" role="switch" class="cop-switch" style="accent-color:#4f46e5" onchange="updateCopKwEnabledState()" />
+                </div>
+                <div id="cop-kw-body" class="cop-card-body">
+                  <div class="cop-sep"></div>
+                  <div>
+                    <div id="cop-kw-list" class="cop-kw-wrap"></div>
+                    <div class="cop-kw-addrow">
+                      <input type="text" id="cop-kw-input" placeholder="Ex.: copiloto, executar comando..." onkeydown="if(event.key==='Enter'){event.preventDefault();addCopKeyword();}" />
+                      <button onclick="addCopKeyword()"><i class="ti ti-plus"></i> Adicionar</button>
+                    </div>
+                    <div class="cop-note" style="background:#eef2ff;border:0.5px solid #c7d2fe;color:#3730a3;margin-top:10px">
+                      Dica: use palavras curtas e pouco comuns na fala normal (ex.: "copiloto"), para evitar acionamentos
+                      sem querer. A palavra é buscada em qualquer trecho da frase transcrita, sem diferenciar maiúsculas/acentos.
                     </div>
                   </div>
                 </div>
@@ -6250,6 +6287,8 @@
                                                                 insight: cfg.insight!==false,
                                                                 protocolo: cfg.protocolo!==false,
                                                                 retorno: cfg.retorno!==false,
+                                                                kwEnabled: cfg.kwEnabled!==false,
+                                                                keywords: Array.isArray(cfg.keywords)&&cfg.keywords.length ? cfg.keywords : ['copiloto','executar comando'],
                                                               };
                                                             }
 
@@ -6356,6 +6395,40 @@
                                                                 if(!voz.checked){const a=document.getElementById('cop-voz-auto');if(a)a.checked=false;}
                                                               }
                                                             }
+                                                            // ---- Palavra-chave de comando ----
+                                                            let __copKwDraft=[];
+                                                            function updateCopKwEnabledState(){
+                                                              const en=document.getElementById('cop-kw-enabled');const body=document.getElementById('cop-kw-body');
+                                                              if(en&&body)body.classList.toggle('cop-off',!en.checked);
+                                                            }
+                                                            function renderCopKeywordChips(){
+                                                              const list=document.getElementById('cop-kw-list');if(!list)return;
+                                                              if(!__copKwDraft.length){
+                                                                list.innerHTML='<div class="cop-kw-empty">Nenhuma palavra-chave cadastrada — o comando por voz não será acionado automaticamente.</div>';
+                                                                return;
+                                                              }
+                                                              list.innerHTML=__copKwDraft.map(function(kw,i){
+                                                                return '<span class="cop-kw-tag">'+iaEscHtml(kw)+'<button onclick="removeCopKeyword('+i+')" title="Remover"><i class="ti ti-x"></i></button></span>';
+                                                              }).join('');
+                                                            }
+                                                            function addCopKeyword(){
+                                                              const input=document.getElementById('cop-kw-input');if(!input)return;
+                                                              const raw=input.value.trim();
+                                                              if(!raw)return;
+                                                              const norm=raw.toLowerCase();
+                                                              if(__copKwDraft.some(function(k){return k.toLowerCase()===norm;})){
+                                                                input.value='';
+                                                                if(typeof toast==='function')toast('Essa palavra-chave já está cadastrada.');
+                                                                return;
+                                                              }
+                                                              __copKwDraft.push(raw);
+                                                              input.value='';
+                                                              renderCopKeywordChips();
+                                                            }
+                                                            function removeCopKeyword(idx){
+                                                              __copKwDraft.splice(idx,1);
+                                                              renderCopKeywordChips();
+                                                            }
                                                             function loadCopilotoCfg(){
                                                               const cfg=getCopilotoCfg();
                                                               const set=(id,v)=>{const el=document.getElementById(id);if(el)el.checked=!!v;};
@@ -6364,12 +6437,15 @@
                                                               set('cop-perguntas',cfg.perguntas);set('cop-memoria',cfg.memoria);
                                                               set('cop-pendencias',cfg.pendencias);set('cop-insight',cfg.insight);
                                                               set('cop-protocolo',cfg.protocolo);set('cop-retorno',cfg.retorno);
+                                                              set('cop-kw-enabled',cfg.kwEnabled);
+                                                              __copKwDraft=cfg.keywords.slice();
+                                                              renderCopKeywordChips();
                                                               document.getElementById('cop-tipo').value=cfg.tipo||'ativo';
                                                               const f=document.getElementById('cop-freq');
                                                               f.value=Math.min(20,Math.max(5,Math.round(cfg.freq/60)));
                                                               const lbl=document.getElementById('cop-freq-lbl');lbl.textContent=f.value+'min';
                                                               f.oninput=()=>lbl.textContent=f.value+'min';
-                                                              updateCopTipoHint();updateCopEnabledState();
+                                                              updateCopTipoHint();updateCopEnabledState();updateCopKwEnabledState();
                                                             }
                                                             function saveCopilotoCfg(){
                                                               const chk=id=>!!document.getElementById(id)?.checked;
@@ -6385,6 +6461,8 @@
                                                                 insight:chk('cop-insight'),
                                                                 protocolo:chk('cop-protocolo'),
                                                                 retorno:chk('cop-retorno'),
+                                                                kwEnabled:chk('cop-kw-enabled'),
+                                                                keywords:__copKwDraft.slice(),
                                                               };
                                                               localStorage.setItem('copilotoCfg',JSON.stringify(cfg));
                                                               applyCopilotoCfgToUI();
@@ -9606,6 +9684,7 @@ showAtendList();
                                                             function addTranscriptLine(text){
                                                               transcriptLog.push(text);
                                                               transcriptTimeline.push({text:text,ts:Date.now()});
+                                                              checkCopKeywordTrigger(text);
                                                               const content=document.getElementById('trans-content');
                                                               if(!content)return;
                                                               const line=document.createElement('div');
@@ -9617,6 +9696,36 @@ showAtendList();
                                                               const lbl=document.getElementById('trans-lbl');
                                                               if(lbl)lbl.textContent=text;
                                                               saveAtendDraft();
+                                                            }
+
+                                                            // Remove acentuação e normaliza para comparação de palavra-chave
+                                                            // (ex.: "Executar" casa com "executar", "atenção" casa com "atencao").
+                                                            function __copNormalize(s){
+                                                              return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+                                                            }
+
+                                                            let __lastCopKwTriggerTs=0;
+                                                            // Detecta, em cada linha final de transcrição, se alguma palavra-chave
+                                                            // configurada foi dita. Se sim, dispara o comando de voz automaticamente
+                                                            // — sem exigir clique — sem interromper o médico (o resultado vira um
+                                                            // balão flutuante no task tray, como qualquer execução manual).
+                                                            function checkCopKeywordTrigger(text){
+                                                              if(!listening)return; // só durante a consulta em andamento
+                                                              if(text.startsWith('[ '))return; // mensagens internas do sistema, não fala real
+                                                              const cfg=getCopilotoCfg();
+                                                              if(!cfg.enabled||!cfg.kwEnabled||!cfg.keywords.length)return;
+                                                              const norm=__copNormalize(text);
+                                                              const achou=cfg.keywords.some(function(kw){
+                                                                const k=__copNormalize(kw).trim();
+                                                                return k&&norm.indexOf(k)!==-1;
+                                                              });
+                                                              if(!achou)return;
+                                                              // debounce de 6s para não disparar mais de uma vez pela mesma fala
+                                                              const now=Date.now();
+                                                              if(now-__lastCopKwTriggerTs<6000)return;
+                                                              __lastCopKwTriggerTs=now;
+                                                              if(typeof toast==='function')toast('Palavra-chave detectada — executando comando...');
+                                                              executarComandoVoz();
                                                             }
 
                                                             /* ========== AI PANEL — ORB + LISTEN ========== */
