@@ -508,7 +508,8 @@
                                                       .pin-strip-item:last-child{border-bottom:none}
                                                       .pin-strip-item .ti{font-size:11px;color:#d97706;flex-shrink:0;margin-top:1px}
                                                       /* BUBBLES SCROLL AREA */
-                                                      .bubbles-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;padding:4px 10px 10px 10px;z-index:1;position:relative}
+                                                      .bubbles-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px;padding:2px 10px 10px 10px;z-index:1;position:relative}
+                                                      .bubbles-scroll::before{content:"";margin-top:auto}
                                                       .bubbles-scroll.hidden-bbl .bbl:not(.pinned){display:none}
                                                       .bbl{max-width:82%;padding:7px 10px;border-radius:12px;font-size:11.5px;line-height:1.45;pointer-events:auto;animation:popBbl .28s cubic-bezier(.175,.885,.32,1.275) both;position:relative;display:flex;align-items:flex-start;gap:5px;flex-shrink:0}
                                                       @keyframes popBbl{from{opacity:0;transform:scale(.78) translateY(6px)}to{opacity:1;transform:scale(1) translateY(0)}}
@@ -1329,12 +1330,12 @@
 
                                                       /* AI stage — transparent canvas so bubbles and controls float */
                                                       #atend-novo-view .ai-stage{
-                                                        margin:8px 12px 0 12px;
+                                                        margin:4px 12px 0 12px;
                                                         border-radius:20px;
                                                         background:transparent;
                                                         border:none;
                                                         box-shadow:none;
-                                                        padding:6px 8px 112px 8px;
+                                                        padding:2px 8px 112px 8px;
                                                       }
 
                                                       /* Bubbles with relief — floating on the glass background */
@@ -1366,7 +1367,7 @@
                                                         box-shadow:0 6px 16px -4px rgba(180,140,0,.25),0 2px 4px rgba(15,40,60,.06),inset 0 1px 0 rgba(255,255,255,.85)!important;
                                                       }
                                                       #atend-novo-view .trans-bar{
-                                                        margin:0 12px 8px 12px;
+                                                        margin:0 12px 4px 12px;
                                                         background:rgba(255,255,255,.55);
                                                         border:0.5px solid rgba(255,255,255,.85);
                                                         border-radius:14px;
