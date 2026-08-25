@@ -1,7 +1,14 @@
 /* BASE DE CONHECIMENTO — reaproveita .cop-card, .cop-ico-box, .cop-switch etc.
    (definidos inline no <style> do medicopilot.html, seção "COPILOTO — CONFIGURAÇÕES") */
 
-.bk-wrap{display:flex;flex-direction:column;gap:16px;max-width:820px;padding-bottom:40px}
+/* Antes ficava preso a 820px de largura (flex-column de 1 coluna só),
+   sobrando bastante espaço em branco à direita em telas largas. Agora usa
+   grid de 2 colunas até 1440px, com os cards de atalho/base preenchendo as
+   colunas e os formulários/botão "novo" ocupando a largura toda
+   (.bk-wrap-full). Em telas estreitas cai pra 1 coluna. */
+.bk-wrap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:16px;width:100%;max-width:1440px;padding-bottom:40px}
+.bk-wrap>.bk-wrap-full{grid-column:1 / -1}
+@media (max-width:1080px){.bk-wrap{grid-template-columns:1fr}}
 
 .bk-tabs{display:inline-flex;padding:4px;background:rgba(255,255,255,.7);border:0.5px solid var(--n150);border-radius:999px;gap:2px;width:fit-content;margin-bottom:4px}
 .bk-tab{display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--n400);cursor:pointer;border:none;background:transparent;font-family:inherit}

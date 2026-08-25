@@ -291,7 +291,7 @@
 
   function novaBaseFormHtml() {
     return `
-      <div class="cop-card">
+      <div class="cop-card bk-wrap-full">
         <div class="cop-card-title" style="margin-bottom:12px"><i class="ti ti-plus" style="color:#7c3aed"></i> Nova base de conhecimento</div>
         <div class="bk-field"><label>Nome do tópico</label>
           <input class="bk-input" id="bk-nb-nome" placeholder="Ex: Protocolo de enxaqueca da clínica" value="${esc(S.novaBaseCampos.nome)}" />
@@ -367,7 +367,7 @@
 
   function novoAtalhoFormHtml() {
     return `
-      <div class="cop-card">
+      <div class="cop-card bk-wrap-full">
         <div class="cop-card-title" style="margin-bottom:12px"><i class="ti ti-plus" style="color:#f59e0b"></i> Novo atalho</div>
         <div class="bk-field"><label>Atalho</label>
           <input class="bk-input" id="bk-na-atalho" placeholder="/resumo-retorno" value="/" />
@@ -417,12 +417,12 @@
     } else if (S.tab === "bases") {
       body = `<div class="bk-wrap" style="margin-top:14px">
         ${S.bases.map(baseCardHtml).join("")}
-        ${S.creatingBase ? novaBaseFormHtml() : '<button class="bk-dashed" data-newbase="1"><i class="ti ti-plus"></i> Nova base de conhecimento</button>'}
+        ${S.creatingBase ? novaBaseFormHtml() : '<button class="bk-dashed bk-wrap-full" data-newbase="1"><i class="ti ti-plus"></i> Nova base de conhecimento</button>'}
       </div>`;
     } else {
       body = `<div class="bk-wrap" style="margin-top:14px">
         ${S.atalhos.map(atalhoCardHtml).join("")}
-        ${S.creatingAtalho ? novoAtalhoFormHtml() : '<button class="bk-dashed" data-newatalho="1"><i class="ti ti-plus"></i> Novo atalho de comando</button>'}
+        ${S.creatingAtalho ? novoAtalhoFormHtml() : '<button class="bk-dashed bk-wrap-full" data-newatalho="1"><i class="ti ti-plus"></i> Novo atalho de comando</button>'}
       </div>`;
     }
     el.innerHTML = header + body;
