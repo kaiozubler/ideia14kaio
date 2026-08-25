@@ -225,6 +225,7 @@ export type Database = {
           base_id: string | null
           conteudo: string
           created_at: string | null
+          grupo_id: string | null
           id: string
           medico_id: string | null
           nome_original: string | null
@@ -237,6 +238,7 @@ export type Database = {
           base_id?: string | null
           conteudo: string
           created_at?: string | null
+          grupo_id?: string | null
           id?: string
           medico_id?: string | null
           nome_original?: string | null
@@ -249,6 +251,7 @@ export type Database = {
           base_id?: string | null
           conteudo?: string
           created_at?: string | null
+          grupo_id?: string | null
           id?: string
           medico_id?: string | null
           nome_original?: string | null

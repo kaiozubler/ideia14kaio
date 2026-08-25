@@ -53,7 +53,7 @@
     if (!silent) { S.loading = true; render(); }
     const [{ data: bases, error: e1 }, { data: atalhos, error: e2 }] = await Promise.all([
       sb.from("base_conhecimento")
-        .select("id,nome,descricao,tags,ias,ativo,created_at,base_conhecimento_itens(id,tipo,nome_original,tokens_estimados,status)")
+        .select("id,nome,descricao,tags,ias,ativo,created_at,base_conhecimento_itens(id,tipo,nome_original,tokens_estimados,status,grupo_id,ordem)")
         .order("created_at", { ascending: false }),
       sb.from("prompt_comandos").select("id,atalho,texto_completo,ias,created_at").order("created_at", { ascending: false }),
     ]);
@@ -110,9 +110,14 @@
     // Os itens já entram "prontos": a busca do chat usa direto o `conteudo`
     // (similaridade de texto), sem nenhum pré-processamento por IA por chunk.
     // Só a descrição da base (abaixo) ainda passa por IA, e só quando falta.
+    // grupo_id marca que todos esses chunks vieram do mesmo documento/texto
+    // colado — o front-end usa isso pra mostrar "1 documento = 1 linha na
+    // tela" em vez de 1 linha por chunk (que é um detalhe interno de
+    // implementação, não algo que o médico precise ver).
+    const grupoId = uid();
     const linhas = chunks.map((c, ordem) => ({
       base_id: baseId, medico_id: mid, tipo, nome_original: nomeOriginal || null,
-      conteudo: c, tokens_estimados: estimarTokens(c), ordem, status: "pronto",
+      conteudo: c, tokens_estimados: estimarTokens(c), ordem, status: "pronto", grupo_id: grupoId,
     }));
     const { data: inseridos, error } = await sb.from("base_conhecimento_itens").insert(linhas).select("id, conteudo");
     if (error) { console.error(error.message); notify("Erro ao adicionar conteúdo"); return; }
@@ -152,11 +157,42 @@
     }
   }
 
-  async function excluirItem(id) {
+  // Apaga todos os chunks de um mesmo documento/texto colado de uma vez —
+  // pro médico, "excluir" é uma ação sobre o documento, não sobre um pedaço
+  // interno dele.
+  async function excluirGrupo(grupoId) {
     const sb = sbc(); if (!sb) return;
-    const { error } = await sb.from("base_conhecimento_itens").delete().eq("id", id);
+    const { error } = await sb.from("base_conhecimento_itens").delete().eq("grupo_id", grupoId);
     if (error) { console.error(error.message); return; }
     await load();
+  }
+
+  // Agrupa os chunks (linhas de base_conhecimento_itens) por grupo_id, na
+  // ordem em que foram inseridos, pra exibir "1 documento = 1 linha na
+  // tela" — chunking é implementação interna, o médico só precisa saber
+  // quais documentos/textos ele já anexou à base.
+  function agruparPorDocumento(itens) {
+    const porGrupo = new Map();
+    for (const it of itens) {
+      const chave = it.grupo_id || it.id; // fallback pra itens antigos sem grupo_id
+      if (!porGrupo.has(chave)) porGrupo.set(chave, []);
+      porGrupo.get(chave).push(it);
+    }
+    return [...porGrupo.values()].map((chunks) => {
+      chunks.sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+      const primeiro = chunks[0];
+      return {
+        grupoId: primeiro.grupo_id || primeiro.id,
+        tipo: primeiro.tipo,
+        nomeOriginal: primeiro.nome_original,
+        tokensEstimados: chunks.reduce((s, c) => s + (c.tokens_estimados || 0), 0),
+        // Se qualquer chunk do documento estiver com erro/processando, reflete
+        // isso no status agregado (erro tem prioridade sobre processando).
+        status: chunks.some((c) => c.status === "erro") ? "erro"
+          : chunks.some((c) => c.status === "processando") ? "processando"
+          : "pronto",
+      };
+    });
   }
 
   async function criarAtalho(payload) {
@@ -197,6 +233,8 @@
   function baseCardHtml(b) {
     const itens = b.base_conhecimento_itens || [];
     const totalTok = itens.reduce((s, i) => s + (i.tokens_estimados || 0), 0);
+    // Conta documentos (grupos), não chunks — chunking é detalhe interno.
+    const totalDocs = agruparPorDocumento(itens).length;
     const open = S.expandedBaseId === b.id;
     return `
       <div class="cop-card">
@@ -214,7 +252,7 @@
               <div class="bk-tags">
                 ${(b.tags || []).map(tagPill).join("")}
                 ${(b.ias || []).map(iaPill).join("")}
-                <span class="bk-tag">~${fmtTok(totalTok)} tokens · ${itens.length} item(ns)</span>
+                <span class="bk-tag">~${fmtTok(totalTok)} tokens · ${totalDocs} item(ns)</span>
               </div>
             </div>
           </div>
@@ -229,20 +267,21 @@
   }
 
   function baseExpandedHtml(b, itens) {
+    const documentos = agruparPorDocumento(itens);
     return `
       <div class="cop-sep" style="margin-top:14px"></div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
-        ${itens.length === 0 ? '<div class="bk-empty">Nenhum arquivo ou texto ainda.</div>' : itens.map((i) => `
+        ${documentos.length === 0 ? '<div class="bk-empty">Nenhum arquivo ou texto ainda.</div>' : documentos.map((d) => `
           <div class="bk-item-row">
             <div style="display:flex;align-items:center;gap:8px;min-width:0">
-              <i class="ti ${i.tipo === "arquivo" ? "ti-file-text" : "ti-align-left"}"></i>
-              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(i.nome_original || "Sem título")}</span>
-              ${i.status === "processando" ? '<span class="bk-tag" style="white-space:nowrap"><i class="ti ti-loader-2"></i> processando…</span>' : ""}
-              ${i.status === "erro" ? '<span class="bk-tag" style="white-space:nowrap;color:#b45309">erro ao processar</span>' : ""}
+              <i class="ti ${d.tipo === "arquivo" ? "ti-file-text" : "ti-align-left"}"></i>
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.nomeOriginal || "Sem título")}</span>
+              ${d.status === "processando" ? '<span class="bk-tag" style="white-space:nowrap"><i class="ti ti-loader-2"></i> processando…</span>' : ""}
+              ${d.status === "erro" ? '<span class="bk-tag" style="white-space:nowrap;color:#b45309">erro ao processar</span>' : ""}
             </div>
             <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
-              <span class="bk-item-tok">~${fmtTok(i.tokens_estimados)} tok</span>
-              <button class="bk-icon-btn" data-del-item="${i.id}"><i class="ti ti-trash" style="font-size:13px"></i></button>
+              <span class="bk-item-tok">~${fmtTok(d.tokensEstimados)} tok</span>
+              <button class="bk-icon-btn" data-del-item="${d.grupoId}"><i class="ti ti-trash" style="font-size:13px"></i></button>
             </div>
           </div>`).join("")}
       </div>
@@ -439,7 +478,7 @@
     if (delBase) { if (confirm("Excluir esta base de conhecimento e todo o conteúdo dela?")) excluirBase(delBase.dataset.delBase); return; }
 
     const delItem = e.target.closest("[data-del-item]");
-    if (delItem) { return excluirItem(delItem.dataset.delItem); }
+    if (delItem) { return excluirGrupo(delItem.dataset.delItem); }
 
     const delAtalho = e.target.closest("[data-del-atalho]");
     if (delAtalho) { if (confirm("Excluir este atalho?")) excluirAtalho(delAtalho.dataset.delAtalho); return; }
