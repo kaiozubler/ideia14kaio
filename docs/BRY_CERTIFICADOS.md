@@ -1,96 +1,104 @@
-# Assinatura digital ICP-Brasil — A1 Bry, A3 Bry, A1 externo, A3 externo
+# Assinatura digital — A1/A3 Bry e A1/A3 externo
 
-Este documento descreve como os quatro tipos de certificado do médico se
-encaixam na arquitetura plugável já existente (`CertificateProviderFactory`
-+ interface `CertificateProvider`, em `src/lib/signature/`).
+Mapa dos quatro tipos de certificado que o app precisa suportar e onde cada
+um vive no código. `CertificateProviderFactory` cobre os três primeiros;
+o quarto (Integra Bry) é um fluxo à parte, sem credencial persistente.
 
-> Não confundir com `src/lib/bry/` + `src/routes/api/bry/*` (BRy Easy Sign /
-> "coleta de assinaturas"): aquele fluxo é para **assinatura eletrônica do
-> paciente** (sem certificado, por e-mail/link). Este documento é sobre a
-> **assinatura digital do médico** com certificado ICP-Brasil.
-
-## Os quatro tipos e onde cada um vive
-
-| Tipo | `provider` | Onde a chave privada mora | Como assina |
+| Tipo | Onde a chave fica | `provider` em `doctor_certificates` | Módulo |
 |---|---|---|---|
-| A1 externo | `local` | Arquivo `.pfx/.p12` do usuário, guardado em Storage privado | Servidor abre o PKCS#12 com a senha (nunca persistida) e assina localmente com `node-forge`. Não usa a API da Bry. |
-| A1 Bry | `bry_cloud` (`certificate_subtype = "a1"`) | HSM da BRy (Certificado em Nuvem / BRyKMS) | Uma chamada síncrona ao `hub2.bry.com.br/fw/v1/pdf/kms/lote/assinaturas` com CPF + PIN. PIN nunca é persistido. |
-| A3 Bry | `bry_cloud` (`certificate_subtype = "a3"`) | HSM da BRy (Certificado em Nuvem / BRyKMS) | Mesmo endpoint do A1 Bry — a HSM resolve o tipo internamente. A distinção A1/A3 aqui é só metadado para rótulo/regras de UI. |
-| A3 externo | `bry_a3_externo` | Token USB / smart card físico do usuário | Fluxo de duas fases (ver abaixo) — a chave nunca sai do dispositivo e o servidor nunca a acessa. |
+| A1 externo | Arquivo `.pfx/.p12` do usuário, guardado no Storage privado | `local` | `providers/LocalCertificateProvider.server.ts` |
+| A1 Bry | HSM da própria BRy (BRyKMS) | `bry_cloud` (`certificate_subtype: "a1"`) | `providers/BryCloudCertificateProvider.server.ts` + `src/lib/bry/kms.server.ts` |
+| A3 Bry | HSM da própria BRy (BRyKMS) | `bry_cloud` (`certificate_subtype: "a3"`) | idem — mesmo endpoint, `kms_data` idêntico; a distinção hoje é só de metadado/UI |
+| A3 externo | Nuvem de **outro** PSC (BirdID/Soluti, Vidaas/Valid, SafeID/Safeweb, RemoteID/Certisign, SerproID, Syn/Syngular, DS Cloud) | *não vira linha em `doctor_certificates`* | `src/lib/bry/integraBry.server.ts` + `SignatureService.{start,complete}IntegraBryLink` / `signWithIntegraBry` |
 
-`integra_icp` continua existindo como agregador legado (não é Bry).
+## Por que A3 externo não é um `CertificateProvider`
 
-## Por que A3 externo precisa de duas fases
+Os outros três tipos seguem o mesmo contrato: o médico cadastra uma vez
+(`authenticate`), o app guarda uma referência em `doctor_certificates`, e
+toda assinatura futura reusa essa referência (`signDocument`).
 
-O servidor não alcança hardware local (token/smartcard no computador do
-médico). Diferente do A1/A3 Bry (chave na nuvem, servidor fala direto com a
-HSM), aqui é o **navegador** que precisa acionar o driver do token. Isso
-significa duas chamadas HTTP com uma operação local no meio:
+O Integra Bry não se encaixa nesse molde porque a credencial que ele gera
+(`X-API-KEY`) nasce com um `lifetime` (180 a 604800 segundos — o "tempo de
+vida da requisição" citado pelas outras certificadoras; usamos 12h como
+padrão) e um `scope` que normalmente é `single_signature`: uma credencial
+por assinatura, não uma credencial permanente. Por isso ele vive em
+`signature_psc_link_sessions` (TTL 15 min até ser linkada, depois válida
+até o `lifetime` do link) em vez de em `doctor_certificates`.
+
+## Fluxo A3 externo (Integra Bry)
+
+1. `POST /api/signature/integra-bry/link` — o app pede à BRy um link de
+   autenticação para o PSC escolhido pelo médico (`pscName`, ex.: `"BirdID"`).
+   A BRy responde com uma `authorizationUrl`.
+2. O médico abre essa URL, autentica no PSC (login do PSC — pode incluir o
+   QR Code do próprio PSC, isso é responsabilidade dele, fora do controle
+   da BRy) e escolhe o certificado a usar.
+3. O PSC redireciona de volta para a `redirectUri` que informamos, com
+   `?state=...` na query string.
+4. `POST /api/signature/integra-bry/callback` — o app confirma a sessão
+   pelo `state` e busca os dados do certificado escolhido
+   (`GET /auth/info` + `GET /auth/certificate`).
+5. `POST /api/signature/integra-bry/sign` — assina o PDF usando a sessão
+   linkada.
 
 ```
-1. POST /api/signature/a3-externo/prepare
-   servidor: monta o placeholder PAdES no PDF, calcula o digest exato
-   (SHA-256 dos bytes cobertos pelo ByteRange) e devolve
-   { signSessionId, digestBase64 }. Sessão válida por 15 min
-   (tabela signature_sign_sessions).
-
-2. [no navegador] o driver/middleware do token assina o digest
-   (RSA-SHA256) e monta o CMS/PKCS#7 detached com o certificado do
-   token — isso ainda NÃO está implementado neste repositório, é o
-   componente que falta (ver "O que falta" abaixo).
-
-3. POST /api/signature/a3-externo/finalize
-   servidor: recebe { signSessionId, cmsBase64 }, espeta a assinatura
-   de volta no PDF exatamente na posição reservada e sobe o PDF
-   assinado para o Storage (mesmo destino de signDocument()).
+Link (POST /integra-bry/link)
+        │
+        ▼
+Médico autentica no PSC e escolhe o certificado
+        │
+        ▼
+Redirect de volta com ?state=...
+        │
+        ▼
+Callback confirma a sessão (POST /integra-bry/callback)
+        │
+        ▼
+Assinatura (POST /integra-bry/sign)
 ```
 
-A divisão do PDF em duas fases replica **bit a bit** o algoritmo interno de
-`@signpdf/signpdf` (`SignPdf.sign()`), só parando exatamente antes de
-escrever a assinatura — ver `preparePlaceholder` / `finalizeWithCms` em
-`src/lib/signature/PadesEmbedder.server.ts`. Isso garante que o digest
-assinado no token é o mesmo que teria sido gerado no fluxo síncrono
-(A1 externo / IntegraICP).
+## O que está confirmado vs. o que precisa validação
 
-## O que falta para A3 externo funcionar ponta a ponta
+**Confirmado** contra `bry-developer.readme.io/reference/integra-bry` (fetch
+em 2026-08-24):
+- `GET /api/service/psc/list` — lista de PSCs.
+- `POST /api/service/psc/link` — corpo: `pscName`, `redirectUri`, `state`,
+  `numberOfDocuments`, `scope` (`single_signature` | `multi_signature` |
+  `signature_session`), `lifetime` (180–604800s), `cpf`/`cnpj`.
+- `GET /api/service/auth/info` e `GET /api/service/auth/certificate`,
+  autenticados com header `X-API-KEY`.
+- URLs base: homologação `https://integra.hom.bry.com.br/api/service`,
+  produção `https://integra.bry.com.br/api/service`.
 
-O backend está pronto (provider, rotas, sessão de 15 min). Falta o
-componente client-side que:
+**Não confirmado** (exemplos de request/response ficam atrás de login em
+`bry-developer.readme.io`; não temos acesso de parceiro):
+- O corpo/resposta exato de `POST /psc/link` — em particular, se o
+  `X-API-KEY` vem *nessa* resposta ou só é anexado ao redirect de volta.
+  `IntegraBryApi.createLink()` tenta os dois formatos mais comuns
+  (`apiKey`/`api_key`/`credential`); se nenhum vier, `completeIntegraBryLink`
+  aceita receber o valor do callback (`apiKeyFromCallback`).
+- O endpoint e o header exatos da assinatura em si depois de linkado. A
+  intro da doc diz para reaproveitar `fw/v1/pdf/kms/lote/assinaturas` (mesmo
+  do BRyKMS, ver `kms.server.ts`) só trocando a URL base — é o que
+  `IntegraBryApi.signPdf()` implementa, com `X-API-KEY` no lugar de
+  `Authorization: Bearer + kms_type`. Isso **precisa ser validado** contra
+  a coleção Postman oficial (`https://integra.bry.com.br/postman.json`)
+  ou em homologação antes de qualquer uso em produção — o código já lança
+  um erro explícito em vez de assumir sucesso se a resposta vier fora do
+  formato esperado.
 
-1. Enumera os certificados A3 disponíveis no token/smartcard conectado
-   (tipicamente via um middleware do fabricante — SafeSign, Watchdata,
-   Athena etc. — já que browsers modernos não suportam mais plugins
-   PKCS#11 diretamente).
-2. Assina o `digestBase64` devolvido por `/prepare` com a chave privada do
-   token (RSA-SHA256) e monta um CMS/PKCS#7 *detached* contendo o
-   certificado + a assinatura.
-3. Envia o resultado para `/finalize`.
+## Variáveis de ambiente
 
-Isso normalmente é feito com uma pequena aplicação local ("Web PKI"-style,
-como Lacuna Web PKI ou o "App Desktop" da própria BRy) que expõe uma API
-HTTP local (`localhost:xxxx`) para o navegador conversar com o driver do
-token. Vale confirmar com o time de integração da Bry se eles têm um
-componente equivalente pronto antes de construir um do zero.
+Reaproveita as mesmas do BRyKMS (`BRY_HUB_TOKEN` ou `BRY_API_TOKEN`).
+Opcional: `INTEGRA_BRY_ENV` (`hom` | `prod`, padrão `hom`) e
+`INTEGRA_BRY_BASE_URL` para sobrescrever a URL base diretamente.
 
-## Registro (`/api/signature/authenticate`)
+## Histórico
 
-```jsonc
-// A1 Bry
-{ "provider": "bry_cloud", "cpf": "...", "certificateType": "a1", "holderName": "..." }
-
-// A3 Bry
-{ "provider": "bry_cloud", "cpf": "...", "certificateType": "a3", "holderName": "..." }
-
-// A3 externo (não guarda segredo nenhum — só CPF/rótulo)
-{ "provider": "bry_a3_externo", "cpf": "...", "holderName": "..." }
-
-// A1 externo — rota separada, envia o .pfx/.p12 + senha
-// POST /api/signature/register-local (ver SignatureService.registerLocalCertificate)
-```
-
-## Migração
-
-`supabase/migrations/20260824120000_bry_a1_a3_split_e_a3_externo.sql`:
-adiciona `doctor_certificates.certificate_subtype` (a1 | a3 | a3_token) e a
-tabela `signature_sign_sessions` (mesmo padrão de TTL/RLS de
-`signature_pkce_sessions`, já existente).
+Uma primeira versão deste documento descrevia A3 externo como token/
+smartcard físico local, assinado via extensão de navegador/driver
+PKCS#11 (fluxo de duas fases: `prepareA3ExternoSignSession` +
+`finalizeA3ExternoSignature`, tabela `signature_sign_sessions`). Essa
+abordagem foi substituída pelo Integra Bry — na prática, a maioria dos
+certificados "externos" hoje já é hospedada na nuvem de outro PSC, não
+um token USB. Ver migration `20260824130000_integra_bry_link_sessions.sql`.

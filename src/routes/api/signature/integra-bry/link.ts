@@ -14,15 +14,15 @@ function errorResponse(err: unknown) {
   if (err instanceof SignatureError) {
     return Response.json({ error: err.code, message: err.message }, { status: err.status });
   }
-  console.error("[signature/a3-externo/finalize]", err);
+  console.error("[signature/integra-bry/link]", err);
   return Response.json({ error: "internal_error", message: String(err) }, { status: 500 });
 }
 
-// Fase 2 do A3 externo: recebe o CMS/PKCS#7 (base64) já produzido pelo
-// driver do token/smartcard no navegador a partir do digest devolvido por
-// /prepare, espeta a assinatura no PDF e sobe para o Storage — mesmo
-// destino final de signDocument() para os demais providers.
-export const Route = createFileRoute("/api/signature/a3-externo/finalize")({
+// A3 externo (certificado hospedado por OUTRO PSC, não pela BRy) via
+// Integra Bry. Gera o link de autenticação — o frontend deve abrir
+// `authorizationUrl` (nova aba ou redirect) para o médico autenticar no
+// PSC escolhido e selecionar o certificado.
+export const Route = createFileRoute("/api/signature/integra-bry/link")({
   server: {
     handlers: {
       POST: async ({ request }) => {
@@ -31,19 +31,24 @@ export const Route = createFileRoute("/api/signature/a3-externo/finalize")({
           if (!userId) return Response.json({ error: "unauthorized" }, { status: 401 });
 
           const body = (await request.json()) as {
-            signSessionId?: string;
-            cmsBase64?: string;
-            filename?: string;
+            pscName?: string;
+            cpf?: string;
+            redirectUri?: string;
+            scope?: "single_signature" | "multi_signature" | "signature_session";
+            lifetimeSeconds?: number;
           };
-          if (!body.signSessionId || !body.cmsBase64) {
-            return Response.json({ error: "sign_session_and_cms_required" }, { status: 400 });
+          if (!body.pscName || !body.redirectUri) {
+            return Response.json({ error: "psc_name_and_redirect_uri_required" }, { status: 400 });
           }
+          const cpf = body.cpf ? body.cpf.replace(/\D/g, "") : undefined;
 
-          const result = await SignatureService.finalizeA3ExternoSignature({
+          const result = await SignatureService.startIntegraBryLink({
             doctorId: userId,
-            signSessionId: body.signSessionId,
-            cmsBase64: body.cmsBase64,
-            filename: body.filename,
+            pscName: body.pscName,
+            redirectUri: body.redirectUri,
+            cpf,
+            scope: body.scope,
+            lifetimeSeconds: body.lifetimeSeconds,
           });
           return Response.json({ ok: true, ...result });
         } catch (err) {

@@ -54,69 +54,99 @@ export const SignatureService = {
     return provider.authenticate(input as never);
   },
 
-  /** A3 externo (token/smartcard local) — só registra o rótulo, sem segredo algum. */
-  async registerBryA3ExternoCertificate(input: {
+  /**
+   * A3 externo (certificado hospedado por outro PSC, não pela BRy) via
+   * Integra Bry. Gera o link de autenticação com o PSC escolhido — o
+   * médico abre esse link, autentica no PSC e escolhe o certificado.
+   * `lifetimeSeconds` é o "tempo de vida da requisição" (180 a 604800s;
+   * default 12h, o mesmo valor citado pelas outras certificadoras).
+   */
+  async startIntegraBryLink(req: {
     doctorId: string;
-    holderDocument: string;
-    holderName?: string | null;
-    label?: string | null;
-  }) {
-    const provider = await CertificateProviderFactory.getById("bry_a3_externo");
-    return provider.authenticate(input as never);
+    pscName: string;
+    redirectUri: string;
+    cpf?: string;
+    scope?: "single_signature" | "multi_signature" | "signature_session";
+    lifetimeSeconds?: number;
+  }): Promise<{ sessionId: string; authorizationUrl: string; state: string }> {
+    const { IntegraBryApi } = await import("@/lib/bry/integraBry.server");
+    const state = crypto.randomUUID();
+    const link = await IntegraBryApi.createLink({
+      pscName: req.pscName,
+      redirectUri: req.redirectUri,
+      state,
+      scope: req.scope ?? "single_signature",
+      lifetime: req.lifetimeSeconds ?? 12 * 60 * 60,
+      cpf: req.cpf,
+    });
+    const sessionId = await CredentialRepository.createPscLinkSession({
+      doctorId: req.doctorId,
+      pscName: req.pscName,
+      state,
+      redirectUri: req.redirectUri,
+      apiKey: link.apiKey,
+    });
+    return { sessionId, authorizationUrl: link.authorizationUrl, state };
   },
 
   /**
-   * Fase 1 do fluxo A3 externo: prepara o placeholder PAdES e devolve o
-   * digest que o navegador deve assinar com o token/smartcard local.
+   * Chamado quando o PSC redireciona de volta (?state=...) após o médico
+   * autenticar e escolher o certificado. Confirma a sessão e devolve os
+   * dados do certificado escolhido (via /auth/info + /auth/certificate).
    */
-  async prepareA3ExternoSignSession(req: {
+  async completeIntegraBryLink(params: {
+    state: string;
+    /** Só necessário se o apiKey não veio na resposta de /psc/link (ver comentário em IntegraBryApi.createLink). */
+    apiKeyFromCallback?: string | null;
+  }) {
+    const session = await CredentialRepository.getPscLinkSessionByState(params.state);
+    if (!session) throw SignatureErrors.NotConfigured("Sessão de link Integra Bry não encontrada.");
+    if (new Date(session.expiresAt).getTime() < Date.now()) {
+      throw SignatureErrors.Timeout("Sessão de link Integra Bry expirada. Inicie novamente.");
+    }
+    const apiKey = session.apiKey ?? params.apiKeyFromCallback ?? null;
+    if (!apiKey) {
+      throw SignatureErrors.NotConfigured(
+        "Nenhum apiKey disponível para esta sessão — confirmar com a Bry onde a " +
+          "credencial é retornada (resposta de /psc/link ou query param do redirect).",
+      );
+    }
+    const { IntegraBryApi } = await import("@/lib/bry/integraBry.server");
+    const [info, certificate] = await Promise.all([
+      IntegraBryApi.getAuthInfo(apiKey),
+      IntegraBryApi.getAuthCertificate(apiKey),
+    ]);
+    await CredentialRepository.markPscLinkSessionLinked(session.id, apiKey);
+    return { sessionId: session.id, pscName: session.pscName, info, certificate };
+  },
+
+  /**
+   * Assina o PDF usando a sessão Integra Bry já linkada (ver aviso em
+   * IntegraBryApi.signPdf sobre o contrato do passo final ainda não estar
+   * 100% confirmado com a documentação autenticada da Bry).
+   */
+  async signWithIntegraBry(req: {
     doctorId: string;
-    documentId: string;
+    sessionId: string;
     pdfBuffer: Uint8Array;
     contentDescription?: string;
-  }): Promise<{ signSessionId: string; digestBase64: string }> {
-    const cert = await CredentialRepository.getActiveCertificate(req.doctorId);
-    if (!cert || (cert as StoredCertificate).provider !== "bry_a3_externo") {
-      throw SignatureErrors.NotConfigured("Nenhum certificado A3 externo vinculado.");
-    }
-    const reason = req.contentDescription ?? "Assinatura ICP-Brasil";
-    const { preparePlaceholder } = await import("./PadesEmbedder.server");
-    const { placeholderPdf, digestBase64 } = await preparePlaceholder({
-      pdfBuffer: req.pdfBuffer,
-      reason,
-      name: (cert as StoredCertificate).certificate_subject ?? "Médico",
-    });
-    const signSessionId = await CredentialRepository.createSignSession({
-      doctorId: req.doctorId,
-      documentId: req.documentId,
-      digestBase64,
-      placeholderPdf,
-      reason,
-      signerName: (cert as StoredCertificate).certificate_subject ?? null,
-    });
-    return { signSessionId, digestBase64 };
-  },
-
-  /**
-   * Fase 2 do fluxo A3 externo: recebe o CMS já assinado localmente e
-   * finaliza o PDF, seguindo o mesmo caminho de upload de signDocument().
-   */
-  async finalizeA3ExternoSignature(req: {
-    doctorId: string;
-    signSessionId: string;
-    cmsBase64: string;
     filename?: string;
   }): Promise<{ signedPdfUrl: string; signaturePath: string; signatureTimestamp: string | null }> {
-    const cert = await CredentialRepository.getActiveCertificate(req.doctorId);
-    if (!cert) throw SignatureErrors.CredentialExpired("Nenhum certificado ativo.");
-    const provider = await CertificateProviderFactory.getById("bry_a3_externo");
-    const signed = await provider.signDocument({
-      certificate: cert as StoredCertificate,
-      documentId: req.signSessionId,
-      pdfBuffer: new Uint8Array(0),
-      contentDescription: "Assinatura ICP-Brasil",
-      externalSignatureCms: req.cmsBase64,
-      signSessionId: req.signSessionId,
+    const session = await CredentialRepository.getLinkedPscSession({
+      sessionId: req.sessionId,
+      doctorId: req.doctorId,
+    });
+    if (!session) {
+      throw SignatureErrors.NotConfigured(
+        "Sessão Integra Bry não encontrada, expirada ou ainda não linkada.",
+      );
+    }
+    const { IntegraBryApi } = await import("@/lib/bry/integraBry.server");
+    const signed = await IntegraBryApi.signPdf({
+      apiKey: session.apiKey,
+      pdfBuffer: req.pdfBuffer,
+      filename: req.filename ?? `documento_${Date.now()}.pdf`,
+      reason: req.contentDescription ?? "Assinatura ICP-Brasil",
     });
     return uploadSignedPdf(req.doctorId, req.filename, signed);
   },

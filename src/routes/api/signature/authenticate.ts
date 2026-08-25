@@ -59,16 +59,6 @@ export const Route = createFileRoute("/api/signature/authenticate")({
             return Response.json(result);
           }
 
-          if (provider === "bry_a3_externo") {
-            const result = await SignatureService.registerBryA3ExternoCertificate({
-              doctorId: userId,
-              holderDocument: cpf,
-              holderName: body.holderName ?? null,
-              label: body.label ?? null,
-            });
-            return Response.json(result);
-          }
-
           if (!body.callbackUrl) {
             return Response.json({ error: "callback_url_required" }, { status: 400 });
           }

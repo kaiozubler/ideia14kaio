@@ -58,15 +58,6 @@ export interface SignDocumentParams {
   contentDescription: string;
   /** Only used by providers that require a per-signature secret (e.g. PFX password). */
   secret?: string | null;
-  /**
-   * Usado apenas por providers de duas fases (ex.: A3 externo): o CMS/PKCS#7
-   * em base64 já produzido pelo token/smartcard local do usuário na fase 1
-   * (ver preparePlaceholder). Quando ausente, o provider deve sinalizar que
-   * a fase 1 (digest) precisa ser executada antes.
-   */
-  externalSignatureCms?: string | null;
-  /** Correlaciona com a sessão criada na fase 1 (signature_sign_sessions.id). */
-  signSessionId?: string | null;
 }
 
 export interface SignedDocument {

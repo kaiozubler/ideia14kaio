@@ -2304,46 +2304,43 @@ export type Database = {
         }
         Relationships: []
       }
-      signature_sign_sessions: {
+      signature_psc_link_sessions: {
         Row: {
+          api_key: string | null
           created_at: string
-          digest_base64: string
           doctor_id: string
-          document_id: string
           expires_at: string
           id: string
-          placeholder_pdf: string
-          reason: string | null
-          signer_name: string | null
+          psc_name: string
+          redirect_uri: string
+          state: string
           status: string
         }
         Insert: {
+          api_key?: string | null
           created_at?: string
-          digest_base64: string
           doctor_id: string
-          document_id: string
           expires_at?: string
           id?: string
-          placeholder_pdf: string
-          reason?: string | null
-          signer_name?: string | null
+          psc_name: string
+          redirect_uri: string
+          state: string
           status?: string
         }
         Update: {
+          api_key?: string | null
           created_at?: string
-          digest_base64?: string
           doctor_id?: string
-          document_id?: string
           expires_at?: string
           id?: string
-          placeholder_pdf?: string
-          reason?: string | null
-          signer_name?: string | null
+          psc_name?: string
+          redirect_uri?: string
+          state?: string
           status?: string
         }
         Relationships: [
           {
-            foreignKeyName: "signature_sign_sessions_doctor_id_fkey"
+            foreignKeyName: "signature_psc_link_sessions_doctor_id_fkey"
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "users"

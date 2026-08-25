@@ -14,7 +14,13 @@ function errorResponse(err: unknown) {
   if (err instanceof SignatureError) {
     return Response.json({ error: err.code, message: err.message }, { status: err.status });
   }
-  console.error("[signature/a3-externo/prepare]", err);
+  if (err && typeof err === "object" && (err as { name?: string }).name === "BryError") {
+    const e = err as { message: string; status?: number };
+    const status = e.status && e.status >= 400 && e.status < 600 ? e.status : 502;
+    console.error("[signature/integra-bry/sign] bry_error", status, e.message);
+    return Response.json({ error: "provider_unavailable", message: e.message }, { status });
+  }
+  console.error("[signature/integra-bry/sign]", err);
   return Response.json({ error: "internal_error", message: String(err) }, { status: 500 });
 }
 
@@ -26,13 +32,7 @@ function b64ToBytes(b64: string): Uint8Array {
   return out;
 }
 
-// Fase 1 do A3 externo: monta o placeholder PAdES e devolve o digest
-// (SHA-256, base64) que o token/smartcard local deve assinar. Válido por
-// 15 minutos (signature_sign_sessions.expires_at) — equivalente ao "tempo
-// de vida da requisição" de outras certificadoras, só que sem depender de
-// um serviço remoto: o prazo é só para o usuário completar a assinatura
-// local antes do PDF intermediário expirar.
-export const Route = createFileRoute("/api/signature/a3-externo/prepare")({
+export const Route = createFileRoute("/api/signature/integra-bry/sign")({
   server: {
     handlers: {
       POST: async ({ request }) => {
@@ -41,23 +41,23 @@ export const Route = createFileRoute("/api/signature/a3-externo/prepare")({
           if (!userId) return Response.json({ error: "unauthorized" }, { status: 401 });
 
           const body = (await request.json()) as {
-            documentId?: string;
+            sessionId?: string;
             pdfBase64?: string;
             contentDescription?: string;
+            filename?: string;
           };
-          if (!body.pdfBase64) {
-            return Response.json({ error: "pdf_required" }, { status: 400 });
+          if (!body.sessionId || !body.pdfBase64) {
+            return Response.json({ error: "session_id_and_pdf_required" }, { status: 400 });
           }
-          const documentId =
-            body.documentId ?? `doc_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 
-          const result = await SignatureService.prepareA3ExternoSignSession({
+          const result = await SignatureService.signWithIntegraBry({
             doctorId: userId,
-            documentId,
+            sessionId: body.sessionId,
             pdfBuffer: b64ToBytes(body.pdfBase64),
             contentDescription: body.contentDescription,
+            filename: body.filename,
           });
-          return Response.json({ ok: true, ...result, expiresInSeconds: 15 * 60 });
+          return Response.json({ ok: true, ...result });
         } catch (err) {
           return errorResponse(err);
         }

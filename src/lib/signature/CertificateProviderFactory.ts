@@ -5,19 +5,21 @@ import { SignatureErrors } from "./errors";
 
 // bry_cloud cobre A1 Bry e A3 Bry (mesmo endpoint BRyKMS; ver
 // certificate_subtype em doctor_certificates para distinguir os dois).
-// local = A1 externo (.pfx/.p12 do usuário). bry_a3_externo = A3 externo
-// (token/smartcard local, fluxo de duas fases). integra_icp = agregador
+// local = A1 externo (.pfx/.p12 do usuário). integra_icp = agregador
 // terceiro legado (não é Bry).
-export type ProviderId = "bry_cloud" | "bry_a3_externo" | "integra_icp" | "local" | (string & {});
+//
+// A3 externo (certificado hospedado por outro PSC) NÃO é um CertificateProvider
+// aqui: é uma sessão de link de curta duração via Integra Bry, tratada em
+// src/lib/bry/integraBry.server.ts + SignatureService.{start,complete}IntegraBryLink
+// + SignatureService.signWithIntegraBry — sem credencial persistente como
+// os providers abaixo.
+export type ProviderId = "bry_cloud" | "integra_icp" | "local" | (string & {});
 
 type Loader = () => Promise<CertificateProvider>;
 
 const registry: Record<string, Loader> = {
   bry_cloud: async () =>
     (await import("./providers/BryCloudCertificateProvider.server")).BryCloudCertificateProvider,
-  bry_a3_externo: async () =>
-    (await import("./providers/BryA3ExternoCertificateProvider.server"))
-      .BryA3ExternoCertificateProvider,
   integra_icp: async () =>
     (await import("./providers/IntegraICPCertificateProvider")).IntegraICPCertificateProvider,
   local: async () =>

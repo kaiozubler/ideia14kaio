@@ -232,62 +232,30 @@ export const CredentialRepository = {
     if (error) throw error;
   },
 
-  /** Persists an A3 externo (token/smartcard local) reference — sem chave nenhuma no servidor. */
-  async upsertA3ExternoCertificate(params: {
+  /**
+   * Fluxo Integra Bry (A3/A1 hospedado por outro PSC): cria a sessão de
+   * link (POST /psc/link já feito pelo chamador) com o `state` que
+   * identifica essa sessão e o `apiKey` retornado pela Bry, se já vier
+   * na resposta do link. Expira em 15 min por padrão (mesmo padrão de
+   * signature_pkce_sessions).
+   */
+  async createPscLinkSession(params: {
     doctorId: string;
-    credentialId: string;
-    label: string | null;
-    holderDocument: string | null;
-    subject: string | null;
-  }) {
-    const sb = await admin();
-    const { error } = await sb.from("doctor_certificates").upsert(
-      {
-        doctor_id: params.doctorId,
-        credential_id: params.credentialId,
-        provider: "bry_a3_externo",
-        certificate_type: "token",
-        certificate_subtype: "a3_token",
-        storage_path: null,
-        label: params.label,
-        provider_name: "A3 externo (token/smartcard)",
-        product_name: "A3 ICP-Brasil local",
-        certificate_subject: params.subject,
-        holder_document: params.holderDocument,
-        certificate_serial: null,
-        certificate_fingerprint: null,
-        issuer: null,
-        certificate_valid_from: null,
-        certificate_valid_until: null,
-        credential_expires_at: null,
-        code_verifier_encrypted: null,
-        raw_metadata: null,
-        updated_at: new Date().toISOString(),
-      } as never,
-      { onConflict: "doctor_id,credential_id" },
-    );
-    if (error) throw error;
-  },
-
-  /** Fase 1 do fluxo A3 externo: guarda o PDF-com-placeholder até a fase 2 chegar. */
-  async createSignSession(params: {
-    doctorId: string;
-    documentId: string;
-    digestBase64: string;
-    placeholderPdf: Uint8Array;
-    reason: string | null;
-    signerName: string | null;
+    pscName: string;
+    state: string;
+    redirectUri: string;
+    apiKey: string | null;
   }): Promise<string> {
     const sb = await admin();
     const { data, error } = await sb
-      .from("signature_sign_sessions")
+      .from("signature_psc_link_sessions")
       .insert({
         doctor_id: params.doctorId,
-        document_id: params.documentId,
-        digest_base64: params.digestBase64,
-        placeholder_pdf: `\\x${Buffer.from(params.placeholderPdf).toString("hex")}`,
-        reason: params.reason,
-        signer_name: params.signerName,
+        psc_name: params.pscName,
+        state: params.state,
+        redirect_uri: params.redirectUri,
+        api_key: params.apiKey,
+        status: "pending",
       } as never)
       .select("id")
       .single();
@@ -295,42 +263,76 @@ export const CredentialRepository = {
     return (data as { id: string }).id;
   },
 
-  /** Fase 2: recupera e consome (marca como usada) a sessão criada na fase 1. */
-  async consumeSignSession(params: {
-    sessionId: string;
+  /** Busca a sessão pelo `state` recebido de volta no callback do PSC. */
+  async getPscLinkSessionByState(state: string): Promise<{
+    id: string;
     doctorId: string;
-  }): Promise<{ documentId: string; placeholderPdf: Uint8Array; reason: string | null } | null> {
+    pscName: string;
+    apiKey: string | null;
+    status: string;
+    expiresAt: string;
+  } | null> {
     const sb = await admin();
     const { data, error } = await sb
-      .from("signature_sign_sessions")
-      .select("document_id, placeholder_pdf, reason, status, expires_at, doctor_id")
+      .from("signature_psc_link_sessions")
+      .select("id, doctor_id, psc_name, api_key, status, expires_at")
+      .eq("state", state)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const row = data as {
+      id: string;
+      doctor_id: string;
+      psc_name: string;
+      api_key: string | null;
+      status: string;
+      expires_at: string;
+    };
+    return {
+      id: row.id,
+      doctorId: row.doctor_id,
+      pscName: row.psc_name,
+      apiKey: row.api_key,
+      status: row.status,
+      expiresAt: row.expires_at,
+    };
+  },
+
+  /** Marca a sessão como linkada (usuário concluiu a autenticação no PSC) e guarda o apiKey, se só agora disponível. */
+  async markPscLinkSessionLinked(sessionId: string, apiKey?: string | null): Promise<void> {
+    const sb = await admin();
+    const patch: Record<string, unknown> = { status: "linked" };
+    if (apiKey) patch.api_key = apiKey;
+    const { error } = await sb
+      .from("signature_psc_link_sessions")
+      .update(patch as never)
+      .eq("id", sessionId);
+    if (error) throw error;
+  },
+
+  /** Busca uma sessão linkada (por id) para uso imediato na assinatura — não marca como consumida (scope define reuso). */
+  async getLinkedPscSession(params: {
+    sessionId: string;
+    doctorId: string;
+  }): Promise<{ apiKey: string; pscName: string } | null> {
+    const sb = await admin();
+    const { data, error } = await sb
+      .from("signature_psc_link_sessions")
+      .select("api_key, psc_name, status, expires_at, doctor_id")
       .eq("id", params.sessionId)
       .eq("doctor_id", params.doctorId)
       .maybeSingle();
     if (error) throw error;
     if (!data) return null;
     const row = data as {
-      document_id: string;
-      placeholder_pdf: string;
-      reason: string | null;
+      api_key: string | null;
+      psc_name: string;
       status: string;
       expires_at: string;
     };
-    if (row.status !== "pending" || new Date(row.expires_at).getTime() < Date.now()) return null;
-
-    await sb
-      .from("signature_sign_sessions")
-      .update({ status: "consumed" } as never)
-      .eq("id", params.sessionId);
-
-    const hex = row.placeholder_pdf.startsWith("\\x")
-      ? row.placeholder_pdf.slice(2)
-      : row.placeholder_pdf;
-    return {
-      documentId: row.document_id,
-      placeholderPdf: new Uint8Array(Buffer.from(hex, "hex")),
-      reason: row.reason,
-    };
+    if (row.status !== "linked" || !row.api_key) return null;
+    if (new Date(row.expires_at).getTime() < Date.now()) return null;
+    return { apiKey: row.api_key, pscName: row.psc_name };
   },
 
   async getActiveCertificateWithVerifier(doctorId: string) {

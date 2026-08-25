@@ -56,8 +56,9 @@ import { Route as ApiPublicTermosAssinarRouteImport } from './routes/api/public/
 import { Route as ApiPublicTermosCodigoRouteImport } from './routes/api/public/termos/codigo'
 import { Route as ApiPublicTermosPublicoRouteImport } from './routes/api/public/termos/publico'
 import { Route as ApiPublicWebhooksBryRouteImport } from './routes/api/public/webhooks/bry'
-import { Route as ApiSignatureA3ExternoFinalizeRouteImport } from './routes/api/signature/a3-externo/finalize'
-import { Route as ApiSignatureA3ExternoPrepareRouteImport } from './routes/api/signature/a3-externo/prepare'
+import { Route as ApiSignatureIntegraBryCallbackRouteImport } from './routes/api/signature/integra-bry/callback'
+import { Route as ApiSignatureIntegraBryLinkRouteImport } from './routes/api/signature/integra-bry/link'
+import { Route as ApiSignatureIntegraBrySignRouteImport } from './routes/api/signature/integra-bry/sign'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -309,16 +310,22 @@ const ApiPublicWebhooksBryRoute = ApiPublicWebhooksBryRouteImport.update({
   path: '/api/public/webhooks/bry',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiSignatureA3ExternoFinalizeRoute =
-  ApiSignatureA3ExternoFinalizeRouteImport.update({
-    id: '/api/signature/a3-externo/finalize',
-    path: '/api/signature/a3-externo/finalize',
+const ApiSignatureIntegraBryCallbackRoute =
+  ApiSignatureIntegraBryCallbackRouteImport.update({
+    id: '/api/signature/integra-bry/callback',
+    path: '/api/signature/integra-bry/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiSignatureA3ExternoPrepareRoute =
-  ApiSignatureA3ExternoPrepareRouteImport.update({
-    id: '/api/signature/a3-externo/prepare',
-    path: '/api/signature/a3-externo/prepare',
+const ApiSignatureIntegraBryLinkRoute =
+  ApiSignatureIntegraBryLinkRouteImport.update({
+    id: '/api/signature/integra-bry/link',
+    path: '/api/signature/integra-bry/link',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiSignatureIntegraBrySignRoute =
+  ApiSignatureIntegraBrySignRouteImport.update({
+    id: '/api/signature/integra-bry/sign',
+    path: '/api/signature/integra-bry/sign',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -370,8 +377,9 @@ export interface FileRoutesByFullPath {
   '/api/public/termos/codigo': typeof ApiPublicTermosCodigoRoute
   '/api/public/termos/publico': typeof ApiPublicTermosPublicoRoute
   '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
-  '/api/signature/a3-externo/finalize': typeof ApiSignatureA3ExternoFinalizeRoute
-  '/api/signature/a3-externo/prepare': typeof ApiSignatureA3ExternoPrepareRoute
+  '/api/signature/integra-bry/callback': typeof ApiSignatureIntegraBryCallbackRoute
+  '/api/signature/integra-bry/link': typeof ApiSignatureIntegraBryLinkRoute
+  '/api/signature/integra-bry/sign': typeof ApiSignatureIntegraBrySignRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -421,8 +429,9 @@ export interface FileRoutesByTo {
   '/api/public/termos/codigo': typeof ApiPublicTermosCodigoRoute
   '/api/public/termos/publico': typeof ApiPublicTermosPublicoRoute
   '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
-  '/api/signature/a3-externo/finalize': typeof ApiSignatureA3ExternoFinalizeRoute
-  '/api/signature/a3-externo/prepare': typeof ApiSignatureA3ExternoPrepareRoute
+  '/api/signature/integra-bry/callback': typeof ApiSignatureIntegraBryCallbackRoute
+  '/api/signature/integra-bry/link': typeof ApiSignatureIntegraBryLinkRoute
+  '/api/signature/integra-bry/sign': typeof ApiSignatureIntegraBrySignRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -473,8 +482,9 @@ export interface FileRoutesById {
   '/api/public/termos/codigo': typeof ApiPublicTermosCodigoRoute
   '/api/public/termos/publico': typeof ApiPublicTermosPublicoRoute
   '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
-  '/api/signature/a3-externo/finalize': typeof ApiSignatureA3ExternoFinalizeRoute
-  '/api/signature/a3-externo/prepare': typeof ApiSignatureA3ExternoPrepareRoute
+  '/api/signature/integra-bry/callback': typeof ApiSignatureIntegraBryCallbackRoute
+  '/api/signature/integra-bry/link': typeof ApiSignatureIntegraBryLinkRoute
+  '/api/signature/integra-bry/sign': typeof ApiSignatureIntegraBrySignRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -526,8 +536,9 @@ export interface FileRouteTypes {
     | '/api/public/termos/codigo'
     | '/api/public/termos/publico'
     | '/api/public/webhooks/bry'
-    | '/api/signature/a3-externo/finalize'
-    | '/api/signature/a3-externo/prepare'
+    | '/api/signature/integra-bry/callback'
+    | '/api/signature/integra-bry/link'
+    | '/api/signature/integra-bry/sign'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -577,8 +588,9 @@ export interface FileRouteTypes {
     | '/api/public/termos/codigo'
     | '/api/public/termos/publico'
     | '/api/public/webhooks/bry'
-    | '/api/signature/a3-externo/finalize'
-    | '/api/signature/a3-externo/prepare'
+    | '/api/signature/integra-bry/callback'
+    | '/api/signature/integra-bry/link'
+    | '/api/signature/integra-bry/sign'
   id:
     | '__root__'
     | '/'
@@ -628,8 +640,9 @@ export interface FileRouteTypes {
     | '/api/public/termos/codigo'
     | '/api/public/termos/publico'
     | '/api/public/webhooks/bry'
-    | '/api/signature/a3-externo/finalize'
-    | '/api/signature/a3-externo/prepare'
+    | '/api/signature/integra-bry/callback'
+    | '/api/signature/integra-bry/link'
+    | '/api/signature/integra-bry/sign'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -680,8 +693,9 @@ export interface RootRouteChildren {
   ApiPublicTermosCodigoRoute: typeof ApiPublicTermosCodigoRoute
   ApiPublicTermosPublicoRoute: typeof ApiPublicTermosPublicoRoute
   ApiPublicWebhooksBryRoute: typeof ApiPublicWebhooksBryRoute
-  ApiSignatureA3ExternoFinalizeRoute: typeof ApiSignatureA3ExternoFinalizeRoute
-  ApiSignatureA3ExternoPrepareRoute: typeof ApiSignatureA3ExternoPrepareRoute
+  ApiSignatureIntegraBryCallbackRoute: typeof ApiSignatureIntegraBryCallbackRoute
+  ApiSignatureIntegraBryLinkRoute: typeof ApiSignatureIntegraBryLinkRoute
+  ApiSignatureIntegraBrySignRoute: typeof ApiSignatureIntegraBrySignRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1015,18 +1029,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWebhooksBryRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/signature/a3-externo/finalize': {
-      id: '/api/signature/a3-externo/finalize'
-      path: '/api/signature/a3-externo/finalize'
-      fullPath: '/api/signature/a3-externo/finalize'
-      preLoaderRoute: typeof ApiSignatureA3ExternoFinalizeRouteImport
+    '/api/signature/integra-bry/callback': {
+      id: '/api/signature/integra-bry/callback'
+      path: '/api/signature/integra-bry/callback'
+      fullPath: '/api/signature/integra-bry/callback'
+      preLoaderRoute: typeof ApiSignatureIntegraBryCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/signature/a3-externo/prepare': {
-      id: '/api/signature/a3-externo/prepare'
-      path: '/api/signature/a3-externo/prepare'
-      fullPath: '/api/signature/a3-externo/prepare'
-      preLoaderRoute: typeof ApiSignatureA3ExternoPrepareRouteImport
+    '/api/signature/integra-bry/link': {
+      id: '/api/signature/integra-bry/link'
+      path: '/api/signature/integra-bry/link'
+      fullPath: '/api/signature/integra-bry/link'
+      preLoaderRoute: typeof ApiSignatureIntegraBryLinkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/signature/integra-bry/sign': {
+      id: '/api/signature/integra-bry/sign'
+      path: '/api/signature/integra-bry/sign'
+      fullPath: '/api/signature/integra-bry/sign'
+      preLoaderRoute: typeof ApiSignatureIntegraBrySignRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -1081,8 +1102,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTermosCodigoRoute: ApiPublicTermosCodigoRoute,
   ApiPublicTermosPublicoRoute: ApiPublicTermosPublicoRoute,
   ApiPublicWebhooksBryRoute: ApiPublicWebhooksBryRoute,
-  ApiSignatureA3ExternoFinalizeRoute: ApiSignatureA3ExternoFinalizeRoute,
-  ApiSignatureA3ExternoPrepareRoute: ApiSignatureA3ExternoPrepareRoute,
+  ApiSignatureIntegraBryCallbackRoute: ApiSignatureIntegraBryCallbackRoute,
+  ApiSignatureIntegraBryLinkRoute: ApiSignatureIntegraBryLinkRoute,
+  ApiSignatureIntegraBrySignRoute: ApiSignatureIntegraBrySignRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
