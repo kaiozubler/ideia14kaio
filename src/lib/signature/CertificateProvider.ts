@@ -9,6 +9,8 @@ export interface StoredCertificate {
   doctor_id: string;
   provider?: string | null;
   certificate_type?: string | null;
+  /** a1 | a3 (bry_cloud) | a3_token (bry_a3_externo) — ver certificate_subtype na migration. */
+  certificate_subtype?: string | null;
   credential_id: string;
   storage_path?: string | null;
   issuer?: string | null;
@@ -28,6 +30,8 @@ export interface StoredCertificate {
 export interface CertificateInformation {
   provider: string;
   certificateType: string;
+  /** a1 | a3 | a3_token — detalha certificateType quando útil para a UI. */
+  certificateSubtype: string | null;
   label: string | null;
   subject: string | null;
   holderDocument: string | null;
@@ -54,6 +58,15 @@ export interface SignDocumentParams {
   contentDescription: string;
   /** Only used by providers that require a per-signature secret (e.g. PFX password). */
   secret?: string | null;
+  /**
+   * Usado apenas por providers de duas fases (ex.: A3 externo): o CMS/PKCS#7
+   * em base64 já produzido pelo token/smartcard local do usuário na fase 1
+   * (ver preparePlaceholder). Quando ausente, o provider deve sinalizar que
+   * a fase 1 (digest) precisa ser executada antes.
+   */
+  externalSignatureCms?: string | null;
+  /** Correlaciona com a sessão criada na fase 1 (signature_sign_sessions.id). */
+  signSessionId?: string | null;
 }
 
 export interface SignedDocument {
@@ -87,6 +100,7 @@ export function baseCertificateInformation(
   return {
     provider: certificate.provider ?? providerId,
     certificateType: certificate.certificate_type ?? "cloud",
+    certificateSubtype: (certificate.certificate_subtype as string | null) ?? null,
     label: certificate.label ?? null,
     subject: certificate.certificate_subject ?? null,
     holderDocument: certificate.holder_document ?? null,

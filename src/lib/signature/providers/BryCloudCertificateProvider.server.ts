@@ -15,24 +15,28 @@ import {
 
 export const PROVIDER_ID = "bry_cloud";
 const PROVIDER_NAME = "BRy Cloud (Certificado em Nuvem)";
-const PRODUCT_NAME = "BRyKMS";
+const PRODUCT_NAME_A1 = "BRyKMS — A1 em nuvem";
+const PRODUCT_NAME_A3 = "BRyKMS — A3 em HSM";
 
 export const BryCloudCertificateProvider: CertificateProvider = {
   id: PROVIDER_ID,
 
   async authenticate(input) {
-    const { doctorId, cpf, uuidCert, label, holderName } = input as unknown as {
+    const { doctorId, cpf, uuidCert, label, holderName, certificateType } = input as unknown as {
       doctorId: string;
       cpf?: string;
       uuidCert?: string | null;
       label?: string | null;
       holderName?: string | null;
+      /** A1 e A3 em nuvem usam o mesmo endpoint BRyKMS — isto é só metadado. */
+      certificateType?: "a1" | "a3";
     };
 
     const digits = (cpf ?? "").replace(/\D/g, "");
     if (digits.length !== 11) {
       throw new SignatureError("invalid_cpf", "Informe um CPF válido (11 dígitos).", 400);
     }
+    const subtype: "a1" | "a3" = certificateType === "a3" ? "a3" : "a1";
     // Garante que a integração está configurada antes de vincular.
     const { BryKmsApi } = await import("@/lib/bry/kms.server");
     void BryKmsApi;
@@ -45,14 +49,16 @@ export const BryCloudCertificateProvider: CertificateProvider = {
       holderDocument: digits,
       subject: holderName ?? null,
       providerName: PROVIDER_NAME,
-      productName: PRODUCT_NAME,
+      productName: subtype === "a3" ? PRODUCT_NAME_A3 : PRODUCT_NAME_A1,
       uuidCert: uuidCert ?? null,
+      certificateSubtype: subtype,
     });
 
     return {
       ok: true,
       provider: PROVIDER_ID,
       certificateType: "cloud",
+      certificateSubtype: subtype,
       requiresPin: true,
       holderDocument: digits,
     };

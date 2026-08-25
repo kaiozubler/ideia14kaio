@@ -56,6 +56,8 @@ import { Route as ApiPublicTermosAssinarRouteImport } from './routes/api/public/
 import { Route as ApiPublicTermosCodigoRouteImport } from './routes/api/public/termos/codigo'
 import { Route as ApiPublicTermosPublicoRouteImport } from './routes/api/public/termos/publico'
 import { Route as ApiPublicWebhooksBryRouteImport } from './routes/api/public/webhooks/bry'
+import { Route as ApiSignatureA3ExternoFinalizeRouteImport } from './routes/api/signature/a3-externo/finalize'
+import { Route as ApiSignatureA3ExternoPrepareRouteImport } from './routes/api/signature/a3-externo/prepare'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -307,6 +309,18 @@ const ApiPublicWebhooksBryRoute = ApiPublicWebhooksBryRouteImport.update({
   path: '/api/public/webhooks/bry',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSignatureA3ExternoFinalizeRoute =
+  ApiSignatureA3ExternoFinalizeRouteImport.update({
+    id: '/api/signature/a3-externo/finalize',
+    path: '/api/signature/a3-externo/finalize',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiSignatureA3ExternoPrepareRoute =
+  ApiSignatureA3ExternoPrepareRouteImport.update({
+    id: '/api/signature/a3-externo/prepare',
+    path: '/api/signature/a3-externo/prepare',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -356,6 +370,8 @@ export interface FileRoutesByFullPath {
   '/api/public/termos/codigo': typeof ApiPublicTermosCodigoRoute
   '/api/public/termos/publico': typeof ApiPublicTermosPublicoRoute
   '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
+  '/api/signature/a3-externo/finalize': typeof ApiSignatureA3ExternoFinalizeRoute
+  '/api/signature/a3-externo/prepare': typeof ApiSignatureA3ExternoPrepareRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -405,6 +421,8 @@ export interface FileRoutesByTo {
   '/api/public/termos/codigo': typeof ApiPublicTermosCodigoRoute
   '/api/public/termos/publico': typeof ApiPublicTermosPublicoRoute
   '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
+  '/api/signature/a3-externo/finalize': typeof ApiSignatureA3ExternoFinalizeRoute
+  '/api/signature/a3-externo/prepare': typeof ApiSignatureA3ExternoPrepareRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -455,6 +473,8 @@ export interface FileRoutesById {
   '/api/public/termos/codigo': typeof ApiPublicTermosCodigoRoute
   '/api/public/termos/publico': typeof ApiPublicTermosPublicoRoute
   '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
+  '/api/signature/a3-externo/finalize': typeof ApiSignatureA3ExternoFinalizeRoute
+  '/api/signature/a3-externo/prepare': typeof ApiSignatureA3ExternoPrepareRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -506,6 +526,8 @@ export interface FileRouteTypes {
     | '/api/public/termos/codigo'
     | '/api/public/termos/publico'
     | '/api/public/webhooks/bry'
+    | '/api/signature/a3-externo/finalize'
+    | '/api/signature/a3-externo/prepare'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -555,6 +577,8 @@ export interface FileRouteTypes {
     | '/api/public/termos/codigo'
     | '/api/public/termos/publico'
     | '/api/public/webhooks/bry'
+    | '/api/signature/a3-externo/finalize'
+    | '/api/signature/a3-externo/prepare'
   id:
     | '__root__'
     | '/'
@@ -604,6 +628,8 @@ export interface FileRouteTypes {
     | '/api/public/termos/codigo'
     | '/api/public/termos/publico'
     | '/api/public/webhooks/bry'
+    | '/api/signature/a3-externo/finalize'
+    | '/api/signature/a3-externo/prepare'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -654,6 +680,8 @@ export interface RootRouteChildren {
   ApiPublicTermosCodigoRoute: typeof ApiPublicTermosCodigoRoute
   ApiPublicTermosPublicoRoute: typeof ApiPublicTermosPublicoRoute
   ApiPublicWebhooksBryRoute: typeof ApiPublicWebhooksBryRoute
+  ApiSignatureA3ExternoFinalizeRoute: typeof ApiSignatureA3ExternoFinalizeRoute
+  ApiSignatureA3ExternoPrepareRoute: typeof ApiSignatureA3ExternoPrepareRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -987,6 +1015,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWebhooksBryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/signature/a3-externo/finalize': {
+      id: '/api/signature/a3-externo/finalize'
+      path: '/api/signature/a3-externo/finalize'
+      fullPath: '/api/signature/a3-externo/finalize'
+      preLoaderRoute: typeof ApiSignatureA3ExternoFinalizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/signature/a3-externo/prepare': {
+      id: '/api/signature/a3-externo/prepare'
+      path: '/api/signature/a3-externo/prepare'
+      fullPath: '/api/signature/a3-externo/prepare'
+      preLoaderRoute: typeof ApiSignatureA3ExternoPrepareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1039,17 +1081,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTermosCodigoRoute: ApiPublicTermosCodigoRoute,
   ApiPublicTermosPublicoRoute: ApiPublicTermosPublicoRoute,
   ApiPublicWebhooksBryRoute: ApiPublicWebhooksBryRoute,
+  ApiSignatureA3ExternoFinalizeRoute: ApiSignatureA3ExternoFinalizeRoute,
+  ApiSignatureA3ExternoPrepareRoute: ApiSignatureA3ExternoPrepareRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

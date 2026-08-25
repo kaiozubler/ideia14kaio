@@ -38,6 +38,8 @@ export const Route = createFileRoute("/api/signature/authenticate")({
             uuidCert?: string | null;
             label?: string | null;
             holderName?: string | null;
+            /** Só usado quando provider = "bry_cloud": "a1" (padrão) ou "a3". */
+            certificateType?: "a1" | "a3";
           };
           const cpf = (body.cpf ?? "").replace(/\D/g, "");
           if (cpf.length !== 11) {
@@ -52,6 +54,17 @@ export const Route = createFileRoute("/api/signature/authenticate")({
               uuidCert: body.uuidCert ?? null,
               label: body.label ?? null,
               holderName: body.holderName ?? null,
+              certificateType: body.certificateType ?? "a1",
+            });
+            return Response.json(result);
+          }
+
+          if (provider === "bry_a3_externo") {
+            const result = await SignatureService.registerBryA3ExternoCertificate({
+              doctorId: userId,
+              holderDocument: cpf,
+              holderName: body.holderName ?? null,
+              label: body.label ?? null,
             });
             return Response.json(result);
           }

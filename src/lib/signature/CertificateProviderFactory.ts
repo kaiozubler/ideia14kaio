@@ -3,13 +3,21 @@
 import type { CertificateProvider, StoredCertificate } from "./CertificateProvider";
 import { SignatureErrors } from "./errors";
 
-export type ProviderId = "bry_cloud" | "integra_icp" | "local" | (string & {});
+// bry_cloud cobre A1 Bry e A3 Bry (mesmo endpoint BRyKMS; ver
+// certificate_subtype em doctor_certificates para distinguir os dois).
+// local = A1 externo (.pfx/.p12 do usuário). bry_a3_externo = A3 externo
+// (token/smartcard local, fluxo de duas fases). integra_icp = agregador
+// terceiro legado (não é Bry).
+export type ProviderId = "bry_cloud" | "bry_a3_externo" | "integra_icp" | "local" | (string & {});
 
 type Loader = () => Promise<CertificateProvider>;
 
 const registry: Record<string, Loader> = {
   bry_cloud: async () =>
     (await import("./providers/BryCloudCertificateProvider.server")).BryCloudCertificateProvider,
+  bry_a3_externo: async () =>
+    (await import("./providers/BryA3ExternoCertificateProvider.server"))
+      .BryA3ExternoCertificateProvider,
   integra_icp: async () =>
     (await import("./providers/IntegraICPCertificateProvider")).IntegraICPCertificateProvider,
   local: async () =>

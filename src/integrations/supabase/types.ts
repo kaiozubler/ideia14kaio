@@ -2304,6 +2304,53 @@ export type Database = {
         }
         Relationships: []
       }
+      signature_sign_sessions: {
+        Row: {
+          created_at: string
+          digest_base64: string
+          doctor_id: string
+          document_id: string
+          expires_at: string
+          id: string
+          placeholder_pdf: string
+          reason: string | null
+          signer_name: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          digest_base64: string
+          doctor_id: string
+          document_id: string
+          expires_at?: string
+          id?: string
+          placeholder_pdf: string
+          reason?: string | null
+          signer_name?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          digest_base64?: string
+          doctor_id?: string
+          document_id?: string
+          expires_at?: string
+          id?: string
+          placeholder_pdf?: string
+          reason?: string | null
+          signer_name?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signature_sign_sessions_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_conversas: {
         Row: {
           created_at: string
