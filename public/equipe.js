@@ -595,18 +595,14 @@
           const listEl = document.getElementById("eq-psc-list");
           try {
             const token = await authToken();
-            const res = await fetch("/api/signature/integra-bry/pscs", {
-              headers: { Authorization: "Bearer " + token },
-            });
-            const j = await res.json().catch(() => ({ pscs: [] }));
-            const pscs = j.pscs || [];
+            const pscs = await window.IntegraBryConnect.listPscs(token);
             if (pscs.length === 0) {
               listEl.innerHTML = `<div style="color:#dc2626;font-size:12px">Não foi possível carregar a lista de certificadoras agora.</div>`;
               return;
             }
             listEl.innerHTML = pscs
               .map(
-                (psc, i) =>
+                (psc) =>
                   `<button type="button" class="eq-btn eq-btn-ghost eq-psc-opt" data-psc="${esc(psc.name)}" style="justify-content:flex-start">${esc(psc.provider ? `${psc.provider} (${psc.name})` : psc.name)}</button>`,
               )
               .join("");
@@ -628,51 +624,18 @@
           const msg = document.getElementById("eq-psc-msg");
           try {
             const token = await authToken();
-            const redirectUri = location.origin + location.pathname;
-            const res = await fetch("/api/signature/integra-bry/link", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-              body: JSON.stringify({ pscName, redirectUri, cpf: p.cpf || undefined }),
+            const result = await window.IntegraBryConnect.connect(token, {
+              pscName,
+              cpf: p.cpf || undefined,
+              onStatus: (text) => {
+                msg.textContent = text;
+              },
             });
-            const j = await res.json().catch(() => ({}));
-            if (!res.ok) {
-              msg.innerHTML = `<b style="color:#dc2626">${esc(j.message || j.error || "Falha ao gerar o link.")}</b>`;
-              return;
-            }
-            const state = j.state;
-            window.open(j.authorizationUrl, "_blank", "noopener");
-            msg.innerHTML = `
-              <div>Uma nova aba abriu para você autenticar em <b>${esc(pscName)}</b> e escolher o certificado.</div>
-              <div style="margin-top:8px">Depois de concluir por lá, volte aqui e clique no botão abaixo.</div>
-              <button type="button" class="eq-btn eq-btn-primary" id="eq-psc-confirm" style="margin-top:8px"><i class="ti ti-check"></i> Já autorizei, continuar</button>
-              <div id="eq-psc-confirm-msg" style="font-size:12px;color:#64748b;margin-top:6px"></div>
-            `;
-            document.getElementById("eq-psc-confirm").onclick = async () => {
-              const confirmMsg = document.getElementById("eq-psc-confirm-msg");
-              confirmMsg.textContent = "Confirmando…";
-              try {
-                const token2 = await authToken();
-                const res2 = await fetch("/api/signature/integra-bry/callback", {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: "Bearer " + token2,
-                  },
-                  body: JSON.stringify({ state }),
-                });
-                const j2 = await res2.json().catch(() => ({}));
-                if (!res2.ok) {
-                  confirmMsg.innerHTML = `<b style="color:#dc2626">${esc(j2.message || j2.error || "Ainda não foi possível confirmar. Conclua a autenticação na outra aba e tente de novo.")}</b>`;
-                  return;
-                }
-                closeModal();
-                loadCert();
-              } catch (err) {
-                confirmMsg.innerHTML = `<b style="color:#dc2626">${esc(String(err))}</b>`;
-              }
-            };
+            void result;
+            closeModal();
+            loadCert();
           } catch (err) {
-            msg.innerHTML = `<b style="color:#dc2626">${esc(String(err))}</b>`;
+            msg.innerHTML = `<b style="color:#dc2626">${esc(String(err && err.message ? err.message : err))}</b>`;
           }
         }
 

@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="equipe.css" />
     <link rel="stylesheet" href="paciente-protocolos.css" />
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="integra-bry-connect.js" defer></script>
     <script src="paciente-protocolos.js" defer></script>
     <script src="equipe.js" defer></script>
     <link rel="stylesheet" href="protocolos.css?v=2" />
@@ -15191,6 +15192,25 @@ let rxSelected = [];
                                                       resp = await post(pin);
                                                       j = await resp.json().catch(() => ({}));
                                                     }
+                                                    if (!resp.ok && j.error === 'credential_expired' && window.IntegraBryConnect) {
+                                                      // Certificado (A3 externo) expirado ou nunca conectado: em vez de
+                                                      // desistir e devolver o PDF sem assinatura — o que faria o médico
+                                                      // fechar a receita, ir em Minha Equipe reconectar e voltar pra
+                                                      // preencher tudo de novo — oferece reconectar aqui mesmo, sem sair
+                                                      // da tela, e tenta assinar de novo automaticamente.
+                                                      try {
+                                                        const { data: sess2 } = await sb.auth.getSession();
+                                                        const cpfAtual = (currentUser && currentUser.user_metadata && currentUser.user_metadata.cpf) || undefined;
+                                                        await window.IntegraBryConnect.promptAndConnect(sess2?.session?.access_token || token, {
+                                                          cpf: cpfAtual,
+                                                          title: 'Seu certificado expirou — reconecte para assinar',
+                                                        });
+                                                        resp = await post(null);
+                                                        j = await resp.json().catch(() => ({}));
+                                                      } catch (cancelErr) {
+                                                        // Médico cancelou o reconecte: segue com o fallback normal abaixo (PDF sem assinatura).
+                                                      }
+                                                    }
                                                     if (!resp.ok) {
                                                       console.warn('Assinatura ICP falhou:', resp.status, j);
                                                       const _msg = j.message || j.error || ('HTTP ' + resp.status);
@@ -16894,6 +16914,19 @@ let rxSelected = [];
                                                       if (!pin) { showToast && showToast('Assinatura cancelada', 'warn'); return; }
                                                       resp = await postSign(pin);
                                                       j = await resp.json().catch(() => ({}));
+                                                    }
+                                                    if (!resp.ok && j.error === 'credential_expired' && window.IntegraBryConnect) {
+                                                      try {
+                                                        const cpfAtual = (currentUser && currentUser.user_metadata && currentUser.user_metadata.cpf) || undefined;
+                                                        await window.IntegraBryConnect.promptAndConnect(token, {
+                                                          cpf: cpfAtual,
+                                                          title: 'Seu certificado expirou — reconecte para assinar',
+                                                        });
+                                                        resp = await postSign(null);
+                                                        j = await resp.json().catch(() => ({}));
+                                                      } catch (cancelErr) {
+                                                        // Médico cancelou o reconecte: segue com o erro normal abaixo.
+                                                      }
                                                     }
                                                     if (!resp.ok) {
                                                       const msgs = { credential_expired: 'Certificado ICP-Brasil expirado ou não conectado.', not_configured: 'Nenhum certificado ICP-Brasil conectado.' };

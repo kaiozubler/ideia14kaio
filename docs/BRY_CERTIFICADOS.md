@@ -57,6 +57,45 @@ Callback confirma a sessão (POST /integra-bry/callback)
 Assinatura (POST /integra-bry/sign)
 ```
 
+## Detecção automática do retorno (sem clique manual)
+
+`public/integra-bry-connect.js` é o módulo compartilhado (carregado uma vez
+em `medicopilot.html`, usado por `equipe.js` e pelas telas de documento).
+Ele abre a autenticação numa nova aba e resolve sozinho, sem precisar de
+nenhum "Já autorizei, continuar":
+
+1. **postMessage**: a aba nova (que recebe o `?state=...` de volta do PSC)
+   confirma o vínculo e avisa a aba original via `window.opener.postMessage`.
+   Por isso o `window.open` é feito **sem** `"noopener"` — precisamos manter
+   a referência de `opener`. Trade-off consciente: como o destino é o login
+   de um PSC parceiro (não um site arbitrário), o risco de reverse
+   tabnabbing é baixo, mas é uma escolha deliberada, não um descuido.
+2. **Polling de reforço**: a aba original também pergunta periodicamente
+   (a cada 4s) se a sessão já foi linkada, caso o `postMessage` falhe por
+   algum motivo. Para de tentar depois de ~10 min ou se a aba nova foi
+   fechada sem concluir.
+
+`window.IntegraBryConnect.promptAndConnect(token, { cpf, title })` é a
+função de mais alto nível: mostra um overlay autônomo (não depende de
+nenhum sistema de modal existente), lista os PSCs, deixa escolher, conecta
+e resolve — pensada pra ser chamada de **qualquer tela**, inclusive no meio
+da criação de um documento.
+
+## Reconectar sem perder o que já foi preenchido
+
+Cenário que motivou isso: médico preenche uma receita com vários
+medicamentos, clica em assinar, e o certificado (A3 externo) expirou. Sem
+essa mudança, ele precisaria fechar a receita, ir em "Minha equipe",
+reconectar, voltar e preencher tudo de novo.
+
+Agora, em `_assinarPdfBase64` (geração/assinatura da receita) e em
+`executarForcarAssinatura` (reassinar um documento já gerado), quando a
+API retorna `credential_expired`, o app chama `promptAndConnect` **ali
+mesmo, sem navegar pra lugar nenhum** — o formulário por trás do overlay
+continua intacto — e tenta assinar de novo automaticamente assim que a
+Bry confirmar o vínculo. Se o médico cancelar o overlay, cai no
+comportamento de sempre (gera o PDF sem assinatura, com aviso).
+
 ## O que está confirmado vs. o que precisa validação
 
 **Confirmado** contra `bry-developer.readme.io/reference/integra-bry` (fetch
