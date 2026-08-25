@@ -107,70 +107,48 @@
   async function adicionarItemTexto(baseId, tipo, nomeOriginal, conteudo) {
     const sb = sbc(); const mid = await medicoId(); if (!sb || !mid) return;
     const chunks = dividirEmChunks(conteudo);
+    // Os itens já entram "prontos": a busca do chat usa direto o `conteudo`
+    // (similaridade de texto), sem nenhum pré-processamento por IA por chunk.
+    // Só a descrição da base (abaixo) ainda passa por IA, e só quando falta.
     const linhas = chunks.map((c, ordem) => ({
       base_id: baseId, medico_id: mid, tipo, nome_original: nomeOriginal || null,
-      conteudo: c, tokens_estimados: estimarTokens(c), ordem, status: "processando",
+      conteudo: c, tokens_estimados: estimarTokens(c), ordem, status: "pronto",
     }));
     const { data: inseridos, error } = await sb.from("base_conhecimento_itens").insert(linhas).select("id, conteudo");
     if (error) { console.error(error.message); notify("Erro ao adicionar conteúdo"); return; }
     S.addingTextFor = null;
-    notify("Conteúdo adicionado — gerando perguntas relacionadas…");
+    notify("Conteúdo adicionado");
     await load();
-    // Enriquecimento por IA roda em segundo plano (uma vez, aqui no upload —
-    // nunca a cada mensagem de chat). Não bloqueia a tela nem o load acima.
-    enriquecerItensComIA(baseId, inseridos || []);
+    // Só chama a IA se a base ainda não tem descrição — não roda mais a cada
+    // chunk. Roda em segundo plano, não bloqueia a tela nem o load acima.
+    const base = S.bases.find((b) => b.id === baseId);
+    if ((!base || !(base.descricao || "").trim()) && inseridos && inseridos.length) {
+      sugerirDescricaoBase(baseId, inseridos);
+    }
   }
 
-  async function enriquecerItensComIA(baseId, itensInseridos) {
-    if (!itensInseridos.length) return;
+  async function sugerirDescricaoBase(baseId, itensInseridos) {
     const sb = sbc(); if (!sb) return;
-
-    // Só pede sugestão de descrição se a base ainda não tem uma (não sobrescreve
-    // o que o médico já escreveu).
-    const base = S.bases.find((b) => b.id === baseId);
-    const precisaDescricao = !base || !(base.descricao || "").trim();
-
-    // Processa em lotes de 6 chunks (mesmo limite aplicado no servidor), pra
-    // manter cada chamada de IA pequena e o custo previsível.
-    for (let i = 0; i < itensInseridos.length; i += 6) {
-      const lote = itensInseridos.slice(i, i + 6);
-      try {
-        const res = await fetch("/api/base-conhecimento/gerar-metadados", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chunks: lote.map((it) => ({ id: it.id, conteudo: it.conteudo })),
-            gerar_descricao: precisaDescricao && i === 0,
-          }),
-        });
-        if (!res.ok) throw new Error(await res.text());
-        const dados = await res.json();
-
-        const porId = new Map((dados.itens || []).map((it) => [it.id, it]));
-        await Promise.all(lote.map((it) => {
-          const gerado = porId.get(it.id);
-          return sb.from("base_conhecimento_itens").update({
-            perguntas_relacionadas: gerado && gerado.perguntas ? gerado.perguntas.join("\n") : null,
-            status: "pronto",
-          }).eq("id", it.id);
-        }));
-
-        if (precisaDescricao && i === 0 && dados.descricao_sugerida) {
-          // Checa de novo antes de gravar — o médico pode ter editado a
-          // descrição enquanto a IA processava.
-          const { data: atual } = await sb.from("base_conhecimento").select("descricao").eq("id", baseId).single();
-          if (atual && !(atual.descricao || "").trim()) {
-            await sb.from("base_conhecimento").update({ descricao: dados.descricao_sugerida }).eq("id", baseId);
-          }
-        }
-      } catch (err) {
-        console.error("[base-conhecimento] erro ao gerar metadados:", err);
-        await Promise.all(lote.map((it) => sb.from("base_conhecimento_itens").update({ status: "erro" }).eq("id", it.id)));
+    try {
+      const res = await fetch("/api/base-conhecimento/gerar-metadados", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chunks: itensInseridos.slice(0, 6).map((it) => ({ id: it.id, conteudo: it.conteudo })),
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const dados = await res.json();
+      if (!dados.descricao_sugerida) return;
+      // Checa de novo antes de gravar — o médico pode ter editado a
+      // descrição enquanto a IA processava.
+      const { data: atual } = await sb.from("base_conhecimento").select("descricao").eq("id", baseId).single();
+      if (atual && !(atual.descricao || "").trim()) {
+        await sb.from("base_conhecimento").update({ descricao: dados.descricao_sugerida }).eq("id", baseId);
+        await load({ silent: true });
       }
-      // Atualiza a tela a cada lote (silencioso, sem piscar "Carregando…"),
-      // pra dar feedback de progresso real em documentos com muitos chunks
-      // em vez de parecer travado até todos os lotes terminarem.
-      await load({ silent: true });
+    } catch (err) {
+      console.error("[base-conhecimento] erro ao gerar descrição sugerida:", err);
     }
   }
 
@@ -259,8 +237,8 @@
             <div style="display:flex;align-items:center;gap:8px;min-width:0">
               <i class="ti ${i.tipo === "arquivo" ? "ti-file-text" : "ti-align-left"}"></i>
               <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(i.nome_original || "Sem título")}</span>
-              ${i.status === "processando" ? '<span class="bk-tag" style="white-space:nowrap"><i class="ti ti-loader-2"></i> gerando perguntas…</span>' : ""}
-              ${i.status === "erro" ? '<span class="bk-tag" style="white-space:nowrap;color:#b45309">só busca por texto</span>' : ""}
+              ${i.status === "processando" ? '<span class="bk-tag" style="white-space:nowrap"><i class="ti ti-loader-2"></i> processando…</span>' : ""}
+              ${i.status === "erro" ? '<span class="bk-tag" style="white-space:nowrap;color:#b45309">erro ao processar</span>' : ""}
             </div>
             <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
               <span class="bk-item-tok">~${fmtTok(i.tokens_estimados)} tok</span>
@@ -512,8 +490,8 @@
         S.novaBaseCampos = { nome: "", descricao: "", tags: "", ias: ["chat_ai", "assistente_ai"] };
         await load();
         // Anexa o conteúdo que o médico já preparou antes de salvar a base —
-        // cada anexo entra no mesmo fluxo de chunking + perguntas por IA de
-        // sempre (adicionarItemTexto), só que agora já sabendo o base_id.
+        // cada anexo entra no mesmo fluxo de chunking de sempre
+        // (adicionarItemTexto), só que agora já sabendo o base_id.
         for (const a of anexosPendentes) {
           try {
             await adicionarItemTexto(novoId, a.tipo, a.nome, a.conteudo);

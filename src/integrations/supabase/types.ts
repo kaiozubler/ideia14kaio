@@ -229,7 +229,6 @@ export type Database = {
           medico_id: string | null
           nome_original: string | null
           ordem: number | null
-          perguntas_relacionadas: string | null
           status: string
           tipo: string | null
           tokens_estimados: number | null
@@ -242,7 +241,6 @@ export type Database = {
           medico_id?: string | null
           nome_original?: string | null
           ordem?: number | null
-          perguntas_relacionadas?: string | null
           status?: string
           tipo?: string | null
           tokens_estimados?: number | null
@@ -255,7 +253,6 @@ export type Database = {
           medico_id?: string | null
           nome_original?: string | null
           ordem?: number | null
-          perguntas_relacionadas?: string | null
           status?: string
           tipo?: string | null
           tokens_estimados?: number | null
