@@ -8564,9 +8564,10 @@
         div.textContent=text;
         if(Array.isArray(fonteBaseConhecimento)&&fonteBaseConhecimento.length){
           const selo=document.createElement('div');
-          selo.className='bk-fonte-badge';
-          selo.title=fonteBaseConhecimento.join(', ');
+          selo.className='bk-fonte-badge bk-fonte-badge-click';
+          selo.title=fonteBaseConhecimento.join(', ')+' — clique para abrir';
           selo.innerHTML='<i class="ti ti-database"></i> Base de conhecimento local: '+(typeof iaEscHtml==='function'?iaEscHtml(fonteBaseConhecimento.join(', ')):fonteBaseConhecimento.join(', '));
+          selo.addEventListener('click',()=>iaAssistAbrirBaseConhecimento(fonteBaseConhecimento));
           div.appendChild(selo);
         }
         log.appendChild(div);
@@ -11195,7 +11196,7 @@ async function iaAssistLoadConversa(id){
     iaAssistHistory=Array.isArray(d.mensagens)?d.mensagens:[];
     const layer=document.getElementById('ia-assist-bubbles');
     if(layer)layer.innerHTML='';
-    iaAssistHistory.forEach(function(m){spawnIaAssistBubble(m.role==='user'?'usr':'ia',m.content||'');});
+    iaAssistHistory.forEach(function(m){spawnIaAssistBubble(m.role==='user'?'usr':'ia',m.content||'',m.fonte_base_conhecimento);});
     iaAssistRenderTopics();
     iaAssistSyncBottomSpace();
   }catch(e){console.warn('[ia-assist] falha ao carregar conversa',e);}
@@ -11323,8 +11324,9 @@ function spawnIaAssistBubble(type,text,fonteBaseConhecimento){
   const el=document.createElement('div');
   el.className='bbl '+type;
   el.id=id;
-  const selo=(Array.isArray(fonteBaseConhecimento)&&fonteBaseConhecimento.length)
-    ? `<div class="bk-fonte-badge" title="${iaEscHtml(fonteBaseConhecimento.join(', '))}"><i class="ti ti-database"></i> Base de conhecimento local: ${iaEscHtml(fonteBaseConhecimento.join(', '))}</div>`
+  const temFonte=Array.isArray(fonteBaseConhecimento)&&fonteBaseConhecimento.length;
+  const selo=temFonte
+    ? `<div class="bk-fonte-badge bk-fonte-badge-click" title="${iaEscHtml(fonteBaseConhecimento.join(', '))} — clique para abrir"><i class="ti ti-database"></i> Base de conhecimento local: ${iaEscHtml(fonteBaseConhecimento.join(', '))}</div>`
     : '';
   // .bbl é display:flex (linha). O texto e o selo precisam ficar DENTRO de um
   // único item flex (em coluna) — se o selo virasse um segundo item na mesma
@@ -11332,9 +11334,27 @@ function spawnIaAssistBubble(type,text,fonteBaseConhecimento){
   // palavra por linha.
   el.innerHTML=`<div class="bbl-content"><span class="bbl-text">${html}</span>${selo}</div>`;
   layer.appendChild(el);
+  if(temFonte){
+    // addEventListener (não onclick inline) pra não ter que escapar nomes de
+    // base com aspas/caracteres especiais dentro de um atributo HTML.
+    const seloEl=el.querySelector('.bk-fonte-badge');
+    if(seloEl)seloEl.addEventListener('click',()=>iaAssistAbrirBaseConhecimento(fonteBaseConhecimento));
+  }
   iaAssistSyncBottomSpace();
   layer.scrollTop=layer.scrollHeight;
   return id;
+}
+
+// Selo "Base de conhecimento local: X" (Assistente IA e Chat IA) — clicar
+// leva até a tela "Base de conhecimento" já com a base aberta/destacada.
+// Com mais de uma base citada na mesma resposta, não dá pra saber qual o
+// médico quer ver, então só abre a tela sem focar em nenhuma específica.
+function iaAssistAbrirBaseConhecimento(nomes){
+  const lista=Array.isArray(nomes)?nomes:[nomes];
+  const foco=lista.length===1?lista[0]:null;
+  if(typeof closeIaAssistModal==='function')closeIaAssistModal();
+  if(typeof goScreen==='function')goScreen('base-conhecimento');
+  if(typeof initBaseConhecimento==='function')initBaseConhecimento(foco);
 }
 function showIaAssistTyping(){
   const layer=document.getElementById('ia-assist-bubbles');if(!layer)return null;

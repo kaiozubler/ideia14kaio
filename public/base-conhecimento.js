@@ -640,5 +640,30 @@
       .finally(() => { fi.value = ""; });
   });
 
-  window.initBaseConhecimento = function () { render(); load(); };
+  window.initBaseConhecimento = function (focoNome) {
+    if (focoNome) { S.tab = "bases"; S.pendingFocusNome = focoNome; }
+    render();
+    load().then(aplicarFocoPendente);
+  };
+
+  // Chamado depois que a IA (Assistente IA ou Chat IA) mostra o selo "Base
+  // de conhecimento local: X" e o médico clica nele — expande e centraliza
+  // a base correspondente, com um destaque rápido, pra ele achar fácil.
+  function aplicarFocoPendente() {
+    const nome = S.pendingFocusNome;
+    if (!nome) return;
+    S.pendingFocusNome = null;
+    const alvo = S.bases.find((b) => (b.nome || "").trim().toLowerCase() === String(nome).trim().toLowerCase());
+    if (!alvo) return;
+    S.expandedBaseId = alvo.id;
+    render();
+    requestAnimationFrame(() => {
+      const toggle = document.querySelector(`[data-toggle-base="${alvo.id}"]`);
+      const card = toggle && toggle.closest(".cop-card");
+      if (!card) return;
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+      card.classList.add("bk-highlight");
+      setTimeout(() => card.classList.remove("bk-highlight"), 1600);
+    });
+  }
 })();

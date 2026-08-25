@@ -1576,9 +1576,14 @@ async function salvarConversa(
   history: ChatMessage[],
   reply: string,
   apiKey: string,
+  fonteBaseConhecimento: string[] | null,
 ): Promise<string | null> {
   if (!medicoId || !history.length) return conversaId;
-  const mensagens = [...history, { role: "assistant", content: reply }];
+  // fonte_base_conhecimento vai junto da mensagem do assistente (não só na
+  // resposta HTTP) pra sobreviver ao reload: sem isso, o selo "Base de
+  // conhecimento local" some assim que a conversa é reaberta pelo histórico,
+  // já que ele nunca tinha sido persistido — só calculado na hora da resposta.
+  const mensagens = [...history, { role: "assistant", content: reply, fonte_base_conhecimento: fonteBaseConhecimento }];
   try {
     if (conversaId) {
       await db
@@ -1611,9 +1616,12 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
         const apiKey = process.env.LOVABLE_API_KEY;
         if (!apiKey) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
 
-        const history = (Array.isArray(body.messages) ? body.messages : []).filter(
-          (m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string",
-        ) as ChatMessage[];
+        const history = (Array.isArray(body.messages) ? body.messages : [])
+          .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+          // Mensagens carregadas do histórico salvo trazem campos extras (ex.:
+          // fonte_base_conhecimento, usado só pra exibir o selo na tela) — não
+          // deixa isso vazar pro payload enviado ao gateway de IA.
+          .map((m) => ({ role: m.role, content: m.content })) as ChatMessage[];
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const pendingAction: { value: unknown } = { value: null };
@@ -1728,7 +1736,15 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
               const conversaId =
                 canal === "paciente"
                   ? body.conversa_id || null
-                  : await salvarConversa(supabaseAdmin, body.user_id || null, body.conversa_id || null, history, reply, apiKey);
+                  : await salvarConversa(
+                      supabaseAdmin,
+                      body.user_id || null,
+                      body.conversa_id || null,
+                      history,
+                      reply,
+                      apiKey,
+                      usouBaseLocal && basesConhecimentoUsadas.length ? basesConhecimentoUsadas : null,
+                    );
               return Response.json({
                 reply,
                 action: pendingAction.value,
