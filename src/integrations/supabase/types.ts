@@ -2307,36 +2307,45 @@ export type Database = {
       signature_psc_link_sessions: {
         Row: {
           api_key: string | null
+          certificate_subject: string | null
           created_at: string
           doctor_id: string
           expires_at: string
+          holder_document: string | null
           id: string
           psc_name: string
           redirect_uri: string
           state: string
           status: string
+          valid_until: string | null
         }
         Insert: {
           api_key?: string | null
+          certificate_subject?: string | null
           created_at?: string
           doctor_id: string
           expires_at?: string
+          holder_document?: string | null
           id?: string
           psc_name: string
           redirect_uri: string
           state: string
           status?: string
+          valid_until?: string | null
         }
         Update: {
           api_key?: string | null
+          certificate_subject?: string | null
           created_at?: string
           doctor_id?: string
           expires_at?: string
+          holder_document?: string | null
           id?: string
           psc_name?: string
           redirect_uri?: string
           state?: string
           status?: string
+          valid_until?: string | null
         }
         Relationships: [
           {

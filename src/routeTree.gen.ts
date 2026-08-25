@@ -57,6 +57,7 @@ import { Route as ApiPublicTermosCodigoRouteImport } from './routes/api/public/t
 import { Route as ApiPublicTermosPublicoRouteImport } from './routes/api/public/termos/publico'
 import { Route as ApiPublicWebhooksBryRouteImport } from './routes/api/public/webhooks/bry'
 import { Route as ApiSignatureIntegraBryCallbackRouteImport } from './routes/api/signature/integra-bry/callback'
+import { Route as ApiSignatureIntegraBryPscsRouteImport } from './routes/api/signature/integra-bry/pscs'
 import { Route as ApiSignatureIntegraBryLinkRouteImport } from './routes/api/signature/integra-bry/link'
 import { Route as ApiSignatureIntegraBrySignRouteImport } from './routes/api/signature/integra-bry/sign'
 
@@ -316,6 +317,12 @@ const ApiSignatureIntegraBryCallbackRoute =
     path: '/api/signature/integra-bry/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiSignatureIntegraBryPscsRoute =
+  ApiSignatureIntegraBryPscsRouteImport.update({
+    id: '/api/signature/integra-bry/pscs',
+    path: '/api/signature/integra-bry/pscs',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiSignatureIntegraBryLinkRoute =
   ApiSignatureIntegraBryLinkRouteImport.update({
     id: '/api/signature/integra-bry/link',
@@ -378,6 +385,7 @@ export interface FileRoutesByFullPath {
   '/api/public/termos/publico': typeof ApiPublicTermosPublicoRoute
   '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
   '/api/signature/integra-bry/callback': typeof ApiSignatureIntegraBryCallbackRoute
+  '/api/signature/integra-bry/pscs': typeof ApiSignatureIntegraBryPscsRoute
   '/api/signature/integra-bry/link': typeof ApiSignatureIntegraBryLinkRoute
   '/api/signature/integra-bry/sign': typeof ApiSignatureIntegraBrySignRoute
 }
@@ -430,6 +438,7 @@ export interface FileRoutesByTo {
   '/api/public/termos/publico': typeof ApiPublicTermosPublicoRoute
   '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
   '/api/signature/integra-bry/callback': typeof ApiSignatureIntegraBryCallbackRoute
+  '/api/signature/integra-bry/pscs': typeof ApiSignatureIntegraBryPscsRoute
   '/api/signature/integra-bry/link': typeof ApiSignatureIntegraBryLinkRoute
   '/api/signature/integra-bry/sign': typeof ApiSignatureIntegraBrySignRoute
 }
@@ -483,6 +492,7 @@ export interface FileRoutesById {
   '/api/public/termos/publico': typeof ApiPublicTermosPublicoRoute
   '/api/public/webhooks/bry': typeof ApiPublicWebhooksBryRoute
   '/api/signature/integra-bry/callback': typeof ApiSignatureIntegraBryCallbackRoute
+  '/api/signature/integra-bry/pscs': typeof ApiSignatureIntegraBryPscsRoute
   '/api/signature/integra-bry/link': typeof ApiSignatureIntegraBryLinkRoute
   '/api/signature/integra-bry/sign': typeof ApiSignatureIntegraBrySignRoute
 }
@@ -537,6 +547,7 @@ export interface FileRouteTypes {
     | '/api/public/termos/publico'
     | '/api/public/webhooks/bry'
     | '/api/signature/integra-bry/callback'
+    | '/api/signature/integra-bry/pscs'
     | '/api/signature/integra-bry/link'
     | '/api/signature/integra-bry/sign'
   fileRoutesByTo: FileRoutesByTo
@@ -589,6 +600,7 @@ export interface FileRouteTypes {
     | '/api/public/termos/publico'
     | '/api/public/webhooks/bry'
     | '/api/signature/integra-bry/callback'
+    | '/api/signature/integra-bry/pscs'
     | '/api/signature/integra-bry/link'
     | '/api/signature/integra-bry/sign'
   id:
@@ -641,6 +653,7 @@ export interface FileRouteTypes {
     | '/api/public/termos/publico'
     | '/api/public/webhooks/bry'
     | '/api/signature/integra-bry/callback'
+    | '/api/signature/integra-bry/pscs'
     | '/api/signature/integra-bry/link'
     | '/api/signature/integra-bry/sign'
   fileRoutesById: FileRoutesById
@@ -694,6 +707,7 @@ export interface RootRouteChildren {
   ApiPublicTermosPublicoRoute: typeof ApiPublicTermosPublicoRoute
   ApiPublicWebhooksBryRoute: typeof ApiPublicWebhooksBryRoute
   ApiSignatureIntegraBryCallbackRoute: typeof ApiSignatureIntegraBryCallbackRoute
+  ApiSignatureIntegraBryPscsRoute: typeof ApiSignatureIntegraBryPscsRoute
   ApiSignatureIntegraBryLinkRoute: typeof ApiSignatureIntegraBryLinkRoute
   ApiSignatureIntegraBrySignRoute: typeof ApiSignatureIntegraBrySignRoute
 }
@@ -1036,6 +1050,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSignatureIntegraBryCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/signature/integra-bry/pscs': {
+      id: '/api/signature/integra-bry/pscs'
+      path: '/api/signature/integra-bry/pscs'
+      fullPath: '/api/signature/integra-bry/pscs'
+      preLoaderRoute: typeof ApiSignatureIntegraBryPscsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/signature/integra-bry/link': {
       id: '/api/signature/integra-bry/link'
       path: '/api/signature/integra-bry/link'
@@ -1103,6 +1124,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTermosPublicoRoute: ApiPublicTermosPublicoRoute,
   ApiPublicWebhooksBryRoute: ApiPublicWebhooksBryRoute,
   ApiSignatureIntegraBryCallbackRoute: ApiSignatureIntegraBryCallbackRoute,
+  ApiSignatureIntegraBryPscsRoute: ApiSignatureIntegraBryPscsRoute,
   ApiSignatureIntegraBryLinkRoute: ApiSignatureIntegraBryLinkRoute,
   ApiSignatureIntegraBrySignRoute: ApiSignatureIntegraBrySignRoute,
 }

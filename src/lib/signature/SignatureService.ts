@@ -61,6 +61,12 @@ export const SignatureService = {
    * `lifetimeSeconds` é o "tempo de vida da requisição" (180 a 604800s;
    * default 12h, o mesmo valor citado pelas outras certificadoras).
    */
+  /** Lista os PSCs suportados pelo Integra Bry, para o médico escolher qual usar. */
+  async listIntegraBryPscs() {
+    const { IntegraBryApi } = await import("@/lib/bry/integraBry.server");
+    return IntegraBryApi.listPscs();
+  },
+
   async startIntegraBryLink(req: {
     doctorId: string;
     pscName: string;
@@ -75,8 +81,13 @@ export const SignatureService = {
       pscName: req.pscName,
       redirectUri: req.redirectUri,
       state,
-      scope: req.scope ?? "single_signature",
-      lifetime: req.lifetimeSeconds ?? 12 * 60 * 60,
+      // Por padrão usamos "signature_session" com o lifetime máximo (7 dias)
+      // para que a tela de configuração possa mostrar "conectado" por um
+      // tempo razoável, como os demais tipos de certificado. Para assinar
+      // documento a documento sem manter vínculo, o chamador pode passar
+      // scope: "single_signature".
+      scope: req.scope ?? "signature_session",
+      lifetime: req.lifetimeSeconds ?? 7 * 24 * 60 * 60,
       cpf: req.cpf,
     });
     const sessionId = await CredentialRepository.createPscLinkSession({
@@ -116,7 +127,11 @@ export const SignatureService = {
       IntegraBryApi.getAuthInfo(apiKey),
       IntegraBryApi.getAuthCertificate(apiKey),
     ]);
-    await CredentialRepository.markPscLinkSessionLinked(session.id, apiKey);
+    await CredentialRepository.markPscLinkSessionLinked(session.id, apiKey, {
+      subject: certificate.subject,
+      holderDocument: certificate.holderDocument,
+      validUntil: certificate.validUntil,
+    });
     return { sessionId: session.id, pscName: session.pscName, info, certificate };
   },
 
@@ -181,22 +196,50 @@ export const SignatureService = {
 
   async getCredential(doctorId: string) {
     const cert = await CredentialRepository.getActiveCertificate(doctorId);
-    if (!cert) return null;
-    const provider = await CertificateProviderFactory.get(cert as StoredCertificate);
-    const info = provider.getCertificateInformation(cert as StoredCertificate);
-    // Never expose secrets / raw material to the frontend.
-    const safe = { ...(cert as Record<string, unknown>) };
-    delete safe.code_verifier_encrypted;
-    delete safe.raw_metadata;
-    return { ...safe, expired: info.expired, info };
+    if (cert) {
+      const provider = await CertificateProviderFactory.get(cert as StoredCertificate);
+      const info = provider.getCertificateInformation(cert as StoredCertificate);
+      // Never expose secrets / raw material to the frontend.
+      const safe = { ...(cert as Record<string, unknown>) };
+      delete safe.code_verifier_encrypted;
+      delete safe.raw_metadata;
+      return { ...safe, expired: info.expired, info };
+    }
+
+    // Sem certificado "tradicional" — verifica se há uma sessão Integra Bry
+    // (A3 externo / certificado de outro PSC) ainda válida.
+    const psc = await CredentialRepository.getActivePscLinkSession(doctorId);
+    if (!psc) return null;
+    return {
+      provider: "integra_bry",
+      provider_name: `Integra Bry (${psc.pscName})`,
+      certificate_subject: psc.certificateSubject,
+      credential_id: psc.id,
+      pscSessionId: psc.id,
+      expired: false,
+      info: {
+        provider: "integra_bry",
+        subject: psc.certificateSubject,
+        holderDocument: psc.holderDocument,
+        validUntil: psc.validUntil,
+        expiresAt: psc.expiresAt,
+      },
+    };
   },
 
   async removeCredential(doctorId: string) {
     const cert = await CredentialRepository.getActiveCertificate(doctorId);
-    if (!cert) return { removed: false };
-    const provider = await CertificateProviderFactory.get(cert as StoredCertificate);
-    await provider.revokeAuthentication(cert as StoredCertificate);
-    return { removed: true };
+    if (cert) {
+      const provider = await CertificateProviderFactory.get(cert as StoredCertificate);
+      await provider.revokeAuthentication(cert as StoredCertificate);
+      return { removed: true };
+    }
+    const psc = await CredentialRepository.getActivePscLinkSession(doctorId);
+    if (psc) {
+      await CredentialRepository.expirePscLinkSession(psc.id, doctorId);
+      return { removed: true };
+    }
+    return { removed: false };
   },
 
   async signDocument(req: {
@@ -208,7 +251,19 @@ export const SignatureService = {
     certificatePassword?: string | null;
   }): Promise<{ signedPdfUrl: string; signaturePath: string; signatureTimestamp: string | null }> {
     const cert = await CredentialRepository.getActiveCertificate(req.doctorId);
-    if (!cert) throw SignatureErrors.CredentialExpired("Nenhum certificado ativo.");
+    if (!cert) {
+      const psc = await CredentialRepository.getActivePscLinkSession(req.doctorId);
+      if (psc) {
+        return this.signWithIntegraBry({
+          doctorId: req.doctorId,
+          sessionId: psc.id,
+          pdfBuffer: req.pdfBuffer,
+          contentDescription: req.contentDescription,
+          filename: req.filename,
+        });
+      }
+      throw SignatureErrors.CredentialExpired("Nenhum certificado ativo.");
+    }
     const provider = await CertificateProviderFactory.get(cert as StoredCertificate);
     const signed = await provider.signDocument({
       certificate: cert as StoredCertificate,

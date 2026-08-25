@@ -472,8 +472,9 @@
           modalShell(
             "Escolha o tipo de certificado",
             `<div style="display:grid;gap:10px">
-               <button type="button" class="eq-btn eq-btn-ghost" id="eq-cert-cloud" style="justify-content:flex-start"><i class="ti ti-cloud-lock"></i> Certificado em Nuvem</button>
+               <button type="button" class="eq-btn eq-btn-ghost" id="eq-cert-cloud" style="justify-content:flex-start"><i class="ti ti-cloud-lock"></i> Certificado em Nuvem (BRy)</button>
                <button type="button" class="eq-btn eq-btn-ghost" id="eq-cert-local" style="justify-content:flex-start"><i class="ti ti-file-certificate"></i> Arquivo .PFX / .P12</button>
+               <button type="button" class="eq-btn eq-btn-ghost" id="eq-cert-psc" style="justify-content:flex-start"><i class="ti ti-building-bank"></i> Certificado de outra certificadora (BirdID, Vidaas, SafeID...)</button>
              </div>`,
           );
           document.getElementById("eq-cert-cloud").onclick = () => {
@@ -483,6 +484,10 @@
           document.getElementById("eq-cert-local").onclick = () => {
             closeModal();
             openLocalUpload();
+          };
+          document.getElementById("eq-cert-psc").onclick = () => {
+            closeModal();
+            openPscChooser();
           };
         }
 
@@ -577,6 +582,98 @@
               msg.innerHTML = `<b style="color:#dc2626">${esc(String(err))}</b>`;
             }
           };
+        }
+
+        async function openPscChooser() {
+          modalShell(
+            "Certificado de outra certificadora",
+            `<div style="display:grid;gap:10px">
+               <div style="font-size:12px;color:#64748b">Escolha a certificadora onde seu certificado A1 ou A3 está hospedado. Você vai autenticar diretamente lá — nenhum dado do certificado é digitado aqui.</div>
+               <div id="eq-psc-list" style="display:grid;gap:8px">Carregando certificadoras…</div>
+             </div>`,
+          );
+          const listEl = document.getElementById("eq-psc-list");
+          try {
+            const token = await authToken();
+            const res = await fetch("/api/signature/integra-bry/pscs", {
+              headers: { Authorization: "Bearer " + token },
+            });
+            const j = await res.json().catch(() => ({ pscs: [] }));
+            const pscs = j.pscs || [];
+            if (pscs.length === 0) {
+              listEl.innerHTML = `<div style="color:#dc2626;font-size:12px">Não foi possível carregar a lista de certificadoras agora.</div>`;
+              return;
+            }
+            listEl.innerHTML = pscs
+              .map(
+                (psc, i) =>
+                  `<button type="button" class="eq-btn eq-btn-ghost eq-psc-opt" data-psc="${esc(psc.name)}" style="justify-content:flex-start">${esc(psc.provider ? `${psc.provider} (${psc.name})` : psc.name)}</button>`,
+              )
+              .join("");
+            listEl.querySelectorAll(".eq-psc-opt").forEach((btn) => {
+              btn.onclick = () => startPscLink(btn.dataset.psc);
+            });
+          } catch (err) {
+            listEl.innerHTML = `<div style="color:#dc2626;font-size:12px">${esc(String(err))}</div>`;
+          }
+        }
+
+        async function startPscLink(pscName) {
+          modalShell(
+            `Conectar com ${esc(pscName)}`,
+            `<div style="display:grid;gap:10px">
+               <div id="eq-psc-msg" style="font-size:12px;color:#64748b">Gerando link de autenticação…</div>
+             </div>`,
+          );
+          const msg = document.getElementById("eq-psc-msg");
+          try {
+            const token = await authToken();
+            const redirectUri = location.origin + location.pathname;
+            const res = await fetch("/api/signature/integra-bry/link", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+              body: JSON.stringify({ pscName, redirectUri, cpf: p.cpf || undefined }),
+            });
+            const j = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              msg.innerHTML = `<b style="color:#dc2626">${esc(j.message || j.error || "Falha ao gerar o link.")}</b>`;
+              return;
+            }
+            const state = j.state;
+            window.open(j.authorizationUrl, "_blank", "noopener");
+            msg.innerHTML = `
+              <div>Uma nova aba abriu para você autenticar em <b>${esc(pscName)}</b> e escolher o certificado.</div>
+              <div style="margin-top:8px">Depois de concluir por lá, volte aqui e clique no botão abaixo.</div>
+              <button type="button" class="eq-btn eq-btn-primary" id="eq-psc-confirm" style="margin-top:8px"><i class="ti ti-check"></i> Já autorizei, continuar</button>
+              <div id="eq-psc-confirm-msg" style="font-size:12px;color:#64748b;margin-top:6px"></div>
+            `;
+            document.getElementById("eq-psc-confirm").onclick = async () => {
+              const confirmMsg = document.getElementById("eq-psc-confirm-msg");
+              confirmMsg.textContent = "Confirmando…";
+              try {
+                const token2 = await authToken();
+                const res2 = await fetch("/api/signature/integra-bry/callback", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: "Bearer " + token2,
+                  },
+                  body: JSON.stringify({ state }),
+                });
+                const j2 = await res2.json().catch(() => ({}));
+                if (!res2.ok) {
+                  confirmMsg.innerHTML = `<b style="color:#dc2626">${esc(j2.message || j2.error || "Ainda não foi possível confirmar. Conclua a autenticação na outra aba e tente de novo.")}</b>`;
+                  return;
+                }
+                closeModal();
+                loadCert();
+              } catch (err) {
+                confirmMsg.innerHTML = `<b style="color:#dc2626">${esc(String(err))}</b>`;
+              }
+            };
+          } catch (err) {
+            msg.innerHTML = `<b style="color:#dc2626">${esc(String(err))}</b>`;
+          }
         }
 
         certBtn.onclick = openTypeChooser;

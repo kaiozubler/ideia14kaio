@@ -299,14 +299,81 @@ export const CredentialRepository = {
   },
 
   /** Marca a sessão como linkada (usuário concluiu a autenticação no PSC) e guarda o apiKey, se só agora disponível. */
-  async markPscLinkSessionLinked(sessionId: string, apiKey?: string | null): Promise<void> {
+  async markPscLinkSessionLinked(
+    sessionId: string,
+    apiKey?: string | null,
+    certificateSummary?: {
+      subject?: string | null;
+      holderDocument?: string | null;
+      validUntil?: string | null;
+    },
+  ): Promise<void> {
     const sb = await admin();
     const patch: Record<string, unknown> = { status: "linked" };
     if (apiKey) patch.api_key = apiKey;
+    if (certificateSummary) {
+      patch.certificate_subject = certificateSummary.subject ?? null;
+      patch.holder_document = certificateSummary.holderDocument ?? null;
+      patch.valid_until = certificateSummary.validUntil ?? null;
+    }
     const { error } = await sb
       .from("signature_psc_link_sessions")
       .update(patch as never)
       .eq("id", sessionId);
+    if (error) throw error;
+  },
+
+  /**
+   * Sessão Integra Bry ativa mais recente do médico (linkada e ainda dentro
+   * do prazo). Usado para exibir "certificado conectado" na tela de
+   * configuração, já que esse fluxo não gera linha em doctor_certificates.
+   */
+  async getActivePscLinkSession(doctorId: string): Promise<{
+    id: string;
+    pscName: string;
+    certificateSubject: string | null;
+    holderDocument: string | null;
+    validUntil: string | null;
+    expiresAt: string;
+  } | null> {
+    const sb = await admin();
+    const { data, error } = await sb
+      .from("signature_psc_link_sessions")
+      .select("id, psc_name, certificate_subject, holder_document, valid_until, expires_at")
+      .eq("doctor_id", doctorId)
+      .eq("status", "linked")
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const row = data as {
+      id: string;
+      psc_name: string;
+      certificate_subject: string | null;
+      holder_document: string | null;
+      valid_until: string | null;
+      expires_at: string;
+    };
+    return {
+      id: row.id,
+      pscName: row.psc_name,
+      certificateSubject: row.certificate_subject,
+      holderDocument: row.holder_document,
+      validUntil: row.valid_until,
+      expiresAt: row.expires_at,
+    };
+  },
+
+  /** Encerra a sessão Integra Bry ativa do médico (equivalente a "excluir certificado" para esse fluxo). */
+  async expirePscLinkSession(sessionId: string, doctorId: string): Promise<void> {
+    const sb = await admin();
+    const { error } = await sb
+      .from("signature_psc_link_sessions")
+      .update({ status: "expired" } as never)
+      .eq("id", sessionId)
+      .eq("doctor_id", doctorId);
     if (error) throw error;
   },
 
@@ -324,6 +391,7 @@ export const CredentialRepository = {
       .maybeSingle();
     if (error) throw error;
     if (!data) return null;
+
     const row = data as {
       api_key: string | null;
       psc_name: string;
