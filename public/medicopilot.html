@@ -6823,24 +6823,88 @@
                                                               const label=COP_VOICE_ACTION_LABELS[rule.action]||rule.action||'Ação';
                                                               const kwLabel=[rule.keyword].concat(rule.branches||[]).filter(Boolean).join(' + ');
                                                               if(rule.exec==='confirmar'){
-                                                                if(typeof showToast==='function')showToast('Comando de voz detectado: "'+kwLabel+'" → '+label+' (aguardando confirmação do médico)','info');
-                                                                // A UI de confirmação (aceitar/recusar) será implementada na próxima etapa.
+                                                                copVoiceAskConfirmation(rule,kwLabel,label);
                                                               } else if(rule.exec==='pendencia'){
-                                                                copVoicePendencias.push({id:_cvNewId(),ts:Date.now(),keyword:kwLabel,action:rule.action,label:label});
-                                                                if(typeof showToast==='function')showToast('Pendência gerada por voz: '+label,'success');
-                                                                // A listagem dessas pendências será implementada na próxima etapa.
+                                                                // "Gerar pendência" = o balão flutuante do task tray: fica
+                                                                // sinalizado para o médico revisar quando quiser, sem
+                                                                // interromper a consulta agora.
+                                                                if(typeof showToast==='function')showToast('Pendência detectada: "'+kwLabel+'" → gerando '+label+'...','info');
+                                                                executeCopVoiceAction(rule,kwLabel,label);
                                                               } else {
-                                                                if(typeof showToast==='function')showToast('Comando de voz disparado: "'+kwLabel+'" → '+label,'success');
-                                                                // A execução de cada ação (gerar receita, enviar mensagem etc.) será implementada na próxima etapa.
-                                                                if(typeof executeCopVoiceAction==='function')executeCopVoiceAction(rule);
+                                                                if(typeof showToast==='function')showToast('Comando de voz detectado: "'+kwLabel+'" → '+label,'success');
+                                                                executeCopVoiceAction(rule,kwLabel,label);
                                                               }
                                                             }
-                                                            function executeCopVoiceAction(rule){
-                                                              // Placeholder — cada ação (gerar receita, enviar receita, gerar/enviar
-                                                              // atestado, agendar paciente, enviar mensagem de agendamento,
-                                                              // responder pergunta, fazer pesquisa, análise pela IA) será
-                                                              // implementada na próxima etapa.
-                                                              console.log('[copiloto-voz] executar (stub):',rule.action,rule);
+                                                            // Executa de fato a ação vinculada à regra: reaproveita o mesmo
+                                                            // pipeline do botão "Executar" (envia o contexto recente da fala
+                                                            // para a IA e transforma a ação retornada num balão flutuante no
+                                                            // task tray) — assim o médico nunca é interrompido, só sinalizado.
+                                                            async function executeCopVoiceAction(rule,kwLabel,label){
+                                                              kwLabel=kwLabel||[rule.keyword].concat(rule.branches||[]).filter(Boolean).join(' + ');
+                                                              label=label||COP_VOICE_ACTION_LABELS[rule.action]||rule.action||'Ação';
+                                                              try{
+                                                                const contexto=getTranscriptWindowText(Math.round(COP_VOICE_WINDOW_MS/1000)+2,Date.now());
+                                                                const mensagens=[{role:'user',content:'[Comando de voz automático — a palavra-chave "'+kwLabel+'" foi detectada durante a consulta. Ação configurada pelo médico para esse gatilho: "'+label+'". Execute essa ação com base no contexto abaixo.]\n'+(contexto||'(sem fala recente registrada)')}];
+                                                                const res=await fetch('/api/assistente-ia',{
+                                                                  method:'POST',headers:{'Content-Type':'application/json'},
+                                                                  body:JSON.stringify({
+                                                                    mode:'assistente_global',
+                                                                    messages:mensagens,
+                                                                    user_id:(typeof iaAssistUserId==='function')?iaAssistUserId():null,
+                                                                    conversa_id:null,
+                                                                    paciente_id:(currentPatient&&currentPatient.id)||null,
+                                                                    paciente_nome:(currentPatient&&currentPatient.name)||null
+                                                                  })
+                                                                });
+                                                                if(!res.ok)throw new Error(await res.text());
+                                                                const data=await res.json();
+                                                                if(data&&data.action){
+                                                                  const kind=taskKindFromActionType(data.action.type);
+                                                                  const id=iaAssistRegisterAttachment(kind,data.action);
+                                                                  spawnTaskBubble(kind,id);
+                                                                  if(typeof queueAiPanelItem==='function')queueAiPanelItem('ia',(data.reply&&data.reply.trim())||('Comando de voz "'+kwLabel+'" executado — veja o balão no canto superior direito.'));
+                                                                }else{
+                                                                  // Ação conversacional (responder pergunta, pesquisa, análise da IA) —
+                                                                  // não gera documento, mas também vira balão para não interromper.
+                                                                  const id=iaAssistRegisterAttachment('orientacoes',{
+                                                                    texto:(data&&data.reply&&data.reply.trim())||'A IA não retornou conteúdo para este comando.',
+                                                                    paciente_nome:(currentPatient&&currentPatient.name)||''
+                                                                  });
+                                                                  spawnTaskBubble('orientacoes',id);
+                                                                }
+                                                              }catch(e){
+                                                                console.error('[copiloto-voz] ERRO ao executar ação do comando:',e);
+                                                                if(typeof showToast==='function')showToast('Erro ao executar comando de voz "'+kwLabel+'": '+(e.message||e),'error');
+                                                              }
+                                                            }
+                                                            // Modo "Pedir confirmação" — mostra um balão diferenciado (âmbar,
+                                                            // pulsando) que só executa a ação de fato quando o médico clicar
+                                                            // e confirmar; enquanto isso, nada é gerado nem enviado.
+                                                            let _copVoiceConfirmSeq=0;
+                                                            window.copVoicePendingConfirm=window.copVoicePendingConfirm||{};
+                                                            function copVoiceAskConfirmation(rule,kwLabel,label){
+                                                              const id='cv-confirm-'+(++_copVoiceConfirmSeq)+'-'+Date.now();
+                                                              window.copVoicePendingConfirm[id]={rule,kwLabel,label};
+                                                              spawnTaskBubble('confirmacao',id);
+                                                              if(typeof showToast==='function')showToast('Comando de voz detectado: "'+kwLabel+'" → toque no balão para confirmar '+label,'info');
+                                                            }
+                                                            function copVoiceConfirmarBalao(taskId){
+                                                              const item=window.taskTray.find(function(t){return t.id===taskId;});
+                                                              if(!item)return;
+                                                              const pending=window.copVoicePendingConfirm[item.attachId];
+                                                              if(!pending)return;
+                                                              window.taskTray=window.taskTray.filter(function(t){return t.id!==taskId;});
+                                                              delete window.copVoicePendingConfirm[item.attachId];
+                                                              renderTaskTray();
+                                                              executeCopVoiceAction(pending.rule,pending.kwLabel,pending.label);
+                                                            }
+                                                            function copVoiceRecusarBalao(taskId){
+                                                              const item=window.taskTray.find(function(t){return t.id===taskId;});
+                                                              if(!item)return;
+                                                              window.taskTray=window.taskTray.filter(function(t){return t.id!==taskId;});
+                                                              delete window.copVoicePendingConfirm[item.attachId];
+                                                              renderTaskTray();
+                                                              if(typeof showToast==='function')showToast('Comando de voz recusado','info');
                                                             }
                                                             /* Reflete o estado do copiloto no atendimento: sem copiloto, o painel da IA
                                                                (chat_ia) sai da tela e o prontuário ocupa a largura inteira. */
@@ -11827,7 +11891,8 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                     orientacoes: {label:'Instruções', icon:'ti-notes',            grad:'linear-gradient(135deg,#f472b6,#db2777)'},
                     laudo:       {label:'Laudo',      icon:'ti-report-medical',   grad:'linear-gradient(135deg,#67e8f9,#0891b2)'},
                     anamnese:    {label:'Anamnese',   icon:'ti-file-text-ai',     grad:'linear-gradient(135deg,#94a3b8,#475569)'},
-                    documento:   {label:'Documento',  icon:'ti-file',             grad:'linear-gradient(135deg,#cbd5e1,#64748b)'}
+                    documento:   {label:'Documento',  icon:'ti-file',             grad:'linear-gradient(135deg,#cbd5e1,#64748b)'},
+                    confirmacao: {label:'Confirmar',  icon:'ti-help-circle',      grad:'linear-gradient(135deg,#fbbf24,#b45309)'}
                   };
 
                   window.taskTray=window.taskTray||[]; // [{id, attachId, kind, createdAt}]
@@ -11868,6 +11933,16 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                   function openTaskBubble(taskId){
                     const item=window.taskTray.find(function(t){return t.id===taskId;});
                     if(!item)return;
+                    if(item.kind==='confirmacao'){
+                      const pending=window.copVoicePendingConfirm[item.attachId];
+                      const desc=pending?('"'+pending.kwLabel+'" → '+pending.label):'este comando de voz';
+                      if(confirm('Confirmar '+desc+'?\n\nOK = executar agora · Cancelar = descartar')){
+                        copVoiceConfirmarBalao(taskId);
+                      }else{
+                        copVoiceRecusarBalao(taskId);
+                      }
+                      return;
+                    }
                     iaAssistOpenPreview(item.attachId);
                   }
 
@@ -11890,9 +11965,12 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                   function taskTrayOrganizar(){
                     document.getElementById('task-tray-dropdown').classList.remove('open');
                     const byKind={};
-                    window.taskTray.forEach(function(item){ (byKind[item.kind]=byKind[item.kind]||[]).push(item); });
+                    window.taskTray.forEach(function(item){
+                      if(item.kind==='confirmacao')return; // aguardando confirmação — não funde
+                      (byKind[item.kind]=byKind[item.kind]||[]).push(item);
+                    });
                     let fundidos=0;
-                    const novaLista=[];
+                    const novaLista=window.taskTray.filter(function(item){return item.kind==='confirmacao';});
                     Object.keys(byKind).forEach(function(kind){
                       const items=byKind[kind];
                       if(items.length<2){ novaLista.push(items[0]); return; }
@@ -11929,7 +12007,9 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                       return;
                     }
                     let ok=0, falhas=0;
+                    const restantes=[];
                     for(const item of window.taskTray.slice()){
+                      if(item.kind==='confirmacao'){ restantes.push(item); continue; } // aguardando decisão do médico
                       const att=window.iaAssistAttachments[item.attachId];
                       if(!att)continue;
                       try{
@@ -11946,7 +12026,7 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                         ok++;
                       }catch(e){ falhas++; }
                     }
-                    window.taskTray=[];
+                    window.taskTray=restantes;
                     renderTaskTray();
                     if(typeof showToast==='function')showToast(falhas?('Enviado '+ok+' — falhou '+falhas):('Documentos enviados ao paciente ('+ok+')'),falhas?'error':'success');
                   }
@@ -11956,6 +12036,9 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                     document.getElementById('task-tray-dropdown').classList.remove('open');
                     if(!window.taskTray.length)return;
                     if(!confirm('Excluir todos os '+window.taskTray.length+' comando(s) gerado(s) nesta consulta? Essa ação não pode ser desfeita.'))return;
+                    window.taskTray.forEach(function(item){
+                      if(item.kind==='confirmacao')delete window.copVoicePendingConfirm[item.attachId];
+                    });
                     window.taskTray=[];
                     renderTaskTray();
                     if(typeof showToast==='function')showToast('Comandos excluídos','success');
