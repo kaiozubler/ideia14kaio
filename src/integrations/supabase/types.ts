@@ -2566,12 +2566,16 @@ export type Database = {
         Args: { p_fabricante?: string; p_nome_comercial: string }
         Returns: {
           apresentacao: string
+          apresentacao_original: string
+          posologia_padrao: string
         }[]
       }
       listar_apresentacoes_generico: {
         Args: { p_fabricante?: string; p_id_substancia: string }
         Returns: {
           apresentacao: string
+          apresentacao_original: string
+          posologia_padrao: string
         }[]
       }
       listar_fabricantes_generico: {
