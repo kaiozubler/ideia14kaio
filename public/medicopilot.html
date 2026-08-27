@@ -6829,22 +6829,120 @@
                                                                 // sinalizado para o médico revisar quando quiser, sem
                                                                 // interromper a consulta agora.
                                                                 if(typeof showToast==='function')showToast('Pendência detectada: "'+kwLabel+'" → gerando '+label+'...','info');
-                                                                executeCopVoiceAction(rule,kwLabel,label);
+                                                                runCopVoiceRuleAction(rule,kwLabel,label);
                                                               } else {
                                                                 if(typeof showToast==='function')showToast('Comando de voz detectado: "'+kwLabel+'" → '+label,'success');
+                                                                runCopVoiceRuleAction(rule,kwLabel,label);
+                                                              }
+                                                            }
+
+                                                            // As 6 primeiras ações (gerar/enviar receita, gerar/enviar atestado,
+                                                            // agendar paciente, enviar mensagem de novo agendamento) são
+                                                            // determinísticas: o médico já disse exatamente o que quer no
+                                                            // momento em que cadastrou a regra, então não faz sentido gastar uma
+                                                            // chamada de IA para "interpretar" — a ação é executada direto.
+                                                            // As 3 últimas (Responder pergunta / Fazer pesquisa / Análise pela
+                                                            // IA) são, por natureza, abertas — precisam do chat_ia para
+                                                            // interpretar a fala. É esse mesmo chat_ia que já sabe reconhecer
+                                                            // pedidos mais completos ditos naturalmente ("agendar para a semana
+                                                            // que vem", "emitir receita de dipirona") e gerar o documento certo.
+                                                            const COP_VOICE_DETERMINISTIC=new Set([
+                                                              'gerar_receita','enviar_receita','gerar_atestado','enviar_atestado',
+                                                              'agendar_paciente','enviar_msg_agendamento'
+                                                            ]);
+                                                            function runCopVoiceRuleAction(rule,kwLabel,label){
+                                                              if(COP_VOICE_DETERMINISTIC.has(rule.action)){
+                                                                executeCopVoiceActionDireto(rule,kwLabel,label);
+                                                              }else{
                                                                 executeCopVoiceAction(rule,kwLabel,label);
                                                               }
                                                             }
-                                                            // Executa de fato a ação vinculada à regra: reaproveita o mesmo
-                                                            // pipeline do botão "Executar" (envia o contexto recente da fala
-                                                            // para a IA e transforma a ação retornada num balão flutuante no
-                                                            // task tray) — assim o médico nunca é interrompido, só sinalizado.
+
+                                                            // ---- Ações diretas (sem IA) ----
+                                                            function executeCopVoiceActionDireto(rule,kwLabel,label){
+                                                              const nome=(currentPatient&&currentPatient.name)||'';
+                                                              switch(rule.action){
+                                                                case 'gerar_receita': {
+                                                                  const id=iaAssistRegisterAttachment('receita',{medicamentos:[],paciente_nome:nome});
+                                                                  spawnTaskBubble('receita',id);
+                                                                  if(typeof showToast==='function')showToast('Receita criada — edite os medicamentos no balão.','success');
+                                                                  break;
+                                                                }
+                                                                case 'gerar_atestado': {
+                                                                  const id=iaAssistRegisterAttachment('atestado',{dias:'',cid:'',observacao:'',paciente_nome:nome});
+                                                                  spawnTaskBubble('atestado',id);
+                                                                  if(typeof showToast==='function')showToast('Atestado criado — edite os dados no balão.','success');
+                                                                  break;
+                                                                }
+                                                                case 'agendar_paciente': {
+                                                                  const id=iaAssistRegisterAttachment('agendamento',{data:'',hora:'',motivo:'',paciente_nome:nome});
+                                                                  spawnTaskBubble('agendamento',id);
+                                                                  if(typeof showToast==='function')showToast('Agendamento criado — edite data/hora no balão.','success');
+                                                                  break;
+                                                                }
+                                                                case 'enviar_receita':
+                                                                  copVoiceEnviarUltimoBalao('receita','Receita');
+                                                                  break;
+                                                                case 'enviar_atestado':
+                                                                  copVoiceEnviarUltimoBalao('atestado','Atestado');
+                                                                  break;
+                                                                case 'enviar_msg_agendamento': {
+                                                                  if(!currentPatient||!currentPatient.id){
+                                                                    if(typeof showToast==='function')showToast('Nenhum paciente identificado para enviar o convite de agendamento.','error');
+                                                                    break;
+                                                                  }
+                                                                  iaAssistEnviarConviteWhatsapp({paciente_id:currentPatient.id,paciente_nome:nome});
+                                                                  break;
+                                                                }
+                                                                default:
+                                                                  console.warn('[copiloto-voz] ação direta não reconhecida:',rule.action);
+                                                              }
+                                                            }
+                                                            // Envia (sem IA) o balão mais recente do tipo pedido já presente no
+                                                            // task tray — ex.: "enviar receita" manda a última receita gerada
+                                                            // nesta consulta para o paciente.
+                                                            function copVoiceEnviarUltimoBalao(kind,label){
+                                                              const idx=window.taskTray.map(function(t){return t.kind;}).lastIndexOf(kind);
+                                                              if(idx===-1){
+                                                                if(typeof showToast==='function')showToast('Nenhum(a) '+label.toLowerCase()+' pendente nesta consulta para enviar.','error');
+                                                                return;
+                                                              }
+                                                              const item=window.taskTray[idx];
+                                                              const att=window.iaAssistAttachments[item.attachId];
+                                                              const contato=(currentPatient&&(currentPatient.tel||currentPatient.email)||'').trim();
+                                                              if(!att||!contato){
+                                                                if(typeof showToast==='function')showToast('Não foi possível enviar: paciente sem contato cadastrado.','error');
+                                                                return;
+                                                              }
+                                                              fetch('/api/enviar-documento',{
+                                                                method:'POST',headers:{'Content-Type':'application/json'},
+                                                                body:JSON.stringify({
+                                                                  tipo:kind,
+                                                                  canal:currentPatient.tel?'whatsapp':'email',
+                                                                  contato,
+                                                                  paciente:currentPatient.name||'Paciente',
+                                                                  dados:att
+                                                                })
+                                                              }).then(function(){
+                                                                window.taskTray.splice(idx,1);
+                                                                renderTaskTray();
+                                                                if(typeof showToast==='function')showToast(label+' enviado(a) ao paciente.','success');
+                                                              }).catch(function(e){
+                                                                if(typeof showToast==='function')showToast('Erro ao enviar '+label.toLowerCase()+': '+(e.message||e),'error');
+                                                              });
+                                                            }
+
+                                                            // ---- Ações via IA (chat_ia) — apenas para as 3 últimas opções ----
+                                                            // Reaproveita o mesmo pipeline do botão "Executar": envia o contexto
+                                                            // recente da fala para a IA e transforma a ação retornada num
+                                                            // balão flutuante no task tray — assim o médico nunca é
+                                                            // interrompido, só sinalizado.
                                                             async function executeCopVoiceAction(rule,kwLabel,label){
                                                               kwLabel=kwLabel||[rule.keyword].concat(rule.branches||[]).filter(Boolean).join(' + ');
                                                               label=label||COP_VOICE_ACTION_LABELS[rule.action]||rule.action||'Ação';
                                                               try{
                                                                 const contexto=getTranscriptWindowText(Math.round(COP_VOICE_WINDOW_MS/1000)+2,Date.now());
-                                                                const mensagens=[{role:'user',content:'[Comando de voz automático — a palavra-chave "'+kwLabel+'" foi detectada durante a consulta. Ação configurada pelo médico para esse gatilho: "'+label+'". Execute essa ação com base no contexto abaixo.]\n'+(contexto||'(sem fala recente registrada)')}];
+                                                                const mensagens=[{role:'user',content:'[Comando de voz automático — a palavra-chave "'+kwLabel+'" foi detectada durante a consulta. Ação configurada pelo médico para esse gatilho: "'+label+'". Interprete a fala abaixo — se o médico pediu algo mais completo (ex.: agendar para uma data específica, receita de um medicamento específico), gere o documento correspondente; caso contrário, responda à pergunta/pesquisa/análise solicitada.]\n'+(contexto||'(sem fala recente registrada)')}];
                                                                 const res=await fetch('/api/assistente-ia',{
                                                                   method:'POST',headers:{'Content-Type':'application/json'},
                                                                   body:JSON.stringify({
@@ -6864,8 +6962,8 @@
                                                                   spawnTaskBubble(kind,id);
                                                                   if(typeof queueAiPanelItem==='function')queueAiPanelItem('ia',(data.reply&&data.reply.trim())||('Comando de voz "'+kwLabel+'" executado — veja o balão no canto superior direito.'));
                                                                 }else{
-                                                                  // Ação conversacional (responder pergunta, pesquisa, análise da IA) —
-                                                                  // não gera documento, mas também vira balão para não interromper.
+                                                                  // Pergunta/pesquisa/análise conversacional — não gera documento,
+                                                                  // mas também vira balão para não interromper.
                                                                   const id=iaAssistRegisterAttachment('orientacoes',{
                                                                     texto:(data&&data.reply&&data.reply.trim())||'A IA não retornou conteúdo para este comando.',
                                                                     paciente_nome:(currentPatient&&currentPatient.name)||''
@@ -6896,7 +6994,7 @@
                                                               window.taskTray=window.taskTray.filter(function(t){return t.id!==taskId;});
                                                               delete window.copVoicePendingConfirm[item.attachId];
                                                               renderTaskTray();
-                                                              executeCopVoiceAction(pending.rule,pending.kwLabel,pending.label);
+                                                              runCopVoiceRuleAction(pending.rule,pending.kwLabel,pending.label);
                                                             }
                                                             function copVoiceRecusarBalao(taskId){
                                                               const item=window.taskTray.find(function(t){return t.id===taskId;});
