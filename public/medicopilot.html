@@ -3928,11 +3928,11 @@
                   <div>
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
                       <div style="font-size:12.5px;font-weight:600;color:var(--n700)">Frequência de atualização</div>
-                      <div style="font-size:12.5px;font-weight:600;color:var(--g600,#059669)"><span id="cop-freq-lbl">8min</span></div>
+                      <div style="font-size:12.5px;font-weight:600;color:var(--g600,#059669)"><span id="cop-freq-lbl">1min</span></div>
                     </div>
-                    <input type="range" id="cop-freq" min="5" max="20" step="1" value="8" style="width:100%;accent-color:#10b981" />
+                    <input type="range" id="cop-freq" min="10" max="600" step="10" value="60" style="width:100%;accent-color:#10b981" />
                     <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--n400);margin-top:4px">
-                      <span>5min</span><span>20min</span>
+                      <span>10s</span><span>10min</span>
                     </div>
                   </div>
                 </div>
@@ -6446,7 +6446,7 @@
                                                                 voz: cfg.voz!==false,
                                                                 vozAuto: cfg.vozAuto===true,
                                                                 tipo: cfg.tipo||'ativo',
-                                                                freq: Number(cfg.freq)||480,
+                                                                freq: Math.min(600,Math.max(10,Number(cfg.freq)||480)),
                                                                 perguntas: cfg.perguntas!==false,
                                                                 memoria: cfg.memoria!==false,
                                                                 pendencias: cfg.pendencias!==false,
@@ -6542,7 +6542,12 @@
                                                               if(typeof toast==='function')toast('Dados da clínica salvos');
                                                             }
 
-                                                            function _copFmt(s){const m=Math.max(1,Math.round((Number(s)||480)/60));return m+'min';}
+                                                            function _copFmt(s){
+                                                              const total=Math.max(10,Math.round(Number(s)||480));
+                                                              if(total<60)return total+'s';
+                                                              const m=Math.floor(total/60),r=total%60;
+                                                              return r?(m+'min'+r+'s'):(m+'min');
+                                                            }
                                                             function updateCopTipoHint(){
                                                               const t=document.getElementById('cop-tipo');const h=document.getElementById('cop-tipo-hint');
                                                               if(!t||!h)return;
@@ -6570,9 +6575,9 @@
                                                               set('cop-protocolo',cfg.protocolo);set('cop-retorno',cfg.retorno);
                                                               document.getElementById('cop-tipo').value=cfg.tipo||'ativo';
                                                               const f=document.getElementById('cop-freq');
-                                                              f.value=Math.min(20,Math.max(5,Math.round(cfg.freq/60)));
-                                                              const lbl=document.getElementById('cop-freq-lbl');lbl.textContent=f.value+'min';
-                                                              f.oninput=()=>lbl.textContent=f.value+'min';
+                                                              f.value=Math.min(600,Math.max(10,Math.round(cfg.freq)));
+                                                              const lbl=document.getElementById('cop-freq-lbl');lbl.textContent=_copFmt(f.value);
+                                                              f.oninput=()=>lbl.textContent=_copFmt(f.value);
                                                               updateCopTipoHint();updateCopEnabledState();
                                                               try{loadCopVoiceCfg();}catch(e){console.error('[copiloto-voz] ERRO inesperado ao chamar loadCopVoiceCfg:',e);}
                                                             }
@@ -6583,7 +6588,7 @@
                                                                 voz:chk('cop-voz'),
                                                                 vozAuto:chk('cop-voz-auto'),
                                                                 tipo:document.getElementById('cop-tipo').value,
-                                                                freq:(Number(document.getElementById('cop-freq').value)||8)*60,
+                                                                freq:Math.min(600,Math.max(10,Number(document.getElementById('cop-freq').value)||60)),
                                                                 perguntas:chk('cop-perguntas'),
                                                                 memoria:chk('cop-memoria'),
                                                                 pendencias:chk('cop-pendencias'),
@@ -10707,7 +10712,7 @@ showAtendList();
                                                               stopCopilotoLoop();
                                                               const cfg=getCopilotoCfg();
                                                               if(!cfg.enabled || cfg.tipo!=='ativo') return;
-                                                              const ms=Math.max(15,cfg.freq)*1000;
+                                                              const ms=Math.max(10,cfg.freq)*1000;
                                                               copLoopTimer=setInterval(()=>{
                                                                 if(!listening) return;
                                                                 runCopilotoTurn({manual:false}).catch(e=>console.warn('copiloto turn',e));
@@ -10747,8 +10752,10 @@ showAtendList();
                                                                 copFirstRun=false;
                                                                 if(data && typeof data==='object'){
                                                                   if(data.resumo_clinico) copLastSummary=data.resumo_clinico;
-                                                                  const perguntas=Array.isArray(data.perguntas_sugeridas)?data.perguntas_sugeridas:[];
-                                                                  const condutas=Array.isArray(data.condutas_sugeridas)?data.condutas_sugeridas:[];
+                                                                  // Trava defensiva no cliente: mesmo que o modelo não siga a instrução do
+                                                                  // prompt à risca, nunca mostramos mais que 2 perguntas e 1 conduta por vez.
+                                                                  const perguntas=(Array.isArray(data.perguntas_sugeridas)?data.perguntas_sugeridas:[]).slice(0,2);
+                                                                  const condutas=(Array.isArray(data.condutas_sugeridas)?data.condutas_sugeridas:[]).slice(0,1);
                                                                   const pontos=Array.isArray(data.pontos_atencao)?data.pontos_atencao:[];
                                                                   // Perguntas personalizadas no início do atendimento seguem a configuração do copiloto.
                                                                   const showPerg = (!kind || kind==='duvida') && (!primeiro || manual || cfgCop.perguntas);
