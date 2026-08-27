@@ -5474,13 +5474,19 @@
             Revise, edite ou desmarque o que não desejar aplicar antes de finalizar.
           </p>
           <div id="cic-lista" style="display:flex;flex-direction:column;gap:8px"></div>
-          <div id="cic-receita-ja-feito" style="margin-top:12px;display:none;border:0.5px solid #bbf7d0;border-radius:var(--r8);padding:10px 12px;background:#f0fdf4;font-size:12px;color:#166534;align-items:center;gap:8px">
-            <i class="ti ti-circle-check" style="font-size:15px;flex-shrink:0"></i>
-            <span id="cic-receita-ja-feito-txt"></span>
+          <div id="cic-receita-ja-feito" style="margin-top:12px;display:none;border:0.5px solid #bbf7d0;border-radius:var(--r8);padding:10px 12px;background:#f0fdf4">
+            <div style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#166534;margin-bottom:6px">
+              <i class="ti ti-circle-check" style="font-size:15px;flex-shrink:0"></i>
+              <span id="cic-receita-ja-feito-hd"></span>
+            </div>
+            <div id="cic-receita-ja-feito-list" style="display:flex;flex-direction:column;gap:5px"></div>
           </div>
-          <div id="cic-agend-ja-feito" style="margin-top:12px;display:none;border:0.5px solid #bbf7d0;border-radius:var(--r8);padding:10px 12px;background:#f0fdf4;font-size:12px;color:#166534;align-items:center;gap:8px">
-            <i class="ti ti-circle-check" style="font-size:15px;flex-shrink:0"></i>
-            <span id="cic-agend-ja-feito-txt"></span>
+          <div id="cic-agend-ja-feito" style="margin-top:12px;display:none;border:0.5px solid #bbf7d0;border-radius:var(--r8);padding:10px 12px;background:#f0fdf4">
+            <div style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#166534;margin-bottom:6px">
+              <i class="ti ti-circle-check" style="font-size:15px;flex-shrink:0"></i>
+              <span id="cic-agend-ja-feito-hd"></span>
+            </div>
+            <div id="cic-agend-ja-feito-list" style="display:flex;flex-direction:column;gap:5px"></div>
           </div>
           <div id="cic-cids-wrap" style="margin-top:14px;display:none">
             <label
@@ -9962,20 +9968,21 @@ showAtendList();
             if(!conteudo)return null;
                                         const infoAtual=loadInfoComp();
                                         const cidsAtuais=Array.isArray(currentPatient.cids)?currentPatient.cids:[];
-                                        // Já houve agendamento/receita de verdade nesta consulta? Isso não
+                                        // Já houve agendamento(s)/receita(s) de verdade nesta consulta? Isso não
                                         // depende da IA — são dados que já temos, guardados no momento em
-                                        // que a ação foi feita (rxEmitirConfirmado / agmSubmit). Mandamos
-                                        // isso pro backend só para a IA não perder tempo/token propondo de
-                                        // novo algo que já aconteceu.
-                                        const agendamentoJaFeito=(!opts||!opts.conteudoExtra)?(atendEmAndamento.agendamentoGerado||null):null;
-                                        const receitaJaFeita=(!opts||!opts.conteudoExtra)?(atendEmAndamento.receitaGerada||null):null;
+                                        // que cada ação foi feita (rxEmitirConfirmado / agmSubmit). Pode haver
+                                        // mais de um de cada durante a mesma consulta. Mandamos isso pro
+                                        // backend só para a IA não perder tempo/token propondo de novo algo
+                                        // que já aconteceu.
+                                        const agendamentosJaFeitos=(!opts||!opts.conteudoExtra)?(atendEmAndamento.agendamentosGerados||[]):[];
+                                        const receitasJaFeitas=(!opts||!opts.conteudoExtra)?(atendEmAndamento.receitasGeradas||[]):[];
                                         const res=await fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
                                           mode:'extrair_complementares',
                                           info_complementar_atual:infoAtual,
                                           cids_atuais:cidsAtuais,
                                           cid_opcoes:CID10_DB.map(c=>({code:c.c,description:c.d})),
                                           conteudo_atendimento:conteudo,
-                                          agendamento_ja_realizado:agendamentoJaFeito?{data:agendamentoJaFeito.dataTexto,horario:agendamentoJaFeito.horaTexto,motivo:agendamentoJaFeito.motivo}:null
+                                          agendamentos_ja_realizados:agendamentosJaFeitos.map(a=>({data:a.dataTexto,horario:a.horaTexto,motivo:a.motivo}))
                                         })});
                                         if(!res.ok)return null;
                                         const data=await res.json();
@@ -9986,17 +9993,17 @@ showAtendList();
                                         const cidsSugeridos=(Array.isArray(data.cids_sugeridos)?data.cids_sugeridos:[])
                                           .filter(c=>c&&c.code&&!cidsAtuais.some(x=>String(x.code).toUpperCase()===String(c.code).toUpperCase()))
                                           .map(c=>({code:String(c.code).toUpperCase(),description:c.description||''}));
-                                        // "Agendar retorno" desligado no copiloto, ou agendamento já criado de
-                                        // verdade nesta consulta → não propõe (de novo) um agendamento ao finalizar.
-                                        const ag=(getCopilotoCfg().retorno&&!agendamentoJaFeito)?data.agendamento_sugerido:null;
+                                        // "Agendar retorno" desligado no copiloto, ou já há algum agendamento
+                                        // real criado nesta consulta → não propõe (de novo) um agendamento.
+                                        const ag=(getCopilotoCfg().retorno&&!agendamentosJaFeitos.length)?data.agendamento_sugerido:null;
                                         const agendamentoSugerido=(ag&&typeof ag==='object')?{
                                           prazoTexto:(ag.prazo_texto||'').trim(),
                                           data:(ag.data||'').trim(),
                                           horario:(ag.horario||'').trim(),
                                           motivo:(ag.motivo||'Retorno').trim()
                                         }:null;
-                                        if(!alteracoes.length&&!cidsSugeridos.length&&!agendamentoSugerido&&!agendamentoJaFeito&&!receitaJaFeita)return null;
-                                        return {alteracoes,cidsSugeridos,agendamentoSugerido,agendamentoJaFeito,receitaJaFeita};
+                                        if(!alteracoes.length&&!cidsSugeridos.length&&!agendamentoSugerido&&!agendamentosJaFeitos.length&&!receitasJaFeitas.length)return null;
+                                        return {alteracoes,cidsSugeridos,agendamentoSugerido,agendamentosJaFeitos,receitasJaFeitas};
                                       }catch(e){console.warn('Falha ao avaliar informações complementares via IA',e);return null;}
                                     }
                                                               function renderCicRow(alt){
@@ -10030,26 +10037,35 @@ showAtendList();
                                         cidsWrap.style.display='block';
                                         renderCicCidsChips();
                                       }else if(cidsWrap){cidsWrap.style.display='none';}
-                                      renderCicJaFeito('cic-receita-ja-feito',proposta.receitaJaFeita?(
-                                        'Receita emitida às '+proposta.receitaJaFeita.horaTexto+' nesta consulta ('+proposta.receitaJaFeita.resumo+').'
-                                      ):null);
-                                      renderCicJaFeito('cic-agend-ja-feito',proposta.agendamentoJaFeito?(
-                                        'Retorno já agendado para '+proposta.agendamentoJaFeito.dataTexto+' às '+proposta.agendamentoJaFeito.horaTexto+
-                                        (proposta.agendamentoJaFeito.motivo?' ('+proposta.agendamentoJaFeito.motivo+')':'')+'.'
-                                      ):null);
-                                      // Se já houve um agendamento de verdade nesta consulta, não mostra o
+                                      renderCicJaFeitoLista('cic-receita-ja-feito',proposta.receitasJaFeitas||[],{
+                                        singular:'Receita emitida nesta consulta',
+                                        plural:'Receitas emitidas nesta consulta',
+                                        row:r=>r.horaTexto+' — '+r.resumo
+                                      });
+                                      renderCicJaFeitoLista('cic-agend-ja-feito',proposta.agendamentosJaFeitos||[],{
+                                        singular:'Retorno já agendado nesta consulta',
+                                        plural:'Retornos já agendados nesta consulta',
+                                        row:a=>a.dataTexto+' às '+a.horaTexto+(a.motivo?' — '+a.motivo:'')
+                                      });
+                                      // Se já houve algum agendamento de verdade nesta consulta, não mostra o
                                       // formulário de "sugestão de retorno" — já foi feito.
-                                      renderCicAgendamentoSugerido(proposta.agendamentoJaFeito?null:(proposta.agendamentoSugerido||null));
+                                      renderCicAgendamentoSugerido((proposta.agendamentosJaFeitos&&proposta.agendamentosJaFeitos.length)?null:(proposta.agendamentoSugerido||null));
                                       openModal('confirma-info-comp');
                                     }
-                                    // Banner informativo simples (sem IA) — só exibe o dado já registrado
-                                    // no momento em que a receita/agendamento foi de fato gerado.
-                                    function renderCicJaFeito(elId,texto){
-                                      const el=document.getElementById(elId);if(!el)return;
-                                      if(!texto){el.style.display='none';return;}
-                                      el.style.display='flex';
-                                      const txtEl=document.getElementById(elId+'-txt');
-                                      if(txtEl)txtEl.textContent=texto;
+                                    // Bloco informativo simples (sem IA) — lista, um por linha, cada
+                                    // receita/agendamento já realizado de fato nesta consulta (pode haver
+                                    // mais de um). Os dados vêm prontos do momento em que cada ação foi
+                                    // concluída — nada aqui passa por IA.
+                                    function renderCicJaFeitoLista(elId,items,cfg){
+                                      const wrap=document.getElementById(elId);if(!wrap)return;
+                                      if(!items||!items.length){wrap.style.display='none';return;}
+                                      wrap.style.display='block';
+                                      const hd=document.getElementById(elId+'-hd');
+                                      if(hd)hd.textContent=(items.length>1?cfg.plural+' ('+items.length+')':cfg.singular);
+                                      const list=document.getElementById(elId+'-list');
+                                      if(list)list.innerHTML=items.map(it=>
+                                        '<div style="font-size:11.5px;color:#166534;background:#dcfce7;border-radius:6px;padding:5px 9px">'+iaEscHtml(cfg.row(it))+'</div>'
+                                      ).join('');
                                     }
                                     // Bloco de sugestão de retorno/agendamento identificado pela IA ao finalizar o
                                     // atendimento (nunca criado sozinho — o médico revisa data/motivo e confirma).
@@ -15205,12 +15221,14 @@ let rxSelected = [];
                                                               if (ta) { ta.value = (ta.value ? ta.value + '\n\n' : '') + 'RECEITA:\n' + linhas; if (typeof markAtendDirty === 'function') markAtendDirty(); }
                                                               // Sinaliza para a IA de encerramento que a receita já foi emitida
                                                               // nesta consulta — evita sugerir gerar outra pra mesma coisa.
+                                                              // Pode haver mais de uma receita na mesma consulta: acumula em lista.
                                                               const _rxAgora=new Date();
-                                                              atendEmAndamento.receitaGerada={
+                                                              if(!Array.isArray(atendEmAndamento.receitasGeradas))atendEmAndamento.receitasGeradas=[];
+                                                              atendEmAndamento.receitasGeradas.push({
                                                                 quando:_rxAgora.toISOString(),
                                                                 horaTexto:_rxAgora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
                                                                 resumo:(items[0]&&items[0].nome?items[0].nome+(items.length>1?' + '+(items.length-1):''):'medicamento(s)')
-                                                              };
+                                                              });
                                                               openReceitaPDF({ items, formulas: formulaItems });
                                                               closeModal();
                                                               showToast && showToast('Receita adicionada ao prontuário', 'success');
@@ -19156,14 +19174,16 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                 showToast&&showToast('Agendamento criado com sucesso','success');
                                                                 // Sinaliza para a IA de encerramento que já existe um agendamento
                                                                 // real criado nesta consulta — evita sugerir marcar outro.
+                                                                // Pode haver mais de um agendamento na mesma consulta: acumula em lista.
                                                                 if(typeof atendEmAndamento!=='undefined'&&atendEmAndamento&&atendEmAndamento.patientId&&pacienteId===atendEmAndamento.patientId){
-                                                                  atendEmAndamento.agendamentoGerado={
+                                                                  if(!Array.isArray(atendEmAndamento.agendamentosGerados))atendEmAndamento.agendamentosGerados=[];
+                                                                  atendEmAndamento.agendamentosGerados.push({
                                                                     quando:new Date().toISOString(),
                                                                     dataHora:dataHora,
                                                                     dataTexto:new Date(dataHora).toLocaleDateString('pt-BR'),
                                                                     horaTexto:hora,
                                                                     motivo:agPayload.motivo
-                                                                  };
+                                                                  });
                                                                 }
                                                                 closeNovoAgendamentoModal();
                                                                 await loadPatients();
