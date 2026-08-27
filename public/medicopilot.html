@@ -12,6 +12,7 @@
     />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
     <script src="https://unpkg.com/@daily-co/daily-js"></script>
@@ -345,6 +346,29 @@
                                                       .attach-item .ti{font-size:14px;color:var(--g500)}
                                                       .attach-add{border-style:dashed;background:transparent;color:var(--n400)}
                                                       .attach-add:hover{border-color:var(--n300);color:var(--n500);background:var(--n50)}
+
+                                                      /* ================= Painel de Documentos do LME ================= */
+                                                      .lme-panel{border:0.5px solid var(--n150);border-radius:var(--r8);padding:12px 14px;margin-top:8px;margin-bottom:16px;background:var(--n25,#fafafa)}
+                                                      .lme-panel-hd{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+                                                      .lme-panel-title{font-size:12.5px;font-weight:700;color:#0f172a;display:flex;align-items:center;gap:6px}
+                                                      .lme-validity{font-size:11px;font-weight:600;padding:4px 9px;border-radius:999px;display:inline-flex;align-items:center;gap:5px}
+                                                      .lme-validity.ok{background:#ecfdf5;color:#047857;border:0.5px solid #a7f3d0}
+                                                      .lme-validity.warn{background:#fffbeb;color:#b45309;border:0.5px solid #fde68a}
+                                                      .lme-validity.bad{background:#fef2f2;color:#b91c1c;border:0.5px solid #fecaca}
+                                                      .lme-validity.none{background:var(--n100);color:var(--n500);border:0.5px solid var(--n200)}
+                                                      .lme-doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
+                                                      .lme-doc-chip{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:var(--r8);cursor:pointer;border:0.5px solid var(--n200);background:#fff;transition:all .12s}
+                                                      .lme-doc-chip:hover{filter:brightness(0.98)}
+                                                      .lme-doc-chip .lme-dot{width:9px;height:9px;border-radius:50%;margin-top:3px;flex-shrink:0}
+                                                      .lme-doc-chip.done{background:#ecfdf5;border-color:#a7f3d0}
+                                                      .lme-doc-chip.done .lme-dot{background:#10b981}
+                                                      .lme-doc-chip.pending{background:var(--n50);border-color:var(--n200)}
+                                                      .lme-doc-chip.pending .lme-dot{background:var(--n300)}
+                                                      .lme-doc-chip .lme-doc-txt{font-size:11.5px;line-height:1.35;color:#334155}
+                                                      .lme-doc-chip.done .lme-doc-txt{color:#065f46;font-weight:600}
+                                                      .lme-doc-chip .lme-doc-sub{font-size:10px;color:var(--n400);margin-top:2px}
+                                                      .lme-panel-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+                                                      .lme-empty{font-size:11.5px;color:var(--n400);padding:10px 2px}
 
                                                       /* ATENDIMENTOS */
                                                       .atend-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
@@ -2877,6 +2901,11 @@
                 </div>
               </div>
 
+              <div class="sec-hd" style="display:flex;align-items:center;justify-content:space-between">
+                <span>Documentos do LME</span>
+              </div>
+              <div id="lme-docs-panel" class="lme-panel"><div class="lme-empty">Carregando…</div></div>
+
               <div class="sec-hd">Documentos do cadastro</div>
               <div class="attach-row">
                 <div class="attach-item attach-add" onclick="openModal('add-exame')">
@@ -4732,6 +4761,9 @@
             </div>
             <div class="fld"><label>Nome da mãe</label><input type="text" id="np-mae" /></div>
             <div class="fld"><label>Nome do pai</label><input type="text" id="np-pai" /></div>
+            <div class="fld wide">
+              <label>Endereço</label><input type="text" id="np-end" placeholder="Rua, nº — Bairro, Cidade, UF" />
+            </div>
             <div class="fld">
               <label>Convênio</label
               ><select id="np-conv">
@@ -5100,6 +5132,31 @@
           <button class="btn" onclick="closeModal()">Cancelar</button>
           <button class="btn primary" id="gd-submit-btn" onclick="gerarDocumentoGenerico()">
             <i class="ti ti-file-plus"></i> Gerar documento
+          </button>
+        </div>
+      </div>
+
+      <!-- COMPARTILHAR DOCUMENTOS DO LME -->
+      <div class="modal" id="m-lme-compartilhar" style="display:none;width:420px">
+        <div class="mhd">
+          <span class="mhd-title"><i class="ti ti-send"></i> Compartilhar documentos do LME</span
+          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody">
+          <p style="font-size:11.5px;color:var(--n500);margin-bottom:10px" id="lme-share-count">0 documentos prontos serão enviados.</p>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <button class="btn sm primary" id="lme-share-ch-wa" onclick="lmeShareSetCanal('whatsapp')">
+              <i class="ti ti-brand-whatsapp"></i> WhatsApp
+            </button>
+            <button class="btn sm" id="lme-share-ch-em" onclick="lmeShareSetCanal('email')">
+              <i class="ti ti-mail"></i> E-mail
+            </button>
+          </div>
+          <div class="fld"><label>Contato</label><input type="text" id="lme-share-contato" placeholder="(47) 99999-9999" /></div>
+        </div>
+        <div class="mfoot">
+          <button class="btn primary" id="lme-share-confirm-btn" onclick="lmeConfirmarCompartilhar()">
+            <i class="ti ti-send"></i> Enviar
           </button>
         </div>
       </div>
@@ -6382,7 +6439,6 @@
                                                             let atendimentos=[];
                                                             let exames=[];
                                                             let timelineEvents=[];
-                                                            let questionariosPaciente=[]; // respostas de questionários do paciente atual (para contexto da IA)
                                                             let prontAllCollapsed=false;
 
                                                             /* ========== STATE ========== */
@@ -7410,57 +7466,18 @@
                                                             }
                                                             function mapExameRow(e){return {id:e.id,nome:e.nome,tipo:e.tipo||'Outro',data:e.data||'',obs:e.obs||'',resultado:e.resultado||'',arquivoPath:e.arquivo_path||null,file:e.file_name||'—',validade:e.validade||'',validadeDias:e.validade_dias||null,tussId:e.tuss_procedimento_id||null,statusTuss:e.status_tuss||'nao_aplicavel',resultadoOriginal:e.resultado_original||'',resultadoEstruturado:e.resultado_estruturado||null,protocoloTarefaId:e.protocolo_tarefa_id||null,statusProtocolo:e.status_protocolo||'sem_protocolo'};}
                                                             function mapTimelineRow(ev){return {id:ev.id,date:ev.event_date,type:ev.type,icon:ev.icon,title:ev.title,sub:ev.sub||'',refType:ev.ref_type||null,refId:ev.ref_id||null};}
-                                                            // Cada resposta de questionário respondida pelo paciente, com as perguntas/valores já
-                                                            // "achatados" e a data de resposta preservada — usado tanto na tela quanto no contexto da IA.
-                                                            function mapQuestionarioRespostaRow(r){
-                                                              const itens=(r.questionario_resposta_itens||[]).map(it=>{
-                                                                const pergunta=(it.questionario_perguntas&&it.questionario_perguntas.enunciado)||'';
-                                                                let valor='';
-                                                                if(it.valor_texto)valor=it.valor_texto;
-                                                                else if(Array.isArray(it.valor_opcoes)&&it.valor_opcoes.length)valor=it.valor_opcoes.join(', ');
-                                                                else if(it.valor_escala!=null)valor=String(it.valor_escala);
-                                                                return {pergunta,valor};
-                                                              }).filter(it=>it.pergunta);
-                                                              return {
-                                                                id:r.id,
-                                                                questionarioId:r.questionario_id,
-                                                                titulo:(r.questionarios&&r.questionarios.titulo)||'Formulário sem título',
-                                                                respondidoEm:r.respondido_em||null,
-                                                                itens
-                                                              };
-                                                            }
                                                             async function loadPatientRecords(id){
-                                                              const [atRes,exRes,tlRes,qzRes]=await Promise.all([
+                                                              const [atRes,exRes,tlRes]=await Promise.all([
                                                                 sb.from('consulta').select('*').eq('paciente_id',id).order('started_at',{ascending:false}),
                                                                 sb.from('exames').select('*').eq('paciente_id',id).order('created_at',{ascending:false}),
-                                                                sb.from('timeline_events').select('*').eq('paciente_id',id).order('created_at',{ascending:false}),
-                                                                sb.from('questionario_respostas')
-                                                                  .select('id,questionario_id,respondido_em,questionarios(titulo),questionario_resposta_itens(valor_texto,valor_opcoes,valor_escala,questionario_perguntas(enunciado,ordem))')
-                                                                  .eq('paciente_id',id)
-                                                                  .order('respondido_em',{ascending:false})
+                                                                sb.from('timeline_events').select('*').eq('paciente_id',id).order('created_at',{ascending:false})
                                                               ]);
                                                               if(atRes.error)console.warn('Erro ao carregar atendimentos',atRes.error);
                                                               if(exRes.error)console.warn('Erro ao carregar exames',exRes.error);
                                                               if(tlRes.error)console.warn('Erro ao carregar timeline',tlRes.error);
-                                                              if(qzRes.error)console.warn('Erro ao carregar questionários do paciente',qzRes.error);
                                                               atendimentos=(atRes.data||[]).map(mapConsultaRow);
                                                               exames=(exRes.data||[]).map(mapExameRow);
                                                               timelineEvents=(tlRes.data||[]).map(mapTimelineRow);
-                                                              questionariosPaciente=(qzRes.data||[]).map(mapQuestionarioRespostaRow);
-                                                            }
-                                                            // Monta o bloco de texto com as respostas de questionários do paciente para
-                                                            // ser enviado como contexto à IA (chat_ai). Cada resposta traz o NOME do
-                                                            // formulário e a DATA em que foi respondida — a IA é instruída a sempre citar
-                                                            // os dois ao usar essa informação, e a priorizar a resposta mais recente
-                                                            // quando houver mais de uma para o mesmo formulário, evitando dados desatualizados.
-                                                            function buildQuestionariosContexto(){
-                                                              if(!Array.isArray(questionariosPaciente)||!questionariosPaciente.length)return '';
-                                                              const blocos=questionariosPaciente.map(r=>{
-                                                                const dataFmt=r.respondidoEm?new Date(r.respondidoEm).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'data não registrada';
-                                                                const linhas=(r.itens||[]).map(it=>`- ${it.pergunta}: ${it.valor||'—'}`).join('\n')||'(sem respostas registradas neste formulário)';
-                                                                return `Formulário: "${r.titulo}"\nRespondido em: ${dataFmt}\n${linhas}`;
-                                                              });
-                                                              return blocos.join('\n\n---\n\n');
                                                             }
                                                             async function addTimelineEvent(ev){
                                                               timelineEvents.unshift(ev);
@@ -7535,6 +7552,7 @@
                                                         loadHistoricoFamiliarCids();
                                                         openTab('cadastro',document.querySelector('.tab'));
                                                         renderAtendimentos();renderExames();renderTimeline();updateAtendProgress();
+                                                        if(typeof renderLmeDocsPanel==='function')renderLmeDocsPanel();
                                                       }
                                                       function backToPatients(){saveAtendState();goScreen('patients');}
                                                       function showToast(msg,type){
@@ -9247,6 +9265,7 @@ showAtendList();
                                                                 await sb.storage.from('exames-arquivos').remove([exame.arquivoPath]);
                                                               }
                                                               exames=exames.filter(e=>e.id!==id);renderExames();
+                                                              if(typeof renderLmeDocsPanel==='function')renderLmeDocsPanel();
                                                             }
                                                             async function saveExame(){
                                                               const nome=document.getElementById('exame-nome').value.trim();if(!nome)return;
@@ -9291,6 +9310,7 @@ showAtendList();
                                                               await avaliarExameNoMotor(data.id);
                                                               await addTimelineEvent({date:new Date().toLocaleDateString('pt-BR'),type:'exame',icon:'ti-flask',title:'Exame adicionado: '+nome,sub:document.getElementById('exame-obs').value||''});
                                                               renderExames();renderTimeline();clearFile();
+                                                              if(typeof renderLmeDocsPanel==='function')renderLmeDocsPanel();
                                                               document.getElementById('exame-nome').value='';document.getElementById('exame-obs').value='';document.getElementById('exame-resultado').value='';
                                                               if(durSel)durSel.value='indef';
                                                               const dcw=document.getElementById('exame-dur-custom-wrap');if(dcw)dcw.style.display='none';
@@ -11314,7 +11334,7 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                                                               fetch('/api/chat-ia',{
                                                                 method:'POST',
                                                                 headers:{'Content-Type':'application/json'},
-                                                                body:JSON.stringify(Object.assign({mode:'chat',messages:mensagensParaIA,resumo_prontuario:currentResumoProntuario||'',questionarios_paciente:buildQuestionariosContexto(),anexo:iaTakeAnexo('ai')},(function(){const p=iaExamePacienteCtx();return p?{paciente_nome:p.nome,paciente_cpf:p.cpf,paciente_nascimento:p.data_nascimento}:{};})()))
+                                                                body:JSON.stringify(Object.assign({mode:'chat',messages:mensagensParaIA,resumo_prontuario:currentResumoProntuario||'',anexo:iaTakeAnexo('ai')},(function(){const p=iaExamePacienteCtx();return p?{paciente_nome:p.nome,paciente_cpf:p.cpf,paciente_nascimento:p.data_nascimento}:{};})()))
                                                               })
                                                               .then(async r=>{if(!r.ok)throw new Error(await r.text());return r.json();})
                                                               .then(async d=>{
@@ -13935,7 +13955,7 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                               document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
                                                               const m=document.getElementById('m-'+name);if(m)m.style.display='flex';
                                                               if(name==='new-patient'){
-                                                                ['np-nome','np-cpf','np-dob','np-tel','np-email','np-sus','np-mae','np-pai'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+                                                                ['np-nome','np-cpf','np-dob','np-tel','np-email','np-sus','np-mae','np-pai','np-end'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
                                                                 ['np-conv','np-sexo','np-medico'].forEach(id=>{const el=document.getElementById(id);if(el)el.selectedIndex=0;});
                                                                 const g=document.getElementById('np-grupo');if(g){populateGrupoSelect(g);g.value='';}
                                                               }
@@ -16914,12 +16934,235 @@ let rxSelected = [];
                                                         form.medicamentos.map(m => m.nome).join('; ');
                                                       if (typeof markAtendDirty === 'function') markAtendDirty();
                                                     }
-                                                    showToast && showToast('LME emitido e anexado ao atendimento', 'success');
+                                                    showToast && showToast(window.__lmeRenovacao ? 'LME renovado com sucesso' : 'LME emitido e anexado ao atendimento', 'success');
+                                                    window.__lmeRenovacao = false;
+                                                    if (typeof renderLmeDocsPanel === 'function') renderLmeDocsPanel();
                                                     closeModal();
                                                   } finally {
                                                     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-file-download"></i> Emitir LME'; }
                                                   }
                                                 }
+
+                                                /* ================= Documentos do LME — checklist, ZIP, compartilhamento e renovação =================
+                                                   Cada item pode ser:
+                                                   - origem 'sistema': gerado pelo próprio MediCopilot (fica em documentos_paciente, ex.: o LME e a receita)
+                                                   - origem 'upload': o médico/paciente anexa (reaproveita o fluxo já existente de "Documentos do cadastro",
+                                                     tabela 'exames', usando o prefixo "[LME] " no nome para reconhecer o documento no checklist)
+                                                   A lista abaixo segue o padrão nacional do Componente Especializado da Assistência Farmacêutica (CEAF/SUS).
+                                                   Cada estado (SES) pode ter exigências adicionais — por isso os itens marcados como exigíveis (não
+                                                   universais) aparecem como "(Opcional)" e podem ser ajustados aqui conforme o protocolo/UF da clínica. */
+                                                const LME_DOCUMENTOS = [
+                                                  { id: 'lme_laudo',              label: 'LME — Laudo de Solicitação, Avaliação e Autorização de Medicamentos', exigido: true,  origem: 'sistema', tipoDoc: 'laudo' },
+                                                  { id: 'receita',                label: 'Receita médica atual dos medicamentos solicitados',                  exigido: true,  origem: 'sistema', tipoDoc: 'receita' },
+                                                  { id: 'doc_identidade',         label: 'Documento de identidade com foto (RG, CNH ou CIN)',                  exigido: true,  origem: 'upload',  tag: 'Documento de identidade' },
+                                                  { id: 'cpf',                    label: 'CPF do paciente',                                                    exigido: true,  origem: 'upload',  tag: 'CPF' },
+                                                  { id: 'cartao_sus',             label: 'Cartão Nacional de Saúde (Cartão SUS)',                              exigido: true,  origem: 'upload',  tag: 'Cartão SUS' },
+                                                  { id: 'comprovante_residencia', label: 'Comprovante de residência atualizado',                               exigido: true,  origem: 'upload',  tag: 'Comprovante de residência' },
+                                                  { id: 'exames_diagnostico',     label: 'Exame(s) que comprovem o diagnóstico (conforme o PCDT)',             exigido: true,  origem: 'upload',  tag: 'Exames do diagnóstico' },
+                                                  { id: 'termo_consentimento',    label: 'Termo de Consentimento Informado, Livre e Esclarecido assinado',     exigido: true,  origem: 'upload',  tag: 'Termo de consentimento' },
+                                                  { id: 'doc_responsavel',        label: 'Documento e CPF do responsável legal',                               exigido: false, origem: 'upload',  tag: 'Documento do responsável' },
+                                                  { id: 'relatorio_complementar', label: 'Relatório médico complementar',                                      exigido: false, origem: 'upload',  tag: 'Relatório médico complementar' },
+                                                  { id: 'laudo_anatomopatologico',label: 'Laudo anatomopatológico / biópsia',                                  exigido: false, origem: 'upload',  tag: 'Anatomopatológico' },
+                                                  { id: 'declaracao_tratamentos', label: 'Declaração de tratamentos anteriores / falha terapêutica',           exigido: false, origem: 'upload',  tag: 'Tratamentos anteriores' },
+                                                  { id: 'certidao_nascimento',    label: 'Certidão de nascimento (se o paciente não possuir RG)',              exigido: false, origem: 'upload',  tag: 'Certidão de nascimento' },
+                                                ];
+                                                const LME_VALIDADE_MESES = 6;
+                                                window.__lmeDocsCache = { sistema: [], porDoc: {} };
+
+                                                function _lmeUploadNome(doc) { return '[LME] ' + doc.tag; }
+
+                                                async function lmeCarregarDocsSistema() {
+                                                  if (!currentPatient) return [];
+                                                  const { data, error } = await sb.from('documentos_paciente')
+                                                    .select('*').eq('paciente_id', currentPatient.id).order('created_at', { ascending: false });
+                                                  if (error) { console.error(error); return []; }
+                                                  return data || [];
+                                                }
+
+                                                function _lmeStatusDoc(doc, docsSistema) {
+                                                  if (doc.origem === 'sistema') {
+                                                    const found = docsSistema.find(d => d.tipo === doc.tipoDoc);
+                                                    return found ? { done: true, origem: 'sistema', row: found } : { done: false };
+                                                  }
+                                                  const found = (typeof exames !== 'undefined' ? exames : []).find(e => e.nome === _lmeUploadNome(doc));
+                                                  return found ? { done: true, origem: 'upload', row: found } : { done: false };
+                                                }
+
+                                                function lmeValidadeInfo(docsSistema) {
+                                                  const laudos = docsSistema.filter(d => d.tipo === 'laudo').sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                                                  if (!laudos.length) return { iniciado: false };
+                                                  const emissao = new Date(laudos[0].created_at);
+                                                  const vencimento = new Date(emissao); vencimento.setMonth(vencimento.getMonth() + LME_VALIDADE_MESES);
+                                                  const diasRestantes = Math.ceil((vencimento - new Date()) / 86400000);
+                                                  let cor = 'ok';
+                                                  if (diasRestantes < 0) cor = 'bad'; else if (diasRestantes <= 30) cor = 'warn';
+                                                  return { iniciado: true, emissao, vencimento, diasRestantes, cor, ultimoLaudo: laudos[0] };
+                                                }
+
+                                                async function renderLmeDocsPanel() {
+                                                  const roots = [document.getElementById('lme-docs-panel'), document.getElementById('pat-protocolos-root')].filter(Boolean);
+                                                  if (!roots.length || !currentPatient) return;
+                                                  roots.forEach(r => r.innerHTML = '<div class="lme-empty">Carregando…</div>');
+                                                  const docsSistema = await lmeCarregarDocsSistema();
+                                                  window.__lmeDocsCache.sistema = docsSistema;
+                                                  const validade = lmeValidadeInfo(docsSistema);
+
+                                                  let badgeHtml, actionsHtml;
+                                                  if (!validade.iniciado) {
+                                                    badgeHtml = '<span class="lme-validity none"><i class="ti ti-circle-dashed"></i> Processo não iniciado</span>';
+                                                    actionsHtml = '<button class="btn sm primary" onclick="openLmeModal()"><i class="ti ti-file-plus"></i> Iniciar LME</button>';
+                                                  } else {
+                                                    const label = validade.diasRestantes < 0
+                                                      ? 'Vencido há ' + Math.abs(validade.diasRestantes) + ' dia(s)'
+                                                      : 'Válido por ' + validade.diasRestantes + ' dia(s) (vence em ' + validade.vencimento.toLocaleDateString('pt-BR') + ')';
+                                                    const icon = validade.cor === 'ok' ? 'ti-rosette-discount-check' : (validade.cor === 'warn' ? 'ti-alert-triangle' : 'ti-alert-circle');
+                                                    badgeHtml = '<span class="lme-validity ' + validade.cor + '"><i class="ti ' + icon + '"></i> ' + label + '</span>';
+                                                    actionsHtml = '<button class="btn sm" onclick="lmeRenovar()"><i class="ti ti-refresh"></i> Renovar LME</button>';
+                                                  }
+
+                                                  const chipsHtml = LME_DOCUMENTOS.map(doc => {
+                                                    const st = _lmeStatusDoc(doc, docsSistema);
+                                                    const cls = st.done ? 'done' : 'pending';
+                                                    const label = doc.exigido ? doc.label : (doc.label + ' <span style="font-weight:400">(Opcional)</span>');
+                                                    const sub = st.done
+                                                      ? (st.origem === 'sistema' ? 'Gerado em ' + new Date(st.row.created_at).toLocaleDateString('pt-BR') + ' · clique para baixar' : 'Anexado · clique para baixar')
+                                                      : (doc.origem === 'sistema' ? 'Clique para gerar' : 'Clique para anexar');
+                                                    const clickFn = st.done ? "lmeDocBaixar('" + doc.id + "')" : "lmeDocPreencher('" + doc.id + "')";
+                                                    return '<div class="lme-doc-chip ' + cls + '" onclick="' + clickFn + '">' +
+                                                      '<span class="lme-dot"></span>' +
+                                                      '<div><div class="lme-doc-txt">' + label + '</div><div class="lme-doc-sub">' + sub + '</div></div>' +
+                                                      '</div>';
+                                                  }).join('');
+
+                                                  const prontos = LME_DOCUMENTOS.filter(d => _lmeStatusDoc(d, docsSistema).done).length;
+                                                  const html =
+                                                    '<div class="lme-panel-hd">' +
+                                                      '<span class="lme-panel-title"><i class="ti ti-file-text"></i> Documentos do LME — ' + prontos + '/' + LME_DOCUMENTOS.length + ' prontos</span>' +
+                                                      badgeHtml +
+                                                    '</div>' +
+                                                    '<div class="lme-doc-grid">' + chipsHtml + '</div>' +
+                                                    '<div class="lme-panel-actions">' +
+                                                      actionsHtml +
+                                                      '<button class="btn sm" onclick="lmeCompactarZip()"><i class="ti ti-file-zip"></i> Baixar tudo em ZIP</button>' +
+                                                      '<button class="btn sm" onclick="lmeAbrirCompartilhar()"><i class="ti ti-send"></i> Compartilhar com o paciente</button>' +
+                                                    '</div>';
+                                                  roots.forEach(r => r.innerHTML = html);
+                                                }
+                                                // Aliases para os hooks já existentes na aba "Protocolos" (openTab chama estas funções, se existirem).
+                                                function initProtocolos() { renderLmeDocsPanel(); }
+                                                function renderPacienteProtocolosTab() { renderLmeDocsPanel(); }
+
+                                                function lmeDocBaixar(docId) {
+                                                  const doc = LME_DOCUMENTOS.find(d => d.id === docId); if (!doc) return;
+                                                  const st = _lmeStatusDoc(doc, window.__lmeDocsCache.sistema || []);
+                                                  if (!st.done) return;
+                                                  if (st.origem === 'sistema') { if (typeof downloadDocumentoGerado === 'function') downloadDocumentoGerado(st.row); else _lmeDownloadStorage('documentos-arquivos', st.row.arquivo_path, st.row.arquivo_nome); }
+                                                  else { if (typeof downloadExame === 'function') downloadExame(st.row.id); }
+                                                }
+
+                                                async function _lmeDownloadStorage(bucket, path, filename) {
+                                                  if (!path) { showToast && showToast('Arquivo não encontrado no armazenamento', 'error'); return; }
+                                                  const { data, error } = await sb.storage.from(bucket).createSignedUrl(path, 60, { download: true });
+                                                  if (error) { showToast && showToast('Erro ao baixar: ' + error.message, 'error'); return; }
+                                                  window.open(data.signedUrl, '_blank');
+                                                }
+
+                                                // Documento pendente: se é gerável pela IA, abre o gerador certo; se é upload do paciente, abre o anexo já com o nome preenchido.
+                                                function lmeDocPreencher(docId) {
+                                                  const doc = LME_DOCUMENTOS.find(d => d.id === docId); if (!doc) return;
+                                                  if (doc.origem === 'sistema') {
+                                                    if (doc.tipoDoc === 'laudo') { openLmeModal(); return; }
+                                                    if (doc.tipoDoc === 'receita') { if (typeof abrirModalGerarDocumento === 'function') abrirModalGerarDocumento(); else showToast && showToast('Abra "Gerar documento" para emitir a receita', 'info'); return; }
+                                                  }
+                                                  openModal('add-exame');
+                                                  setTimeout(() => {
+                                                    const nomeEl = document.getElementById('exame-nome'); if (nomeEl) nomeEl.value = _lmeUploadNome(doc);
+                                                    const tipoEl = document.getElementById('exame-tipo'); if (tipoEl) tipoEl.value = 'Documento';
+                                                  }, 30);
+                                                }
+
+                                                // Renovação: reabre o LME pré-preenchido com os dados do último laudo emitido, com a data atualizada para hoje.
+                                                async function lmeRenovar() {
+                                                  const docsSistema = window.__lmeDocsCache.sistema.length ? window.__lmeDocsCache.sistema : await lmeCarregarDocsSistema();
+                                                  const laudos = docsSistema.filter(d => d.tipo === 'laudo').sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                                                  if (!laudos.length) { openLmeModal(); return; }
+                                                  window.__lmeRenovacao = true;
+                                                  openLmeModal();
+                                                  const prev = laudos[0].conteudo || {};
+                                                  setTimeout(() => {
+                                                    lmeApply(prev);
+                                                    _lmeSet('lme-data', new Date().toISOString().slice(0, 10));
+                                                    showToast && showToast('Campos preenchidos com o último LME — confira e emita a renovação', 'info');
+                                                  }, 60);
+                                                }
+
+                                                // Compactação em ZIP de todos os documentos já prontos (gerados pelo sistema + anexados pelo paciente).
+                                                async function lmeCompactarZip() {
+                                                  if (typeof JSZip === 'undefined') { showToast && showToast('Biblioteca de compactação não carregada', 'error'); return; }
+                                                  const docsSistema = window.__lmeDocsCache.sistema.length ? window.__lmeDocsCache.sistema : await lmeCarregarDocsSistema();
+                                                  const prontos = LME_DOCUMENTOS.map(d => ({ doc: d, st: _lmeStatusDoc(d, docsSistema) })).filter(x => x.st.done);
+                                                  if (!prontos.length) { showToast && showToast('Nenhum documento pronto para compactar ainda', 'warn'); return; }
+                                                  showToast && showToast('Compactando ' + prontos.length + ' documento(s)...', 'info');
+                                                  const zip = new JSZip();
+                                                  for (const { doc, st } of prontos) {
+                                                    try {
+                                                      const bucket = st.origem === 'sistema' ? 'documentos-arquivos' : 'exames-arquivos';
+                                                      const path = st.origem === 'sistema' ? st.row.arquivo_path : st.row.arquivoPath;
+                                                      const filename = (st.origem === 'sistema' ? st.row.arquivo_nome : st.row.file) || (doc.id + '.pdf');
+                                                      if (!path) continue;
+                                                      const { data, error } = await sb.storage.from(bucket).createSignedUrl(path, 60);
+                                                      if (error) continue;
+                                                      const blob = await (await fetch(data.signedUrl)).blob();
+                                                      zip.file(filename, blob);
+                                                    } catch (e) { console.error('Falha ao adicionar ao ZIP:', doc.id, e); }
+                                                  }
+                                                  const finalBlob = await zip.generateAsync({ type: 'blob' });
+                                                  const nomePaciente = (currentPatient.name || 'paciente').replace(/[^\w\-]+/g, '_');
+                                                  _baixarBlob(finalBlob, 'LME_' + nomePaciente + '_' + new Date().toISOString().slice(0, 10) + '.zip');
+                                                  showToast && showToast('ZIP gerado com sucesso', 'success');
+                                                }
+
+                                                // Compartilhamento com o paciente — reaproveita a mesma rota já usada no restante do app.
+                                                let __lmeShareCanal = 'whatsapp';
+                                                function lmeShareSetCanal(canal) {
+                                                  __lmeShareCanal = canal;
+                                                  const wa = document.getElementById('lme-share-ch-wa'), em = document.getElementById('lme-share-ch-em');
+                                                  if (wa) wa.classList.toggle('primary', canal === 'whatsapp');
+                                                  if (em) em.classList.toggle('primary', canal === 'email');
+                                                }
+                                                async function lmeAbrirCompartilhar() {
+                                                  const docsSistema = window.__lmeDocsCache.sistema.length ? window.__lmeDocsCache.sistema : await lmeCarregarDocsSistema();
+                                                  const prontos = LME_DOCUMENTOS.filter(d => _lmeStatusDoc(d, docsSistema).done);
+                                                  if (!prontos.length) { showToast && showToast('Nenhum documento pronto para compartilhar ainda', 'warn'); return; }
+                                                  const cEl = document.getElementById('lme-share-count'); if (cEl) cEl.textContent = prontos.length + ' documento(s) prontos serão enviados.';
+                                                  const contatoEl = document.getElementById('lme-share-contato');
+                                                  if (contatoEl) contatoEl.value = (currentPatient && (currentPatient.tel || currentPatient.email)) || '';
+                                                  lmeShareSetCanal(currentPatient && currentPatient.tel ? 'whatsapp' : 'email');
+                                                  openModal('lme-compartilhar');
+                                                }
+                                                async function lmeConfirmarCompartilhar() {
+                                                  const contato = (document.getElementById('lme-share-contato') || {}).value || '';
+                                                  if (!contato.trim()) { showToast && showToast('Informe um contato para envio', 'error'); return; }
+                                                  const docsSistema = window.__lmeDocsCache.sistema.length ? window.__lmeDocsCache.sistema : await lmeCarregarDocsSistema();
+                                                  const prontos = LME_DOCUMENTOS.map(d => ({ doc: d, st: _lmeStatusDoc(d, docsSistema) })).filter(x => x.st.done);
+                                                  let ok = 0, falhas = 0;
+                                                  for (const { doc, st } of prontos) {
+                                                    try {
+                                                      await fetch('/api/enviar-documento', {
+                                                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({
+                                                          tipo: 'lme_documento', canal: __lmeShareCanal, contato,
+                                                          paciente: (currentPatient && currentPatient.name) || 'Paciente',
+                                                          dados: { documento: doc.label, origem: st.origem, arquivo: st.origem === 'sistema' ? st.row.arquivo_nome : st.row.file }
+                                                        })
+                                                      });
+                                                      ok++;
+                                                    } catch (e) { falhas++; }
+                                                  }
+                                                  showToast && showToast(falhas ? ('Enviado ' + ok + ' — falhou ' + falhas) : ('Documentos enviados ao paciente (' + ok + ')'), falhas ? 'error' : 'success');
+                                                  closeModal();
+                                                }
+
                                                 async function _renderSolicitacaoExamesPdf({ patientName, patientAge, patientCpf, examsHtml, careType, urgente, fastingRequired, validityDays, clinicalIndication, cidCode, cidDescription, preparationNotes, additionalNotes }) {
                                                   let clinic = {};
                                                   try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
@@ -17653,7 +17896,6 @@ let rxSelected = [];
                                                             async function saveNewPatient(){
                                                               const val=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
                                                               const nome=val('np-nome');if(!nome){alert('Informe o nome do paciente');return;}
-                                                              const addr=readEnderecoFields('np-');
                                                               const payload={
                                                                 name:nome,
                                                                 data_nascimento:val('np-dob')||null,
@@ -17663,14 +17905,7 @@ let rxSelected = [];
                                                                 sus:val('np-sus')||null,
                                                                 mae:val('np-mae')||null,
                                                                 pai:val('np-pai')||null,
-                                                                cep:addr.cep||null,
-                                                                logradouro:addr.logradouro||null,
-                                                                numero:addr.numero||null,
-                                                                complemento:addr.complemento||null,
-                                                                bairro:addr.bairro||null,
-                                                                cidade:addr.cidade||null,
-                                                                uf:addr.uf||null,
-                                                                endereco:buildEnderecoConcat(addr),
+                                                                endereco:val('np-end')||null,
                                                                 convenio:val('np-conv')||'Particular',
                                                                 sexo:val('np-sexo')||null,
                                                                 medico:val('np-medico')||null,
@@ -18401,7 +18636,7 @@ let rxSelected = [];
                                                             }
                                                             function iniciarNovoAtendimento(){
                                                               currentPatient={id:null,name:'',init:'',dob:'',tel:'',conv:'Particular',sus:'—',cpf:'',end:'',email:'',mae:'',pai:'',nasc:'',sexo:'Feminino',medico:'',ocup:'',dadosClinicos:''};
-                                                              atendimentos=[];exames=[];timelineEvents=[];questionariosPaciente=[];currentResumoProntuario='';
+                                                              atendimentos=[];exames=[];timelineEvents=[];currentResumoProntuario='';
                                                               atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[]};
                                                               goScreen('patient-detail');
                                                               document.getElementById('page-title').textContent='Paciente';
@@ -18420,6 +18655,7 @@ let rxSelected = [];
                                                               document.getElementById('d-email').value='';document.getElementById('d-cpf').value='';document.getElementById('d-mae').value='';
                                                               document.getElementById('d-pai').value='';document.getElementById('d-end').value='';
                                                               document.getElementById('d-nasc').value='';document.getElementById('d-sus').value='';
+const de=document.getElementById('np-end');if(de)de.value='';
                                                               const cv=document.getElementById('d-conv');if(cv)cv.value='Particular';
                                                               const sx=document.getElementById('d-sexo');if(sx)sx.value='Feminino';
                                                               const ms=document.getElementById('d-medico');if(ms)ms.value='';
