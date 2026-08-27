@@ -6382,6 +6382,7 @@
                                                             let atendimentos=[];
                                                             let exames=[];
                                                             let timelineEvents=[];
+                                                            let questionariosPaciente=[]; // respostas de questionários do paciente atual (para contexto da IA)
                                                             let prontAllCollapsed=false;
 
                                                             /* ========== STATE ========== */
@@ -7409,18 +7410,57 @@
                                                             }
                                                             function mapExameRow(e){return {id:e.id,nome:e.nome,tipo:e.tipo||'Outro',data:e.data||'',obs:e.obs||'',resultado:e.resultado||'',arquivoPath:e.arquivo_path||null,file:e.file_name||'—',validade:e.validade||'',validadeDias:e.validade_dias||null,tussId:e.tuss_procedimento_id||null,statusTuss:e.status_tuss||'nao_aplicavel',resultadoOriginal:e.resultado_original||'',resultadoEstruturado:e.resultado_estruturado||null,protocoloTarefaId:e.protocolo_tarefa_id||null,statusProtocolo:e.status_protocolo||'sem_protocolo'};}
                                                             function mapTimelineRow(ev){return {id:ev.id,date:ev.event_date,type:ev.type,icon:ev.icon,title:ev.title,sub:ev.sub||'',refType:ev.ref_type||null,refId:ev.ref_id||null};}
+                                                            // Cada resposta de questionário respondida pelo paciente, com as perguntas/valores já
+                                                            // "achatados" e a data de resposta preservada — usado tanto na tela quanto no contexto da IA.
+                                                            function mapQuestionarioRespostaRow(r){
+                                                              const itens=(r.questionario_resposta_itens||[]).map(it=>{
+                                                                const pergunta=(it.questionario_perguntas&&it.questionario_perguntas.enunciado)||'';
+                                                                let valor='';
+                                                                if(it.valor_texto)valor=it.valor_texto;
+                                                                else if(Array.isArray(it.valor_opcoes)&&it.valor_opcoes.length)valor=it.valor_opcoes.join(', ');
+                                                                else if(it.valor_escala!=null)valor=String(it.valor_escala);
+                                                                return {pergunta,valor};
+                                                              }).filter(it=>it.pergunta);
+                                                              return {
+                                                                id:r.id,
+                                                                questionarioId:r.questionario_id,
+                                                                titulo:(r.questionarios&&r.questionarios.titulo)||'Formulário sem título',
+                                                                respondidoEm:r.respondido_em||null,
+                                                                itens
+                                                              };
+                                                            }
                                                             async function loadPatientRecords(id){
-                                                              const [atRes,exRes,tlRes]=await Promise.all([
+                                                              const [atRes,exRes,tlRes,qzRes]=await Promise.all([
                                                                 sb.from('consulta').select('*').eq('paciente_id',id).order('started_at',{ascending:false}),
                                                                 sb.from('exames').select('*').eq('paciente_id',id).order('created_at',{ascending:false}),
-                                                                sb.from('timeline_events').select('*').eq('paciente_id',id).order('created_at',{ascending:false})
+                                                                sb.from('timeline_events').select('*').eq('paciente_id',id).order('created_at',{ascending:false}),
+                                                                sb.from('questionario_respostas')
+                                                                  .select('id,questionario_id,respondido_em,questionarios(titulo),questionario_resposta_itens(valor_texto,valor_opcoes,valor_escala,questionario_perguntas(enunciado,ordem))')
+                                                                  .eq('paciente_id',id)
+                                                                  .order('respondido_em',{ascending:false})
                                                               ]);
                                                               if(atRes.error)console.warn('Erro ao carregar atendimentos',atRes.error);
                                                               if(exRes.error)console.warn('Erro ao carregar exames',exRes.error);
                                                               if(tlRes.error)console.warn('Erro ao carregar timeline',tlRes.error);
+                                                              if(qzRes.error)console.warn('Erro ao carregar questionários do paciente',qzRes.error);
                                                               atendimentos=(atRes.data||[]).map(mapConsultaRow);
                                                               exames=(exRes.data||[]).map(mapExameRow);
                                                               timelineEvents=(tlRes.data||[]).map(mapTimelineRow);
+                                                              questionariosPaciente=(qzRes.data||[]).map(mapQuestionarioRespostaRow);
+                                                            }
+                                                            // Monta o bloco de texto com as respostas de questionários do paciente para
+                                                            // ser enviado como contexto à IA (chat_ai). Cada resposta traz o NOME do
+                                                            // formulário e a DATA em que foi respondida — a IA é instruída a sempre citar
+                                                            // os dois ao usar essa informação, e a priorizar a resposta mais recente
+                                                            // quando houver mais de uma para o mesmo formulário, evitando dados desatualizados.
+                                                            function buildQuestionariosContexto(){
+                                                              if(!Array.isArray(questionariosPaciente)||!questionariosPaciente.length)return '';
+                                                              const blocos=questionariosPaciente.map(r=>{
+                                                                const dataFmt=r.respondidoEm?new Date(r.respondidoEm).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'data não registrada';
+                                                                const linhas=(r.itens||[]).map(it=>`- ${it.pergunta}: ${it.valor||'—'}`).join('\n')||'(sem respostas registradas neste formulário)';
+                                                                return `Formulário: "${r.titulo}"\nRespondido em: ${dataFmt}\n${linhas}`;
+                                                              });
+                                                              return blocos.join('\n\n---\n\n');
                                                             }
                                                             async function addTimelineEvent(ev){
                                                               timelineEvents.unshift(ev);
@@ -11274,7 +11314,7 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                                                               fetch('/api/chat-ia',{
                                                                 method:'POST',
                                                                 headers:{'Content-Type':'application/json'},
-                                                                body:JSON.stringify(Object.assign({mode:'chat',messages:mensagensParaIA,resumo_prontuario:currentResumoProntuario||'',anexo:iaTakeAnexo('ai')},(function(){const p=iaExamePacienteCtx();return p?{paciente_nome:p.nome,paciente_cpf:p.cpf,paciente_nascimento:p.data_nascimento}:{};})()))
+                                                                body:JSON.stringify(Object.assign({mode:'chat',messages:mensagensParaIA,resumo_prontuario:currentResumoProntuario||'',questionarios_paciente:buildQuestionariosContexto(),anexo:iaTakeAnexo('ai')},(function(){const p=iaExamePacienteCtx();return p?{paciente_nome:p.nome,paciente_cpf:p.cpf,paciente_nascimento:p.data_nascimento}:{};})()))
                                                               })
                                                               .then(async r=>{if(!r.ok)throw new Error(await r.text());return r.json();})
                                                               .then(async d=>{
@@ -18361,7 +18401,7 @@ let rxSelected = [];
                                                             }
                                                             function iniciarNovoAtendimento(){
                                                               currentPatient={id:null,name:'',init:'',dob:'',tel:'',conv:'Particular',sus:'—',cpf:'',end:'',email:'',mae:'',pai:'',nasc:'',sexo:'Feminino',medico:'',ocup:'',dadosClinicos:''};
-                                                              atendimentos=[];exames=[];timelineEvents=[];currentResumoProntuario='';
+                                                              atendimentos=[];exames=[];timelineEvents=[];questionariosPaciente=[];currentResumoProntuario='';
                                                               atendEmAndamento={pront:'',notaPessoal:'',dirty:false,bblHistory:[]};
                                                               goScreen('patient-detail');
                                                               document.getElementById('page-title').textContent='Paciente';

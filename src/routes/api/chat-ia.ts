@@ -7,6 +7,11 @@ type RequestBody = {
   mode?: "chat" | "resumo" | "anamnese" | "copiloto" | "extrair_complementares";
   messages?: ChatMessage[];
   resumo_prontuario?: string;
+  // Respostas de questionários que o paciente preencheu (enviados pela tela de
+  // Questionário), já formatadas em texto pelo cliente — um bloco por formulário
+  // respondido, cada um com título e data de resposta. Pode haver mais de um
+  // formulário e mais de uma resposta para o mesmo formulário.
+  questionarios_paciente?: string;
   paciente?: Record<string, unknown>;
   atendimentos?: unknown[];
   exames?: unknown[];
@@ -180,7 +185,20 @@ formato exato {"reply": "...", "action": {...}} — nunca misture os campos de a
 um único objeto, e nunca envolva vários objetos em um array. Cada "reply" deve ser curto e falar só
 daquela ação específica (ex.: um para a receita, outro para o agendamento).
 
-Se a mensagem não for um pedido de documento nem de agendamento, responda normalmente em texto puro (sem JSON).`;
+Se a mensagem não for um pedido de documento nem de agendamento, responda normalmente em texto puro (sem JSON).
+
+QUESTIONÁRIOS RESPONDIDOS PELO PACIENTE
+Quando a seção "=== QUESTIONÁRIOS RESPONDIDOS PELO PACIENTE ===" estiver presente no contexto, ela traz
+as respostas que o próprio paciente preencheu em formulários enviados pela clínica (um bloco por resposta,
+cada um já identificado com o nome do formulário e a data/hora em que foi respondido). Um paciente pode ter
+mais de um formulário e até mais de uma resposta para o mesmo formulário ao longo do tempo. Sempre que usar
+alguma informação vinda dessa seção para responder ao médico, cite explicitamente o NOME do formulário e a
+DATA em que aquela resposta foi registrada (ex.: "Segundo o formulário 'Anamnese inicial', respondido em
+12/03/2026, o paciente relatou..."), para deixar claro a origem e a data do dado e evitar que o médico
+interprete uma informação antiga como atual. Se houver respostas mais de uma vez para o mesmo formulário,
+priorize a mais recente ao responder, mas avise se os dados mudaram entre as respostas ou se a resposta
+disponível é antiga e pode estar desatualizada. Nunca invente conteúdo de questionário que não esteja
+presente nessa seção.`;
 
 const SYSTEM_RESUMO = `Você é um assistente clínico. Gere um RESUMO ESTRUTURADO do prontuário
 do paciente em português do Brasil, organizado em seções:
@@ -475,6 +493,7 @@ export const Route = createFileRoute("/api/chat-ia")({
           // chat mode
           const history = Array.isArray(body.messages) ? body.messages : [];
           const resumo = (body.resumo_prontuario || "").trim();
+          const questionariosPaciente = (body.questionarios_paciente || "").trim();
 
           // Base de conhecimento local do médico (opcional): se ele tiver bases
           // ativas para o chat_ai, isso injeta o índice delas + os trechos que
@@ -525,6 +544,9 @@ export const Route = createFileRoute("/api/chat-ia")({
             (resumo
               ? "\n\n=== RESUMO DO PRONTUÁRIO DO PACIENTE ===\n" + resumo
               : "\n\n(Sem resumo de prontuário disponível.)") +
+            (questionariosPaciente
+              ? "\n\n=== QUESTIONÁRIOS RESPONDIDOS PELO PACIENTE ===\n" + questionariosPaciente
+              : "") +
             (analiseExame
               ? `\n\n=== ANÁLISE DE EXAME (IA de exames) — arquivo "${body.anexo?.nome || "anexo"}" ===\n` +
                 JSON.stringify(analiseExame, null, 2)
