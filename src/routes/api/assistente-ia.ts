@@ -17,6 +17,14 @@ type ToolCall = {
 export type RequestBody = {
   mode?: string;
   messages?: { role: string; content: string }[];
+  // Igual a "messages", mas com os atalhos de comando ("/algo") ainda
+  // compactos, sem expandir pro texto completo — é essa versão que fica
+  // salva em ia_assist_conversas (pra reabrir a conversa depois mostrar o
+  // atalho curto de novo, e não o prompt inteiro). "messages" é o que
+  // efetivamente vai pro modelo. Se omitido (ex.: extensão do navegador ou
+  // canal do WhatsApp, que não lidam com atalhos), cai de volta pra
+  // "messages" — mesmo comportamento de antes.
+  messages_exibicao?: { role: string; content: string }[];
   user_id?: string | null;
   conversa_id?: string | null;
   // canal === "paciente": conversa vinda do WhatsApp do paciente (fora do app), com
@@ -1623,6 +1631,19 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
           // deixa isso vazar pro payload enviado ao gateway de IA.
           .map((m) => ({ role: m.role, content: m.content })) as ChatMessage[];
 
+        // Versão compacta (com atalhos "/algo" ainda não expandidos) usada só
+        // pra persistir em ia_assist_conversas — "history" acima (possivelmente
+        // já expandida pelo cliente) é o que realmente vai pro modelo.
+        // Sem .map() aqui de propósito: mensagens antigas recarregadas do
+        // histórico trazem fonte_base_conhecimento (usado pro selo na tela) e
+        // isso precisa sobreviver a cada novo salvamento — só "history" (que
+        // vai pro gateway de IA) precisa ser saneada.
+        const historyParaSalvar = (
+          Array.isArray(body.messages_exibicao) ? body.messages_exibicao : body.messages || []
+        ).filter(
+          (m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string",
+        ) as ChatMessage[];
+
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const pendingAction: { value: unknown } = { value: null };
         const canal = body.canal === "paciente" ? "paciente" : "interno";
@@ -1740,7 +1761,7 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
                       supabaseAdmin,
                       body.user_id || null,
                       body.conversa_id || null,
-                      history,
+                      historyParaSalvar,
                       reply,
                       apiKey,
                       usouBaseLocal && basesConhecimentoUsadas.length ? basesConhecimentoUsadas : null,

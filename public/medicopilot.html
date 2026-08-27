@@ -11197,7 +11197,7 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                                                         }
                                                       }
                                                       // ────────────────────────────────────────────────────────────────────────────
-                                                            function sendAIMsg(){
+                                                            async function sendAIMsg(){
                                                               const inp=document.getElementById('ai-inp');if(!inp||!inp.value.trim())return;
                                                               if(aiBusy)return;
                                                               const userText=inp.value.trim();inp.value='';
@@ -11206,10 +11206,13 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                                                               aiBusy=true;
                                                               const btn=document.querySelector('.ai-sbtn');if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>';}
                                                               const typingId=showTypingBubble();
+                                                              // O histórico enviado à IA vai com os atalhos ("/algo") já expandidos
+                                                              // pro texto completo — aiChatHistory continua compacto (exibição).
+                                                              const mensagensParaIA=await iaExpandirHistoricoAtalhos(aiChatHistory,'chat_ai');
                                                               fetch('/api/chat-ia',{
                                                                 method:'POST',
                                                                 headers:{'Content-Type':'application/json'},
-                                                                body:JSON.stringify(Object.assign({mode:'chat',messages:aiChatHistory,resumo_prontuario:currentResumoProntuario||'',anexo:iaTakeAnexo('ai')},(function(){const p=iaExamePacienteCtx();return p?{paciente_nome:p.nome,paciente_cpf:p.cpf,paciente_nascimento:p.data_nascimento}:{};})()))
+                                                                body:JSON.stringify(Object.assign({mode:'chat',messages:mensagensParaIA,resumo_prontuario:currentResumoProntuario||'',anexo:iaTakeAnexo('ai')},(function(){const p=iaExamePacienteCtx();return p?{paciente_nome:p.nome,paciente_cpf:p.cpf,paciente_nascimento:p.data_nascimento}:{};})()))
                                                               })
                                                               .then(async r=>{if(!r.ok)throw new Error(await r.text());return r.json();})
                                                               .then(async d=>{
@@ -11415,9 +11418,14 @@ function iaAssistQuickPrompt(text){
 /* Autocomplete de atalhos de comando ("/algo") nos inputs do Assistente IA
    (#ia-assist-inp) e do Chat IA (#ai-inp). Os atalhos são cadastrados na
    tela "Base de conhecimento" (tabela prompt_comandos, coluna "ias" indica
-   pra qual(is) IA cada atalho vale) — aqui só listamos os que valem pra
-   cada input e, ao escolher um, substituímos o texto digitado pelo comando
-   completo antes de enviar. */
+   pra qual(is) IA cada atalho vale).
+
+   Ao escolher um atalho da lista, o campo mostra só o nome dele (ex.:
+   "/explicação_doença"), igual a como foi digitado — o texto completo do
+   comando fica "mocado" ali dentro, sem aparecer no campo. A expansão pro
+   texto completo só acontece por baixo dos panos, na hora de enviar
+   (iaExpandirAtalhos), então o médico vê e edita algo curto, mas a IA
+   recebe o prompt inteiro. */
 const _ATALHO_INPUTS={
   'ia-assist-inp':{boxId:'ia-assist-atalho-sugestoes',iaKey:'assistente_ai'},
   'ai-inp':{boxId:'ai-atalho-sugestoes',iaKey:'chat_ai'},
@@ -11440,9 +11448,41 @@ async function iaCarregarAtalhos(iaKey){
     return _atalhosCachePorIa[iaKey];
   }catch(e){ console.error('[atalhos] erro ao carregar',e); return []; }
 }
+// Troca cada ocorrência de um atalho conhecido (ex.: "/explicação_doença")
+// pelo texto completo cadastrado, preservando o resto da mensagem ao redor.
+// Usado só na hora de montar o que vai pra IA — o que o médico vê no campo,
+// na bolha da conversa e no histórico salvo continua sendo o atalho curto.
+async function iaExpandirAtalhos(texto,iaKey){
+  const lista=await iaCarregarAtalhos(iaKey); // cache-hit se já carregado
+  if(!Array.isArray(lista)||!lista.length||!texto) return texto;
+  // atalhos mais longos primeiro, pra um atalho que é prefixo de outro
+  // (ex.: "/receita" e "/receita_controlada") não atropelar a troca do maior
+  const ordenados=[...lista].sort((a,b)=>b.atalho.length-a.atalho.length);
+  let resultado=texto;
+  ordenados.forEach(a=>{
+    const escapado=a.atalho.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const re=new RegExp('(^|\\s)'+escapado+'(?=\\s|$)','g');
+    resultado=resultado.replace(re,(_m,pre)=>pre+a.texto_completo);
+  });
+  return resultado;
+}
+// Mesma troca, mas pra um histórico inteiro de mensagens — usado ao montar o
+// payload enviado à IA, sem alterar o array original (que continua compacto
+// pra exibição/reload).
+async function iaExpandirHistoricoAtalhos(historico,iaKey){
+  const out=[];
+  for(const m of historico){ out.push({role:m.role,content:await iaExpandirAtalhos(m.content,iaKey)}); }
+  return out;
+}
 function iaFecharSugestoesAtalho(boxId){
   const el=document.getElementById(boxId);
   if(el) el.remove();
+}
+// Encontra o "/token" que está sendo digitado no fim do texto — não precisa
+// ser a mensagem inteira, só o último pedaço depois de um espaço (ou do
+// início do campo), pra funcionar mesmo com texto antes do "/".
+function iaAtalhoTokenAtual(valor){
+  return valor.match(/(^|\s)\/(\S*)$/);
 }
 async function iaMostrarSugestoesAtalho(inputId,boxId,iaKey,prefixo){
   const todos=await iaCarregarAtalhos(iaKey);
@@ -11467,7 +11507,18 @@ async function iaMostrarSugestoesAtalho(inputId,boxId,iaKey,prefixo){
     // mousedown (não click) pra disparar antes do input perder o foco
     item.addEventListener('mousedown',(e)=>{
       e.preventDefault();
-      inp.value=a.texto_completo;
+      // Troca só o "/token" que estava sendo digitado pelo nome do atalho
+      // completo (ex.: "/expl" vira "/explicação_doença "), sem tocar no
+      // resto do texto que já estava no campo. O prompt inteiro não entra
+      // aqui — só é resolvido depois, na hora de enviar.
+      const val=inp.value;
+      const m=iaAtalhoTokenAtual(val);
+      if(m){
+        const inicioBarra=m.index+m[1].length;
+        inp.value=val.slice(0,inicioBarra)+a.atalho+' ';
+      }else{
+        inp.value=val+a.atalho+' ';
+      }
       iaFecharSugestoesAtalho(boxId);
       inp.focus();
     });
@@ -11478,8 +11529,8 @@ async function iaMostrarSugestoesAtalho(inputId,boxId,iaKey,prefixo){
 document.addEventListener('input',function(e){
   const cfg=e.target&&_ATALHO_INPUTS[e.target.id];
   if(!cfg) return;
-  const m=e.target.value.match(/^\/(\S*)$/);
-  if(m) iaMostrarSugestoesAtalho(e.target.id,cfg.boxId,cfg.iaKey,m[1]);
+  const m=iaAtalhoTokenAtual(e.target.value);
+  if(m) iaMostrarSugestoesAtalho(e.target.id,cfg.boxId,cfg.iaKey,m[2]);
   else iaFecharSugestoesAtalho(cfg.boxId);
 });
 document.addEventListener('click',function(e){
@@ -11558,10 +11609,15 @@ async function sendIaAssistMsg(){
   if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>';}
   const typingId=showIaAssistTyping();
   try{
+    // messages: histórico com os atalhos ("/algo") já expandidos pro texto
+    // completo — é o que a IA de fato recebe. messages_exibicao: o mesmo
+    // histórico só que compacto — é o que fica salvo/exibido, pra o atalho
+    // continuar aparecendo curto ao reabrir a conversa depois.
+    const mensagensParaIA=await iaExpandirHistoricoAtalhos(iaAssistHistory,'assistente_ai');
     const r=await fetch('/api/assistente-ia',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({mode:'assistente_global',messages:iaAssistHistory,user_id:iaAssistUserId(),conversa_id:iaAssistConversaId,anexo:iaTakeAnexo('assist')})
+      body:JSON.stringify({mode:'assistente_global',messages:mensagensParaIA,messages_exibicao:iaAssistHistory,user_id:iaAssistUserId(),conversa_id:iaAssistConversaId,anexo:iaTakeAnexo('assist')})
     });
     if(!r.ok)throw new Error(await r.text());
     const d=await r.json();
