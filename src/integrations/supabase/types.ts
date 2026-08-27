@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -115,6 +115,27 @@ export type Database = {
           sources?: Json
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      apresentacao_legivel: {
+        Row: {
+          apresentacao: string
+          created_at: string
+          posologia_padrao: string | null
+          texto_simplificado: string
+        }
+        Insert: {
+          apresentacao: string
+          created_at?: string
+          posologia_padrao?: string | null
+          texto_simplificado: string
+        }
+        Update: {
+          apresentacao?: string
+          created_at?: string
+          posologia_padrao?: string | null
+          texto_simplificado?: string
         }
         Relationships: []
       }
@@ -225,11 +246,11 @@ export type Database = {
           base_id: string | null
           conteudo: string
           created_at: string | null
-          grupo_id: string | null
           id: string
           medico_id: string | null
           nome_original: string | null
           ordem: number | null
+          perguntas_relacionadas: string | null
           status: string
           tipo: string | null
           tokens_estimados: number | null
@@ -238,11 +259,11 @@ export type Database = {
           base_id?: string | null
           conteudo: string
           created_at?: string | null
-          grupo_id?: string | null
           id?: string
           medico_id?: string | null
           nome_original?: string | null
           ordem?: number | null
+          perguntas_relacionadas?: string | null
           status?: string
           tipo?: string | null
           tokens_estimados?: number | null
@@ -251,11 +272,11 @@ export type Database = {
           base_id?: string | null
           conteudo?: string
           created_at?: string | null
-          grupo_id?: string | null
           id?: string
           medico_id?: string | null
           nome_original?: string | null
           ordem?: number | null
+          perguntas_relacionadas?: string | null
           status?: string
           tipo?: string | null
           tokens_estimados?: number | null
@@ -988,6 +1009,7 @@ export type Database = {
         Row: {
           api_id: number | null
           apresentacao: string | null
+          apresentacao_simplificada: string | null
           categoria_regulatoria: string | null
           classe_terapeutica: string | null
           cnpj_fabricante: string | null
@@ -998,6 +1020,7 @@ export type Database = {
           id: string
           is_generico: boolean
           nome_comercial: string | null
+          posologia_padrao: string | null
           regime_preco: string | null
           registro_anvisa: string | null
           tarja: string | null
@@ -1005,6 +1028,7 @@ export type Database = {
         Insert: {
           api_id?: number | null
           apresentacao?: string | null
+          apresentacao_simplificada?: string | null
           categoria_regulatoria?: string | null
           classe_terapeutica?: string | null
           cnpj_fabricante?: string | null
@@ -1015,6 +1039,7 @@ export type Database = {
           id: string
           is_generico?: boolean
           nome_comercial?: string | null
+          posologia_padrao?: string | null
           regime_preco?: string | null
           registro_anvisa?: string | null
           tarja?: string | null
@@ -1022,6 +1047,7 @@ export type Database = {
         Update: {
           api_id?: number | null
           apresentacao?: string | null
+          apresentacao_simplificada?: string | null
           categoria_regulatoria?: string | null
           classe_terapeutica?: string | null
           cnpj_fabricante?: string | null
@@ -1032,6 +1058,7 @@ export type Database = {
           id?: string
           is_generico?: boolean
           nome_comercial?: string | null
+          posologia_padrao?: string | null
           regime_preco?: string | null
           registro_anvisa?: string | null
           tarja?: string | null
@@ -1988,6 +2015,54 @@ export type Database = {
         }
         Relationships: []
       }
+      signature_psc_link_sessions: {
+        Row: {
+          api_key: string | null
+          certificate_subject: string | null
+          created_at: string
+          doctor_id: string
+          expires_at: string
+          holder_document: string | null
+          id: string
+          psc_name: string
+          redirect_uri: string | null
+          state: string
+          status: string
+          updated_at: string
+          valid_until: string | null
+        }
+        Insert: {
+          api_key?: string | null
+          certificate_subject?: string | null
+          created_at?: string
+          doctor_id: string
+          expires_at?: string
+          holder_document?: string | null
+          id?: string
+          psc_name: string
+          redirect_uri?: string | null
+          state: string
+          status?: string
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Update: {
+          api_key?: string | null
+          certificate_subject?: string | null
+          created_at?: string
+          doctor_id?: string
+          expires_at?: string
+          holder_document?: string | null
+          id?: string
+          psc_name?: string
+          redirect_uri?: string | null
+          state?: string
+          status?: string
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       substancias: {
         Row: {
           api_id: number | null
@@ -2304,59 +2379,6 @@ export type Database = {
         }
         Relationships: []
       }
-      signature_psc_link_sessions: {
-        Row: {
-          api_key: string | null
-          certificate_subject: string | null
-          created_at: string
-          doctor_id: string
-          expires_at: string
-          holder_document: string | null
-          id: string
-          psc_name: string
-          redirect_uri: string
-          state: string
-          status: string
-          valid_until: string | null
-        }
-        Insert: {
-          api_key?: string | null
-          certificate_subject?: string | null
-          created_at?: string
-          doctor_id: string
-          expires_at?: string
-          holder_document?: string | null
-          id?: string
-          psc_name: string
-          redirect_uri: string
-          state: string
-          status?: string
-          valid_until?: string | null
-        }
-        Update: {
-          api_key?: string | null
-          certificate_subject?: string | null
-          created_at?: string
-          doctor_id?: string
-          expires_at?: string
-          holder_document?: string | null
-          id?: string
-          psc_name?: string
-          redirect_uri?: string
-          state?: string
-          status?: string
-          valid_until?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "signature_psc_link_sessions_doctor_id_fkey"
-            columns: ["doctor_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       whatsapp_conversas: {
         Row: {
           created_at: string
@@ -2544,12 +2566,16 @@ export type Database = {
         Args: { p_fabricante?: string; p_nome_comercial: string }
         Returns: {
           apresentacao: string
+          apresentacao_original: string
+          posologia_padrao: string
         }[]
       }
       listar_apresentacoes_generico: {
         Args: { p_fabricante?: string; p_id_substancia: string }
         Returns: {
           apresentacao: string
+          apresentacao_original: string
+          posologia_padrao: string
         }[]
       }
       listar_fabricantes_generico: {
