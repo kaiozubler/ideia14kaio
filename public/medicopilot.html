@@ -4732,9 +4732,6 @@
             </div>
             <div class="fld"><label>Nome da mãe</label><input type="text" id="np-mae" /></div>
             <div class="fld"><label>Nome do pai</label><input type="text" id="np-pai" /></div>
-            <div class="fld wide">
-              <label>Endereço</label><input type="text" id="np-end" placeholder="Rua, nº — Bairro, Cidade, UF" />
-            </div>
             <div class="fld">
               <label>Convênio</label
               ><select id="np-conv">
@@ -13898,7 +13895,7 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                               document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
                                                               const m=document.getElementById('m-'+name);if(m)m.style.display='flex';
                                                               if(name==='new-patient'){
-                                                                ['np-nome','np-cpf','np-dob','np-tel','np-email','np-sus','np-mae','np-pai','np-end'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+                                                                ['np-nome','np-cpf','np-dob','np-tel','np-email','np-sus','np-mae','np-pai'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
                                                                 ['np-conv','np-sexo','np-medico'].forEach(id=>{const el=document.getElementById(id);if(el)el.selectedIndex=0;});
                                                                 const g=document.getElementById('np-grupo');if(g){populateGrupoSelect(g);g.value='';}
                                                               }
@@ -17616,6 +17613,7 @@ let rxSelected = [];
                                                             async function saveNewPatient(){
                                                               const val=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
                                                               const nome=val('np-nome');if(!nome){alert('Informe o nome do paciente');return;}
+                                                              const addr=readEnderecoFields('np-');
                                                               const payload={
                                                                 name:nome,
                                                                 data_nascimento:val('np-dob')||null,
@@ -17625,7 +17623,14 @@ let rxSelected = [];
                                                                 sus:val('np-sus')||null,
                                                                 mae:val('np-mae')||null,
                                                                 pai:val('np-pai')||null,
-                                                                endereco:val('np-end')||null,
+                                                                cep:addr.cep||null,
+                                                                logradouro:addr.logradouro||null,
+                                                                numero:addr.numero||null,
+                                                                complemento:addr.complemento||null,
+                                                                bairro:addr.bairro||null,
+                                                                cidade:addr.cidade||null,
+                                                                uf:addr.uf||null,
+                                                                endereco:buildEnderecoConcat(addr),
                                                                 convenio:val('np-conv')||'Particular',
                                                                 sexo:val('np-sexo')||null,
                                                                 medico:val('np-medico')||null,
@@ -18375,7 +18380,6 @@ let rxSelected = [];
                                                               document.getElementById('d-email').value='';document.getElementById('d-cpf').value='';document.getElementById('d-mae').value='';
                                                               document.getElementById('d-pai').value='';document.getElementById('d-end').value='';
                                                               document.getElementById('d-nasc').value='';document.getElementById('d-sus').value='';
-const de=document.getElementById('np-end');if(de)de.value='';
                                                               const cv=document.getElementById('d-conv');if(cv)cv.value='Particular';
                                                               const sx=document.getElementById('d-sexo');if(sx)sx.value='Feminino';
                                                               const ms=document.getElementById('d-medico');if(ms)ms.value='';
