@@ -22,6 +22,10 @@ type RequestBody = {
   cids_atuais?: { code?: string; description?: string }[];
   cid_opcoes?: { c?: string; d?: string }[];
   conteudo_atendimento?: string;
+  // Agendamento real já criado nesta mesma consulta (não depende da IA —
+  // vem direto do momento em que o médico de fato marcou o retorno pelo
+  // modal/comando de voz). Quando presente, a IA não deve propor um novo.
+  agendamento_ja_realizado?: { data?: string; horario?: string; motivo?: string } | null;
   // Anexo enviado pelo médico no chat da consulta (ex.: PDF de exame).
   anexo?: { nome?: string; mime?: string; base64?: string } | null;
   paciente_cpf?: string | null;
@@ -281,6 +285,10 @@ REGRAS PARA "agendamento_sugerido":
   na hora de confirmar.
 - "motivo": frase curta com o motivo do retorno, se mencionado (ex.: "Reavaliação pós-tratamento").
 - Se não houver nenhuma menção a retorno/nova consulta, retorne "agendamento_sugerido": null.
+- Se "agendamento_ja_realizado" estiver preenchido nos dados recebidos, significa que o médico JÁ
+  agendou de verdade o retorno durante esta mesma consulta (não é uma sugestão, é um agendamento real
+  já criado). Neste caso, SEMPRE retorne "agendamento_sugerido": null — nunca proponha um novo, mesmo
+  que a fala mencione um retorno; o retorno já existe.
 
 Retorne EXCLUSIVAMENTE um JSON válido (sem comentários, sem markdown, sem cercas de código) no
 formato exato:
@@ -422,6 +430,10 @@ export const Route = createFileRoute("/api/chat-ia")({
             if (!conteudo) {
               return Response.json({ alteracoes: [], cids_sugeridos: [] });
             }
+            const agendamentoJaRealizado =
+              body.agendamento_ja_realizado && typeof body.agendamento_ja_realizado === "object"
+                ? body.agendamento_ja_realizado
+                : null;
             const ctx = JSON.stringify(
               {
                 campos: IC_FIELD_META,
@@ -429,6 +441,7 @@ export const Route = createFileRoute("/api/chat-ia")({
                 cids_atuais: body.cids_atuais ?? [],
                 cid_opcoes: body.cid_opcoes ?? [],
                 conteudo_atendimento: conteudo,
+                agendamento_ja_realizado: agendamentoJaRealizado,
               },
               null,
               2,
@@ -443,7 +456,10 @@ export const Route = createFileRoute("/api/chat-ia")({
             const parsed = parseJsonLoose(text);
             const alteracoes = Array.isArray(parsed.alteracoes) ? parsed.alteracoes : [];
             const cidsSugeridos = Array.isArray(parsed.cids_sugeridos) ? parsed.cids_sugeridos : [];
-            const agRaw = parsed.agendamento_sugerido;
+            // Segurança extra: se já existe um agendamento real desta consulta,
+            // nunca devolvemos uma sugestão nova — independente do que o modelo
+            // tenha respondido (não depende da IA acertar sempre).
+            const agRaw = agendamentoJaRealizado ? null : parsed.agendamento_sugerido;
             const agendamentoSugerido =
               agRaw && typeof agRaw === "object" && !Array.isArray(agRaw)
                 ? {

@@ -5474,6 +5474,14 @@
             Revise, edite ou desmarque o que não desejar aplicar antes de finalizar.
           </p>
           <div id="cic-lista" style="display:flex;flex-direction:column;gap:8px"></div>
+          <div id="cic-receita-ja-feito" style="margin-top:12px;display:none;border:0.5px solid #bbf7d0;border-radius:var(--r8);padding:10px 12px;background:#f0fdf4;font-size:12px;color:#166534;align-items:center;gap:8px">
+            <i class="ti ti-circle-check" style="font-size:15px;flex-shrink:0"></i>
+            <span id="cic-receita-ja-feito-txt"></span>
+          </div>
+          <div id="cic-agend-ja-feito" style="margin-top:12px;display:none;border:0.5px solid #bbf7d0;border-radius:var(--r8);padding:10px 12px;background:#f0fdf4;font-size:12px;color:#166534;align-items:center;gap:8px">
+            <i class="ti ti-circle-check" style="font-size:15px;flex-shrink:0"></i>
+            <span id="cic-agend-ja-feito-txt"></span>
+          </div>
           <div id="cic-cids-wrap" style="margin-top:14px;display:none">
             <label
               style="font-size:11px;font-weight:600;color:var(--n500);text-transform:uppercase;letter-spacing:.04em"
@@ -9954,12 +9962,20 @@ showAtendList();
             if(!conteudo)return null;
                                         const infoAtual=loadInfoComp();
                                         const cidsAtuais=Array.isArray(currentPatient.cids)?currentPatient.cids:[];
+                                        // Já houve agendamento/receita de verdade nesta consulta? Isso não
+                                        // depende da IA — são dados que já temos, guardados no momento em
+                                        // que a ação foi feita (rxEmitirConfirmado / agmSubmit). Mandamos
+                                        // isso pro backend só para a IA não perder tempo/token propondo de
+                                        // novo algo que já aconteceu.
+                                        const agendamentoJaFeito=(!opts||!opts.conteudoExtra)?(atendEmAndamento.agendamentoGerado||null):null;
+                                        const receitaJaFeita=(!opts||!opts.conteudoExtra)?(atendEmAndamento.receitaGerada||null):null;
                                         const res=await fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
                                           mode:'extrair_complementares',
                                           info_complementar_atual:infoAtual,
                                           cids_atuais:cidsAtuais,
                                           cid_opcoes:CID10_DB.map(c=>({code:c.c,description:c.d})),
-                                          conteudo_atendimento:conteudo
+                                          conteudo_atendimento:conteudo,
+                                          agendamento_ja_realizado:agendamentoJaFeito?{data:agendamentoJaFeito.dataTexto,horario:agendamentoJaFeito.horaTexto,motivo:agendamentoJaFeito.motivo}:null
                                         })});
                                         if(!res.ok)return null;
                                         const data=await res.json();
@@ -9970,16 +9986,17 @@ showAtendList();
                                         const cidsSugeridos=(Array.isArray(data.cids_sugeridos)?data.cids_sugeridos:[])
                                           .filter(c=>c&&c.code&&!cidsAtuais.some(x=>String(x.code).toUpperCase()===String(c.code).toUpperCase()))
                                           .map(c=>({code:String(c.code).toUpperCase(),description:c.description||''}));
-                                        // "Agendar retorno" desligado no copiloto → não propõe agendamento ao finalizar.
-                                        const ag=getCopilotoCfg().retorno?data.agendamento_sugerido:null;
+                                        // "Agendar retorno" desligado no copiloto, ou agendamento já criado de
+                                        // verdade nesta consulta → não propõe (de novo) um agendamento ao finalizar.
+                                        const ag=(getCopilotoCfg().retorno&&!agendamentoJaFeito)?data.agendamento_sugerido:null;
                                         const agendamentoSugerido=(ag&&typeof ag==='object')?{
                                           prazoTexto:(ag.prazo_texto||'').trim(),
                                           data:(ag.data||'').trim(),
                                           horario:(ag.horario||'').trim(),
                                           motivo:(ag.motivo||'Retorno').trim()
                                         }:null;
-                                        if(!alteracoes.length&&!cidsSugeridos.length&&!agendamentoSugerido)return null;
-                                        return {alteracoes,cidsSugeridos,agendamentoSugerido};
+                                        if(!alteracoes.length&&!cidsSugeridos.length&&!agendamentoSugerido&&!agendamentoJaFeito&&!receitaJaFeita)return null;
+                                        return {alteracoes,cidsSugeridos,agendamentoSugerido,agendamentoJaFeito,receitaJaFeita};
                                       }catch(e){console.warn('Falha ao avaliar informações complementares via IA',e);return null;}
                                     }
                                                               function renderCicRow(alt){
@@ -10013,8 +10030,26 @@ showAtendList();
                                         cidsWrap.style.display='block';
                                         renderCicCidsChips();
                                       }else if(cidsWrap){cidsWrap.style.display='none';}
-                                      renderCicAgendamentoSugerido(proposta.agendamentoSugerido||null);
+                                      renderCicJaFeito('cic-receita-ja-feito',proposta.receitaJaFeita?(
+                                        'Receita emitida às '+proposta.receitaJaFeita.horaTexto+' nesta consulta ('+proposta.receitaJaFeita.resumo+').'
+                                      ):null);
+                                      renderCicJaFeito('cic-agend-ja-feito',proposta.agendamentoJaFeito?(
+                                        'Retorno já agendado para '+proposta.agendamentoJaFeito.dataTexto+' às '+proposta.agendamentoJaFeito.horaTexto+
+                                        (proposta.agendamentoJaFeito.motivo?' ('+proposta.agendamentoJaFeito.motivo+')':'')+'.'
+                                      ):null);
+                                      // Se já houve um agendamento de verdade nesta consulta, não mostra o
+                                      // formulário de "sugestão de retorno" — já foi feito.
+                                      renderCicAgendamentoSugerido(proposta.agendamentoJaFeito?null:(proposta.agendamentoSugerido||null));
                                       openModal('confirma-info-comp');
+                                    }
+                                    // Banner informativo simples (sem IA) — só exibe o dado já registrado
+                                    // no momento em que a receita/agendamento foi de fato gerado.
+                                    function renderCicJaFeito(elId,texto){
+                                      const el=document.getElementById(elId);if(!el)return;
+                                      if(!texto){el.style.display='none';return;}
+                                      el.style.display='flex';
+                                      const txtEl=document.getElementById(elId+'-txt');
+                                      if(txtEl)txtEl.textContent=texto;
                                     }
                                     // Bloco de sugestão de retorno/agendamento identificado pela IA ao finalizar o
                                     // atendimento (nunca criado sozinho — o médico revisa data/motivo e confirma).
@@ -15168,6 +15203,14 @@ let rxSelected = [];
                                                               // a receita continua sendo adicionada às anotações do atendimento.
                                                               const ta = document.getElementById('pront-area');
                                                               if (ta) { ta.value = (ta.value ? ta.value + '\n\n' : '') + 'RECEITA:\n' + linhas; if (typeof markAtendDirty === 'function') markAtendDirty(); }
+                                                              // Sinaliza para a IA de encerramento que a receita já foi emitida
+                                                              // nesta consulta — evita sugerir gerar outra pra mesma coisa.
+                                                              const _rxAgora=new Date();
+                                                              atendEmAndamento.receitaGerada={
+                                                                quando:_rxAgora.toISOString(),
+                                                                horaTexto:_rxAgora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+                                                                resumo:(items[0]&&items[0].nome?items[0].nome+(items.length>1?' + '+(items.length-1):''):'medicamento(s)')
+                                                              };
                                                               openReceitaPDF({ items, formulas: formulaItems });
                                                               closeModal();
                                                               showToast && showToast('Receita adicionada ao prontuário', 'success');
@@ -19111,6 +19154,17 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                 const{error:agErr}=await sb.from('agendamentos').insert(agPayload);
                                                                 if(agErr)throw agErr;
                                                                 showToast&&showToast('Agendamento criado com sucesso','success');
+                                                                // Sinaliza para a IA de encerramento que já existe um agendamento
+                                                                // real criado nesta consulta — evita sugerir marcar outro.
+                                                                if(typeof atendEmAndamento!=='undefined'&&atendEmAndamento&&atendEmAndamento.patientId&&pacienteId===atendEmAndamento.patientId){
+                                                                  atendEmAndamento.agendamentoGerado={
+                                                                    quando:new Date().toISOString(),
+                                                                    dataHora:dataHora,
+                                                                    dataTexto:new Date(dataHora).toLocaleDateString('pt-BR'),
+                                                                    horaTexto:hora,
+                                                                    motivo:agPayload.motivo
+                                                                  };
+                                                                }
                                                                 closeNovoAgendamentoModal();
                                                                 await loadPatients();
                                                               }catch(e){
