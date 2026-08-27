@@ -6863,9 +6863,12 @@
                                                               const nome=(currentPatient&&currentPatient.name)||'';
                                                               switch(rule.action){
                                                                 case 'gerar_receita': {
-                                                                  const id=iaAssistRegisterAttachment('receita',{medicamentos:[],paciente_nome:nome});
-                                                                  spawnTaskBubble('receita',id);
-                                                                  if(typeof showToast==='function')showToast('Receita criada — edite os medicamentos no balão.','success');
+                                                                  // Abre o mesmo modal de "Receitas e Atestados" já usado no resto
+                                                                  // do app — vinculado ao paciente em atendimento (rxIsAvulsa=false),
+                                                                  // igual ao item de menu já existente.
+                                                                  rxIsAvulsa=false;
+                                                                  openReceita();
+                                                                  if(typeof showToast==='function')showToast('Comando de voz: abrindo receita...','success');
                                                                   break;
                                                                 }
                                                                 case 'gerar_atestado': {
@@ -6875,9 +6878,10 @@
                                                                   break;
                                                                 }
                                                                 case 'agendar_paciente': {
-                                                                  const id=iaAssistRegisterAttachment('agendamento',{data:'',hora:'',motivo:'',paciente_nome:nome});
-                                                                  spawnTaskBubble('agendamento',id);
-                                                                  if(typeof showToast==='function')showToast('Agendamento criado — edite data/hora no balão.','success');
+                                                                  // Abre o mesmo modal "Novo agendamento" da tela de Agenda,
+                                                                  // já pré-preenchido com os dados do paciente em atendimento.
+                                                                  openNovoAgendamentoFromPatient();
+                                                                  if(typeof showToast==='function')showToast('Comando de voz: abrindo novo agendamento...','success');
                                                                   break;
                                                                 }
                                                                 case 'enviar_receita':
