@@ -13238,8 +13238,13 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                                   alvo.split(/\s+/).forEach(tok=>{if(tok&&an.includes(tok))score++;});
                                                                   if(score>bestScore){bestScore=score;best=a;}
                                                                 });
-                                                                med.apresentacao=best;
-                                                              }
+                                                                 med.apresentacao=best;
+                                                                 const posPad=window.rxPosologiaPadrao(apsData,best);
+                                                                 if(posPad){
+                                                                   if(!med.posologia)med.posologia=posPad;
+                                                                   if(!med.instrucoes)med.instrucoes=posPad;
+                                                                 }
+                                                               }
                                                               continue;
                                                             }
 
