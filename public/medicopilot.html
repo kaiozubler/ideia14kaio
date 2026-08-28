@@ -14763,6 +14763,17 @@ let rxSelected = [];
                                                               rxRenderSelected();
                                                             }
 
+                                                            // Posologia padrão sugerida para a apresentação escolhida. Os RPCs de
+                                                            // listagem devolvem posologia_padrao junto de cada apresentação
+                                                            // (texto genérico derivado da forma farmacêutica) — usamos apenas
+                                                            // como pré-preenchimento quando o médico/IA não informou nada.
+                                                            function rxPosologiaPadrao(rows, apresentacao) {
+                                                              const list = rows || [];
+                                                              const alvo = (apresentacao || '').toLowerCase().trim();
+                                                              const hit = list.find(r => (r?.apresentacao || '').toLowerCase().trim() === alvo) || list[0];
+                                                              return (hit && hit.posologia_padrao) ? hit.posologia_padrao : '';
+                                                            }
+
                                                             async function rxFetchComposicaoComercial(nome_comercial, fabricante) {
                                                               try {
                                                                 let q = sb.from('medicamentos').select('id').eq('is_generico', false);
