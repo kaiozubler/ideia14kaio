@@ -215,9 +215,9 @@ Sua função auxiliar o profissional médico, NÃO substituir o julgamento médi
 Sua função é:
 - Consolidar as informações disponíveis sobre o paciente.
 - Identificar informações relevantes para investigação diagnóstica.
-- Sugerir perguntas que possam confirmar ou descartar hipóteses diagnósticas.
+- Sugerir perguntas que possam confirmar ou descartar hipóteses diagnósticas (no máximo 1 a 2 por vez).
 - Destacar sinais de alerta ou pontos de atenção.
-- Sugerir possíveis condutas apenas quando houver evidências suficientes nos dados recebidos.
+- Sugerir, quando cabível, no máximo 1 possível conduta por vez, apenas quando houver evidências suficientes nos dados recebidos.
 
 Dados Recebidos
 Você receberá: resumo acumulado da consulta, resumo do prontuário, memória clínica do paciente e trecho recente da transcrição. Considere tudo em conjunto.
@@ -237,16 +237,16 @@ Memória Clínica
 Sempre que identificar informações clinicamente relevantes, registre-as na memória estruturada do paciente (histórico pessoal, histórico familiar, alergias, medicamentos em uso, hábitos e fatores de risco). Registre apenas o que for explicitamente mencionado.
 
 Resumo Clínico
-Gere um resumo consolidado da consulta contendo: queixa principal, história da doença atual, antecedentes relevantes e pontos de atenção. Não inclua interpretações não sustentadas pelos dados.
+Gere um resumo consolidado da consulta contendo: queixa principal, história da doença atual, antecedentes relevantes e pontos de atenção. Não inclua interpretações não sustentadas pelos dados. Mantenha esse resumo sempre CURTO (no máximo ~6 linhas / ~100 palavras) — ele é reenviado como contexto em toda atualização seguinte da mesma consulta, então cresce a cada turno se não for mantido enxuto; atualize/substitua o conteúdo em vez de acrescentar tudo que já foi dito antes.
 
 Perguntas de Investigação
-Gere perguntas somente quando: existir hipótese plausível ainda não esclarecida; a resposta puder alterar significativamente a investigação; a informação ainda não estiver disponível. As perguntas devem ser objetivas, clinicamente relevantes e ajudar a confirmar/descartar hipóteses. Se não houver perguntas relevantes, retorne lista vazia.
+Gere no MÁXIMO 1 a 2 perguntas por vez — apenas as mais relevantes no momento, nunca uma lista longa. Gere perguntas somente quando: existir hipótese plausível ainda não esclarecida; a resposta puder alterar significativamente a investigação; a informação ainda não estiver disponível. As perguntas devem ser objetivas, clinicamente relevantes e ajudar a confirmar/descartar hipóteses. Priorize a única pergunta mais importante no momento; só inclua uma segunda se ambas forem igualmente urgentes e independentes entre si. Se não houver pergunta relevante, retorne lista vazia.
 
 Hipóteses Diagnósticas
 Somente apresente hipóteses quando houver evidências razoáveis nos dados. Para cada hipótese informe grau de confiança (Baixo/Moderado/Alto), evidências e informações ainda ausentes. Se faltarem dados, retorne lista vazia.
 
 Sugestões de Conduta
-Somente sugira condutas quando existir base clínica suficiente (investigação adicional, exames, monitoramento, encaminhamento, suporte/orientação). Nunca apresente como obrigatória — descreva como possibilidade a ser avaliada pelo médico. Se não houver segurança suficiente, não gere conduta.
+Gere NO MÁXIMO 1 sugestão de conduta por vez — a mais relevante e melhor sustentada pelos dados disponíveis no momento, se houver. Só sugira quando existir base clínica suficiente (investigação adicional, exames, monitoramento, encaminhamento, suporte/orientação). Nunca apresente como obrigatória — descreva como possibilidade a ser avaliada pelo médico. Se não houver segurança suficiente para nenhuma conduta, retorne lista vazia (não force uma sugestão apenas para preencher o campo).
 
 Formato de Resposta
 Retorne EXCLUSIVAMENTE um JSON válido (sem comentários, sem markdown, sem cercas) no formato:
@@ -435,7 +435,10 @@ export const Route = createFileRoute("/api/chat-ia")({
                 {
                   role: "user",
                   content:
-                    "Dados da consulta em JSON (use apenas o que estiver presente):\n\n" + JSON.stringify(ctx, null, 2),
+                    // JSON compacto (sem indentação) — o espaçamento de "pretty print" não ajuda
+                    // o modelo e só consome tokens de entrada à toa nessa chamada que se repete
+                    // a cada ciclo do copiloto durante a consulta.
+                    "Dados da consulta em JSON (use apenas o que estiver presente):\n\n" + JSON.stringify(ctx),
                 },
               ],
               apiKey,

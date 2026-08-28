@@ -596,6 +596,15 @@
                                                       /* AI CONTROLS */
                                                       .ai-ctrls{align-self:flex-start;padding:5px 8px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;border:0.5px solid rgba(255,255,255,.9);border-radius:12px;background:rgba(255,255,255,.7);backdrop-filter:blur(16px) saturate(180%);box-shadow:0 8px 22px -8px rgba(15,40,60,.22),0 2px 6px rgba(0,0,0,.06),inset 0 1px 0 rgba(255,255,255,.7)}
                                                       .ai-ctrls .csep{width:0.5px;height:16px;background:var(--n200)}
+                                                      /* Botão "Me apoie" — relógio em barra: a barra de fundo drena da esquerda
+                                                         para a direita ao longo dos 5min de apoio ativo, servindo de contagem
+                                                         regressiva visual. Clicar de novo enquanto ativo reinicia a barra (renova). */
+                                                      #apoio-btn{position:relative;overflow:hidden;isolation:isolate}
+                                                      #apoio-btn .apoio-bar{position:absolute;inset:0;width:0%;background:linear-gradient(90deg,rgba(52,211,153,.55),rgba(5,150,105,.4));z-index:0;pointer-events:none}
+                                                      #apoio-btn .apoio-content{position:relative;z-index:1;display:flex;align-items:center;gap:5px}
+                                                      #apoio-btn.apoio-on{border-color:rgba(5,150,105,.55);background:var(--g50,#ecfdf5);color:var(--g700,#047857)}
+                                                      #apoio-btn.apoio-on #apoio-btn-ico{animation:apoioPulse 1.4s ease-in-out infinite}
+                                                      @keyframes apoioPulse{0%,100%{opacity:1}50%{opacity:.45}}
                                                       .ai-ctrls .btn{height:28px}
                                                       .ai-input-row{padding:6px 8px;display:flex;gap:5px;border-radius:14px;border:0.5px solid rgba(255,255,255,.9);background:rgba(255,255,255,.7);backdrop-filter:blur(16px) saturate(180%);box-shadow:0 8px 22px -8px rgba(15,40,60,.22),0 2px 6px rgba(0,0,0,.06),inset 0 1px 0 rgba(255,255,255,.7)}
                                                       .ai-inp{flex:1;border:none;border-radius:var(--r6);padding:6px 10px;font-family:var(--font);font-size:12px;color:var(--n700);outline:none;background:transparent}
@@ -3216,6 +3225,17 @@
                           <i class="ti ti-microphone" id="lt-ico"></i> <span id="lt-lbl">Escutar</span>
                         </button>
                         <div class="csep"></div>
+                        <button
+                          class="btn sm"
+                          id="apoio-btn"
+                          onclick="toggleMeApoie()"
+                          title="Pede à IA para acompanhar ativamente a consulta por 5min. Clique de novo antes de acabar para renovar."
+                          style="display:none"
+                        >
+                          <span class="apoio-bar" id="apoio-bar"></span>
+                          <span class="apoio-content"><i class="ti ti-clock" id="apoio-btn-ico"></i> <span id="apoio-btn-lbl">Me apoie</span></span>
+                        </button>
+                        <div class="csep"></div>
                         <div
                           class="sug-grp"
                           id="sug-grp"
@@ -3957,11 +3977,11 @@
                   <div>
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
                       <div style="font-size:12.5px;font-weight:600;color:var(--n700)">Frequência de atualização</div>
-                      <div style="font-size:12.5px;font-weight:600;color:var(--g600,#059669)"><span id="cop-freq-lbl">8min</span></div>
+                      <div style="font-size:12.5px;font-weight:600;color:var(--g600,#059669)"><span id="cop-freq-lbl">1min</span></div>
                     </div>
-                    <input type="range" id="cop-freq" min="5" max="20" step="1" value="8" style="width:100%;accent-color:#10b981" />
+                    <input type="range" id="cop-freq" min="10" max="600" step="10" value="60" style="width:100%;accent-color:#10b981" />
                     <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--n400);margin-top:4px">
-                      <span>5min</span><span>20min</span>
+                      <span>10s</span><span>10min</span>
                     </div>
                   </div>
                 </div>
@@ -6489,6 +6509,11 @@
                                                             // Estado do loop do copiloto ativo
                                                             let copLoopTimer=null;
                                                             let copTranscriptCursor=0;
+                                                            // ---- "Me apoie": burst manual de apoio ativo por tempo limitado ----
+                                                            const APOIO_DURACAO_MS=5*60*1000; // 5min
+                                                            let apoioAtivo=false;
+                                                            let apoioLoopTimer=null;
+                                                            let apoioCountdownTimer=null;
                                                             let copLastSummary='';
                                                             let copFirstRun=true;
                                                             let copBusy=false;
@@ -6502,7 +6527,7 @@
                                                                 voz: cfg.voz!==false,
                                                                 vozAuto: cfg.vozAuto===true,
                                                                 tipo: cfg.tipo||'ativo',
-                                                                freq: Number(cfg.freq)||480,
+                                                                freq: Math.min(600,Math.max(10,Number(cfg.freq)||480)),
                                                                 perguntas: cfg.perguntas!==false,
                                                                 memoria: cfg.memoria!==false,
                                                                 pendencias: cfg.pendencias!==false,
@@ -6598,7 +6623,12 @@
                                                               if(typeof toast==='function')toast('Dados da clínica salvos');
                                                             }
 
-                                                            function _copFmt(s){const m=Math.max(1,Math.round((Number(s)||480)/60));return m+'min';}
+                                                            function _copFmt(s){
+                                                              const total=Math.max(10,Math.round(Number(s)||480));
+                                                              if(total<60)return total+'s';
+                                                              const m=Math.floor(total/60),r=total%60;
+                                                              return r?(m+'min'+r+'s'):(m+'min');
+                                                            }
                                                             function updateCopTipoHint(){
                                                               const t=document.getElementById('cop-tipo');const h=document.getElementById('cop-tipo-hint');
                                                               if(!t||!h)return;
@@ -6626,9 +6656,9 @@
                                                               set('cop-protocolo',cfg.protocolo);set('cop-retorno',cfg.retorno);
                                                               document.getElementById('cop-tipo').value=cfg.tipo||'ativo';
                                                               const f=document.getElementById('cop-freq');
-                                                              f.value=Math.min(20,Math.max(5,Math.round(cfg.freq/60)));
-                                                              const lbl=document.getElementById('cop-freq-lbl');lbl.textContent=f.value+'min';
-                                                              f.oninput=()=>lbl.textContent=f.value+'min';
+                                                              f.value=Math.min(600,Math.max(10,Math.round(cfg.freq)));
+                                                              const lbl=document.getElementById('cop-freq-lbl');lbl.textContent=_copFmt(f.value);
+                                                              f.oninput=()=>lbl.textContent=_copFmt(f.value);
                                                               updateCopTipoHint();updateCopEnabledState();
                                                               try{loadCopVoiceCfg();}catch(e){console.error('[copiloto-voz] ERRO inesperado ao chamar loadCopVoiceCfg:',e);}
                                                             }
@@ -6639,7 +6669,7 @@
                                                                 voz:chk('cop-voz'),
                                                                 vozAuto:chk('cop-voz-auto'),
                                                                 tipo:document.getElementById('cop-tipo').value,
-                                                                freq:(Number(document.getElementById('cop-freq').value)||8)*60,
+                                                                freq:Math.min(600,Math.max(10,Number(document.getElementById('cop-freq').value)||60)),
                                                                 perguntas:chk('cop-perguntas'),
                                                                 memoria:chk('cop-memoria'),
                                                                 pendencias:chk('cop-pendencias'),
@@ -10440,6 +10470,10 @@ showAtendList();
                                                               stopCopilotoLoop();
                                                               stopCopVoiceScanner();_copVoiceLastFired={};
                                                               copTranscriptCursor=0;copLastSummary='';copFirstRun=true;copBusy=false;
+                                                              apoioAtivo=false;
+                                                              if(apoioLoopTimer){clearInterval(apoioLoopTimer);apoioLoopTimer=null;}
+                                                              if(apoioCountdownTimer){clearTimeout(apoioCountdownTimer);apoioCountdownTimer=null;}
+                                                              setApoioBtnState(false);
                                                               const bl=document.getElementById('bubbles-layer');
                                                               if(bl){
                                                                 // Clear but keep placeholder
@@ -10727,7 +10761,7 @@ showAtendList();
                                                               stopCopilotoLoop();
                                                               const cfg=getCopilotoCfg();
                                                               if(!cfg.enabled || cfg.tipo!=='ativo') return;
-                                                              const ms=Math.max(15,cfg.freq)*1000;
+                                                              const ms=Math.max(10,cfg.freq)*1000;
                                                               copLoopTimer=setInterval(()=>{
                                                                 if(!listening) return;
                                                                 runCopilotoTurn({manual:false}).catch(e=>console.warn('copiloto turn',e));
@@ -10736,6 +10770,77 @@ showAtendList();
                                                             function stopCopilotoLoop(){
                                                               if(copLoopTimer){clearInterval(copLoopTimer);copLoopTimer=null;}
                                                             }
+
+                                                            /* ========== "ME APOIE" — burst manual de apoio ativo (5min, renovável) ==========
+                                                               Botão em .ai-ctrls: o médico pede apoio ativo da IA por uma janela de tempo
+                                                               curta e limitada (em vez de deixar o copiloto "ativo" rodando o atendimento
+                                                               inteiro). Ao acionar: a IA primeiro resume tudo que já foi dito até agora
+                                                               (força um novo "primeiro processamento"), depois passa a atualizar na
+                                                               frequência configurada em Minhas IA's > Copiloto, por até 5 minutos. Clicar
+                                                               de novo antes de acabar renova a janela; sem clique, encerra sozinho. */
+                                                            function toggleMeApoie(){
+                                                              if(!listening){ if(typeof toast==='function') toast('Inicie a transcrição para pedir apoio à IA.'); return; }
+                                                              if(apoioAtivo){ armarApoioCountdown(); return; } // já ativo: só renova os 5min
+                                                              ativarMeApoie();
+                                                            }
+                                                            async function ativarMeApoie(){
+                                                              apoioAtivo=true;
+                                                              setApoioBtnState(true);
+                                                              armarApoioCountdown();
+                                                              stopCopilotoLoop(); // evita o loop automático "ativo" rodar em paralelo com o burst manual
+                                                              const cfgCop=getCopilotoCfg();
+                                                              copFirstRun=true; // força a IA a resumir todo o histórico da consulta antes de começar a apoiar
+                                                              const typingId=showTypingBubble();
+                                                              try{
+                                                                await runCopilotoTurn({manual:true});
+                                                              }catch(e){
+                                                                spawnBubble('ia','⚠️ Erro ao consultar a IA: '+(e.message||e));
+                                                              }finally{
+                                                                removeTypingBubble(typingId);
+                                                              }
+                                                              if(!apoioAtivo)return; // pode ter sido encerrado durante o await (ex.: parou a transcrição)
+                                                              const ms=Math.max(10,cfgCop.freq)*1000;
+                                                              apoioLoopTimer=setInterval(()=>{
+                                                                if(!listening){ desligarMeApoie('Transcrição pausada — apoio ativo encerrado.'); return; }
+                                                                runCopilotoTurn({manual:false}).catch(e=>console.warn('me apoie turn',e));
+                                                              },ms);
+                                                            }
+                                                            function armarApoioCountdown(){
+                                                              apoioCountdownTimer && clearTimeout(apoioCountdownTimer);
+                                                              apoioCountdownTimer=setTimeout(()=>{ desligarMeApoie('Apoio ativo encerrado após 5min — clique em "Me apoie" para retomar.'); },APOIO_DURACAO_MS);
+                                                              const bar=document.getElementById('apoio-bar');
+                                                              if(bar){
+                                                                bar.style.transition='none';bar.style.width='100%';
+                                                                void bar.offsetWidth; // força reflow para reiniciar a transição do zero
+                                                                bar.style.transition='width '+(APOIO_DURACAO_MS/1000)+'s linear';
+                                                                bar.style.width='0%';
+                                                              }
+                                                            }
+                                                            function desligarMeApoie(aviso){
+                                                              const estavaAtivo=apoioAtivo;
+                                                              apoioAtivo=false;
+                                                              if(apoioLoopTimer){clearInterval(apoioLoopTimer);apoioLoopTimer=null;}
+                                                              if(apoioCountdownTimer){clearTimeout(apoioCountdownTimer);apoioCountdownTimer=null;}
+                                                              setApoioBtnState(false);
+                                                              if(estavaAtivo){
+                                                                if(aviso && typeof toast==='function') toast(aviso);
+                                                                startCopilotoLoop(); // retoma o loop automático normal (se configurado como "ativo"), já que o burst manual terminou
+                                                              }
+                                                            }
+                                                            function setApoioBtnState(active){
+                                                              const btn=document.getElementById('apoio-btn');if(!btn)return;
+                                                              btn.classList.toggle('apoio-on',active);
+                                                              const lbl=document.getElementById('apoio-btn-lbl');if(lbl)lbl.textContent=active?'Apoio ativo':'Me apoie';
+                                                              const ico=document.getElementById('apoio-btn-ico');if(ico)ico.className='ti '+(active?'ti-clock-pause':'ti-clock');
+                                                              if(!active){ const bar=document.getElementById('apoio-bar'); if(bar){bar.style.transition='none';bar.style.width='0%';} }
+                                                            }
+                                                            // Mostra/oculta o botão conforme a transcrição está ativa ou não (local ou por
+                                                            // vídeo) — checagem leve, sem custo perceptível, evitada de acoplar em cada um
+                                                            // dos vários pontos do código que ligam/desligam a transcrição.
+                                                            setInterval(()=>{
+                                                              const btn=document.getElementById('apoio-btn');
+                                                              if(btn) btn.style.display=(typeof listening!=='undefined'&&listening)?'':'none';
+                                                            },700);
                                                             async function runCopilotoTurn(opts){
                                                               if(copBusy)return;
                                                               const manual=!!(opts&&opts.manual);
@@ -10767,8 +10872,10 @@ showAtendList();
                                                                 copFirstRun=false;
                                                                 if(data && typeof data==='object'){
                                                                   if(data.resumo_clinico) copLastSummary=data.resumo_clinico;
-                                                                  const perguntas=Array.isArray(data.perguntas_sugeridas)?data.perguntas_sugeridas:[];
-                                                                  const condutas=Array.isArray(data.condutas_sugeridas)?data.condutas_sugeridas:[];
+                                                                  // Trava defensiva no cliente: mesmo que o modelo não siga a instrução do
+                                                                  // prompt à risca, nunca mostramos mais que 2 perguntas e 1 conduta por vez.
+                                                                  const perguntas=(Array.isArray(data.perguntas_sugeridas)?data.perguntas_sugeridas:[]).slice(0,2);
+                                                                  const condutas=(Array.isArray(data.condutas_sugeridas)?data.condutas_sugeridas:[]).slice(0,1);
                                                                   const pontos=Array.isArray(data.pontos_atencao)?data.pontos_atencao:[];
                                                                   // Perguntas personalizadas no início do atendimento seguem a configuração do copiloto.
                                                                   const showPerg = (!kind || kind==='duvida') && (!primeiro || manual || cfgCop.perguntas);
