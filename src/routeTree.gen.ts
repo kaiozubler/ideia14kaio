@@ -32,6 +32,7 @@ import { Route as ApiBryDownloadDocumentRouteImport } from './routes/api/bry/dow
 import { Route as ApiBryGetEnvelopeRouteImport } from './routes/api/bry/get-envelope'
 import { Route as ApiCidBuscarRouteImport } from './routes/api/cid/buscar'
 import { Route as ApiMedicamentosBuscarRouteImport } from './routes/api/medicamentos/buscar'
+import { Route as ApiMedicamentosSimplificarApresentacoesRouteImport } from './routes/api/medicamentos/simplificar-apresentacoes'
 import { Route as ApiPacientesMigrarRouteImport } from './routes/api/pacientes/migrar'
 import { Route as ApiProtocolosAvaliarExameRouteImport } from './routes/api/protocolos/avaliar-exame'
 import { Route as ApiProtocolosGerarIaRouteImport } from './routes/api/protocolos/gerar-ia'
@@ -181,6 +182,12 @@ const ApiMedicamentosBuscarRoute = ApiMedicamentosBuscarRouteImport.update({
   path: '/api/medicamentos/buscar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMedicamentosSimplificarApresentacoesRoute =
+  ApiMedicamentosSimplificarApresentacoesRouteImport.update({
+    id: '/api/medicamentos/simplificar-apresentacoes',
+    path: '/api/medicamentos/simplificar-apresentacoes',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPacientesMigrarRoute = ApiPacientesMigrarRouteImport.update({
   id: '/api/pacientes/migrar',
   path: '/api/pacientes/migrar',
@@ -360,6 +367,7 @@ export interface FileRoutesByFullPath {
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/cid/buscar': typeof ApiCidBuscarRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
+  '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
   '/api/pacientes/migrar': typeof ApiPacientesMigrarRoute
   '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
@@ -413,6 +421,7 @@ export interface FileRoutesByTo {
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/cid/buscar': typeof ApiCidBuscarRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
+  '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
   '/api/pacientes/migrar': typeof ApiPacientesMigrarRoute
   '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
@@ -467,6 +476,7 @@ export interface FileRoutesById {
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/cid/buscar': typeof ApiCidBuscarRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
+  '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
   '/api/pacientes/migrar': typeof ApiPacientesMigrarRoute
   '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
@@ -522,6 +532,7 @@ export interface FileRouteTypes {
     | '/api/bry/get-envelope'
     | '/api/cid/buscar'
     | '/api/medicamentos/buscar'
+    | '/api/medicamentos/simplificar-apresentacoes'
     | '/api/pacientes/migrar'
     | '/api/protocolos/avaliar-exame'
     | '/api/protocolos/gerar-ia'
@@ -575,6 +586,7 @@ export interface FileRouteTypes {
     | '/api/bry/get-envelope'
     | '/api/cid/buscar'
     | '/api/medicamentos/buscar'
+    | '/api/medicamentos/simplificar-apresentacoes'
     | '/api/pacientes/migrar'
     | '/api/protocolos/avaliar-exame'
     | '/api/protocolos/gerar-ia'
@@ -628,6 +640,7 @@ export interface FileRouteTypes {
     | '/api/bry/get-envelope'
     | '/api/cid/buscar'
     | '/api/medicamentos/buscar'
+    | '/api/medicamentos/simplificar-apresentacoes'
     | '/api/pacientes/migrar'
     | '/api/protocolos/avaliar-exame'
     | '/api/protocolos/gerar-ia'
@@ -682,6 +695,7 @@ export interface RootRouteChildren {
   ApiBryGetEnvelopeRoute: typeof ApiBryGetEnvelopeRoute
   ApiCidBuscarRoute: typeof ApiCidBuscarRoute
   ApiMedicamentosBuscarRoute: typeof ApiMedicamentosBuscarRoute
+  ApiMedicamentosSimplificarApresentacoesRoute: typeof ApiMedicamentosSimplificarApresentacoesRoute
   ApiPacientesMigrarRoute: typeof ApiPacientesMigrarRoute
   ApiProtocolosAvaliarExameRoute: typeof ApiProtocolosAvaliarExameRoute
   ApiProtocolosGerarIaRoute: typeof ApiProtocolosGerarIaRoute
@@ -873,6 +887,13 @@ declare module '@tanstack/react-router' {
       path: '/api/medicamentos/buscar'
       fullPath: '/api/medicamentos/buscar'
       preLoaderRoute: typeof ApiMedicamentosBuscarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/medicamentos/simplificar-apresentacoes': {
+      id: '/api/medicamentos/simplificar-apresentacoes'
+      path: '/api/medicamentos/simplificar-apresentacoes'
+      fullPath: '/api/medicamentos/simplificar-apresentacoes'
+      preLoaderRoute: typeof ApiMedicamentosSimplificarApresentacoesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/pacientes/migrar': {
@@ -1099,6 +1120,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBryGetEnvelopeRoute: ApiBryGetEnvelopeRoute,
   ApiCidBuscarRoute: ApiCidBuscarRoute,
   ApiMedicamentosBuscarRoute: ApiMedicamentosBuscarRoute,
+  ApiMedicamentosSimplificarApresentacoesRoute:
+    ApiMedicamentosSimplificarApresentacoesRoute,
   ApiPacientesMigrarRoute: ApiPacientesMigrarRoute,
   ApiProtocolosAvaliarExameRoute: ApiProtocolosAvaliarExameRoute,
   ApiProtocolosGerarIaRoute: ApiProtocolosGerarIaRoute,
