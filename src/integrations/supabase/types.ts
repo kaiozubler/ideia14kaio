@@ -2616,6 +2616,7 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      sincronizar_apresentacao_legivel: { Args: never; Returns: number }
       sincronizar_protocolo: {
         Args: { p_protocolo_id: string }
         Returns: undefined

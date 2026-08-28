@@ -11149,7 +11149,7 @@ if(gErr)console.warn('buscar_genericos falhou para',term,gErr);
                                                                   const alvo=rxNorm(m.apresentacao);let bestScore=-1;
                                                                   aps.forEach(a=>{const an=rxNorm(a);let sc=0;alvo.split(/\s+/).forEach(t=>{if(t&&an.includes(t))sc++;});if(sc>bestScore){bestScore=sc;best=a;}});
                                                                 }
-                                                                rxSelected.push({uid,nome_comercial:g.nome_exibicao,composicao:g.grupo_busca||'',apresentacoes:aps,apresentacao:best,posologia:m.posologia||'',quantidade:m.quantidade||'1 caixa',is_generico:true,fabricantes:[],fabricante:'',id_substancia:g.id_substancia});
+                                                                rxSelected.push({uid,nome_comercial:g.nome_exibicao,composicao:g.grupo_busca||'',apresentacoes:aps,apresentacao:best,posologia:m.posologia||window.rxPosologiaPadrao(apsData,best),quantidade:m.quantidade||'1 caixa',is_generico:true,fabricantes:[],fabricante:'',id_substancia:g.id_substancia});
                                                                 continue;
                                                               }
                                                               // Tenta como comercial
@@ -11165,7 +11165,7 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                                                                   const alvo=rxNorm(m.apresentacao);let bestScore=-1;
                                                                   aps.forEach(a=>{const an=rxNorm(a);let sc=0;alvo.split(/\s+/).forEach(t=>{if(t&&an.includes(t))sc++;});if(sc>bestScore){bestScore=sc;best=a;}});
                                                                 }
-                                                                rxSelected.push({uid,nome_comercial:c.nome_comercial,composicao:'',apresentacoes:aps,apresentacao:best,posologia:m.posologia||'',quantidade:m.quantidade||'1 caixa',is_generico:false,fabricantes:[],fabricante:c.fabricante||'',id_substancia:null});
+                                                                rxSelected.push({uid,nome_comercial:c.nome_comercial,composicao:'',apresentacoes:aps,apresentacao:best,posologia:m.posologia||window.rxPosologiaPadrao(apsData,best),quantidade:m.quantidade||'1 caixa',is_generico:false,fabricantes:[],fabricante:c.fabricante||'',id_substancia:null});
                                                               }
                                                             }catch(e){console.warn('iaExecuteAction receita',e);}
                                                           }
@@ -13238,8 +13238,13 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                                   alvo.split(/\s+/).forEach(tok=>{if(tok&&an.includes(tok))score++;});
                                                                   if(score>bestScore){bestScore=score;best=a;}
                                                                 });
-                                                                med.apresentacao=best;
-                                                              }
+                                                                 med.apresentacao=best;
+                                                                 const posPad=window.rxPosologiaPadrao(apsData,best);
+                                                                 if(posPad){
+                                                                   if(!med.posologia)med.posologia=posPad;
+                                                                   if(!med.instrucoes)med.instrucoes=posPad;
+                                                                 }
+                                                               }
                                                               continue;
                                                             }
 
@@ -13276,8 +13281,13 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                                   alvo.split(/\s+/).forEach(tok=>{if(tok&&an.includes(tok))score++;});
                                                                   if(score>bestScore){bestScore=score;best=a;}
                                                                 });
-                                                                med.apresentacao=best;
-                                                              }
+                                                                 med.apresentacao=best;
+                                                                 const posPad=window.rxPosologiaPadrao(apsData,best);
+                                                                 if(posPad){
+                                                                   if(!med.posologia)med.posologia=posPad;
+                                                                   if(!med.instrucoes)med.instrucoes=posPad;
+                                                                 }
+                                                               }
                                                             }
                                                           }catch(e){console.warn('cfEnrichMedicamentos',term,e);}
                                                         }
@@ -14762,6 +14772,17 @@ let rxSelected = [];
                                                               document.getElementById('rx-results').style.display = 'none';
                                                               rxRenderSelected();
                                                             }
+
+                                                            // Posologia padrão sugerida para a apresentação escolhida. Os RPCs de
+                                                            // listagem devolvem posologia_padrao junto de cada apresentação
+                                                            // (texto genérico derivado da forma farmacêutica) — usamos apenas
+                                                            // como pré-preenchimento quando o médico/IA não informou nada.
+                                                            window.rxPosologiaPadrao = function (rows, apresentacao) {
+                                                              const list = rows || [];
+                                                              const alvo = (apresentacao || '').toLowerCase().trim();
+                                                              const hit = list.find(r => (r?.apresentacao || '').toLowerCase().trim() === alvo) || list[0];
+                                                              return (hit && hit.posologia_padrao) ? hit.posologia_padrao : '';
+                                                            };
 
                                                             async function rxFetchComposicaoComercial(nome_comercial, fabricante) {
                                                               try {
