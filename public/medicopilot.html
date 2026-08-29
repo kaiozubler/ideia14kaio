@@ -13661,38 +13661,41 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                         const med = (cfMedLastResults || []).find(m => m.key === key);
                                                         if (!med) return;
                                                         const id = Date.now();
-                                                        let apresentacoes = [], fabricantes = [], composicao = med.composicao || '';
-                                                        try {
-                                                          if (med.is_generico) {
-                                                            const [fabRes, apsRes] = await Promise.all([
-                                                              sb.rpc('listar_fabricantes_generico', { p_id_substancia: med.id_substancia }),
-                                                              sb.rpc('listar_apresentacoes_generico', { p_id_substancia: med.id_substancia })
-                                                            ]);
-                                                            fabricantes = (fabRes.data || []).map(f => f.fabricante).filter(Boolean);
-                                                            const seen = new Set();
-                                                            for (const a of (apsRes.data || [])) {
-                                                              const k = (a.apresentacao || '').toLowerCase().trim();
-                                                              if (k && !seen.has(k)) { seen.add(k); apresentacoes.push(a.apresentacao); }
-                                                            }
-                                                          } else {
-                                                            const { data } = await sb.rpc('listar_apresentacoes_comercial', {
-                                                              p_nome_comercial: med.nome_comercial,
-                                                              p_fabricante: med.fabricante
-                                                            });
-                                                            apresentacoes = (data || []).map(a => a.apresentacao).filter(Boolean);
-                                                            composicao = await rxFetchComposicaoComercial(med.nome_comercial, med.fabricante);
-                                                          }
-                                                        } catch (e) { console.error(e); }
+                                                         let apresentacoes = [], fabricantes = [], composicao = med.composicao || '';
+                                                         let apsRows = [];
+                                                         try {
+                                                           if (med.is_generico) {
+                                                             const [fabRes, apsRes] = await Promise.all([
+                                                               sb.rpc('listar_fabricantes_generico', { p_id_substancia: med.id_substancia }),
+                                                               sb.rpc('listar_apresentacoes_generico', { p_id_substancia: med.id_substancia })
+                                                             ]);
+                                                             fabricantes = (fabRes.data || []).map(f => f.fabricante).filter(Boolean);
+                                                             apsRows = apsRes.data || [];
+                                                             const seen = new Set();
+                                                             for (const a of apsRows) {
+                                                               const k = (a.apresentacao || '').toLowerCase().trim();
+                                                               if (k && !seen.has(k)) { seen.add(k); apresentacoes.push(a.apresentacao); }
+                                                             }
+                                                           } else {
+                                                             const { data } = await sb.rpc('listar_apresentacoes_comercial', {
+                                                               p_nome_comercial: med.nome_comercial,
+                                                               p_fabricante: med.fabricante
+                                                             });
+                                                             apsRows = data || [];
+                                                             apresentacoes = apsRows.map(a => a.apresentacao).filter(Boolean);
+                                                             composicao = await rxFetchComposicaoComercial(med.nome_comercial, med.fabricante);
+                                                           }
+                                                         } catch (e) { console.error(e); }
 
-                                                        condState.medicamentos.push({
-                                                          id,
-                                                          nome: med.nome_comercial,
-                                                          composicao,
-                                                          principio_ativo: med.composicao || '',
-                                                          apresentacao: apresentacoes[0] || '',
-                                                          apresentacoes_db: apresentacoes,
-                                                          quantidade: '1 caixa',
-                                                          instrucoes: '',
+                                                         condState.medicamentos.push({
+                                                           id,
+                                                           nome: med.nome_comercial,
+                                                           composicao,
+                                                           principio_ativo: med.composicao || '',
+                                                           apresentacao: apresentacoes[0] || '',
+                                                           apresentacoes_db: apresentacoes,
+                                                           quantidade: '1 caixa',
+                                                           instrucoes: window.rxPosologiaPadrao(apsRows, apresentacoes[0] || ''),
                                                           selecionado: true,
                                                           is_generico: !!med.is_generico,
                                                           fabricantes,
@@ -14730,37 +14733,40 @@ let rxSelected = [];
 
                                                               const uid = Math.random().toString(36).slice(2, 10);
                                                               let apresentacoes = [], fabricantes = [];
-                                                              let composicao = med.composicao || '';
+                                                               let composicao = med.composicao || '';
+                                                               let apsRows = [];
 
-                                                              try {
-                                                                if (med.is_generico) {
-                                                                  const [fabRes, apsRes] = await Promise.all([
-                                                                    sb.rpc('listar_fabricantes_generico', { p_id_substancia: med.id_substancia }),
-                                                                    sb.rpc('listar_apresentacoes_generico', { p_id_substancia: med.id_substancia })
-                                                                  ]);
-                                                                  fabricantes = (fabRes.data || []).map(f => f.fabricante).filter(Boolean);
-                                                                  const seen = new Set();
-                                                                  for (const a of (apsRes.data || [])) {
-                                                                    const k = (a.apresentacao || '').toLowerCase().trim();
-                                                                    if (k && !seen.has(k)) { seen.add(k); apresentacoes.push(a.apresentacao); }
-                                                                  }
-                                                                } else {
-                                                                  const { data } = await sb.rpc('listar_apresentacoes_comercial', {
-                                                                    p_nome_comercial: med.nome_comercial,
-                                                                    p_fabricante: med.fabricante
-                                                                  });
-                                                                  apresentacoes = (data || []).map(a => a.apresentacao).filter(Boolean);
-                                                                  composicao = await rxFetchComposicaoComercial(med.nome_comercial, med.fabricante);
-                                                                }
-                                                              } catch (e) { console.error(e); }
+                                                               try {
+                                                                 if (med.is_generico) {
+                                                                   const [fabRes, apsRes] = await Promise.all([
+                                                                     sb.rpc('listar_fabricantes_generico', { p_id_substancia: med.id_substancia }),
+                                                                     sb.rpc('listar_apresentacoes_generico', { p_id_substancia: med.id_substancia })
+                                                                   ]);
+                                                                   fabricantes = (fabRes.data || []).map(f => f.fabricante).filter(Boolean);
+                                                                   apsRows = apsRes.data || [];
+                                                                   const seen = new Set();
+                                                                   for (const a of apsRows) {
+                                                                     const k = (a.apresentacao || '').toLowerCase().trim();
+                                                                     if (k && !seen.has(k)) { seen.add(k); apresentacoes.push(a.apresentacao); }
+                                                                   }
+                                                                 } else {
+                                                                   const { data } = await sb.rpc('listar_apresentacoes_comercial', {
+                                                                     p_nome_comercial: med.nome_comercial,
+                                                                     p_fabricante: med.fabricante
+                                                                   });
+                                                                   apsRows = data || [];
+                                                                   apresentacoes = apsRows.map(a => a.apresentacao).filter(Boolean);
+                                                                   composicao = await rxFetchComposicaoComercial(med.nome_comercial, med.fabricante);
+                                                                 }
+                                                               } catch (e) { console.error(e); }
 
-                                                              rxSelected.push({
-                                                                uid,
-                                                                nome_comercial: med.nome_comercial,
-                                                                composicao: composicao || med.composicao || '',
-                                                                apresentacoes,
-                                                                apresentacao: apresentacoes[0] || '',
-                                                                posologia: '',
+                                                               rxSelected.push({
+                                                                 uid,
+                                                                 nome_comercial: med.nome_comercial,
+                                                                 composicao: composicao || med.composicao || '',
+                                                                 apresentacoes,
+                                                                 apresentacao: apresentacoes[0] || '',
+                                                                 posologia: window.rxPosologiaPadrao(apsRows, apresentacoes[0] || ''),
                                                                 quantidade: '1 caixa',
                                                                 is_generico: !!med.is_generico,
                                                                 fabricantes,
