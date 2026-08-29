@@ -23,7 +23,19 @@ export const Route = createFileRoute("/api/signature/integra-bry/pscs")({
           return Response.json({ pscs });
         } catch (err) {
           console.error("[signature/integra-bry/pscs]", err);
-          return Response.json({ pscs: [], error: "internal_error" }, { status: 200 });
+          const status =
+            err &&
+            typeof err === "object" &&
+            typeof (err as { status?: unknown }).status === "number"
+              ? (err as { status: number }).status
+              : 502;
+          const message =
+            err &&
+            typeof err === "object" &&
+            typeof (err as { message?: unknown }).message === "string"
+              ? (err as { message: string }).message
+              : "Falha ao consultar o Integra Bry.";
+          return Response.json({ pscs: [], error: "provider_unavailable", message }, { status });
         }
       },
     },

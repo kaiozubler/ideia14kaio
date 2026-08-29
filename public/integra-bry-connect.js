@@ -25,7 +25,10 @@
     const res = await fetch("/api/signature/integra-bry/pscs", {
       headers: { Authorization: "Bearer " + token },
     });
-    const j = await res.json().catch(() => ({ pscs: [] }));
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(j.message || j.error || "Falha ao consultar as certificadoras (" + res.status + ").");
+    }
     return j.pscs || [];
   }
 
