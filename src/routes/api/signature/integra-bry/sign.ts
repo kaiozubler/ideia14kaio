@@ -1,14 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { getUserIdFromRequest } from "@/lib/signature/requestAuth.server";
 import { SignatureService } from "@/lib/signature/SignatureService";
-import { SignatureError } from "@/lib/signature/errors";
-
-async function getUserIdFromRequest(request: Request): Promise<string | null> {
-  const auth = request.headers.get("authorization");
-  if (!auth?.startsWith("Bearer ")) return null;
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin.auth.getUser(auth.slice(7));
-  return data.user?.id ?? null;
-}
+import { SignatureError, errorMessage } from "@/lib/signature/errors";
 
 function errorResponse(err: unknown) {
   if (err instanceof SignatureError) {
@@ -21,7 +14,7 @@ function errorResponse(err: unknown) {
     return Response.json({ error: "provider_unavailable", message: e.message }, { status });
   }
   console.error("[signature/integra-bry/sign]", err);
-  return Response.json({ error: "internal_error", message: String(err) }, { status: 500 });
+  return Response.json({ error: "internal_error", message: errorMessage(err) }, { status: 500 });
 }
 
 function b64ToBytes(b64: string): Uint8Array {

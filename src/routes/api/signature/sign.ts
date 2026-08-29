@@ -1,21 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { getUserIdFromRequest } from "@/lib/signature/requestAuth.server";
 import { SignatureService } from "@/lib/signature/SignatureService";
-import { SignatureError } from "@/lib/signature/errors";
-
-async function getUserIdFromRequest(request: Request): Promise<string | null> {
-  const auth = request.headers.get("authorization");
-  if (!auth?.startsWith("Bearer ")) return null;
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin.auth.getUser(auth.slice(7));
-  return data.user?.id ?? null;
-}
+import { SignatureError, errorMessage } from "@/lib/signature/errors";
 
 function errorResponse(err: unknown) {
   if (err instanceof SignatureError) {
-    return Response.json(
-      { error: err.code, message: err.message },
-      { status: err.status },
-    );
+    return Response.json({ error: err.code, message: err.message }, { status: err.status });
   }
   // Erros do provedor BRy (HUB/KMS) já trazem status e mensagem tratada.
   if (err && typeof err === "object" && (err as { name?: string }).name === "BryError") {
@@ -28,13 +18,10 @@ function errorResponse(err: unknown) {
         : status === 409
           ? "cloud_certificate_not_found"
           : "provider_unavailable";
-    return Response.json(
-      { error: code, message: e.message },
-      { status },
-    );
+    return Response.json({ error: code, message: e.message }, { status });
   }
   console.error("[signature/sign]", err);
-  return Response.json({ error: "internal_error", message: String(err) }, { status: 500 });
+  return Response.json({ error: "internal_error", message: errorMessage(err) }, { status: 500 });
 }
 
 function b64ToBytes(b64: string): Uint8Array {

@@ -18,16 +18,35 @@ export const SignatureErrors = {
     new SignatureError("provider_unavailable", m, 502, d),
   UserCancelled: (m = "Autenticação cancelada pelo usuário.") =>
     new SignatureError("user_cancelled", m, 400),
-  InvalidPKCE: (m = "PKCE inválido.") =>
-    new SignatureError("invalid_pkce", m, 400),
-  InvalidDigest: (m = "SHA-256 inválido.") =>
-    new SignatureError("invalid_digest", m, 400),
-  Timeout: (m = "Tempo limite excedido.") =>
-    new SignatureError("timeout", m, 504),
+  InvalidPKCE: (m = "PKCE inválido.") => new SignatureError("invalid_pkce", m, 400),
+  InvalidDigest: (m = "SHA-256 inválido.") => new SignatureError("invalid_digest", m, 400),
+  Timeout: (m = "Tempo limite excedido.") => new SignatureError("timeout", m, 504),
   CallbackMissing: (m = "Callback não recebido do provedor.") =>
     new SignatureError("callback_missing", m, 504),
   NotConfigured: (m = "IntegraICP não configurado (secrets ausentes).") =>
     new SignatureError("not_configured", m, 500),
-  Unauthorized: (m = "Não autorizado.") =>
-    new SignatureError("unauthorized", m, 401),
+  Unauthorized: (m = "Não autorizado.") => new SignatureError("unauthorized", m, 401),
 };
+
+/**
+ * Extrai uma mensagem legível de qualquer valor lançado como erro. Erros do
+ * Supabase/Postgrest/GoTrue são objetos simples (não instâncias de Error),
+ * então `String(err)` neles vira "[object Object]" em vez da mensagem real
+ * — esta função evita isso, tentando `.message` antes de cair pro
+ * `JSON.stringify`/`String` genérico.
+ */
+export function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (
+    err &&
+    typeof err === "object" &&
+    typeof (err as { message?: unknown }).message === "string"
+  ) {
+    return (err as { message: string }).message;
+  }
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
+}

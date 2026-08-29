@@ -1,21 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createClient } from "@supabase/supabase-js";
 import { SignatureService } from "@/lib/signature/SignatureService";
-
-// Token validation only needs the publishable key — avoids depending on the
-// service-role key just to identify the caller.
-async function getUserIdFromRequest(request: Request): Promise<string | null> {
-  const auth = request.headers.get("authorization");
-  if (!auth?.startsWith("Bearer ")) return null;
-  const url = process.env["SUPABASE_URL"];
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
-  if (!url || !key) return null;
-  const client = createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-  const { data } = await client.auth.getUser(auth.slice(7));
-  return data.user?.id ?? null;
-}
+import { getUserIdFromRequest } from "@/lib/signature/requestAuth.server";
 
 export const Route = createFileRoute("/api/signature/credential")({
   server: {

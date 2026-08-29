@@ -1,13 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { getUserIdFromRequest } from "@/lib/signature/requestAuth.server";
 import { SignatureService } from "@/lib/signature/SignatureService";
-
-async function getUserIdFromRequest(request: Request): Promise<string | null> {
-  const auth = request.headers.get("authorization");
-  if (!auth?.startsWith("Bearer ")) return null;
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin.auth.getUser(auth.slice(7));
-  return data.user?.id ?? null;
-}
 
 // Lista os PSCs (BirdID, Vidaas, SafeID, RemoteID, SerproID, Syn, DS Cloud...)
 // que o Integra Bry sabe conversar, para o médico escolher qual usar —
