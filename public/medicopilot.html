@@ -14973,8 +14973,15 @@ let rxSelected = [];
                                                                 const fabOpts = (it.fabricantes || [])
                                                                   .map(f => `<option value="${f.replace(/"/g, '&quot;')}" ${f === it.fabricante ? 'selected' : ''}>${f}</option>`)
                                                                   .join('');
-                                                                const genBadge = it.is_generico
-                                                                  ? '<span style="font-size:9px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 6px;border-radius:4px;letter-spacing:.04em;margin-left:6px">GENÉRICO</span>' : '';
+                                                                 const genBadge = it.is_generico
+                                                                   ? '<span style="font-size:9px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 6px;border-radius:4px;letter-spacing:.04em;margin-left:6px">GENÉRICO</span>' : '';
+
+                                                                 const controleEspecialAviso = it.tipo_receita
+                                                                   ? `<div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#9a3412;background:#fff7ed;border:1px solid #fdba74;border-radius:7px;padding:5px 9px">
+                                                                       <i class="ti ti-alert-triangle" style="font-size:13px"></i> ${it.tipo_receita}
+                                                                     </div>`
+                                                                   : '';
+
 
                                                                 const fabBlock = it.is_generico
                                                                   ? `<div style="grid-column:1/-1">
