@@ -27,7 +27,10 @@ import { BryError } from "./bry.server";
 import { getBryAccessToken } from "./authToken.server";
 
 async function getConfig() {
-  const env = (process.env.INTEGRA_BRY_ENV || "hom").toLowerCase();
+  // Mesma variável usada pelo endpoint de token (authToken.server.ts) —
+  // eram duas antes (INTEGRA_BRY_ENV separado), o que permitia configurar
+  // o token num ambiente e a URL base do Integra Bry em outro por engano.
+  const env = (process.env.BRY_ENV || "hom").toLowerCase();
   const baseUrl =
     process.env.INTEGRA_BRY_BASE_URL ||
     (env === "prod"

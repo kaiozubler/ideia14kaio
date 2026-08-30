@@ -149,8 +149,12 @@ Body: grant_type=client_credentials&client_id=...&client_secret=...
   Essas sim são estáveis e não expiram.
 - `BRY_ENV` (`hom` | `prod`, padrão `hom`) — escolhe o ambiente de auth.
 - `BRY_AUTH_BASE_URL` — sobrescreve a URL do serviço de token diretamente.
-- `INTEGRA_BRY_ENV` / `INTEGRA_BRY_BASE_URL` — mesma coisa, mas para a URL
-  base do Integra Bry especificamente (separada da URL de autenticação).
+- `INTEGRA_BRY_BASE_URL` — sobrescreve só a URL base do Integra Bry
+  (a URL de autenticação continua controlada por `BRY_ENV`/`BRY_AUTH_BASE_URL`).
+  Não existe mais uma `INTEGRA_BRY_ENV` separada — havia duas variáveis de
+  ambiente controlando essencialmente a mesma coisa, o que permitia
+  configurar o token num ambiente e a API do Integra Bry em outro por
+  engano; foi unificado em `BRY_ENV`.
 - `BRY_HUB_TOKEN` / `BRY_API_TOKEN` — **legado**: token estático usado como
   fallback só se `BRY_CLIENT_ID`/`BRY_CLIENT_SECRET` não estiverem
   configurados. Como o token real expira em minutos, esse fallback só
