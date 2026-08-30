@@ -15397,12 +15397,17 @@ let rxSelected = [];
                                                               const linhasMed = rxSelected.map((it, i) =>
                                                                 `${i + 1}. ${it.nome_comercial}${it.apresentacao ? ' — ' + it.apresentacao : ''}${it.quantidade ? ' — ' + it.quantidade : ''}${it.posologia ? '\n   ' + it.posologia : ''}`
                                                               ).join('\n');
-                                                              const items = rxSelected.map(it => ({
-                                                                nome: it.nome_comercial,
-                                                                apresentacao: it.apresentacao || it.composicao || '',
-                                                                quantidade: it.quantidade || '',
-                                                                posologia: it.posologia || ''
-                                                              }));
+                                                               const items = rxSelected.map(it => ({
+                                                                 nome: it.nome_comercial,
+                                                                 apresentacao: it.apresentacao || it.composicao || '',
+                                                                 quantidade: it.quantidade || '',
+                                                                 posologia: it.posologia || '',
+                                                                 tipo_receita: it.tipo_receita || null
+                                                               }));
+
+                                                               // Se QUALQUER item exigir controle especial, a receita inteira sai
+                                                               // no modelo de controle especial (2 vias), nunca no modelo normal.
+                                                               const rxControleEspecial = items.some(it => it.tipo_receita);
 
                                                               // Salva no atalho "Últimas receitas emitidas" (histórico local do
                                                               // médico) para reuso rápido na próxima vez que este modal abrir.
