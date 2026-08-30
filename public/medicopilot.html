@@ -14760,6 +14760,18 @@ let rxSelected = [];
                                                                  }
                                                                } catch (e) { console.error(e); }
 
+                                                               // Verifica se alguma substância deste medicamento exige receita de
+                                                               // controle especial (coluna `tipo_receita` em `substancias`).
+                                                               let tipoReceita = null;
+                                                               try {
+                                                                 const idsSubst = await resolverIdsSubstanciaItem(med.nome_comercial, med.fabricante, med.is_generico, med.id_substancia);
+                                                                 if (idsSubst.length) {
+                                                                   const { data: subs } = await sb.from('substancias').select('tipo_receita').in('id_substancia', idsSubst);
+                                                                   const encontrado = (subs || []).map(s => s.tipo_receita).filter(Boolean);
+                                                                   if (encontrado.length) tipoReceita = encontrado[0];
+                                                                 }
+                                                               } catch (e) { console.warn('checagem tipo_receita falhou', e); }
+
                                                                rxSelected.push({
                                                                  uid,
                                                                  nome_comercial: med.nome_comercial,
@@ -14771,7 +14783,8 @@ let rxSelected = [];
                                                                 is_generico: !!med.is_generico,
                                                                 fabricantes,
                                                                 fabricante: med.is_generico ? '' : (med.fabricante || ''),
-                                                                id_substancia: med.id_substancia || null
+                                                                id_substancia: med.id_substancia || null,
+                                                                tipo_receita: tipoReceita
                                                               });
 
                                                               document.getElementById('rx-search').value = '';
@@ -14960,8 +14973,15 @@ let rxSelected = [];
                                                                 const fabOpts = (it.fabricantes || [])
                                                                   .map(f => `<option value="${f.replace(/"/g, '&quot;')}" ${f === it.fabricante ? 'selected' : ''}>${f}</option>`)
                                                                   .join('');
-                                                                const genBadge = it.is_generico
-                                                                  ? '<span style="font-size:9px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 6px;border-radius:4px;letter-spacing:.04em;margin-left:6px">GENÉRICO</span>' : '';
+                                                                 const genBadge = it.is_generico
+                                                                   ? '<span style="font-size:9px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 6px;border-radius:4px;letter-spacing:.04em;margin-left:6px">GENÉRICO</span>' : '';
+
+                                                                 const controleEspecialAviso = it.tipo_receita
+                                                                   ? `<div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#9a3412;background:#fff7ed;border:1px solid #fdba74;border-radius:7px;padding:5px 9px">
+                                                                       <i class="ti ti-alert-triangle" style="font-size:13px"></i> ${it.tipo_receita}
+                                                                     </div>`
+                                                                   : '';
+
 
                                                                 const fabBlock = it.is_generico
                                                                   ? `<div style="grid-column:1/-1">
@@ -14994,7 +15014,8 @@ let rxSelected = [];
                                                                       style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;border:1px solid #fecaca;border-radius:6px;background:#fef2f2;color:#dc2626;cursor:pointer;flex-shrink:0;font-size:13px">
                                                                       <i class="ti ti-trash"></i>
                                                                     </button>
-                                                                  </div>
+                                                                   </div>
+                                                                   ${controleEspecialAviso}
                                                                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
                                                                     ${fabBlock}
                                                                     <div>
@@ -15376,12 +15397,17 @@ let rxSelected = [];
                                                               const linhasMed = rxSelected.map((it, i) =>
                                                                 `${i + 1}. ${it.nome_comercial}${it.apresentacao ? ' — ' + it.apresentacao : ''}${it.quantidade ? ' — ' + it.quantidade : ''}${it.posologia ? '\n   ' + it.posologia : ''}`
                                                               ).join('\n');
-                                                              const items = rxSelected.map(it => ({
-                                                                nome: it.nome_comercial,
-                                                                apresentacao: it.apresentacao || it.composicao || '',
-                                                                quantidade: it.quantidade || '',
-                                                                posologia: it.posologia || ''
-                                                              }));
+                                                               const items = rxSelected.map(it => ({
+                                                                 nome: it.nome_comercial,
+                                                                 apresentacao: it.apresentacao || it.composicao || '',
+                                                                 quantidade: it.quantidade || '',
+                                                                 posologia: it.posologia || '',
+                                                                 tipo_receita: it.tipo_receita || null
+                                                               }));
+
+                                                               // Se QUALQUER item exigir controle especial, a receita inteira sai
+                                                               // no modelo de controle especial (2 vias), nunca no modelo normal.
+                                                               const rxControleEspecial = items.some(it => it.tipo_receita);
 
                                                               // Salva no atalho "Últimas receitas emitidas" (histórico local do
                                                               // médico) para reuso rápido na próxima vez que este modal abrir.
