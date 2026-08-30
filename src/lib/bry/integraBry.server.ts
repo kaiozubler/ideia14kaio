@@ -17,21 +17,33 @@
 // públicas da doc (exemplos de request/response ficam atrás de login em
 // bry-developer.readme.io). Ver signPdf() abaixo: a implementação está
 // pronta mas sinalizada para confirmação antes de uso em produção.
+//
+// Autenticação da aplicação: usa o mesmo access_token OAuth2 (client
+// credentials) do restante da API BRy — ver authToken.server.ts. Esse
+// token expira em minutos e é renovado automaticamente; não confundir com
+// o X-API-KEY, que identifica o certificado linkado de um PSC específico.
 import process from "node:process";
 import { BryError } from "./bry.server";
+import { getBryAccessToken } from "./authToken.server";
 
-function getConfig() {
+async function getConfig() {
   const env = (process.env.INTEGRA_BRY_ENV || "hom").toLowerCase();
   const baseUrl =
     process.env.INTEGRA_BRY_BASE_URL ||
     (env === "prod"
       ? "https://integra.bry.com.br/api/service"
       : "https://integra.hom.bry.com.br/api/service");
-  // Token de acesso da plataforma Bry Cloud (mesmo mecanismo de
-  // autenticação usado pelo restante do HUB Signer).
-  const token = process.env.BRY_HUB_TOKEN || process.env.BRY_API_TOKEN;
-  if (!token) {
-    throw new BryError("Integra Bry não configurado (BRY_HUB_TOKEN ausente).", 503);
+  // Token OAuth2 renovado automaticamente (ver authToken.server.ts) — o
+  // mesmo access_token da plataforma Bry Cloud usado pelo HUB Signer.
+  // Fallback para BRY_HUB_TOKEN/BRY_API_TOKEN estático só pra quem ainda
+  // não migrou para BRY_CLIENT_ID/BRY_CLIENT_SECRET.
+  let token: string;
+  try {
+    token = await getBryAccessToken();
+  } catch (err) {
+    const fallback = process.env.BRY_HUB_TOKEN || process.env.BRY_API_TOKEN;
+    if (!fallback) throw err;
+    token = fallback;
   }
   return { baseUrl: baseUrl.replace(/\/+$/, ""), token };
 }
@@ -40,7 +52,7 @@ async function integraFetch<T>(
   path: string,
   init: { method: "GET" | "POST"; body?: unknown; apiKey?: string } = { method: "GET" },
 ): Promise<T> {
-  const { baseUrl, token } = getConfig();
+  const { baseUrl, token } = await getConfig();
   const headers: Record<string, string> = {
     Authorization: `Bearer ${token}`,
     Accept: "application/json",
@@ -203,11 +215,11 @@ export const IntegraBryApi = {
    * A introdução do Integra Bry diz para reaproveitar os mesmos endpoints
    * de assinatura do HUB Signer (fw/v1/pdf/kms/lote/assinaturas), trocando
    * a URL base para integra(.hom).bry.com.br/api/service. O que NÃO está
-   * confirmado nas páginas públicas da doc é se o header de autenticação
-   * nesse passo final é X-API-KEY (como em /auth/info e /auth/certificate)
-   * ou Authorization Bearer + kms_type como no BRyKMS "normal". Esta função
-   * tenta X-API-KEY por consistência com o resto do Integra Bry, mas deve
-   * ser validada contra a coleção Postman oficial
+   * confirmado nas páginas públicas da doc é o header exato de autenticação
+   * nesse passo final. Por segurança mandamos os dois: `Authorization:
+   * Bearer <access_token da aplicação>` (mesmo do restante da API) junto
+   * com `X-API-KEY: <credencial do PSC linkado>` (como em /auth/info e
+   * /auth/certificate). Deve ser validado contra a coleção Postman oficial
    * (https://integra.bry.com.br/postman.json) ou em homologação antes de
    * ir para produção — por isso lança um erro explícito se a resposta não
    * vier no formato esperado, em vez de assumir sucesso silenciosamente.
@@ -218,7 +230,7 @@ export const IntegraBryApi = {
     filename: string;
     reason?: string;
   }): Promise<{ signedPdf: Uint8Array; signatureTimestamp: string | null }> {
-    const { baseUrl } = getConfig();
+    const { baseUrl, token } = await getConfig();
     const dadosAssinatura = {
       perfil: "ADRB",
       algoritmoHash: "SHA256",
@@ -237,7 +249,11 @@ export const IntegraBryApi = {
     try {
       res = await fetch(`${baseUrl}/fw/v1/pdf/kms/lote/assinaturas`, {
         method: "POST",
-        headers: { "X-API-KEY": input.apiKey, Accept: "application/json" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "X-API-KEY": input.apiKey,
+          Accept: "application/json",
+        },
         body: form,
       });
     } catch (e) {

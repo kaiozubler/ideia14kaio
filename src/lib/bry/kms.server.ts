@@ -2,14 +2,21 @@
 // Server-only: o token e o PIN nunca trafegam pelo frontend sem TLS interno.
 import process from "node:process";
 import { BryError } from "./bry.server";
+import { getBryAccessToken } from "./authToken.server";
 
 const DEFAULT_HUB = "https://hub2.bry.com.br";
 
-function getHubConfig() {
-  // O HUB (BRyKMS) usa um token próprio; se não houver, tenta o token do EasySign.
-  const token = process.env.BRY_HUB_TOKEN || process.env.BRY_API_TOKEN;
-  if (!token) {
-    throw new BryError("Integração BRy não configurada (BRY_HUB_TOKEN ausente).", 503);
+async function getHubConfig() {
+  // Preferência: token OAuth2 renovado automaticamente (ver authToken.server.ts).
+  // Fallback: BRY_HUB_TOKEN/BRY_API_TOKEN estático, só pra quem ainda não
+  // migrou para BRY_CLIENT_ID/BRY_CLIENT_SECRET.
+  let token: string;
+  try {
+    token = await getBryAccessToken();
+  } catch (err) {
+    const fallback = process.env.BRY_HUB_TOKEN || process.env.BRY_API_TOKEN;
+    if (!fallback) throw err;
+    token = fallback;
   }
   const baseUrl = (process.env.BRY_HUB_BASE_URL || DEFAULT_HUB).replace(/\/+$/, "");
   return { token, baseUrl };
@@ -52,7 +59,7 @@ function base64ToBytes(b64: string): Uint8Array {
 export const BryKmsApi = {
   /** Assina um PDF (PAdES) usando o certificado do titular armazenado no BRyKMS. */
   async signPdf(input: BryKmsSignInput): Promise<BryKmsSignResult> {
-    const { token, baseUrl } = getHubConfig();
+    const { token, baseUrl } = await getHubConfig();
     const dadosAssinatura = {
       kms_data: {
         user: input.user,
@@ -78,7 +85,11 @@ export const BryKmsApi = {
     try {
       res = await fetch(url, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, kms_type: "BRYKMS", Accept: "application/json" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          kms_type: "BRYKMS",
+          Accept: "application/json",
+        },
         body: form,
       });
     } catch (e) {

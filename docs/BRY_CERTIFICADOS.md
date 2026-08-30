@@ -126,11 +126,44 @@ em 2026-08-24):
   um erro explícito em vez de assumir sucesso se a resposta vier fora do
   formato esperado.
 
-## Variáveis de ambiente
+## Autenticação da aplicação (importante — corrigido em 2026-08-29)
 
-Reaproveita as mesmas do BRyKMS (`BRY_HUB_TOKEN` ou `BRY_API_TOKEN`).
-Opcional: `INTEGRA_BRY_ENV` (`hom` | `prod`, padrão `hom`) e
-`INTEGRA_BRY_BASE_URL` para sobrescrever a URL base diretamente.
+A API da BRy usa OAuth2 client credentials (confirmado em
+`bry-developer.readme.io/reference/autentication-doc` e
+`.../post_token-service-jwt`). O `access_token` **expira em poucos
+minutos** — não é uma credencial estática que se configura uma vez.
+`src/lib/bry/authToken.server.ts` obtém e renova esse token
+automaticamente, chamando:
+
+```
+Homologação: POST https://cloud-hom.bry.com.br/token-service/jwt
+Produção:    POST https://cloud.bry.com.br/token-service/jwt
+Content-Type: application/x-www-form-urlencoded
+Body: grant_type=client_credentials&client_id=...&client_secret=...
+```
+
+**Variáveis de ambiente:**
+- `BRY_CLIENT_ID` / `BRY_CLIENT_SECRET` — obtidas uma única vez no portal
+  Bry Cloud (`cloud.bry.com.br` ou `cloud-hom.bry.com.br` para
+  homologação), menu **Gestão > Minhas aplicações > emitir client_secret**.
+  Essas sim são estáveis e não expiram.
+- `BRY_ENV` (`hom` | `prod`, padrão `hom`) — escolhe o ambiente de auth.
+- `BRY_AUTH_BASE_URL` — sobrescreve a URL do serviço de token diretamente.
+- `INTEGRA_BRY_ENV` / `INTEGRA_BRY_BASE_URL` — mesma coisa, mas para a URL
+  base do Integra Bry especificamente (separada da URL de autenticação).
+- `BRY_HUB_TOKEN` / `BRY_API_TOKEN` — **legado**: token estático usado como
+  fallback só se `BRY_CLIENT_ID`/`BRY_CLIENT_SECRET` não estiverem
+  configurados. Como o token real expira em minutos, esse fallback só
+  funciona por pouco tempo depois de configurado — não é uma solução
+  permanente, migre para `BRY_CLIENT_ID`/`BRY_CLIENT_SECRET`.
+
+**Causa raiz de um bug real encontrado**: antes desta correção, tanto
+`kms.server.ts` (bry_cloud/BRyKMS) quanto `integraBry.server.ts` liam um
+`BRY_HUB_TOKEN` estático do ambiente e o usavam para sempre como
+`Authorization: Bearer`. Como esse token expira em minutos, qualquer
+assinatura tentada depois da janela inicial de validade falhava com erro
+502 — sintoma reportado como "Falha ao consultar as certificadoras
+(502)".
 
 ## Histórico
 
