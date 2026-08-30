@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { analisarExameArquivo, type AnaliseExame } from "@/lib/exames/analise.server";
+import { mensagemErroGateway } from "@/lib/ai/erro-gateway";
 
 type ChatMessage = {
   role: "system" | "user" | "assistant" | "tool";
@@ -1520,7 +1521,8 @@ async function callGateway(messages: ChatMessage[], apiKey: string, toolset: Too
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Response(`AI gateway error ${res.status}: ${text}`, { status: res.status });
+    console.error(`[assistente-ia] AI gateway error ${res.status}:`, text);
+    throw new Response(mensagemErroGateway(res.status), { status: res.status });
   }
   const data = (await res.json()) as { choices?: { message?: ChatMessage }[] };
   return data.choices?.[0]?.message ?? ({ role: "assistant", content: "" } as ChatMessage);
@@ -1541,7 +1543,8 @@ async function callGatewayPlain(messages: ChatMessage[], apiKey: string): Promis
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Response(`AI gateway error ${res.status}: ${text}`, { status: res.status });
+    console.error(`[assistente-ia] AI gateway error ${res.status}:`, text);
+    throw new Response(mensagemErroGateway(res.status), { status: res.status });
   }
   const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
   return (data.choices?.[0]?.message?.content ?? "").trim();
