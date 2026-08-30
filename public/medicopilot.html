@@ -14760,6 +14760,18 @@ let rxSelected = [];
                                                                  }
                                                                } catch (e) { console.error(e); }
 
+                                                               // Verifica se alguma substância deste medicamento exige receita de
+                                                               // controle especial (coluna `tipo_receita` em `substancias`).
+                                                               let tipoReceita = null;
+                                                               try {
+                                                                 const idsSubst = await resolverIdsSubstanciaItem(med.nome_comercial, med.fabricante, med.is_generico, med.id_substancia);
+                                                                 if (idsSubst.length) {
+                                                                   const { data: subs } = await sb.from('substancias').select('tipo_receita').in('id_substancia', idsSubst);
+                                                                   const encontrado = (subs || []).map(s => s.tipo_receita).filter(Boolean);
+                                                                   if (encontrado.length) tipoReceita = encontrado[0];
+                                                                 }
+                                                               } catch (e) { console.warn('checagem tipo_receita falhou', e); }
+
                                                                rxSelected.push({
                                                                  uid,
                                                                  nome_comercial: med.nome_comercial,
@@ -14771,7 +14783,8 @@ let rxSelected = [];
                                                                 is_generico: !!med.is_generico,
                                                                 fabricantes,
                                                                 fabricante: med.is_generico ? '' : (med.fabricante || ''),
-                                                                id_substancia: med.id_substancia || null
+                                                                id_substancia: med.id_substancia || null,
+                                                                tipo_receita: tipoReceita
                                                               });
 
                                                               document.getElementById('rx-search').value = '';
