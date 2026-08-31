@@ -4,7 +4,7 @@ Recrie este MVP, mantendo as caracteristicas exatamento como está
 
 This project was built with [Lovable](https://lovable.dev).
 
-**Live app**: https://ideia14kaio.lovable.app
+**Live app**: https://medicopilot.lovable.app
 
 ## Build with Lovable
 
