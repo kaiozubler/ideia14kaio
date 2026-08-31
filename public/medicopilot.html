@@ -15588,7 +15588,7 @@ let rxSelected = [];
                                                    assinar digitalmente (ICP-Brasil) e retornando o PDF final pronto
                                                    para download/upload. Não baixa nem salva nada sozinho — quem chama
                                                    decide o que fazer com o resultado. */
-                                                async function _renderDocumentoPdf({ docTitle, docMark, patientName, patientAge, patientCpf, bodyHtml, filenamePrefix, contentDescription }) {
+                                                async function _renderDocumentoPdf({ docTitle, docMark, patientName, patientAge, patientCpf, patientAddress, bodyHtml, filenamePrefix, contentDescription, isControleEspecial }) {
                                                   // Dados da clínica (localStorage)
                                                   let clinic = {};
                                                   try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
@@ -15609,10 +15609,12 @@ let rxSelected = [];
                                                     clinic.cep ? 'CEP ' + clinic.cep : ''
                                                   ].filter(Boolean).join(' · ');
 
-                                                  // Carrega o template
+                                                  // Carrega o template — receita de controle especial usa o modelo de
+                                                  // 2 vias; todos os outros documentos usam o modelo padrão.
                                                   let html;
                                                   try {
-                                                    const resp = await fetch('/receita-modelo.html', { cache: 'no-store' });
+                                                    const templateUrl = isControleEspecial ? '/receita-controle-especial-modelo.html' : '/receita-modelo.html';
+                                                    const resp = await fetch(templateUrl, { cache: 'no-store' });
                                                     html = await resp.text();
                                                   } catch (e) { showToast && showToast('Falha ao carregar modelo do documento', 'error'); return null; }
 
@@ -15638,6 +15640,7 @@ let rxSelected = [];
                                                     '{{PATIENT_NAME}}'  : _rxEsc(patientName || '—'),
                                                     '{{PATIENT_AGE}}'   : _rxEsc(patientAge || '—'),
                                                     '{{PATIENT_CPF}}'   : _rxEsc(patientCpf || '—'),
+                                                    '{{PATIENT_ADDRESS}}': _rxEsc(patientAddress || '—'),
                                                     '{{ISSUE_DATE}}'    : _rxEsc(new Date().toLocaleDateString('pt-BR')),
                                                     '{{DOC_TITLE}}'     : _rxEsc(docTitle || 'Documento Médico'),
                                                     '{{DOC_MARK}}'      : docMark || '',
@@ -15827,7 +15830,7 @@ let rxSelected = [];
                                                    assinar digitalmente (ICP-Brasil) e retornando o PDF final pronto
                                                    para download/upload. Não baixa nem salva nada sozinho — quem chama
                                                    decide o que fazer com o resultado. */
-                                                async function _renderDocumentoPdf({ docTitle, docMark, patientName, patientAge, patientCpf, bodyHtml, filenamePrefix, contentDescription }) {
+                                                async function _renderDocumentoPdf({ docTitle, docMark, patientName, patientAge, patientCpf, patientAddress, bodyHtml, filenamePrefix, contentDescription, isControleEspecial }) {
                                                   // Dados da clínica (localStorage)
                                                   let clinic = {};
                                                   try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
@@ -15848,10 +15851,12 @@ let rxSelected = [];
                                                     clinic.cep ? 'CEP ' + clinic.cep : ''
                                                   ].filter(Boolean).join(' · ');
 
-                                                  // Carrega o template
+                                                  // Carrega o template — receita de controle especial usa o modelo de
+                                                  // 2 vias; todos os outros documentos usam o modelo padrão.
                                                   let html;
                                                   try {
-                                                    const resp = await fetch('/receita-modelo.html', { cache: 'no-store' });
+                                                    const templateUrl = isControleEspecial ? '/receita-controle-especial-modelo.html' : '/receita-modelo.html';
+                                                    const resp = await fetch(templateUrl, { cache: 'no-store' });
                                                     html = await resp.text();
                                                   } catch (e) { showToast && showToast('Falha ao carregar modelo do documento', 'error'); return null; }
 
@@ -15877,6 +15882,7 @@ let rxSelected = [];
                                                     '{{PATIENT_NAME}}'  : _rxEsc(patientName || '—'),
                                                     '{{PATIENT_AGE}}'   : _rxEsc(patientAge || '—'),
                                                     '{{PATIENT_CPF}}'   : _rxEsc(patientCpf || '—'),
+                                                    '{{PATIENT_ADDRESS}}': _rxEsc(patientAddress || '—'),
                                                     '{{ISSUE_DATE}}'    : _rxEsc(new Date().toLocaleDateString('pt-BR')),
                                                     '{{DOC_TITLE}}'     : _rxEsc(docTitle || 'Documento Médico'),
                                                     '{{DOC_MARK}}'      : docMark || '',
@@ -17372,6 +17378,7 @@ let rxSelected = [];
                                                     '{{PATIENT_NAME}}'  : _rxEsc(patientName || '—'),
                                                     '{{PATIENT_AGE}}'   : _rxEsc(patientAge || '—'),
                                                     '{{PATIENT_CPF}}'   : _rxEsc(patientCpf || '—'),
+                                                    '{{PATIENT_ADDRESS}}': _rxEsc(patientAddress || '—'),
                                                     '{{ISSUE_DATE}}'    : _rxEsc(new Date().toLocaleDateString('pt-BR')),
                                                     '{{DOC_TITLE}}'     : 'Solicitação de Exame',
                                                     '{{DOC_MARK}}'      : '',
