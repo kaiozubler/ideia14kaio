@@ -1,0 +1,2 @@
+REVOKE ALL ON FUNCTION public.buscar_base_conhecimento(uuid, text, text, integer) FROM anon, authenticated, PUBLIC;
+GRANT EXECUTE ON FUNCTION public.buscar_base_conhecimento(uuid, text, text, integer) TO service_role;
