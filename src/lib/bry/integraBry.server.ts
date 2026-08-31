@@ -165,6 +165,11 @@ export const IntegraBryApi = {
       api_key?: string;
       credential?: string;
     }>("/psc/link", { method: "POST", body: input });
+    // TEMPORÁRIO (remover depois de confirmar o formato real): loga a
+    // resposta crua da Bry pra descobrirmos em qual campo o apiKey/
+    // credencial realmente vem, já que não está em nenhum dos nomes
+    // candidatos nem no redirect (só ?state= volta na query string).
+    console.log("[bry:integra] /psc/link raw response:", JSON.stringify(resp));
     const authorizationUrl = resp.authorizationUrl ?? resp.authorization_url ?? resp.url ?? "";
     if (!authorizationUrl) {
       throw new BryError("Integra Bry não retornou link de autenticação.", 502, resp);

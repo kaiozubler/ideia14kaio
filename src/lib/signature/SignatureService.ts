@@ -115,13 +115,13 @@ export const SignatureService = {
     if (new Date(session.expiresAt).getTime() < Date.now()) {
       throw SignatureErrors.Timeout("Sessão de link Integra Bry expirada. Inicie novamente.");
     }
-    const apiKey = session.apiKey ?? params.apiKeyFromCallback ?? null;
-    if (!apiKey) {
-      throw SignatureErrors.NotConfigured(
-        "Nenhum apiKey disponível para esta sessão — confirmar com a Bry onde a " +
-          "credencial é retornada (resposta de /psc/link ou query param do redirect).",
-      );
-    }
+    // Nenhum apiKey separado veio nem na resposta de /psc/link nem no
+    // redirect (só ?state= volta) — hipótese: o próprio `state` que
+    // geramos e enviamos serve como identificador da sessão pra /auth/info
+    // e /auth/certificate (já que é único por sessão e a Bry não parece
+    // devolver outra coisa). Se isso estiver errado, os dois GETs abaixo
+    // vão falhar com um erro claro da Bry (401/403), não silenciosamente.
+    const apiKey = session.apiKey ?? params.apiKeyFromCallback ?? params.state;
     const { IntegraBryApi } = await import("@/lib/bry/integraBry.server");
     const [info, certificate] = await Promise.all([
       IntegraBryApi.getAuthInfo(apiKey),

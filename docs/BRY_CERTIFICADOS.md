@@ -111,20 +111,27 @@ em 2026-08-24):
 
 **Não confirmado** (exemplos de request/response ficam atrás de login em
 `bry-developer.readme.io`; não temos acesso de parceiro):
-- O corpo/resposta exato de `POST /psc/link` — em particular, se o
-  `X-API-KEY` vem *nessa* resposta ou só é anexado ao redirect de volta.
-  `IntegraBryApi.createLink()` tenta os dois formatos mais comuns
-  (`apiKey`/`api_key`/`credential`); se nenhum vier, `completeIntegraBryLink`
-  aceita receber o valor do callback (`apiKeyFromCallback`).
+- O corpo exato da resposta de `POST /psc/link`. **Testado em 2026-08-30
+  com Vidaas**: o redirect de volta só traz `?state=<o mesmo state que
+  enviamos>` — nenhum outro parâmetro. `IntegraBryApi.createLink()` tenta
+  extrair `apiKey`/`api_key`/`credential` do corpo da resposta; se
+  nenhum vier (log temporário em `console.log("[bry:integra] /psc/link
+  raw response:", ...)` até confirmarmos o formato real),
+  `completeIntegraBryLink` cai para usar o próprio `state` (gerado por
+  nós, único por sessão) como `X-API-KEY` em `/auth/info`/
+  `/auth/certificate`/na assinatura — hipótese razoável dado que é a
+  única coisa que a Bry devolve, mas **não confirmada**. Se `/auth/info`
+  falhar com 401/403 usando o `state` como chave, essa hipótese está
+  errada e o log do `/psc/link` (ver acima) é o próximo lugar a olhar.
 - O endpoint e o header exatos da assinatura em si depois de linkado. A
   intro da doc diz para reaproveitar `fw/v1/pdf/kms/lote/assinaturas` (mesmo
   do BRyKMS, ver `kms.server.ts`) só trocando a URL base — é o que
-  `IntegraBryApi.signPdf()` implementa, com `X-API-KEY` no lugar de
-  `Authorization: Bearer + kms_type`. Isso **precisa ser validado** contra
-  a coleção Postman oficial (`https://integra.bry.com.br/postman.json`)
-  ou em homologação antes de qualquer uso em produção — o código já lança
-  um erro explícito em vez de assumir sucesso se a resposta vier fora do
-  formato esperado.
+  `IntegraBryApi.signPdf()` implementa, mandando tanto `Authorization:
+  Bearer <access_token da aplicação>` quanto `X-API-KEY <credencial do PSC
+  linkado>`. Isso **precisa ser validado** contra a coleção Postman oficial
+  (`https://integra.bry.com.br/postman.json`) ou em homologação antes de
+  qualquer uso em produção — o código já lança um erro explícito em vez de
+  assumir sucesso se a resposta vier fora do formato esperado.
 
 ## Autenticação da aplicação (importante — corrigido em 2026-08-29)
 
