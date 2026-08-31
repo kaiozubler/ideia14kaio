@@ -16036,7 +16036,7 @@ let rxSelected = [];
                                                     <div class="rx-item">
                                                       <div class="rx-index">${i + 1}</div>
                                                       <div>
-                                                        <div class="med-name">${_rxEsc(it.nome)}${it.apresentacao ? ` <span class="dose">${_rxEsc(it.apresentacao)}</span>` : ''}</div>
+                                                        <div class="med-name">${_rxEsc(it.nome)}${it.apresentacao ? ` <span class="dose">${_rxEsc(it.apresentacao)}</span>` : ''}${it.tipo_receita ? ` <span class="med-list-tag">${_rxEsc(it.tipo_receita)}</span>` : ''}</div>
                                                         <div class="med-instructions">${_rxEsc([it.quantidade, it.posologia].filter(Boolean).join(' — ')) || '&nbsp;'}</div>
                                                       </div>
                                                     </div>`).join('');
