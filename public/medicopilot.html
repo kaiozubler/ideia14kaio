@@ -12,7 +12,6 @@
     />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
     <script src="https://unpkg.com/@daily-co/daily-js"></script>
@@ -347,29 +346,6 @@
                                                       .attach-add{border-style:dashed;background:transparent;color:var(--n400)}
                                                       .attach-add:hover{border-color:var(--n300);color:var(--n500);background:var(--n50)}
 
-                                                      /* ================= Painel de Documentos do LME ================= */
-                                                      .lme-panel{border:0.5px solid var(--n150);border-radius:var(--r8);padding:12px 14px;margin-top:8px;margin-bottom:16px;background:var(--n25,#fafafa)}
-                                                      .lme-panel-hd{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px}
-                                                      .lme-panel-title{font-size:12.5px;font-weight:700;color:#0f172a;display:flex;align-items:center;gap:6px}
-                                                      .lme-validity{font-size:11px;font-weight:600;padding:4px 9px;border-radius:999px;display:inline-flex;align-items:center;gap:5px}
-                                                      .lme-validity.ok{background:#ecfdf5;color:#047857;border:0.5px solid #a7f3d0}
-                                                      .lme-validity.warn{background:#fffbeb;color:#b45309;border:0.5px solid #fde68a}
-                                                      .lme-validity.bad{background:#fef2f2;color:#b91c1c;border:0.5px solid #fecaca}
-                                                      .lme-validity.none{background:var(--n100);color:var(--n500);border:0.5px solid var(--n200)}
-                                                      .lme-doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
-                                                      .lme-doc-chip{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:var(--r8);cursor:pointer;border:0.5px solid var(--n200);background:#fff;transition:all .12s}
-                                                      .lme-doc-chip:hover{filter:brightness(0.98)}
-                                                      .lme-doc-chip .lme-dot{width:9px;height:9px;border-radius:50%;margin-top:3px;flex-shrink:0}
-                                                      .lme-doc-chip.done{background:#ecfdf5;border-color:#a7f3d0}
-                                                      .lme-doc-chip.done .lme-dot{background:#10b981}
-                                                      .lme-doc-chip.pending{background:var(--n50);border-color:var(--n200)}
-                                                      .lme-doc-chip.pending .lme-dot{background:var(--n300)}
-                                                      .lme-doc-chip .lme-doc-txt{font-size:11.5px;line-height:1.35;color:#334155}
-                                                      .lme-doc-chip.done .lme-doc-txt{color:#065f46;font-weight:600}
-                                                      .lme-doc-chip .lme-doc-sub{font-size:10px;color:var(--n400);margin-top:2px}
-                                                      .lme-panel-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-                                                      .lme-empty{font-size:11.5px;color:var(--n400);padding:10px 2px}
-
                                                       /* ATENDIMENTOS */
                                                       .atend-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
                                                       .atend-left{display:flex;align-items:center;gap:8px}
@@ -596,15 +572,6 @@
                                                       /* AI CONTROLS */
                                                       .ai-ctrls{align-self:flex-start;padding:5px 8px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;border:0.5px solid rgba(255,255,255,.9);border-radius:12px;background:rgba(255,255,255,.7);backdrop-filter:blur(16px) saturate(180%);box-shadow:0 8px 22px -8px rgba(15,40,60,.22),0 2px 6px rgba(0,0,0,.06),inset 0 1px 0 rgba(255,255,255,.7)}
                                                       .ai-ctrls .csep{width:0.5px;height:16px;background:var(--n200)}
-                                                      /* Botão "Me apoie" — relógio em barra: a barra de fundo drena da esquerda
-                                                         para a direita ao longo dos 5min de apoio ativo, servindo de contagem
-                                                         regressiva visual. Clicar de novo enquanto ativo reinicia a barra (renova). */
-                                                      #apoio-btn{position:relative;overflow:hidden;isolation:isolate}
-                                                      #apoio-btn .apoio-bar{position:absolute;inset:0;width:0%;background:linear-gradient(90deg,rgba(52,211,153,.55),rgba(5,150,105,.4));z-index:0;pointer-events:none}
-                                                      #apoio-btn .apoio-content{position:relative;z-index:1;display:flex;align-items:center;gap:5px}
-                                                      #apoio-btn.apoio-on{border-color:rgba(5,150,105,.55);background:var(--g50,#ecfdf5);color:var(--g700,#047857)}
-                                                      #apoio-btn.apoio-on #apoio-btn-ico{animation:apoioPulse 1.4s ease-in-out infinite}
-                                                      @keyframes apoioPulse{0%,100%{opacity:1}50%{opacity:.45}}
                                                       .ai-ctrls .btn{height:28px}
                                                       .ai-input-row{padding:6px 8px;display:flex;gap:5px;border-radius:14px;border:0.5px solid rgba(255,255,255,.9);background:rgba(255,255,255,.7);backdrop-filter:blur(16px) saturate(180%);box-shadow:0 8px 22px -8px rgba(15,40,60,.22),0 2px 6px rgba(0,0,0,.06),inset 0 1px 0 rgba(255,255,255,.7)}
                                                       .ai-inp{flex:1;border:none;border-radius:var(--r6);padding:6px 10px;font-family:var(--font);font-size:12px;color:var(--n700);outline:none;background:transparent}
@@ -2910,11 +2877,6 @@
                 </div>
               </div>
 
-              <div class="sec-hd" style="display:flex;align-items:center;justify-content:space-between">
-                <span>Documentos do LME</span>
-              </div>
-              <div id="lme-docs-panel" class="lme-panel"><div class="lme-empty">Carregando…</div></div>
-
               <div class="sec-hd">Documentos do cadastro</div>
               <div class="attach-row">
                 <div class="attach-item attach-add" onclick="openModal('add-exame')">
@@ -3223,17 +3185,6 @@
                       <div class="ai-ctrls">
                         <button class="btn sm" id="listen-btn" onclick="toggleListen()">
                           <i class="ti ti-microphone" id="lt-ico"></i> <span id="lt-lbl">Escutar</span>
-                        </button>
-                        <div class="csep"></div>
-                        <button
-                          class="btn sm"
-                          id="apoio-btn"
-                          onclick="toggleMeApoie()"
-                          title="Pede à IA para acompanhar ativamente a consulta por 5min. Clique de novo antes de acabar para renovar."
-                          style="display:none"
-                        >
-                          <span class="apoio-bar" id="apoio-bar"></span>
-                          <span class="apoio-content"><i class="ti ti-clock" id="apoio-btn-ico"></i> <span id="apoio-btn-lbl">Me apoie</span></span>
                         </button>
                         <div class="csep"></div>
                         <div
@@ -3977,11 +3928,11 @@
                   <div>
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
                       <div style="font-size:12.5px;font-weight:600;color:var(--n700)">Frequência de atualização</div>
-                      <div style="font-size:12.5px;font-weight:600;color:var(--g600,#059669)"><span id="cop-freq-lbl">1min</span></div>
+                      <div style="font-size:12.5px;font-weight:600;color:var(--g600,#059669)"><span id="cop-freq-lbl">8min</span></div>
                     </div>
-                    <input type="range" id="cop-freq" min="10" max="600" step="10" value="60" style="width:100%;accent-color:#10b981" />
+                    <input type="range" id="cop-freq" min="5" max="20" step="1" value="8" style="width:100%;accent-color:#10b981" />
                     <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--n400);margin-top:4px">
-                      <span>10s</span><span>10min</span>
+                      <span>5min</span><span>20min</span>
                     </div>
                   </div>
                 </div>
@@ -5156,31 +5107,6 @@
         </div>
       </div>
 
-      <!-- COMPARTILHAR DOCUMENTOS DO LME -->
-      <div class="modal" id="m-lme-compartilhar" style="display:none;width:420px">
-        <div class="mhd">
-          <span class="mhd-title"><i class="ti ti-send"></i> Compartilhar documentos do LME</span
-          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
-        </div>
-        <div class="mbody">
-          <p style="font-size:11.5px;color:var(--n500);margin-bottom:10px" id="lme-share-count">0 documentos prontos serão enviados.</p>
-          <div style="display:flex;gap:8px;margin-bottom:12px">
-            <button class="btn sm primary" id="lme-share-ch-wa" onclick="lmeShareSetCanal('whatsapp')">
-              <i class="ti ti-brand-whatsapp"></i> WhatsApp
-            </button>
-            <button class="btn sm" id="lme-share-ch-em" onclick="lmeShareSetCanal('email')">
-              <i class="ti ti-mail"></i> E-mail
-            </button>
-          </div>
-          <div class="fld"><label>Contato</label><input type="text" id="lme-share-contato" placeholder="(47) 99999-9999" /></div>
-        </div>
-        <div class="mfoot">
-          <button class="btn primary" id="lme-share-confirm-btn" onclick="lmeConfirmarCompartilhar()">
-            <i class="ti ti-send"></i> Enviar
-          </button>
-        </div>
-      </div>
-
       <!-- GERAR LME (Componente Especializado - SUS) -->
       <div class="modal wide" id="m-lme" style="display:none;max-width:1080px">
         <div class="mhd">
@@ -5548,19 +5474,13 @@
             Revise, edite ou desmarque o que não desejar aplicar antes de finalizar.
           </p>
           <div id="cic-lista" style="display:flex;flex-direction:column;gap:8px"></div>
-          <div id="cic-receita-ja-feito" style="margin-top:12px;display:none;border:0.5px solid #bbf7d0;border-radius:var(--r8);padding:10px 12px;background:#f0fdf4">
-            <div style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#166534;margin-bottom:6px">
-              <i class="ti ti-circle-check" style="font-size:15px;flex-shrink:0"></i>
-              <span id="cic-receita-ja-feito-hd"></span>
-            </div>
-            <div id="cic-receita-ja-feito-list" style="display:flex;flex-direction:column;gap:5px"></div>
+          <div id="cic-receita-ja-feito" style="margin-top:12px;display:none;border:0.5px solid #bbf7d0;border-radius:var(--r8);padding:10px 12px;background:#f0fdf4;font-size:12px;color:#166534;align-items:center;gap:8px">
+            <i class="ti ti-circle-check" style="font-size:15px;flex-shrink:0"></i>
+            <span id="cic-receita-ja-feito-txt"></span>
           </div>
-          <div id="cic-agend-ja-feito" style="margin-top:12px;display:none;border:0.5px solid #bbf7d0;border-radius:var(--r8);padding:10px 12px;background:#f0fdf4">
-            <div style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#166534;margin-bottom:6px">
-              <i class="ti ti-circle-check" style="font-size:15px;flex-shrink:0"></i>
-              <span id="cic-agend-ja-feito-hd"></span>
-            </div>
-            <div id="cic-agend-ja-feito-list" style="display:flex;flex-direction:column;gap:5px"></div>
+          <div id="cic-agend-ja-feito" style="margin-top:12px;display:none;border:0.5px solid #bbf7d0;border-radius:var(--r8);padding:10px 12px;background:#f0fdf4;font-size:12px;color:#166534;align-items:center;gap:8px">
+            <i class="ti ti-circle-check" style="font-size:15px;flex-shrink:0"></i>
+            <span id="cic-agend-ja-feito-txt"></span>
           </div>
           <div id="cic-cids-wrap" style="margin-top:14px;display:none">
             <label
@@ -6509,11 +6429,6 @@
                                                             // Estado do loop do copiloto ativo
                                                             let copLoopTimer=null;
                                                             let copTranscriptCursor=0;
-                                                            // ---- "Me apoie": burst manual de apoio ativo por tempo limitado ----
-                                                            const APOIO_DURACAO_MS=5*60*1000; // 5min
-                                                            let apoioAtivo=false;
-                                                            let apoioLoopTimer=null;
-                                                            let apoioCountdownTimer=null;
                                                             let copLastSummary='';
                                                             let copFirstRun=true;
                                                             let copBusy=false;
@@ -6527,7 +6442,7 @@
                                                                 voz: cfg.voz!==false,
                                                                 vozAuto: cfg.vozAuto===true,
                                                                 tipo: cfg.tipo||'ativo',
-                                                                freq: Math.min(600,Math.max(10,Number(cfg.freq)||480)),
+                                                                freq: Number(cfg.freq)||480,
                                                                 perguntas: cfg.perguntas!==false,
                                                                 memoria: cfg.memoria!==false,
                                                                 pendencias: cfg.pendencias!==false,
@@ -6623,12 +6538,7 @@
                                                               if(typeof toast==='function')toast('Dados da clínica salvos');
                                                             }
 
-                                                            function _copFmt(s){
-                                                              const total=Math.max(10,Math.round(Number(s)||480));
-                                                              if(total<60)return total+'s';
-                                                              const m=Math.floor(total/60),r=total%60;
-                                                              return r?(m+'min'+r+'s'):(m+'min');
-                                                            }
+                                                            function _copFmt(s){const m=Math.max(1,Math.round((Number(s)||480)/60));return m+'min';}
                                                             function updateCopTipoHint(){
                                                               const t=document.getElementById('cop-tipo');const h=document.getElementById('cop-tipo-hint');
                                                               if(!t||!h)return;
@@ -6656,9 +6566,9 @@
                                                               set('cop-protocolo',cfg.protocolo);set('cop-retorno',cfg.retorno);
                                                               document.getElementById('cop-tipo').value=cfg.tipo||'ativo';
                                                               const f=document.getElementById('cop-freq');
-                                                              f.value=Math.min(600,Math.max(10,Math.round(cfg.freq)));
-                                                              const lbl=document.getElementById('cop-freq-lbl');lbl.textContent=_copFmt(f.value);
-                                                              f.oninput=()=>lbl.textContent=_copFmt(f.value);
+                                                              f.value=Math.min(20,Math.max(5,Math.round(cfg.freq/60)));
+                                                              const lbl=document.getElementById('cop-freq-lbl');lbl.textContent=f.value+'min';
+                                                              f.oninput=()=>lbl.textContent=f.value+'min';
                                                               updateCopTipoHint();updateCopEnabledState();
                                                               try{loadCopVoiceCfg();}catch(e){console.error('[copiloto-voz] ERRO inesperado ao chamar loadCopVoiceCfg:',e);}
                                                             }
@@ -6669,7 +6579,7 @@
                                                                 voz:chk('cop-voz'),
                                                                 vozAuto:chk('cop-voz-auto'),
                                                                 tipo:document.getElementById('cop-tipo').value,
-                                                                freq:Math.min(600,Math.max(10,Number(document.getElementById('cop-freq').value)||60)),
+                                                                freq:(Number(document.getElementById('cop-freq').value)||8)*60,
                                                                 perguntas:chk('cop-perguntas'),
                                                                 memoria:chk('cop-memoria'),
                                                                 pendencias:chk('cop-pendencias'),
@@ -7582,7 +7492,6 @@
                                                         loadHistoricoFamiliarCids();
                                                         openTab('cadastro',document.querySelector('.tab'));
                                                         renderAtendimentos();renderExames();renderTimeline();updateAtendProgress();
-                                                        if(typeof renderLmeDocsPanel==='function')renderLmeDocsPanel();
                                                       }
                                                       function backToPatients(){saveAtendState();goScreen('patients');}
                                                       function showToast(msg,type){
@@ -9295,7 +9204,6 @@ showAtendList();
                                                                 await sb.storage.from('exames-arquivos').remove([exame.arquivoPath]);
                                                               }
                                                               exames=exames.filter(e=>e.id!==id);renderExames();
-                                                              if(typeof renderLmeDocsPanel==='function')renderLmeDocsPanel();
                                                             }
                                                             async function saveExame(){
                                                               const nome=document.getElementById('exame-nome').value.trim();if(!nome)return;
@@ -9340,7 +9248,6 @@ showAtendList();
                                                               await avaliarExameNoMotor(data.id);
                                                               await addTimelineEvent({date:new Date().toLocaleDateString('pt-BR'),type:'exame',icon:'ti-flask',title:'Exame adicionado: '+nome,sub:document.getElementById('exame-obs').value||''});
                                                               renderExames();renderTimeline();clearFile();
-                                                              if(typeof renderLmeDocsPanel==='function')renderLmeDocsPanel();
                                                               document.getElementById('exame-nome').value='';document.getElementById('exame-obs').value='';document.getElementById('exame-resultado').value='';
                                                               if(durSel)durSel.value='indef';
                                                               const dcw=document.getElementById('exame-dur-custom-wrap');if(dcw)dcw.style.display='none';
@@ -10055,21 +9962,20 @@ showAtendList();
             if(!conteudo)return null;
                                         const infoAtual=loadInfoComp();
                                         const cidsAtuais=Array.isArray(currentPatient.cids)?currentPatient.cids:[];
-                                        // Já houve agendamento(s)/receita(s) de verdade nesta consulta? Isso não
+                                        // Já houve agendamento/receita de verdade nesta consulta? Isso não
                                         // depende da IA — são dados que já temos, guardados no momento em
-                                        // que cada ação foi feita (rxEmitirConfirmado / agmSubmit). Pode haver
-                                        // mais de um de cada durante a mesma consulta. Mandamos isso pro
-                                        // backend só para a IA não perder tempo/token propondo de novo algo
-                                        // que já aconteceu.
-                                        const agendamentosJaFeitos=(!opts||!opts.conteudoExtra)?(atendEmAndamento.agendamentosGerados||[]):[];
-                                        const receitasJaFeitas=(!opts||!opts.conteudoExtra)?(atendEmAndamento.receitasGeradas||[]):[];
+                                        // que a ação foi feita (rxEmitirConfirmado / agmSubmit). Mandamos
+                                        // isso pro backend só para a IA não perder tempo/token propondo de
+                                        // novo algo que já aconteceu.
+                                        const agendamentoJaFeito=(!opts||!opts.conteudoExtra)?(atendEmAndamento.agendamentoGerado||null):null;
+                                        const receitaJaFeita=(!opts||!opts.conteudoExtra)?(atendEmAndamento.receitaGerada||null):null;
                                         const res=await fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
                                           mode:'extrair_complementares',
                                           info_complementar_atual:infoAtual,
                                           cids_atuais:cidsAtuais,
                                           cid_opcoes:CID10_DB.map(c=>({code:c.c,description:c.d})),
                                           conteudo_atendimento:conteudo,
-                                          agendamentos_ja_realizados:agendamentosJaFeitos.map(a=>({data:a.dataTexto,horario:a.horaTexto,motivo:a.motivo}))
+                                          agendamento_ja_realizado:agendamentoJaFeito?{data:agendamentoJaFeito.dataTexto,horario:agendamentoJaFeito.horaTexto,motivo:agendamentoJaFeito.motivo}:null
                                         })});
                                         if(!res.ok)return null;
                                         const data=await res.json();
@@ -10080,17 +9986,17 @@ showAtendList();
                                         const cidsSugeridos=(Array.isArray(data.cids_sugeridos)?data.cids_sugeridos:[])
                                           .filter(c=>c&&c.code&&!cidsAtuais.some(x=>String(x.code).toUpperCase()===String(c.code).toUpperCase()))
                                           .map(c=>({code:String(c.code).toUpperCase(),description:c.description||''}));
-                                        // "Agendar retorno" desligado no copiloto, ou já há algum agendamento
-                                        // real criado nesta consulta → não propõe (de novo) um agendamento.
-                                        const ag=(getCopilotoCfg().retorno&&!agendamentosJaFeitos.length)?data.agendamento_sugerido:null;
+                                        // "Agendar retorno" desligado no copiloto, ou agendamento já criado de
+                                        // verdade nesta consulta → não propõe (de novo) um agendamento ao finalizar.
+                                        const ag=(getCopilotoCfg().retorno&&!agendamentoJaFeito)?data.agendamento_sugerido:null;
                                         const agendamentoSugerido=(ag&&typeof ag==='object')?{
                                           prazoTexto:(ag.prazo_texto||'').trim(),
                                           data:(ag.data||'').trim(),
                                           horario:(ag.horario||'').trim(),
                                           motivo:(ag.motivo||'Retorno').trim()
                                         }:null;
-                                        if(!alteracoes.length&&!cidsSugeridos.length&&!agendamentoSugerido&&!agendamentosJaFeitos.length&&!receitasJaFeitas.length)return null;
-                                        return {alteracoes,cidsSugeridos,agendamentoSugerido,agendamentosJaFeitos,receitasJaFeitas};
+                                        if(!alteracoes.length&&!cidsSugeridos.length&&!agendamentoSugerido&&!agendamentoJaFeito&&!receitaJaFeita)return null;
+                                        return {alteracoes,cidsSugeridos,agendamentoSugerido,agendamentoJaFeito,receitaJaFeita};
                                       }catch(e){console.warn('Falha ao avaliar informações complementares via IA',e);return null;}
                                     }
                                                               function renderCicRow(alt){
@@ -10124,35 +10030,26 @@ showAtendList();
                                         cidsWrap.style.display='block';
                                         renderCicCidsChips();
                                       }else if(cidsWrap){cidsWrap.style.display='none';}
-                                      renderCicJaFeitoLista('cic-receita-ja-feito',proposta.receitasJaFeitas||[],{
-                                        singular:'Receita emitida nesta consulta',
-                                        plural:'Receitas emitidas nesta consulta',
-                                        row:r=>r.horaTexto+' — '+r.resumo
-                                      });
-                                      renderCicJaFeitoLista('cic-agend-ja-feito',proposta.agendamentosJaFeitos||[],{
-                                        singular:'Retorno já agendado nesta consulta',
-                                        plural:'Retornos já agendados nesta consulta',
-                                        row:a=>a.dataTexto+' às '+a.horaTexto+(a.motivo?' — '+a.motivo:'')
-                                      });
-                                      // Se já houve algum agendamento de verdade nesta consulta, não mostra o
+                                      renderCicJaFeito('cic-receita-ja-feito',proposta.receitaJaFeita?(
+                                        'Receita emitida às '+proposta.receitaJaFeita.horaTexto+' nesta consulta ('+proposta.receitaJaFeita.resumo+').'
+                                      ):null);
+                                      renderCicJaFeito('cic-agend-ja-feito',proposta.agendamentoJaFeito?(
+                                        'Retorno já agendado para '+proposta.agendamentoJaFeito.dataTexto+' às '+proposta.agendamentoJaFeito.horaTexto+
+                                        (proposta.agendamentoJaFeito.motivo?' ('+proposta.agendamentoJaFeito.motivo+')':'')+'.'
+                                      ):null);
+                                      // Se já houve um agendamento de verdade nesta consulta, não mostra o
                                       // formulário de "sugestão de retorno" — já foi feito.
-                                      renderCicAgendamentoSugerido((proposta.agendamentosJaFeitos&&proposta.agendamentosJaFeitos.length)?null:(proposta.agendamentoSugerido||null));
+                                      renderCicAgendamentoSugerido(proposta.agendamentoJaFeito?null:(proposta.agendamentoSugerido||null));
                                       openModal('confirma-info-comp');
                                     }
-                                    // Bloco informativo simples (sem IA) — lista, um por linha, cada
-                                    // receita/agendamento já realizado de fato nesta consulta (pode haver
-                                    // mais de um). Os dados vêm prontos do momento em que cada ação foi
-                                    // concluída — nada aqui passa por IA.
-                                    function renderCicJaFeitoLista(elId,items,cfg){
-                                      const wrap=document.getElementById(elId);if(!wrap)return;
-                                      if(!items||!items.length){wrap.style.display='none';return;}
-                                      wrap.style.display='block';
-                                      const hd=document.getElementById(elId+'-hd');
-                                      if(hd)hd.textContent=(items.length>1?cfg.plural+' ('+items.length+')':cfg.singular);
-                                      const list=document.getElementById(elId+'-list');
-                                      if(list)list.innerHTML=items.map(it=>
-                                        '<div style="font-size:11.5px;color:#166534;background:#dcfce7;border-radius:6px;padding:5px 9px">'+iaEscHtml(cfg.row(it))+'</div>'
-                                      ).join('');
+                                    // Banner informativo simples (sem IA) — só exibe o dado já registrado
+                                    // no momento em que a receita/agendamento foi de fato gerado.
+                                    function renderCicJaFeito(elId,texto){
+                                      const el=document.getElementById(elId);if(!el)return;
+                                      if(!texto){el.style.display='none';return;}
+                                      el.style.display='flex';
+                                      const txtEl=document.getElementById(elId+'-txt');
+                                      if(txtEl)txtEl.textContent=texto;
                                     }
                                     // Bloco de sugestão de retorno/agendamento identificado pela IA ao finalizar o
                                     // atendimento (nunca criado sozinho — o médico revisa data/motivo e confirma).
@@ -10470,10 +10367,6 @@ showAtendList();
                                                               stopCopilotoLoop();
                                                               stopCopVoiceScanner();_copVoiceLastFired={};
                                                               copTranscriptCursor=0;copLastSummary='';copFirstRun=true;copBusy=false;
-                                                              apoioAtivo=false;
-                                                              if(apoioLoopTimer){clearInterval(apoioLoopTimer);apoioLoopTimer=null;}
-                                                              if(apoioCountdownTimer){clearTimeout(apoioCountdownTimer);apoioCountdownTimer=null;}
-                                                              setApoioBtnState(false);
                                                               const bl=document.getElementById('bubbles-layer');
                                                               if(bl){
                                                                 // Clear but keep placeholder
@@ -10761,7 +10654,7 @@ showAtendList();
                                                               stopCopilotoLoop();
                                                               const cfg=getCopilotoCfg();
                                                               if(!cfg.enabled || cfg.tipo!=='ativo') return;
-                                                              const ms=Math.max(10,cfg.freq)*1000;
+                                                              const ms=Math.max(15,cfg.freq)*1000;
                                                               copLoopTimer=setInterval(()=>{
                                                                 if(!listening) return;
                                                                 runCopilotoTurn({manual:false}).catch(e=>console.warn('copiloto turn',e));
@@ -10770,77 +10663,6 @@ showAtendList();
                                                             function stopCopilotoLoop(){
                                                               if(copLoopTimer){clearInterval(copLoopTimer);copLoopTimer=null;}
                                                             }
-
-                                                            /* ========== "ME APOIE" — burst manual de apoio ativo (5min, renovável) ==========
-                                                               Botão em .ai-ctrls: o médico pede apoio ativo da IA por uma janela de tempo
-                                                               curta e limitada (em vez de deixar o copiloto "ativo" rodando o atendimento
-                                                               inteiro). Ao acionar: a IA primeiro resume tudo que já foi dito até agora
-                                                               (força um novo "primeiro processamento"), depois passa a atualizar na
-                                                               frequência configurada em Minhas IA's > Copiloto, por até 5 minutos. Clicar
-                                                               de novo antes de acabar renova a janela; sem clique, encerra sozinho. */
-                                                            function toggleMeApoie(){
-                                                              if(!listening){ if(typeof toast==='function') toast('Inicie a transcrição para pedir apoio à IA.'); return; }
-                                                              if(apoioAtivo){ armarApoioCountdown(); return; } // já ativo: só renova os 5min
-                                                              ativarMeApoie();
-                                                            }
-                                                            async function ativarMeApoie(){
-                                                              apoioAtivo=true;
-                                                              setApoioBtnState(true);
-                                                              armarApoioCountdown();
-                                                              stopCopilotoLoop(); // evita o loop automático "ativo" rodar em paralelo com o burst manual
-                                                              const cfgCop=getCopilotoCfg();
-                                                              copFirstRun=true; // força a IA a resumir todo o histórico da consulta antes de começar a apoiar
-                                                              const typingId=showTypingBubble();
-                                                              try{
-                                                                await runCopilotoTurn({manual:true});
-                                                              }catch(e){
-                                                                spawnBubble('ia','⚠️ Erro ao consultar a IA: '+(e.message||e));
-                                                              }finally{
-                                                                removeTypingBubble(typingId);
-                                                              }
-                                                              if(!apoioAtivo)return; // pode ter sido encerrado durante o await (ex.: parou a transcrição)
-                                                              const ms=Math.max(10,cfgCop.freq)*1000;
-                                                              apoioLoopTimer=setInterval(()=>{
-                                                                if(!listening){ desligarMeApoie('Transcrição pausada — apoio ativo encerrado.'); return; }
-                                                                runCopilotoTurn({manual:false}).catch(e=>console.warn('me apoie turn',e));
-                                                              },ms);
-                                                            }
-                                                            function armarApoioCountdown(){
-                                                              apoioCountdownTimer && clearTimeout(apoioCountdownTimer);
-                                                              apoioCountdownTimer=setTimeout(()=>{ desligarMeApoie('Apoio ativo encerrado após 5min — clique em "Me apoie" para retomar.'); },APOIO_DURACAO_MS);
-                                                              const bar=document.getElementById('apoio-bar');
-                                                              if(bar){
-                                                                bar.style.transition='none';bar.style.width='100%';
-                                                                void bar.offsetWidth; // força reflow para reiniciar a transição do zero
-                                                                bar.style.transition='width '+(APOIO_DURACAO_MS/1000)+'s linear';
-                                                                bar.style.width='0%';
-                                                              }
-                                                            }
-                                                            function desligarMeApoie(aviso){
-                                                              const estavaAtivo=apoioAtivo;
-                                                              apoioAtivo=false;
-                                                              if(apoioLoopTimer){clearInterval(apoioLoopTimer);apoioLoopTimer=null;}
-                                                              if(apoioCountdownTimer){clearTimeout(apoioCountdownTimer);apoioCountdownTimer=null;}
-                                                              setApoioBtnState(false);
-                                                              if(estavaAtivo){
-                                                                if(aviso && typeof toast==='function') toast(aviso);
-                                                                startCopilotoLoop(); // retoma o loop automático normal (se configurado como "ativo"), já que o burst manual terminou
-                                                              }
-                                                            }
-                                                            function setApoioBtnState(active){
-                                                              const btn=document.getElementById('apoio-btn');if(!btn)return;
-                                                              btn.classList.toggle('apoio-on',active);
-                                                              const lbl=document.getElementById('apoio-btn-lbl');if(lbl)lbl.textContent=active?'Apoio ativo':'Me apoie';
-                                                              const ico=document.getElementById('apoio-btn-ico');if(ico)ico.className='ti '+(active?'ti-clock-pause':'ti-clock');
-                                                              if(!active){ const bar=document.getElementById('apoio-bar'); if(bar){bar.style.transition='none';bar.style.width='0%';} }
-                                                            }
-                                                            // Mostra/oculta o botão conforme a transcrição está ativa ou não (local ou por
-                                                            // vídeo) — checagem leve, sem custo perceptível, evitada de acoplar em cada um
-                                                            // dos vários pontos do código que ligam/desligam a transcrição.
-                                                            setInterval(()=>{
-                                                              const btn=document.getElementById('apoio-btn');
-                                                              if(btn) btn.style.display=(typeof listening!=='undefined'&&listening)?'':'none';
-                                                            },700);
                                                             async function runCopilotoTurn(opts){
                                                               if(copBusy)return;
                                                               const manual=!!(opts&&opts.manual);
@@ -10872,10 +10694,8 @@ showAtendList();
                                                                 copFirstRun=false;
                                                                 if(data && typeof data==='object'){
                                                                   if(data.resumo_clinico) copLastSummary=data.resumo_clinico;
-                                                                  // Trava defensiva no cliente: mesmo que o modelo não siga a instrução do
-                                                                  // prompt à risca, nunca mostramos mais que 2 perguntas e 1 conduta por vez.
-                                                                  const perguntas=(Array.isArray(data.perguntas_sugeridas)?data.perguntas_sugeridas:[]).slice(0,2);
-                                                                  const condutas=(Array.isArray(data.condutas_sugeridas)?data.condutas_sugeridas:[]).slice(0,1);
+                                                                  const perguntas=Array.isArray(data.perguntas_sugeridas)?data.perguntas_sugeridas:[];
+                                                                  const condutas=Array.isArray(data.condutas_sugeridas)?data.condutas_sugeridas:[];
                                                                   const pontos=Array.isArray(data.pontos_atencao)?data.pontos_atencao:[];
                                                                   // Perguntas personalizadas no início do atendimento seguem a configuração do copiloto.
                                                                   const showPerg = (!kind || kind==='duvida') && (!primeiro || manual || cfgCop.perguntas);
@@ -11149,7 +10969,7 @@ if(gErr)console.warn('buscar_genericos falhou para',term,gErr);
                                                                   const alvo=rxNorm(m.apresentacao);let bestScore=-1;
                                                                   aps.forEach(a=>{const an=rxNorm(a);let sc=0;alvo.split(/\s+/).forEach(t=>{if(t&&an.includes(t))sc++;});if(sc>bestScore){bestScore=sc;best=a;}});
                                                                 }
-                                                                rxSelected.push({uid,nome_comercial:g.nome_exibicao,composicao:g.grupo_busca||'',apresentacoes:aps,apresentacao:best,posologia:m.posologia||window.rxPosologiaPadrao(apsData,best),quantidade:m.quantidade||'1 caixa',is_generico:true,fabricantes:[],fabricante:'',id_substancia:g.id_substancia});
+                                                                rxSelected.push({uid,nome_comercial:g.nome_exibicao,composicao:g.grupo_busca||'',apresentacoes:aps,apresentacao:best,posologia:m.posologia||'',quantidade:m.quantidade||'1 caixa',is_generico:true,fabricantes:[],fabricante:'',id_substancia:g.id_substancia});
                                                                 continue;
                                                               }
                                                               // Tenta como comercial
@@ -11165,7 +10985,7 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                                                                   const alvo=rxNorm(m.apresentacao);let bestScore=-1;
                                                                   aps.forEach(a=>{const an=rxNorm(a);let sc=0;alvo.split(/\s+/).forEach(t=>{if(t&&an.includes(t))sc++;});if(sc>bestScore){bestScore=sc;best=a;}});
                                                                 }
-                                                                rxSelected.push({uid,nome_comercial:c.nome_comercial,composicao:'',apresentacoes:aps,apresentacao:best,posologia:m.posologia||window.rxPosologiaPadrao(apsData,best),quantidade:m.quantidade||'1 caixa',is_generico:false,fabricantes:[],fabricante:c.fabricante||'',id_substancia:null});
+                                                                rxSelected.push({uid,nome_comercial:c.nome_comercial,composicao:'',apresentacoes:aps,apresentacao:best,posologia:m.posologia||'',quantidade:m.quantidade||'1 caixa',is_generico:false,fabricantes:[],fabricante:c.fabricante||'',id_substancia:null});
                                                               }
                                                             }catch(e){console.warn('iaExecuteAction receita',e);}
                                                           }
@@ -13238,13 +13058,8 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                                   alvo.split(/\s+/).forEach(tok=>{if(tok&&an.includes(tok))score++;});
                                                                   if(score>bestScore){bestScore=score;best=a;}
                                                                 });
-                                                                 med.apresentacao=best;
-                                                                 const posPad=window.rxPosologiaPadrao(apsData,best);
-                                                                 if(posPad){
-                                                                   if(!med.posologia)med.posologia=posPad;
-                                                                   if(!med.instrucoes)med.instrucoes=posPad;
-                                                                 }
-                                                               }
+                                                                med.apresentacao=best;
+                                                              }
                                                               continue;
                                                             }
 
@@ -13281,13 +13096,8 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                                   alvo.split(/\s+/).forEach(tok=>{if(tok&&an.includes(tok))score++;});
                                                                   if(score>bestScore){bestScore=score;best=a;}
                                                                 });
-                                                                 med.apresentacao=best;
-                                                                 const posPad=window.rxPosologiaPadrao(apsData,best);
-                                                                 if(posPad){
-                                                                   if(!med.posologia)med.posologia=posPad;
-                                                                   if(!med.instrucoes)med.instrucoes=posPad;
-                                                                 }
-                                                               }
+                                                                med.apresentacao=best;
+                                                              }
                                                             }
                                                           }catch(e){console.warn('cfEnrichMedicamentos',term,e);}
                                                         }
@@ -13661,41 +13471,38 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                         const med = (cfMedLastResults || []).find(m => m.key === key);
                                                         if (!med) return;
                                                         const id = Date.now();
-                                                         let apresentacoes = [], fabricantes = [], composicao = med.composicao || '';
-                                                         let apsRows = [];
-                                                         try {
-                                                           if (med.is_generico) {
-                                                             const [fabRes, apsRes] = await Promise.all([
-                                                               sb.rpc('listar_fabricantes_generico', { p_id_substancia: med.id_substancia }),
-                                                               sb.rpc('listar_apresentacoes_generico', { p_id_substancia: med.id_substancia })
-                                                             ]);
-                                                             fabricantes = (fabRes.data || []).map(f => f.fabricante).filter(Boolean);
-                                                             apsRows = apsRes.data || [];
-                                                             const seen = new Set();
-                                                             for (const a of apsRows) {
-                                                               const k = (a.apresentacao || '').toLowerCase().trim();
-                                                               if (k && !seen.has(k)) { seen.add(k); apresentacoes.push(a.apresentacao); }
-                                                             }
-                                                           } else {
-                                                             const { data } = await sb.rpc('listar_apresentacoes_comercial', {
-                                                               p_nome_comercial: med.nome_comercial,
-                                                               p_fabricante: med.fabricante
-                                                             });
-                                                             apsRows = data || [];
-                                                             apresentacoes = apsRows.map(a => a.apresentacao).filter(Boolean);
-                                                             composicao = await rxFetchComposicaoComercial(med.nome_comercial, med.fabricante);
-                                                           }
-                                                         } catch (e) { console.error(e); }
+                                                        let apresentacoes = [], fabricantes = [], composicao = med.composicao || '';
+                                                        try {
+                                                          if (med.is_generico) {
+                                                            const [fabRes, apsRes] = await Promise.all([
+                                                              sb.rpc('listar_fabricantes_generico', { p_id_substancia: med.id_substancia }),
+                                                              sb.rpc('listar_apresentacoes_generico', { p_id_substancia: med.id_substancia })
+                                                            ]);
+                                                            fabricantes = (fabRes.data || []).map(f => f.fabricante).filter(Boolean);
+                                                            const seen = new Set();
+                                                            for (const a of (apsRes.data || [])) {
+                                                              const k = (a.apresentacao || '').toLowerCase().trim();
+                                                              if (k && !seen.has(k)) { seen.add(k); apresentacoes.push(a.apresentacao); }
+                                                            }
+                                                          } else {
+                                                            const { data } = await sb.rpc('listar_apresentacoes_comercial', {
+                                                              p_nome_comercial: med.nome_comercial,
+                                                              p_fabricante: med.fabricante
+                                                            });
+                                                            apresentacoes = (data || []).map(a => a.apresentacao).filter(Boolean);
+                                                            composicao = await rxFetchComposicaoComercial(med.nome_comercial, med.fabricante);
+                                                          }
+                                                        } catch (e) { console.error(e); }
 
-                                                         condState.medicamentos.push({
-                                                           id,
-                                                           nome: med.nome_comercial,
-                                                           composicao,
-                                                           principio_ativo: med.composicao || '',
-                                                           apresentacao: apresentacoes[0] || '',
-                                                           apresentacoes_db: apresentacoes,
-                                                           quantidade: '1 caixa',
-                                                           instrucoes: window.rxPosologiaPadrao(apsRows, apresentacoes[0] || ''),
+                                                        condState.medicamentos.push({
+                                                          id,
+                                                          nome: med.nome_comercial,
+                                                          composicao,
+                                                          principio_ativo: med.composicao || '',
+                                                          apresentacao: apresentacoes[0] || '',
+                                                          apresentacoes_db: apresentacoes,
+                                                          quantidade: '1 caixa',
+                                                          instrucoes: '',
                                                           selecionado: true,
                                                           is_generico: !!med.is_generico,
                                                           fabricantes,
@@ -14733,52 +14540,49 @@ let rxSelected = [];
 
                                                               const uid = Math.random().toString(36).slice(2, 10);
                                                               let apresentacoes = [], fabricantes = [];
-                                                               let composicao = med.composicao || '';
-                                                               let apsRows = [];
+                                                              let composicao = med.composicao || '';
 
-                                                               try {
-                                                                 if (med.is_generico) {
-                                                                   const [fabRes, apsRes] = await Promise.all([
-                                                                     sb.rpc('listar_fabricantes_generico', { p_id_substancia: med.id_substancia }),
-                                                                     sb.rpc('listar_apresentacoes_generico', { p_id_substancia: med.id_substancia })
-                                                                   ]);
-                                                                   fabricantes = (fabRes.data || []).map(f => f.fabricante).filter(Boolean);
-                                                                   apsRows = apsRes.data || [];
-                                                                   const seen = new Set();
-                                                                   for (const a of apsRows) {
-                                                                     const k = (a.apresentacao || '').toLowerCase().trim();
-                                                                     if (k && !seen.has(k)) { seen.add(k); apresentacoes.push(a.apresentacao); }
-                                                                   }
-                                                                 } else {
-                                                                   const { data } = await sb.rpc('listar_apresentacoes_comercial', {
-                                                                     p_nome_comercial: med.nome_comercial,
-                                                                     p_fabricante: med.fabricante
-                                                                   });
-                                                                   apsRows = data || [];
-                                                                   apresentacoes = apsRows.map(a => a.apresentacao).filter(Boolean);
-                                                                   composicao = await rxFetchComposicaoComercial(med.nome_comercial, med.fabricante);
-                                                                 }
-                                                               } catch (e) { console.error(e); }
+                                                              try {
+                                                                if (med.is_generico) {
+                                                                  const [fabRes, apsRes] = await Promise.all([
+                                                                    sb.rpc('listar_fabricantes_generico', { p_id_substancia: med.id_substancia }),
+                                                                    sb.rpc('listar_apresentacoes_generico', { p_id_substancia: med.id_substancia })
+                                                                  ]);
+                                                                  fabricantes = (fabRes.data || []).map(f => f.fabricante).filter(Boolean);
+                                                                  const seen = new Set();
+                                                                  for (const a of (apsRes.data || [])) {
+                                                                    const k = (a.apresentacao || '').toLowerCase().trim();
+                                                                    if (k && !seen.has(k)) { seen.add(k); apresentacoes.push(a.apresentacao); }
+                                                                  }
+                                                                } else {
+                                                                  const { data } = await sb.rpc('listar_apresentacoes_comercial', {
+                                                                    p_nome_comercial: med.nome_comercial,
+                                                                    p_fabricante: med.fabricante
+                                                                  });
+                                                                  apresentacoes = (data || []).map(a => a.apresentacao).filter(Boolean);
+                                                                  composicao = await rxFetchComposicaoComercial(med.nome_comercial, med.fabricante);
+                                                                }
+                                                              } catch (e) { console.error(e); }
 
-                                                               // Verifica se alguma substância deste medicamento exige receita de
-                                                               // controle especial (coluna `tipo_receita` em `substancias`).
-                                                               let tipoReceita = null;
-                                                               try {
-                                                                 const idsSubst = await resolverIdsSubstanciaItem(med.nome_comercial, med.fabricante, med.is_generico, med.id_substancia);
-                                                                 if (idsSubst.length) {
-                                                                   const { data: subs } = await sb.from('substancias').select('tipo_receita').in('id_substancia', idsSubst);
-                                                                   const encontrado = (subs || []).map(s => s.tipo_receita).filter(Boolean);
-                                                                   if (encontrado.length) tipoReceita = encontrado[0];
-                                                                 }
-                                                               } catch (e) { console.warn('checagem tipo_receita falhou', e); }
+                                                              // Verifica se alguma substância deste medicamento exige receita de
+                                                              // controle especial (coluna `tipo_receita` em `substancias`).
+                                                              let tipoReceita = null;
+                                                              try {
+                                                                const idsSubst = await resolverIdsSubstanciaItem(med.nome_comercial, med.fabricante, med.is_generico, med.id_substancia);
+                                                                if (idsSubst.length) {
+                                                                  const { data: subs } = await sb.from('substancias').select('tipo_receita').in('id_substancia', idsSubst);
+                                                                  const encontrado = (subs || []).map(s => s.tipo_receita).filter(Boolean);
+                                                                  if (encontrado.length) tipoReceita = encontrado[0];
+                                                                }
+                                                              } catch (e) { console.warn('checagem tipo_receita falhou', e); }
 
-                                                               rxSelected.push({
-                                                                 uid,
-                                                                 nome_comercial: med.nome_comercial,
-                                                                 composicao: composicao || med.composicao || '',
-                                                                 apresentacoes,
-                                                                 apresentacao: apresentacoes[0] || '',
-                                                                 posologia: window.rxPosologiaPadrao(apsRows, apresentacoes[0] || ''),
+                                                              rxSelected.push({
+                                                                uid,
+                                                                nome_comercial: med.nome_comercial,
+                                                                composicao: composicao || med.composicao || '',
+                                                                apresentacoes,
+                                                                apresentacao: apresentacoes[0] || '',
+                                                                posologia: '',
                                                                 quantidade: '1 caixa',
                                                                 is_generico: !!med.is_generico,
                                                                 fabricantes,
@@ -14791,17 +14595,6 @@ let rxSelected = [];
                                                               document.getElementById('rx-results').style.display = 'none';
                                                               rxRenderSelected();
                                                             }
-
-                                                            // Posologia padrão sugerida para a apresentação escolhida. Os RPCs de
-                                                            // listagem devolvem posologia_padrao junto de cada apresentação
-                                                            // (texto genérico derivado da forma farmacêutica) — usamos apenas
-                                                            // como pré-preenchimento quando o médico/IA não informou nada.
-                                                            window.rxPosologiaPadrao = function (rows, apresentacao) {
-                                                              const list = rows || [];
-                                                              const alvo = (apresentacao || '').toLowerCase().trim();
-                                                              const hit = list.find(r => (r?.apresentacao || '').toLowerCase().trim() === alvo) || list[0];
-                                                              return (hit && hit.posologia_padrao) ? hit.posologia_padrao : '';
-                                                            };
 
                                                             async function rxFetchComposicaoComercial(nome_comercial, fabricante) {
                                                               try {
@@ -14973,15 +14766,8 @@ let rxSelected = [];
                                                                 const fabOpts = (it.fabricantes || [])
                                                                   .map(f => `<option value="${f.replace(/"/g, '&quot;')}" ${f === it.fabricante ? 'selected' : ''}>${f}</option>`)
                                                                   .join('');
-                                                                 const genBadge = it.is_generico
-                                                                   ? '<span style="font-size:9px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 6px;border-radius:4px;letter-spacing:.04em;margin-left:6px">GENÉRICO</span>' : '';
-
-                                                                 const controleEspecialAviso = it.tipo_receita
-                                                                   ? `<div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#9a3412;background:#fff7ed;border:1px solid #fdba74;border-radius:7px;padding:5px 9px">
-                                                                       <i class="ti ti-alert-triangle" style="font-size:13px"></i> ${it.tipo_receita}
-                                                                     </div>`
-                                                                   : '';
-
+                                                                const genBadge = it.is_generico
+                                                                  ? '<span style="font-size:9px;font-weight:700;color:#065f46;background:#d1fae5;padding:1px 6px;border-radius:4px;letter-spacing:.04em;margin-left:6px">GENÉRICO</span>' : '';
 
                                                                 const fabBlock = it.is_generico
                                                                   ? `<div style="grid-column:1/-1">
@@ -15002,6 +14788,12 @@ let rxSelected = [];
                                                                       </div>
                                                                     </div>`;
 
+                                                                const controleEspecialAviso = it.tipo_receita
+                                                                  ? `<div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#9a3412;background:#fff7ed;border:1px solid #fdba74;border-radius:7px;padding:5px 9px">
+                                                                      <i class="ti ti-alert-triangle" style="font-size:13px"></i> ${it.tipo_receita}
+                                                                    </div>`
+                                                                  : '';
+
                                                                 return `<div id="rx-item-${it.uid}"
                                                                   style="border:1px solid #e2e8f0;border-radius:10px;padding:11px 13px;background:#fff;display:flex;flex-direction:column;gap:9px">
                                                                   <div style="display:flex;align-items:flex-start;gap:10px">
@@ -15014,8 +14806,8 @@ let rxSelected = [];
                                                                       style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;border:1px solid #fecaca;border-radius:6px;background:#fef2f2;color:#dc2626;cursor:pointer;flex-shrink:0;font-size:13px">
                                                                       <i class="ti ti-trash"></i>
                                                                     </button>
-                                                                   </div>
-                                                                   ${controleEspecialAviso}
+                                                                  </div>
+                                                                  ${controleEspecialAviso}
                                                                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
                                                                     ${fabBlock}
                                                                     <div>
@@ -15371,7 +15163,7 @@ let rxSelected = [];
                                                               };
                                                             }
 
-                                                            function rxEmitirConfirmado() {
+                                                            async function rxEmitirConfirmado() {
                                                               const formulasValidas = rxFormulasValidas();
                                                               if (!rxSelected.length && !formulasValidas.length) { showToast && showToast('Adicione ao menos um medicamento ou uma fórmula', 'warn'); return; }
 
@@ -15397,17 +15189,32 @@ let rxSelected = [];
                                                               const linhasMed = rxSelected.map((it, i) =>
                                                                 `${i + 1}. ${it.nome_comercial}${it.apresentacao ? ' — ' + it.apresentacao : ''}${it.quantidade ? ' — ' + it.quantidade : ''}${it.posologia ? '\n   ' + it.posologia : ''}`
                                                               ).join('\n');
-                                                               const items = rxSelected.map(it => ({
-                                                                 nome: it.nome_comercial,
-                                                                 apresentacao: it.apresentacao || it.composicao || '',
-                                                                 quantidade: it.quantidade || '',
-                                                                 posologia: it.posologia || '',
-                                                                 tipo_receita: it.tipo_receita || null
-                                                               }));
+                                                              const items = rxSelected.map(it => ({
+                                                                nome: it.nome_comercial,
+                                                                apresentacao: it.apresentacao || it.composicao || '',
+                                                                quantidade: it.quantidade || '',
+                                                                posologia: it.posologia || '',
+                                                                tipo_receita: it.tipo_receita || null
+                                                              }));
+                                                              // Duas categorias são tratadas de forma diferente:
+                                                              // - Notificação de Receita "A" (listas A1/A2/A3 — entorpecentes/
+                                                              //   psicotrópicos): documento à parte, numerado, que exige um
+                                                              //   número já concedido pela Vigilância Sanitária/SNCR. A receita
+                                                              //   que acompanha continua sendo o modelo comum (2 vias).
+                                                              // - Demais tipo_receita preenchidos (ex.: "Receita de Controle
+                                                              //   Especial (2 vias)", listas C1/C5): a receita inteira sai no
+                                                              //   modelo de controle especial, sem documento adicional.
+                                                              const itemsNotificacaoA = items.filter(it => (it.tipo_receita || '').toLowerCase().includes('notifica'));
+                                                              const rxControleEspecial = items.some(it => it.tipo_receita && !itemsNotificacaoA.includes(it));
 
-                                                               // Se QUALQUER item exigir controle especial, a receita inteira sai
-                                                               // no modelo de controle especial (2 vias), nunca no modelo normal.
-                                                               const rxControleEspecial = items.some(it => it.tipo_receita);
+                                                              let numeroNotificacaoA = null;
+                                                              if (itemsNotificacaoA.length) {
+                                                                numeroNotificacaoA = await rxPedirNumeroNotificacaoA(itemsNotificacaoA);
+                                                                if (!numeroNotificacaoA) {
+                                                                  showToast && showToast('Emissão cancelada — número da Notificação de Receita "A" é obrigatório', 'warn');
+                                                                  return;
+                                                                }
+                                                              }
 
                                                               // Salva no atalho "Últimas receitas emitidas" (histórico local do
                                                               // médico) para reuso rápido na próxima vez que este modal abrir.
@@ -15427,6 +15234,7 @@ let rxSelected = [];
                                                                 // atendimento nem mexe em um atendimento em andamento.
                                                                 const avulsaPatient = rxManualPatient; // capturado antes do PDF zerar rxManualPatient
                                                                 openReceitaPDF({ items, formulas: formulaItems });
+                                                                if (itemsNotificacaoA.length) openNotificacaoReceitaAPDF({ items: itemsNotificacaoA, numero: numeroNotificacaoA });
                                                                 closeModal();
                                                                 registrarReceitaAvulsaNoPaciente([...items, ...formulaItems], linhas, avulsaPatient);
                                                                 return;
@@ -15438,15 +15246,14 @@ let rxSelected = [];
                                                               if (ta) { ta.value = (ta.value ? ta.value + '\n\n' : '') + 'RECEITA:\n' + linhas; if (typeof markAtendDirty === 'function') markAtendDirty(); }
                                                               // Sinaliza para a IA de encerramento que a receita já foi emitida
                                                               // nesta consulta — evita sugerir gerar outra pra mesma coisa.
-                                                              // Pode haver mais de uma receita na mesma consulta: acumula em lista.
                                                               const _rxAgora=new Date();
-                                                              if(!Array.isArray(atendEmAndamento.receitasGeradas))atendEmAndamento.receitasGeradas=[];
-                                                              atendEmAndamento.receitasGeradas.push({
+                                                              atendEmAndamento.receitaGerada={
                                                                 quando:_rxAgora.toISOString(),
                                                                 horaTexto:_rxAgora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
                                                                 resumo:(items[0]&&items[0].nome?items[0].nome+(items.length>1?' + '+(items.length-1):''):'medicamento(s)')
-                                                              });
+                                                              };
                                                               openReceitaPDF({ items, formulas: formulaItems });
+                                                              if (itemsNotificacaoA.length) openNotificacaoReceitaAPDF({ items: itemsNotificacaoA, numero: numeroNotificacaoA });
                                                               closeModal();
                                                               showToast && showToast('Receita adicionada ao prontuário', 'success');
                                                             }
@@ -15535,6 +15342,139 @@ let rxSelected = [];
                                                             }
 
 
+                                                            /* Pede ao médico o número da Notificação de Receita "A" já concedido
+                                                               pela Vigilância Sanitária local (ou SNCR) para o talão que ele
+                                                               possui. O sistema nunca gera esse número sozinho — só confirma que
+                                                               o médico digitou algo antes de deixar seguir. Retorna o número
+                                                               (string) ou null se o médico cancelar. */
+                                                            function rxPedirNumeroNotificacaoA(itemsControlados) {
+                                                              return new Promise((resolve) => {
+                                                                const nomes = itemsControlados.map(it => it.nome).filter(Boolean).join(', ');
+                                                                const overlay = document.createElement('div');
+                                                                overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+                                                                overlay.innerHTML = `
+                                                                  <div style="background:#fff;border-radius:14px;max-width:460px;width:100%;padding:22px 24px;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+                                                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                                                                      <i class="ti ti-alert-triangle" style="font-size:20px;color:#ca8a04"></i>
+                                                                      <h3 style="font-size:15px;font-weight:700;color:#0f172a;margin:0">Notificação de Receita "A" obrigatória</h3>
+                                                                    </div>
+                                                                    <p style="font-size:12.5px;color:#475569;line-height:1.55;margin-bottom:12px">
+                                                                      <strong>${_rxEsc(nomes)}</strong> exige Notificação de Receita "A" (listas A1/A2/A3 —
+                                                                      entorpecentes/psicotrópicos), além da receita comum de 2 vias. Informe o número já
+                                                                      concedido pela Vigilância Sanitária local (ou SNCR) para o talão que você possui — o
+                                                                      sistema não pode gerar essa numeração sozinho.
+                                                                    </p>
+                                                                    <label style="display:block;font-size:11px;font-weight:700;color:#334155;margin-bottom:5px">Número da Notificação de Receita "A"</label>
+                                                                    <input id="rx-notif-num-input" type="text" placeholder="Ex.: 000123" autocomplete="off"
+                                                                      style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;margin-bottom:16px" />
+                                                                    <div style="display:flex;gap:10px;justify-content:flex-end">
+                                                                      <button id="rx-notif-cancel" style="padding:9px 16px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:13px;cursor:pointer">Cancelar</button>
+                                                                      <button id="rx-notif-confirm" style="padding:9px 16px;border-radius:8px;border:none;background:#ca8a04;color:#fff;font-size:13px;font-weight:600;cursor:pointer">Confirmar e gerar</button>
+                                                                    </div>
+                                                                  </div>`;
+                                                                document.body.appendChild(overlay);
+                                                                const input = overlay.querySelector('#rx-notif-num-input');
+                                                                setTimeout(() => input.focus(), 30);
+                                                                const finish = (val) => { overlay.remove(); resolve(val); };
+                                                                overlay.querySelector('#rx-notif-cancel').onclick = () => finish(null);
+                                                                input.addEventListener('keydown', (e) => { if (e.key === 'Enter') overlay.querySelector('#rx-notif-confirm').click(); });
+                                                                overlay.querySelector('#rx-notif-confirm').onclick = () => {
+                                                                  const val = (input.value || '').trim();
+                                                                  if (!val) { input.style.borderColor = '#dc2626'; input.focus(); return; }
+                                                                  finish(val);
+                                                                };
+                                                              });
+                                                            }
+
+                                                            /* Gera o PDF da Notificação de Receita "A" — documento de via única,
+                                                               separado da receita comum, contendo o número informado pelo médico.
+                                                               Sempre chamada em conjunto com openReceitaPDF (a receita comum que
+                                                               deve acompanhá-la). */
+                                                            async function openNotificacaoReceitaAPDF({ items, numero }) {
+                                                              const meds = items || [];
+                                                              if (!meds.length) return;
+
+                                                              const p = rxManualPatient || currentPatient || {};
+                                                              const patientAge = _rxIdade(p.nasc || p.data_nascimento || '');
+
+                                                              const itemsHtml = meds.map((it) => `
+                                                                <div class="med-name">${_rxEsc(it.nome)}${it.apresentacao ? ` — ${_rxEsc(it.apresentacao)}` : ''}</div>
+                                                                <div class="med-qty-extenso">Quantidade: <b>${_rxEsc(it.quantidade || '—')}</b>${it.posologia ? ' — ' + _rxEsc(it.posologia) : ''}</div>
+                                                              `).join('<div style="height:10px"></div>');
+
+                                                              let clinic = {};
+                                                              try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
+                                                              const u = currentUser || {};
+                                                              const meta = u.user_metadata || {};
+                                                              const doctorName = meta.full_name || meta.name || (u.email || '').split('@')[0] || 'Médico responsável';
+                                                              const doctorCrm  = meta.crm || meta.CRM || '—';
+                                                              const clinicName = clinic.fantasia || clinic.razao || 'Clínica';
+                                                              const cidadeUf   = [clinic.cidade, clinic.uf].filter(Boolean).join('/');
+                                                              const addr = [
+                                                                [clinic.logradouro, clinic.numero].filter(Boolean).join(', '),
+                                                                clinic.complemento, clinic.bairro, cidadeUf,
+                                                                clinic.cep ? 'CEP ' + clinic.cep : ''
+                                                              ].filter(Boolean).join(' · ');
+
+                                                              let html;
+                                                              try {
+                                                                const resp = await fetch('/notificacao-receita-a-modelo.html', { cache: 'no-store' });
+                                                                html = await resp.text();
+                                                              } catch (e) { showToast && showToast('Falha ao carregar modelo da Notificação de Receita A', 'error'); return null; }
+
+                                                              const [logoDataUrl] = await Promise.all([_rxImgToDataUrl(clinic.logo || '')]);
+
+                                                              const repl = {
+                                                                '{{CLINIC_NAME}}'    : _rxEsc(clinicName),
+                                                                '{{CLINIC_ADDRESS}}' : _rxEsc(addr || '—'),
+                                                                '{{CLINIC_PHONE}}'   : _rxEsc(clinic.telefone || ''),
+                                                                '{{CLINIC_EMAIL}}'   : _rxEsc(clinic.email || ''),
+                                                                '{{LOGO_URL}}'       : logoDataUrl,
+                                                                '{{DOCTOR_NAME}}'    : _rxEsc(doctorName),
+                                                                '{{DOCTOR_CRM}}'     : _rxEsc(doctorCrm),
+                                                                '{{PATIENT_NAME}}'   : _rxEsc(p.name || '—'),
+                                                                '{{PATIENT_AGE}}'    : _rxEsc(patientAge || '—'),
+                                                                '{{PATIENT_CPF}}'    : _rxEsc(p.cpf || '—'),
+                                                                '{{ISSUE_DATE}}'     : _rxEsc(new Date().toLocaleDateString('pt-BR')),
+                                                                '{{NOTIFICATION_NUMBER}}': _rxEsc(numero || '—'),
+                                                                '{{PRESCRIPTION_HTML}}': itemsHtml,
+                                                              };
+                                                              for (const [k, v] of Object.entries(repl)) html = html.split(k).join(v);
+
+                                                              // Remove o aviso de montagem antes de renderizar/baixar
+                                                              html = html.replace(/<div class="builder-note">[\s\S]*?<\/div>\s*/, '');
+                                                              if (!logoDataUrl) html = html.replace(/<div class="logo-slot">[\s\S]*?<\/div>\s*/, '');
+
+                                                              const holder = document.createElement('div');
+                                                              holder.style.cssText = 'position:fixed;left:-9999px;top:0';
+                                                              holder.innerHTML = html;
+                                                              document.body.appendChild(holder);
+                                                              try {
+                                                                try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
+                                                                const imgs = Array.from(holder.querySelectorAll('img'));
+                                                                await Promise.all(imgs.map(img =>
+                                                                  img.complete ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; })
+                                                                ));
+
+                                                                const safeName = (p.name || 'paciente').replace(/[^\w\-]+/g, '_').toLowerCase();
+                                                                const filename = `notificacao_receita_a_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+                                                                await window.html2pdf().set({
+                                                                  margin: 0,
+                                                                  filename,
+                                                                  image: { type: 'jpeg', quality: 0.98 },
+                                                                  html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
+                                                                  jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                                                                  pagebreak: { mode: ['css', 'legacy'] }
+                                                                }).from(holder.querySelector('.sheet') || holder).save();
+                                                              } catch (e) {
+                                                                console.error('Falha ao gerar PDF da Notificação de Receita A', e);
+                                                                showToast && showToast('Falha ao gerar PDF da Notificação de Receita A', 'error');
+                                                              } finally {
+                                                                holder.remove();
+                                                              }
+                                                            }
+
                                                             /* ── GERADOR DE PDF ───────────────────────────────────────────────── */
 
                                                             function _rxEsc(s) {
@@ -15609,8 +15549,7 @@ let rxSelected = [];
                                                     clinic.cep ? 'CEP ' + clinic.cep : ''
                                                   ].filter(Boolean).join(' · ');
 
-                                                  // Carrega o template — receita de controle especial usa o modelo de
-                                                  // 2 vias; todos os outros documentos usam o modelo padrão.
+                                                  // Carrega o template
                                                   let html;
                                                   try {
                                                     const templateUrl = isControleEspecial ? '/receita-controle-especial-modelo.html' : '/receita-modelo.html';
@@ -15851,8 +15790,7 @@ let rxSelected = [];
                                                     clinic.cep ? 'CEP ' + clinic.cep : ''
                                                   ].filter(Boolean).join(' · ');
 
-                                                  // Carrega o template — receita de controle especial usa o modelo de
-                                                  // 2 vias; todos os outros documentos usam o modelo padrão.
+                                                  // Carrega o template
                                                   let html;
                                                   try {
                                                     const templateUrl = isControleEspecial ? '/receita-controle-especial-modelo.html' : '/receita-modelo.html';
@@ -16012,11 +15950,11 @@ let rxSelected = [];
                                                   setTimeout(() => URL.revokeObjectURL(url), 4000);
                                                 }
 
-                                                 async function openReceitaPDF({ items, formulas }) {
-                                       const meds = items || [];
-                                       const formulasList = formulas || [];
-                                       if (!meds.length && !formulasList.length) { showToast && showToast('Nenhum medicamento ou fórmula para a receita', 'warn'); return; }
-                                       const controleEspecial = meds.some(it => it.tipo_receita);
+                                                async function openReceitaPDF({ items, formulas }) {
+                                      const meds = items || [];
+                                      const formulasList = formulas || [];
+                                      if (!meds.length && !formulasList.length) { showToast && showToast('Nenhum medicamento ou fórmula para a receita', 'warn'); return; }
+                                      const controleEspecial = meds.some(it => it.tipo_receita);
 
                                       // FIX: currentPatient usa .nasc (não .data_nascimento)
                                       // Se veio do modal "Gerar documento", usa os dados digitados manualmente.
@@ -16080,18 +16018,18 @@ let rxSelected = [];
 
                                                   const bodyHtml = itemsHtml + formulasHtml + rodapeHtml;
 
-                                                   const result = await _renderDocumentoPdf({
-                                                     docTitle: controleEspecial ? 'Receita de Controle Especial' : 'Receituário Médico',
-                                                     docMark: '℞',
-                                                     patientName: p.name || '',
-                                                     patientAge,
-                                                     patientCpf: p.cpf || '',
-                                                     patientAddress: [p.logradouro, p.numero, p.bairro, p.cidade, p.uf].filter(Boolean).join(', ') || p.endereco || '',
-                                                     bodyHtml,
-                                                     filenamePrefix: controleEspecial ? 'receita-controle-especial' : 'receita',
-                                                     contentDescription: `Receita para ${p.name || 'paciente'}`,
-                                                     isControleEspecial: controleEspecial,
-                                                   });
+                                                  const result = await _renderDocumentoPdf({
+                                                    docTitle: controleEspecial ? 'Receita de Controle Especial' : 'Receituário Médico',
+                                                    docMark: '℞',
+                                                    patientName: p.name || '',
+                                                    patientAge,
+                                                    patientCpf: p.cpf || '',
+                                                    patientAddress: [p.logradouro, p.numero, p.bairro, p.cidade, p.uf].filter(Boolean).join(', ') || p.endereco || '',
+                                                    bodyHtml,
+                                                    filenamePrefix: controleEspecial ? 'receita-controle-especial' : 'receita',
+                                                    contentDescription: `Receita para ${p.name || 'paciente'}`,
+                                                    isControleEspecial: controleEspecial,
+                                                  });
                                                   if (!result) return;
 
                                                   _baixarBlob(result.finalBlob, result.filename);
@@ -17103,235 +17041,12 @@ let rxSelected = [];
                                                         form.medicamentos.map(m => m.nome).join('; ');
                                                       if (typeof markAtendDirty === 'function') markAtendDirty();
                                                     }
-                                                    showToast && showToast(window.__lmeRenovacao ? 'LME renovado com sucesso' : 'LME emitido e anexado ao atendimento', 'success');
-                                                    window.__lmeRenovacao = false;
-                                                    if (typeof renderLmeDocsPanel === 'function') renderLmeDocsPanel();
+                                                    showToast && showToast('LME emitido e anexado ao atendimento', 'success');
                                                     closeModal();
                                                   } finally {
                                                     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-file-download"></i> Emitir LME'; }
                                                   }
                                                 }
-
-                                                /* ================= Documentos do LME — checklist, ZIP, compartilhamento e renovação =================
-                                                   Cada item pode ser:
-                                                   - origem 'sistema': gerado pelo próprio MediCopilot (fica em documentos_paciente, ex.: o LME e a receita)
-                                                   - origem 'upload': o médico/paciente anexa (reaproveita o fluxo já existente de "Documentos do cadastro",
-                                                     tabela 'exames', usando o prefixo "[LME] " no nome para reconhecer o documento no checklist)
-                                                   A lista abaixo segue o padrão nacional do Componente Especializado da Assistência Farmacêutica (CEAF/SUS).
-                                                   Cada estado (SES) pode ter exigências adicionais — por isso os itens marcados como exigíveis (não
-                                                   universais) aparecem como "(Opcional)" e podem ser ajustados aqui conforme o protocolo/UF da clínica. */
-                                                const LME_DOCUMENTOS = [
-                                                  { id: 'lme_laudo',              label: 'LME — Laudo de Solicitação, Avaliação e Autorização de Medicamentos', exigido: true,  origem: 'sistema', tipoDoc: 'laudo' },
-                                                  { id: 'receita',                label: 'Receita médica atual dos medicamentos solicitados',                  exigido: true,  origem: 'sistema', tipoDoc: 'receita' },
-                                                  { id: 'doc_identidade',         label: 'Documento de identidade com foto (RG, CNH ou CIN)',                  exigido: true,  origem: 'upload',  tag: 'Documento de identidade' },
-                                                  { id: 'cpf',                    label: 'CPF do paciente',                                                    exigido: true,  origem: 'upload',  tag: 'CPF' },
-                                                  { id: 'cartao_sus',             label: 'Cartão Nacional de Saúde (Cartão SUS)',                              exigido: true,  origem: 'upload',  tag: 'Cartão SUS' },
-                                                  { id: 'comprovante_residencia', label: 'Comprovante de residência atualizado',                               exigido: true,  origem: 'upload',  tag: 'Comprovante de residência' },
-                                                  { id: 'exames_diagnostico',     label: 'Exame(s) que comprovem o diagnóstico (conforme o PCDT)',             exigido: true,  origem: 'upload',  tag: 'Exames do diagnóstico' },
-                                                  { id: 'termo_consentimento',    label: 'Termo de Consentimento Informado, Livre e Esclarecido assinado',     exigido: true,  origem: 'upload',  tag: 'Termo de consentimento' },
-                                                  { id: 'doc_responsavel',        label: 'Documento e CPF do responsável legal',                               exigido: false, origem: 'upload',  tag: 'Documento do responsável' },
-                                                  { id: 'relatorio_complementar', label: 'Relatório médico complementar',                                      exigido: false, origem: 'upload',  tag: 'Relatório médico complementar' },
-                                                  { id: 'laudo_anatomopatologico',label: 'Laudo anatomopatológico / biópsia',                                  exigido: false, origem: 'upload',  tag: 'Anatomopatológico' },
-                                                  { id: 'declaracao_tratamentos', label: 'Declaração de tratamentos anteriores / falha terapêutica',           exigido: false, origem: 'upload',  tag: 'Tratamentos anteriores' },
-                                                  { id: 'certidao_nascimento',    label: 'Certidão de nascimento (se o paciente não possuir RG)',              exigido: false, origem: 'upload',  tag: 'Certidão de nascimento' },
-                                                ];
-                                                const LME_VALIDADE_MESES = 6;
-                                                window.__lmeDocsCache = { sistema: [], porDoc: {} };
-
-                                                function _lmeUploadNome(doc) { return '[LME] ' + doc.tag; }
-
-                                                async function lmeCarregarDocsSistema() {
-                                                  if (!currentPatient) return [];
-                                                  const { data, error } = await sb.from('documentos_paciente')
-                                                    .select('*').eq('paciente_id', currentPatient.id).order('created_at', { ascending: false });
-                                                  if (error) { console.error(error); return []; }
-                                                  return data || [];
-                                                }
-
-                                                function _lmeStatusDoc(doc, docsSistema) {
-                                                  if (doc.origem === 'sistema') {
-                                                    const found = docsSistema.find(d => d.tipo === doc.tipoDoc);
-                                                    return found ? { done: true, origem: 'sistema', row: found } : { done: false };
-                                                  }
-                                                  const found = (typeof exames !== 'undefined' ? exames : []).find(e => e.nome === _lmeUploadNome(doc));
-                                                  return found ? { done: true, origem: 'upload', row: found } : { done: false };
-                                                }
-
-                                                function lmeValidadeInfo(docsSistema) {
-                                                  const laudos = docsSistema.filter(d => d.tipo === 'laudo').sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-                                                  if (!laudos.length) return { iniciado: false };
-                                                  const emissao = new Date(laudos[0].created_at);
-                                                  const vencimento = new Date(emissao); vencimento.setMonth(vencimento.getMonth() + LME_VALIDADE_MESES);
-                                                  const diasRestantes = Math.ceil((vencimento - new Date()) / 86400000);
-                                                  let cor = 'ok';
-                                                  if (diasRestantes < 0) cor = 'bad'; else if (diasRestantes <= 30) cor = 'warn';
-                                                  return { iniciado: true, emissao, vencimento, diasRestantes, cor, ultimoLaudo: laudos[0] };
-                                                }
-
-                                                async function renderLmeDocsPanel() {
-                                                  const roots = [document.getElementById('lme-docs-panel'), document.getElementById('pat-protocolos-root')].filter(Boolean);
-                                                  if (!roots.length || !currentPatient) return;
-                                                  roots.forEach(r => r.innerHTML = '<div class="lme-empty">Carregando…</div>');
-                                                  const docsSistema = await lmeCarregarDocsSistema();
-                                                  window.__lmeDocsCache.sistema = docsSistema;
-                                                  const validade = lmeValidadeInfo(docsSistema);
-
-                                                  let badgeHtml, actionsHtml;
-                                                  if (!validade.iniciado) {
-                                                    badgeHtml = '<span class="lme-validity none"><i class="ti ti-circle-dashed"></i> Processo não iniciado</span>';
-                                                    actionsHtml = '<button class="btn sm primary" onclick="openLmeModal()"><i class="ti ti-file-plus"></i> Iniciar LME</button>';
-                                                  } else {
-                                                    const label = validade.diasRestantes < 0
-                                                      ? 'Vencido há ' + Math.abs(validade.diasRestantes) + ' dia(s)'
-                                                      : 'Válido por ' + validade.diasRestantes + ' dia(s) (vence em ' + validade.vencimento.toLocaleDateString('pt-BR') + ')';
-                                                    const icon = validade.cor === 'ok' ? 'ti-rosette-discount-check' : (validade.cor === 'warn' ? 'ti-alert-triangle' : 'ti-alert-circle');
-                                                    badgeHtml = '<span class="lme-validity ' + validade.cor + '"><i class="ti ' + icon + '"></i> ' + label + '</span>';
-                                                    actionsHtml = '<button class="btn sm" onclick="lmeRenovar()"><i class="ti ti-refresh"></i> Renovar LME</button>';
-                                                  }
-
-                                                  const chipsHtml = LME_DOCUMENTOS.map(doc => {
-                                                    const st = _lmeStatusDoc(doc, docsSistema);
-                                                    const cls = st.done ? 'done' : 'pending';
-                                                    const label = doc.exigido ? doc.label : (doc.label + ' <span style="font-weight:400">(Opcional)</span>');
-                                                    const sub = st.done
-                                                      ? (st.origem === 'sistema' ? 'Gerado em ' + new Date(st.row.created_at).toLocaleDateString('pt-BR') + ' · clique para baixar' : 'Anexado · clique para baixar')
-                                                      : (doc.origem === 'sistema' ? 'Clique para gerar' : 'Clique para anexar');
-                                                    const clickFn = st.done ? "lmeDocBaixar('" + doc.id + "')" : "lmeDocPreencher('" + doc.id + "')";
-                                                    return '<div class="lme-doc-chip ' + cls + '" onclick="' + clickFn + '">' +
-                                                      '<span class="lme-dot"></span>' +
-                                                      '<div><div class="lme-doc-txt">' + label + '</div><div class="lme-doc-sub">' + sub + '</div></div>' +
-                                                      '</div>';
-                                                  }).join('');
-
-                                                  const prontos = LME_DOCUMENTOS.filter(d => _lmeStatusDoc(d, docsSistema).done).length;
-                                                  const html =
-                                                    '<div class="lme-panel-hd">' +
-                                                      '<span class="lme-panel-title"><i class="ti ti-file-text"></i> Documentos do LME — ' + prontos + '/' + LME_DOCUMENTOS.length + ' prontos</span>' +
-                                                      badgeHtml +
-                                                    '</div>' +
-                                                    '<div class="lme-doc-grid">' + chipsHtml + '</div>' +
-                                                    '<div class="lme-panel-actions">' +
-                                                      actionsHtml +
-                                                      '<button class="btn sm" onclick="lmeCompactarZip()"><i class="ti ti-file-zip"></i> Baixar tudo em ZIP</button>' +
-                                                      '<button class="btn sm" onclick="lmeAbrirCompartilhar()"><i class="ti ti-send"></i> Compartilhar com o paciente</button>' +
-                                                    '</div>';
-                                                  roots.forEach(r => r.innerHTML = html);
-                                                }
-                                                // Aliases para os hooks já existentes na aba "Protocolos" (openTab chama estas funções, se existirem).
-                                                function initProtocolos() { renderLmeDocsPanel(); }
-                                                function renderPacienteProtocolosTab() { renderLmeDocsPanel(); }
-
-                                                function lmeDocBaixar(docId) {
-                                                  const doc = LME_DOCUMENTOS.find(d => d.id === docId); if (!doc) return;
-                                                  const st = _lmeStatusDoc(doc, window.__lmeDocsCache.sistema || []);
-                                                  if (!st.done) return;
-                                                  if (st.origem === 'sistema') { if (typeof downloadDocumentoGerado === 'function') downloadDocumentoGerado(st.row); else _lmeDownloadStorage('documentos-arquivos', st.row.arquivo_path, st.row.arquivo_nome); }
-                                                  else { if (typeof downloadExame === 'function') downloadExame(st.row.id); }
-                                                }
-
-                                                async function _lmeDownloadStorage(bucket, path, filename) {
-                                                  if (!path) { showToast && showToast('Arquivo não encontrado no armazenamento', 'error'); return; }
-                                                  const { data, error } = await sb.storage.from(bucket).createSignedUrl(path, 60, { download: true });
-                                                  if (error) { showToast && showToast('Erro ao baixar: ' + error.message, 'error'); return; }
-                                                  window.open(data.signedUrl, '_blank');
-                                                }
-
-                                                // Documento pendente: se é gerável pela IA, abre o gerador certo; se é upload do paciente, abre o anexo já com o nome preenchido.
-                                                function lmeDocPreencher(docId) {
-                                                  const doc = LME_DOCUMENTOS.find(d => d.id === docId); if (!doc) return;
-                                                  if (doc.origem === 'sistema') {
-                                                    if (doc.tipoDoc === 'laudo') { openLmeModal(); return; }
-                                                    if (doc.tipoDoc === 'receita') { if (typeof abrirModalGerarDocumento === 'function') abrirModalGerarDocumento(); else showToast && showToast('Abra "Gerar documento" para emitir a receita', 'info'); return; }
-                                                  }
-                                                  openModal('add-exame');
-                                                  setTimeout(() => {
-                                                    const nomeEl = document.getElementById('exame-nome'); if (nomeEl) nomeEl.value = _lmeUploadNome(doc);
-                                                    const tipoEl = document.getElementById('exame-tipo'); if (tipoEl) tipoEl.value = 'Documento';
-                                                  }, 30);
-                                                }
-
-                                                // Renovação: reabre o LME pré-preenchido com os dados do último laudo emitido, com a data atualizada para hoje.
-                                                async function lmeRenovar() {
-                                                  const docsSistema = window.__lmeDocsCache.sistema.length ? window.__lmeDocsCache.sistema : await lmeCarregarDocsSistema();
-                                                  const laudos = docsSistema.filter(d => d.tipo === 'laudo').sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-                                                  if (!laudos.length) { openLmeModal(); return; }
-                                                  window.__lmeRenovacao = true;
-                                                  openLmeModal();
-                                                  const prev = laudos[0].conteudo || {};
-                                                  setTimeout(() => {
-                                                    lmeApply(prev);
-                                                    _lmeSet('lme-data', new Date().toISOString().slice(0, 10));
-                                                    showToast && showToast('Campos preenchidos com o último LME — confira e emita a renovação', 'info');
-                                                  }, 60);
-                                                }
-
-                                                // Compactação em ZIP de todos os documentos já prontos (gerados pelo sistema + anexados pelo paciente).
-                                                async function lmeCompactarZip() {
-                                                  if (typeof JSZip === 'undefined') { showToast && showToast('Biblioteca de compactação não carregada', 'error'); return; }
-                                                  const docsSistema = window.__lmeDocsCache.sistema.length ? window.__lmeDocsCache.sistema : await lmeCarregarDocsSistema();
-                                                  const prontos = LME_DOCUMENTOS.map(d => ({ doc: d, st: _lmeStatusDoc(d, docsSistema) })).filter(x => x.st.done);
-                                                  if (!prontos.length) { showToast && showToast('Nenhum documento pronto para compactar ainda', 'warn'); return; }
-                                                  showToast && showToast('Compactando ' + prontos.length + ' documento(s)...', 'info');
-                                                  const zip = new JSZip();
-                                                  for (const { doc, st } of prontos) {
-                                                    try {
-                                                      const bucket = st.origem === 'sistema' ? 'documentos-arquivos' : 'exames-arquivos';
-                                                      const path = st.origem === 'sistema' ? st.row.arquivo_path : st.row.arquivoPath;
-                                                      const filename = (st.origem === 'sistema' ? st.row.arquivo_nome : st.row.file) || (doc.id + '.pdf');
-                                                      if (!path) continue;
-                                                      const { data, error } = await sb.storage.from(bucket).createSignedUrl(path, 60);
-                                                      if (error) continue;
-                                                      const blob = await (await fetch(data.signedUrl)).blob();
-                                                      zip.file(filename, blob);
-                                                    } catch (e) { console.error('Falha ao adicionar ao ZIP:', doc.id, e); }
-                                                  }
-                                                  const finalBlob = await zip.generateAsync({ type: 'blob' });
-                                                  const nomePaciente = (currentPatient.name || 'paciente').replace(/[^\w\-]+/g, '_');
-                                                  _baixarBlob(finalBlob, 'LME_' + nomePaciente + '_' + new Date().toISOString().slice(0, 10) + '.zip');
-                                                  showToast && showToast('ZIP gerado com sucesso', 'success');
-                                                }
-
-                                                // Compartilhamento com o paciente — reaproveita a mesma rota já usada no restante do app.
-                                                let __lmeShareCanal = 'whatsapp';
-                                                function lmeShareSetCanal(canal) {
-                                                  __lmeShareCanal = canal;
-                                                  const wa = document.getElementById('lme-share-ch-wa'), em = document.getElementById('lme-share-ch-em');
-                                                  if (wa) wa.classList.toggle('primary', canal === 'whatsapp');
-                                                  if (em) em.classList.toggle('primary', canal === 'email');
-                                                }
-                                                async function lmeAbrirCompartilhar() {
-                                                  const docsSistema = window.__lmeDocsCache.sistema.length ? window.__lmeDocsCache.sistema : await lmeCarregarDocsSistema();
-                                                  const prontos = LME_DOCUMENTOS.filter(d => _lmeStatusDoc(d, docsSistema).done);
-                                                  if (!prontos.length) { showToast && showToast('Nenhum documento pronto para compartilhar ainda', 'warn'); return; }
-                                                  const cEl = document.getElementById('lme-share-count'); if (cEl) cEl.textContent = prontos.length + ' documento(s) prontos serão enviados.';
-                                                  const contatoEl = document.getElementById('lme-share-contato');
-                                                  if (contatoEl) contatoEl.value = (currentPatient && (currentPatient.tel || currentPatient.email)) || '';
-                                                  lmeShareSetCanal(currentPatient && currentPatient.tel ? 'whatsapp' : 'email');
-                                                  openModal('lme-compartilhar');
-                                                }
-                                                async function lmeConfirmarCompartilhar() {
-                                                  const contato = (document.getElementById('lme-share-contato') || {}).value || '';
-                                                  if (!contato.trim()) { showToast && showToast('Informe um contato para envio', 'error'); return; }
-                                                  const docsSistema = window.__lmeDocsCache.sistema.length ? window.__lmeDocsCache.sistema : await lmeCarregarDocsSistema();
-                                                  const prontos = LME_DOCUMENTOS.map(d => ({ doc: d, st: _lmeStatusDoc(d, docsSistema) })).filter(x => x.st.done);
-                                                  let ok = 0, falhas = 0;
-                                                  for (const { doc, st } of prontos) {
-                                                    try {
-                                                      await fetch('/api/enviar-documento', {
-                                                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                                        body: JSON.stringify({
-                                                          tipo: 'lme_documento', canal: __lmeShareCanal, contato,
-                                                          paciente: (currentPatient && currentPatient.name) || 'Paciente',
-                                                          dados: { documento: doc.label, origem: st.origem, arquivo: st.origem === 'sistema' ? st.row.arquivo_nome : st.row.file }
-                                                        })
-                                                      });
-                                                      ok++;
-                                                    } catch (e) { falhas++; }
-                                                  }
-                                                  showToast && showToast(falhas ? ('Enviado ' + ok + ' — falhou ' + falhas) : ('Documentos enviados ao paciente (' + ok + ')'), falhas ? 'error' : 'success');
-                                                  closeModal();
-                                                }
-
                                                 async function _renderSolicitacaoExamesPdf({ patientName, patientAge, patientCpf, examsHtml, careType, urgente, fastingRequired, validityDays, clinicalIndication, cidCode, cidDescription, preparationNotes, additionalNotes }) {
                                                   let clinic = {};
                                                   try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
@@ -17378,7 +17093,6 @@ let rxSelected = [];
                                                     '{{PATIENT_NAME}}'  : _rxEsc(patientName || '—'),
                                                     '{{PATIENT_AGE}}'   : _rxEsc(patientAge || '—'),
                                                     '{{PATIENT_CPF}}'   : _rxEsc(patientCpf || '—'),
-                                                    '{{PATIENT_ADDRESS}}': _rxEsc(patientAddress || '—'),
                                                     '{{ISSUE_DATE}}'    : _rxEsc(new Date().toLocaleDateString('pt-BR')),
                                                     '{{DOC_TITLE}}'     : 'Solicitação de Exame',
                                                     '{{DOC_MARK}}'      : '',
@@ -19624,16 +19338,14 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                 showToast&&showToast('Agendamento criado com sucesso','success');
                                                                 // Sinaliza para a IA de encerramento que já existe um agendamento
                                                                 // real criado nesta consulta — evita sugerir marcar outro.
-                                                                // Pode haver mais de um agendamento na mesma consulta: acumula em lista.
                                                                 if(typeof atendEmAndamento!=='undefined'&&atendEmAndamento&&atendEmAndamento.patientId&&pacienteId===atendEmAndamento.patientId){
-                                                                  if(!Array.isArray(atendEmAndamento.agendamentosGerados))atendEmAndamento.agendamentosGerados=[];
-                                                                  atendEmAndamento.agendamentosGerados.push({
+                                                                  atendEmAndamento.agendamentoGerado={
                                                                     quando:new Date().toISOString(),
                                                                     dataHora:dataHora,
                                                                     dataTexto:new Date(dataHora).toLocaleDateString('pt-BR'),
                                                                     horaTexto:hora,
                                                                     motivo:agPayload.motivo
-                                                                  });
+                                                                  };
                                                                 }
                                                                 closeNovoAgendamentoModal();
                                                                 await loadPatients();
