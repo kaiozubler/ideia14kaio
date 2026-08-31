@@ -16074,16 +16074,18 @@ let rxSelected = [];
 
                                                   const bodyHtml = itemsHtml + formulasHtml + rodapeHtml;
 
-                                                  const result = await _renderDocumentoPdf({
-                                                    docTitle: 'Receituário Médico',
-                                                    docMark: '℞',
-                                                    patientName: p.name || '',
-                                                    patientAge,
-                                                    patientCpf: p.cpf || '',
-                                                    bodyHtml,
-                                                    filenamePrefix: 'receita',
-                                                    contentDescription: `Receita para ${p.name || 'paciente'}`,
-                                                  });
+                                                   const result = await _renderDocumentoPdf({
+                                                     docTitle: controleEspecial ? 'Receita de Controle Especial' : 'Receituário Médico',
+                                                     docMark: '℞',
+                                                     patientName: p.name || '',
+                                                     patientAge,
+                                                     patientCpf: p.cpf || '',
+                                                     patientAddress: [p.logradouro, p.numero, p.bairro, p.cidade, p.uf].filter(Boolean).join(', ') || p.endereco || '',
+                                                     bodyHtml,
+                                                     filenamePrefix: controleEspecial ? 'receita-controle-especial' : 'receita',
+                                                     contentDescription: `Receita para ${p.name || 'paciente'}`,
+                                                     isControleEspecial: controleEspecial,
+                                                   });
                                                   if (!result) return;
 
                                                   _baixarBlob(result.finalBlob, result.filename);
