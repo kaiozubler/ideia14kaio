@@ -101,7 +101,7 @@
 
   /* O link enviado ao paciente precisa apontar para o site publicado.
      Os domínios de edição/preview exigem login, então nunca são usados no link. */
-  const SITE_PUBLICO = "https://ideia14kaio.lovable.app";
+  const SITE_PUBLICO = "https://medicopilot.lovable.app";
   function publicOrigin() {
     const o = window.location.origin || "";
     const privado = /lovableproject\.com|lovable\.dev|id-preview--|--?dev\.lovable\.app|localhost|127\.0\.0\.1/i.test(o);
