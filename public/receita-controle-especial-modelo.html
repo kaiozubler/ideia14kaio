@@ -429,16 +429,64 @@
         margin-left: 4px;
         vertical-align: middle;
       }
+
+      /* Identificação da via (só no modelo de controle especial) */
+      .via-label {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #5b6660;
+        border: 1px dashed #cbd5e1;
+        border-radius: 6px;
+        padding: 4px 9px;
+        margin-bottom: 10px;
+        display: inline-block;
+      }
+
+      /* Campos de identificação do comprador / fornecedor (Portaria 344/98) */
+      .ce-block {
+        margin-top: 16px;
+        border: 1px solid #e1e4e1;
+        border-radius: 10px;
+        padding: 12px 14px;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .ce-block h3 {
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #5b6660;
+        font-weight: 700;
+        margin-bottom: 9px;
+      }
+
+      .ce-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 16px;
+      }
+
+      .ce-line {
+        flex: 1 1 45%;
+        font-size: 10px;
+        color: #5b6660;
+      }
+
+      .ce-line span.line {
+        display: block;
+        border-bottom: 1px solid #cbd5e1;
+        height: 15px;
+      }
     </style>
   </head>
   <body>
-    <div class="builder-note">
-      <strong>Aviso de montagem</strong> (removido pelo JS antes de gerar o PDF).<br />
-      Substitua todos os <code>{{PLACEHOLDER}}</code> antes de renderizar.<br />
-      Use <code>class="rx-item page-break"</code> para forçar quebra de página antes de um item.
-    </div>
 
     <div class="sheet">
+      <div class="via-label">1ª via — Retenção da farmácia</div>
+
       <!-- CABEÇALHO -->
       <div class="letterhead">
         <div class="brand-row">
@@ -475,6 +523,13 @@
           <div class="patient-field">
             <span class="eyebrow">Data</span>
             <span class="val">{{ISSUE_DATE}}</span>
+          </div>
+        </div>
+
+        <div class="patient-strip" style="margin-top:-8px">
+          <div class="patient-field">
+            <span class="eyebrow">Endereço do paciente</span>
+            <span class="val">{{PATIENT_ADDRESS}}</span>
           </div>
         </div>
 
@@ -526,6 +581,150 @@
             </div>
             <span class="qr-caption">Escaneie para autenticar</span>
           </div>
+        </div>
+      </div>
+
+
+      <!-- IDENTIFICAÇÃO DO COMPRADOR / FORNECEDOR (Portaria SVS/MS 344/98) -->
+      <div class="ce-block">
+        <h3>Identificação do comprador</h3>
+        <div class="ce-grid">
+          <div class="ce-line">Nome completo<span class="line"></span></div>
+          <div class="ce-line">Documento de identidade<span class="line"></span></div>
+          <div class="ce-line">Endereço<span class="line"></span></div>
+          <div class="ce-line">Telefone<span class="line"></span></div>
+        </div>
+        <h3 style="margin-top:12px">Identificação do fornecedor</h3>
+        <div class="ce-grid">
+          <div class="ce-line">Farmácia / drogaria<span class="line"></span></div>
+          <div class="ce-line">Responsável pela dispensação<span class="line"></span></div>
+          <div class="ce-line">Data da dispensação<span class="line"></span></div>
+          <div class="ce-line">Assinatura do farmacêutico<span class="line"></span></div>
+        </div>
+      </div>
+
+      <!-- RODAPÉ -->
+      <div class="doc-footer">
+        <span>{{CLINIC_NAME}} · {{CLINIC_PHONE}}</span>
+        <span>Documento gerado eletronicamente</span>
+      </div>
+    </div>
+    <div class="sheet page-break">
+      <div class="via-label">2ª via — Orientação ao paciente</div>
+
+      <!-- CABEÇALHO -->
+      <div class="letterhead">
+        <div class="brand-row">
+          <div class="brand-left">
+            <div class="logo-slot">
+              <img src="{{LOGO_URL}}" alt="{{CLINIC_NAME}}" />
+            </div>
+            <div>
+              <p class="brand-name">{{CLINIC_NAME}}</p>
+              <p class="brand-meta">{{CLINIC_ADDRESS}}<br />{{CLINIC_PHONE}} · {{CLINIC_EMAIL}}</p>
+            </div>
+          </div>
+          <div class="doctor-block">
+            <strong>{{DOCTOR_NAME}}</strong>
+            {{DOCTOR_SPECIALTY}}<br />
+            CRM {{DOCTOR_CRM}}
+          </div>
+        </div>
+        <div class="accent-rule"></div>
+
+        <div class="patient-strip">
+          <div class="patient-field">
+            <span class="eyebrow">Paciente</span>
+            <span class="val">{{PATIENT_NAME}}</span>
+          </div>
+          <div class="patient-field">
+            <span class="eyebrow">Idade</span>
+            <span class="val">{{PATIENT_AGE}}</span>
+          </div>
+          <div class="patient-field">
+            <span class="eyebrow">CPF</span>
+            <span class="val">{{PATIENT_CPF}}</span>
+          </div>
+          <div class="patient-field">
+            <span class="eyebrow">Data</span>
+            <span class="val">{{ISSUE_DATE}}</span>
+          </div>
+        </div>
+
+        <div class="patient-strip" style="margin-top:-8px">
+          <div class="patient-field">
+            <span class="eyebrow">Endereço do paciente</span>
+            <span class="val">{{PATIENT_ADDRESS}}</span>
+          </div>
+        </div>
+
+        <div class="rx-heading">
+          <div class="rx-mark">{{DOC_MARK}}</div>
+          <h2>{{DOC_TITLE}}</h2>
+        </div>
+      </div>
+
+      <!-- LISTA DE MEDICAMENTOS -->
+      <div class="rx-content">
+        {{PRESCRIPTION_HTML}}
+        <!--
+      ESTRUTURA DE CADA ITEM:
+      <div class="rx-item">
+        <div class="rx-index">1</div>
+        <div>
+          <div class="med-name">Tadalafila <span class="dose">20 mg · BL AL PLAS TRANS × 1</span></div>
+          <div class="med-instructions">1 caixa — 1 comprimido ao dia</div>
+        </div>
+      </div>
+
+      Para quebra de página antes de um item:
+      <div class="rx-item page-break"> ... </div>
+    -->
+      </div>
+
+      <!-- ASSINATURA DIGITAL (removida pelo JS se não configurada) -->
+      <div class="signature-area">
+        <div class="signature-card">
+          <div class="seal">✓</div>
+          <div class="sig-main">
+            <div class="sig-status">Documento assinado digitalmente</div>
+            <div class="sig-meta">
+              Assinado por <b>{{DOCTOR_NAME}}</b> (CRM {{DOCTOR_CRM}}) em <b>{{SIGNATURE_DATETIME}}</b><br />
+              Certificado: {{SIGNATURE_CERT_ID}} · Verificar em: {{VERIFICATION_URL}}
+            </div>
+          </div>
+          <div class="sig-graphic">
+            <div class="sig-graphic-slot">
+              <img src="{{SIGNATURE_IMAGE_URL}}" alt="Assinatura" />
+            </div>
+            <div class="sig-name-line">{{DOCTOR_NAME}}</div>
+          </div>
+          <div class="qr-field">
+            <span class="eyebrow">Verificação</span>
+            <div class="qr-box">
+              <img src="{{QR_CODE_URL}}" alt="QR verificação" />
+            </div>
+            <span class="qr-caption">Escaneie para autenticar</span>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- IDENTIFICAÇÃO DO COMPRADOR / FORNECEDOR (Portaria SVS/MS 344/98) -->
+      <div class="ce-block">
+        <h3>Identificação do comprador</h3>
+        <div class="ce-grid">
+          <div class="ce-line">Nome completo<span class="line"></span></div>
+          <div class="ce-line">Documento de identidade<span class="line"></span></div>
+          <div class="ce-line">Endereço<span class="line"></span></div>
+          <div class="ce-line">Telefone<span class="line"></span></div>
+        </div>
+        <h3 style="margin-top:12px">Identificação do fornecedor</h3>
+        <div class="ce-grid">
+          <div class="ce-line">Farmácia / drogaria<span class="line"></span></div>
+          <div class="ce-line">Responsável pela dispensação<span class="line"></span></div>
+          <div class="ce-line">Data da dispensação<span class="line"></span></div>
+          <div class="ce-line">Assinatura do farmacêutico<span class="line"></span></div>
         </div>
       </div>
 

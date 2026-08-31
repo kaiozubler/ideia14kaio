@@ -15588,7 +15588,7 @@ let rxSelected = [];
                                                    assinar digitalmente (ICP-Brasil) e retornando o PDF final pronto
                                                    para download/upload. Não baixa nem salva nada sozinho — quem chama
                                                    decide o que fazer com o resultado. */
-                                                async function _renderDocumentoPdf({ docTitle, docMark, patientName, patientAge, patientCpf, bodyHtml, filenamePrefix, contentDescription }) {
+                                                async function _renderDocumentoPdf({ docTitle, docMark, patientName, patientAge, patientCpf, patientAddress, bodyHtml, filenamePrefix, contentDescription, isControleEspecial }) {
                                                   // Dados da clínica (localStorage)
                                                   let clinic = {};
                                                   try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
@@ -15609,10 +15609,12 @@ let rxSelected = [];
                                                     clinic.cep ? 'CEP ' + clinic.cep : ''
                                                   ].filter(Boolean).join(' · ');
 
-                                                  // Carrega o template
+                                                  // Carrega o template — receita de controle especial usa o modelo de
+                                                  // 2 vias; todos os outros documentos usam o modelo padrão.
                                                   let html;
                                                   try {
-                                                    const resp = await fetch('/receita-modelo.html', { cache: 'no-store' });
+                                                    const templateUrl = isControleEspecial ? '/receita-controle-especial-modelo.html' : '/receita-modelo.html';
+                                                    const resp = await fetch(templateUrl, { cache: 'no-store' });
                                                     html = await resp.text();
                                                   } catch (e) { showToast && showToast('Falha ao carregar modelo do documento', 'error'); return null; }
 
@@ -15638,6 +15640,7 @@ let rxSelected = [];
                                                     '{{PATIENT_NAME}}'  : _rxEsc(patientName || '—'),
                                                     '{{PATIENT_AGE}}'   : _rxEsc(patientAge || '—'),
                                                     '{{PATIENT_CPF}}'   : _rxEsc(patientCpf || '—'),
+                                                    '{{PATIENT_ADDRESS}}': _rxEsc(patientAddress || '—'),
                                                     '{{ISSUE_DATE}}'    : _rxEsc(new Date().toLocaleDateString('pt-BR')),
                                                     '{{DOC_TITLE}}'     : _rxEsc(docTitle || 'Documento Médico'),
                                                     '{{DOC_MARK}}'      : docMark || '',
@@ -15827,7 +15830,7 @@ let rxSelected = [];
                                                    assinar digitalmente (ICP-Brasil) e retornando o PDF final pronto
                                                    para download/upload. Não baixa nem salva nada sozinho — quem chama
                                                    decide o que fazer com o resultado. */
-                                                async function _renderDocumentoPdf({ docTitle, docMark, patientName, patientAge, patientCpf, bodyHtml, filenamePrefix, contentDescription }) {
+                                                async function _renderDocumentoPdf({ docTitle, docMark, patientName, patientAge, patientCpf, patientAddress, bodyHtml, filenamePrefix, contentDescription, isControleEspecial }) {
                                                   // Dados da clínica (localStorage)
                                                   let clinic = {};
                                                   try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
@@ -15848,10 +15851,12 @@ let rxSelected = [];
                                                     clinic.cep ? 'CEP ' + clinic.cep : ''
                                                   ].filter(Boolean).join(' · ');
 
-                                                  // Carrega o template
+                                                  // Carrega o template — receita de controle especial usa o modelo de
+                                                  // 2 vias; todos os outros documentos usam o modelo padrão.
                                                   let html;
                                                   try {
-                                                    const resp = await fetch('/receita-modelo.html', { cache: 'no-store' });
+                                                    const templateUrl = isControleEspecial ? '/receita-controle-especial-modelo.html' : '/receita-modelo.html';
+                                                    const resp = await fetch(templateUrl, { cache: 'no-store' });
                                                     html = await resp.text();
                                                   } catch (e) { showToast && showToast('Falha ao carregar modelo do documento', 'error'); return null; }
 
@@ -15877,6 +15882,7 @@ let rxSelected = [];
                                                     '{{PATIENT_NAME}}'  : _rxEsc(patientName || '—'),
                                                     '{{PATIENT_AGE}}'   : _rxEsc(patientAge || '—'),
                                                     '{{PATIENT_CPF}}'   : _rxEsc(patientCpf || '—'),
+                                                    '{{PATIENT_ADDRESS}}': _rxEsc(patientAddress || '—'),
                                                     '{{ISSUE_DATE}}'    : _rxEsc(new Date().toLocaleDateString('pt-BR')),
                                                     '{{DOC_TITLE}}'     : _rxEsc(docTitle || 'Documento Médico'),
                                                     '{{DOC_MARK}}'      : docMark || '',
@@ -16006,10 +16012,11 @@ let rxSelected = [];
                                                   setTimeout(() => URL.revokeObjectURL(url), 4000);
                                                 }
 
-                                                async function openReceitaPDF({ items, formulas }) {
-                                      const meds = items || [];
-                                      const formulasList = formulas || [];
-                                      if (!meds.length && !formulasList.length) { showToast && showToast('Nenhum medicamento ou fórmula para a receita', 'warn'); return; }
+                                                 async function openReceitaPDF({ items, formulas }) {
+                                       const meds = items || [];
+                                       const formulasList = formulas || [];
+                                       if (!meds.length && !formulasList.length) { showToast && showToast('Nenhum medicamento ou fórmula para a receita', 'warn'); return; }
+                                       const controleEspecial = meds.some(it => it.tipo_receita);
 
                                       // FIX: currentPatient usa .nasc (não .data_nascimento)
                                       // Se veio do modal "Gerar documento", usa os dados digitados manualmente.
@@ -16035,7 +16042,7 @@ let rxSelected = [];
                                                     <div class="rx-item">
                                                       <div class="rx-index">${i + 1}</div>
                                                       <div>
-                                                        <div class="med-name">${_rxEsc(it.nome)}${it.apresentacao ? ` <span class="dose">${_rxEsc(it.apresentacao)}</span>` : ''}</div>
+                                                        <div class="med-name">${_rxEsc(it.nome)}${it.apresentacao ? ` <span class="dose">${_rxEsc(it.apresentacao)}</span>` : ''}${it.tipo_receita ? ` <span class="med-list-tag">${_rxEsc(it.tipo_receita)}</span>` : ''}</div>
                                                         <div class="med-instructions">${_rxEsc([it.quantidade, it.posologia].filter(Boolean).join(' — ')) || '&nbsp;'}</div>
                                                       </div>
                                                     </div>`).join('');
@@ -16073,16 +16080,18 @@ let rxSelected = [];
 
                                                   const bodyHtml = itemsHtml + formulasHtml + rodapeHtml;
 
-                                                  const result = await _renderDocumentoPdf({
-                                                    docTitle: 'Receituário Médico',
-                                                    docMark: '℞',
-                                                    patientName: p.name || '',
-                                                    patientAge,
-                                                    patientCpf: p.cpf || '',
-                                                    bodyHtml,
-                                                    filenamePrefix: 'receita',
-                                                    contentDescription: `Receita para ${p.name || 'paciente'}`,
-                                                  });
+                                                   const result = await _renderDocumentoPdf({
+                                                     docTitle: controleEspecial ? 'Receita de Controle Especial' : 'Receituário Médico',
+                                                     docMark: '℞',
+                                                     patientName: p.name || '',
+                                                     patientAge,
+                                                     patientCpf: p.cpf || '',
+                                                     patientAddress: [p.logradouro, p.numero, p.bairro, p.cidade, p.uf].filter(Boolean).join(', ') || p.endereco || '',
+                                                     bodyHtml,
+                                                     filenamePrefix: controleEspecial ? 'receita-controle-especial' : 'receita',
+                                                     contentDescription: `Receita para ${p.name || 'paciente'}`,
+                                                     isControleEspecial: controleEspecial,
+                                                   });
                                                   if (!result) return;
 
                                                   _baixarBlob(result.finalBlob, result.filename);
@@ -17369,6 +17378,7 @@ let rxSelected = [];
                                                     '{{PATIENT_NAME}}'  : _rxEsc(patientName || '—'),
                                                     '{{PATIENT_AGE}}'   : _rxEsc(patientAge || '—'),
                                                     '{{PATIENT_CPF}}'   : _rxEsc(patientCpf || '—'),
+                                                    '{{PATIENT_ADDRESS}}': _rxEsc(patientAddress || '—'),
                                                     '{{ISSUE_DATE}}'    : _rxEsc(new Date().toLocaleDateString('pt-BR')),
                                                     '{{DOC_TITLE}}'     : 'Solicitação de Exame',
                                                     '{{DOC_MARK}}'      : '',
