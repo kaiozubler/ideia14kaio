@@ -16006,10 +16006,11 @@ let rxSelected = [];
                                                   setTimeout(() => URL.revokeObjectURL(url), 4000);
                                                 }
 
-                                                async function openReceitaPDF({ items, formulas }) {
-                                      const meds = items || [];
-                                      const formulasList = formulas || [];
-                                      if (!meds.length && !formulasList.length) { showToast && showToast('Nenhum medicamento ou fórmula para a receita', 'warn'); return; }
+                                                 async function openReceitaPDF({ items, formulas }) {
+                                       const meds = items || [];
+                                       const formulasList = formulas || [];
+                                       if (!meds.length && !formulasList.length) { showToast && showToast('Nenhum medicamento ou fórmula para a receita', 'warn'); return; }
+                                       const controleEspecial = meds.some(it => it.tipo_receita);
 
                                       // FIX: currentPatient usa .nasc (não .data_nascimento)
                                       // Se veio do modal "Gerar documento", usa os dados digitados manualmente.
