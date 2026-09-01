@@ -30,6 +30,32 @@ function onlyDigits(v?: string | null) {
 
 type Db = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
 
+// Confirma que a chamada realmente veio da Meta (HMAC-SHA256 do corpo com o App Secret).
+async function verifySignature(req: Request, rawBody: string): Promise<boolean> {
+  const appSecret = process.env.WHATSAPP_APP_SECRET;
+  if (!appSecret) return true; // segredo não configurado — mantém comportamento anterior
+  const signature = req.headers.get("x-hub-signature-256");
+  if (!signature) return false;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(appSecret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
+  const expected =
+    "sha256=" +
+    Array.from(new Uint8Array(mac))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  // Comparação em tempo constante
+  if (signature.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= signature.charCodeAt(i) ^ expected.charCodeAt(i);
+  return diff === 0;
+}
+
 async function enviarWhatsApp(phoneNumberId: string, para: string, texto: string) {
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
   if (!token) {
