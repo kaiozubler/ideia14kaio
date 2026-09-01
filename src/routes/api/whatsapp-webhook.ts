@@ -158,9 +158,16 @@ export const Route = createFileRoute("/api/whatsapp-webhook")({
       },
 
       POST: async ({ request }) => {
+        const rawBody = await request.text();
+
+        const isValid = await verifySignature(request, rawBody);
+        if (!isValid) {
+          return new Response("Invalid signature", { status: 401 });
+        }
+
         let body: any;
         try {
-          body = await request.json();
+          body = JSON.parse(rawBody);
         } catch {
           return new Response("Invalid JSON", { status: 400 });
         }
@@ -169,7 +176,8 @@ export const Route = createFileRoute("/api/whatsapp-webhook")({
         const value = body?.entry?.[0]?.changes?.[0]?.value;
         const msg = value?.messages?.[0];
         const phoneNumberId: string | undefined = value?.metadata?.phone_number_id;
-        const textoRecebido: string = msg?.text?.body || "";
+        const messageType: string = msg?.type || "text";
+        const textoRecebido: string = messageType === "text" ? (msg?.text?.body || "") : `[mensagem do tipo ${messageType}]`;
         const nomeWhatsapp: string = value?.contacts?.[0]?.profile?.name || "";
         const telefonePaciente = onlyDigits(msg?.from);
 
@@ -182,17 +190,30 @@ export const Route = createFileRoute("/api/whatsapp-webhook")({
         if (!apiKey) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+        // Registra a mensagem recebida no log bruto de mensagens.
+        await supabaseAdmin.from("whatsapp_messages").insert({
+          wa_from: telefonePaciente,
+          direction: "inbound",
+          message_type: messageType,
+          content: textoRecebido,
+          wa_message_id: msg.id ?? null,
+        });
+
         const config = await resolverMedicoPorNumero(supabaseAdmin, phoneNumberId);
         if (!config) {
           console.warn("[whatsapp-webhook] Nenhum médico configurado para phone_number_id", phoneNumberId);
           return Response.json({ ok: true });
         }
         if (!config.agendamento_ativo) {
-          await enviarWhatsApp(
-            phoneNumberId,
-            telefonePaciente,
-            "Olá! O agendamento automático por aqui está temporariamente desativado. Por favor, entre em contato diretamente com a clínica.",
-          );
+          const aviso = "Olá! O agendamento automático por aqui está temporariamente desativado. Por favor, entre em contato diretamente com a clínica.";
+          await enviarWhatsApp(phoneNumberId, telefonePaciente, aviso);
+          await supabaseAdmin.from("whatsapp_messages").insert({
+            wa_from: telefonePaciente,
+            direction: "outbound",
+            message_type: "text",
+            content: aviso,
+          });
           return Response.json({ ok: true });
         }
 
