@@ -256,6 +256,12 @@ export const Route = createFileRoute("/api/whatsapp-webhook")({
             [...novoHistorico, { role: "assistant", content: reply }],
           );
           await enviarWhatsApp(phoneNumberId, telefonePaciente, reply);
+          await supabaseAdmin.from("whatsapp_messages").insert({
+            wa_from: telefonePaciente,
+            direction: "outbound",
+            message_type: "text",
+            content: reply,
+          });
         } catch (e) {
           console.error("[whatsapp-webhook] Falha ao processar mensagem:", e);
           await enviarWhatsApp(
