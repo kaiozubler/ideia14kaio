@@ -355,9 +355,7 @@
         const tk = await this.fetchToken();
         const access_token = tk.access_token;
         const subproto = tk.mode === "grant" ? "bearer" : "token";
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation: true, noiseSuppression: true },
-        });
+        const stream = await this.getMicStream();
         this.stream = stream;
         const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
           ? "audio/webm;codecs=opus"
