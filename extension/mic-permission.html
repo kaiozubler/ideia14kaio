@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Permitir microfone — MediCopilot</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #f8fafc;
+        color: #0f172a;
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 24px;
+      }
+      .card {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+        max-width: 420px;
+        padding: 24px;
+        text-align: center;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 8px;
+      }
+      p {
+        font-size: 14px;
+        color: #475569;
+        line-height: 1.5;
+      }
+      button {
+        margin-top: 12px;
+        padding: 10px 16px;
+        border: 0;
+        border-radius: 10px;
+        background: #2563eb;
+        color: #fff;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      #st {
+        margin-top: 12px;
+        font-size: 13px;
+      }
+      .ok {
+        color: #16a34a;
+      }
+      .err {
+        color: #dc2626;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Permitir o microfone</h1>
+      <p>
+        O painel lateral não consegue exibir o pedido de permissão do Chrome. Clique no botão abaixo e escolha
+        <b>Permitir</b> na janela do navegador. Depois disso, o microfone funciona direto no painel.
+      </p>
+      <button id="ask">Permitir microfone</button>
+      <div id="st"></div>
+    </div>
+    <script src="mic-permission.js"></script>
+  </body>
+</html>
