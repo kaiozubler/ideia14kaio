@@ -333,6 +333,29 @@
     active: false,
     baseText: "",
 
+    /* O Chrome não exibe o pedido de permissão de microfone dentro do painel
+       lateral — ele descarta na hora ("Permission dismissed"). Quando isso
+       acontece, abrimos uma aba da própria extensão só para o médico conceder
+       a permissão uma vez; depois o painel passa a capturar normalmente. */
+    async getMicStream() {
+      const constraints = { audio: { echoCancellation: true, noiseSuppression: true } };
+      try {
+        return await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (e) {
+        const name = e?.name || "";
+        const msg = String(e?.message || e);
+        const needsPrompt =
+          name === "NotAllowedError" || /dismissed|denied|permission/i.test(msg);
+        if (!needsPrompt) throw e;
+        try {
+          chrome.tabs.create({ url: chrome.runtime.getURL("mic-permission.html") });
+        } catch {}
+        throw new Error(
+          "Abrimos uma aba para você autorizar o microfone. Clique em Permitir e depois toque no microfone novamente.",
+        );
+      }
+    },
+
     async fetchToken() {
       const token = await MC_AUTH.token();
       if (!token) throw new Error("Sessão expirada. Entre novamente.");
@@ -355,9 +378,7 @@
         const tk = await this.fetchToken();
         const access_token = tk.access_token;
         const subproto = tk.mode === "grant" ? "bearer" : "token";
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation: true, noiseSuppression: true },
-        });
+        const stream = await this.getMicStream();
         this.stream = stream;
         const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
           ? "audio/webm;codecs=opus"
