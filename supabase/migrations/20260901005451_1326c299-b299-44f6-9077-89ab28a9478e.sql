@@ -1,0 +1,1 @@
+CREATE POLICY "whatsapp_messages server only" ON public.whatsapp_messages FOR ALL TO authenticated USING (false) WITH CHECK (false);

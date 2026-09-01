@@ -30,6 +30,32 @@ function onlyDigits(v?: string | null) {
 
 type Db = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
 
+// Confirma que a chamada realmente veio da Meta (HMAC-SHA256 do corpo com o App Secret).
+async function verifySignature(req: Request, rawBody: string): Promise<boolean> {
+  const appSecret = process.env.WHATSAPP_APP_SECRET;
+  if (!appSecret) return true; // segredo não configurado — mantém comportamento anterior
+  const signature = req.headers.get("x-hub-signature-256");
+  if (!signature) return false;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(appSecret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
+  const expected =
+    "sha256=" +
+    Array.from(new Uint8Array(mac))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  // Comparação em tempo constante
+  if (signature.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= signature.charCodeAt(i) ^ expected.charCodeAt(i);
+  return diff === 0;
+}
+
 async function enviarWhatsApp(phoneNumberId: string, para: string, texto: string) {
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
   if (!token) {
@@ -132,9 +158,16 @@ export const Route = createFileRoute("/api/whatsapp-webhook")({
       },
 
       POST: async ({ request }) => {
+        const rawBody = await request.text();
+
+        const isValid = await verifySignature(request, rawBody);
+        if (!isValid) {
+          return new Response("Invalid signature", { status: 401 });
+        }
+
         let body: any;
         try {
-          body = await request.json();
+          body = JSON.parse(rawBody);
         } catch {
           return new Response("Invalid JSON", { status: 400 });
         }
@@ -143,7 +176,8 @@ export const Route = createFileRoute("/api/whatsapp-webhook")({
         const value = body?.entry?.[0]?.changes?.[0]?.value;
         const msg = value?.messages?.[0];
         const phoneNumberId: string | undefined = value?.metadata?.phone_number_id;
-        const textoRecebido: string = msg?.text?.body || "";
+        const messageType: string = msg?.type || "text";
+        const textoRecebido: string = messageType === "text" ? (msg?.text?.body || "") : `[mensagem do tipo ${messageType}]`;
         const nomeWhatsapp: string = value?.contacts?.[0]?.profile?.name || "";
         const telefonePaciente = onlyDigits(msg?.from);
 
@@ -156,17 +190,30 @@ export const Route = createFileRoute("/api/whatsapp-webhook")({
         if (!apiKey) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+        // Registra a mensagem recebida no log bruto de mensagens.
+        await supabaseAdmin.from("whatsapp_messages").insert({
+          wa_from: telefonePaciente,
+          direction: "inbound",
+          message_type: messageType,
+          content: textoRecebido,
+          wa_message_id: msg.id ?? null,
+        });
+
         const config = await resolverMedicoPorNumero(supabaseAdmin, phoneNumberId);
         if (!config) {
           console.warn("[whatsapp-webhook] Nenhum médico configurado para phone_number_id", phoneNumberId);
           return Response.json({ ok: true });
         }
         if (!config.agendamento_ativo) {
-          await enviarWhatsApp(
-            phoneNumberId,
-            telefonePaciente,
-            "Olá! O agendamento automático por aqui está temporariamente desativado. Por favor, entre em contato diretamente com a clínica.",
-          );
+          const aviso = "Olá! O agendamento automático por aqui está temporariamente desativado. Por favor, entre em contato diretamente com a clínica.";
+          await enviarWhatsApp(phoneNumberId, telefonePaciente, aviso);
+          await supabaseAdmin.from("whatsapp_messages").insert({
+            wa_from: telefonePaciente,
+            direction: "outbound",
+            message_type: "text",
+            content: aviso,
+          });
           return Response.json({ ok: true });
         }
 
@@ -209,6 +256,12 @@ export const Route = createFileRoute("/api/whatsapp-webhook")({
             [...novoHistorico, { role: "assistant", content: reply }],
           );
           await enviarWhatsApp(phoneNumberId, telefonePaciente, reply);
+          await supabaseAdmin.from("whatsapp_messages").insert({
+            wa_from: telefonePaciente,
+            direction: "outbound",
+            message_type: "text",
+            content: reply,
+          });
         } catch (e) {
           console.error("[whatsapp-webhook] Falha ao processar mensagem:", e);
           await enviarWhatsApp(
