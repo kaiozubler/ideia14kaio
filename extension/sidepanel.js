@@ -324,6 +324,29 @@
      (endpoint /api/deepgram-token), só que pela rota espelho pública da
      extensão (/api/public/extensao/deepgram-token), que exige o Bearer
      token da sessão por rodar em outra origem. */
+    /* O Chrome não exibe o pedido de permissão de microfone dentro do painel
+     lateral — ele descarta na hora ("Permission dismissed"). Quando isso
+     acontece, abrimos uma aba da própria extensão só para o médico conceder
+     a permissão uma vez; depois o painel passa a capturar normalmente. */
+  async function getMicStream() {
+    const constraints = { audio: { echoCancellation: true, noiseSuppression: true } };
+    try {
+      return await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (e) {
+      const name = e?.name || "";
+      const msg = String(e?.message || e);
+      const needsPrompt =
+        name === "NotAllowedError" || /dismissed|denied|permission/i.test(msg);
+      if (!needsPrompt) throw e;
+      try {
+        chrome.tabs.create({ url: chrome.runtime.getURL("mic-permission.html") });
+      } catch {}
+      throw new Error(
+        "Abrimos uma aba para você autorizar o microfone. Clique em Permitir e depois toque no microfone novamente.",
+      );
+    }
+  }
+
   const dgMic = {
     ws: null,
     mediaRecorder: null,
@@ -332,29 +355,6 @@
     starting: false,
     active: false,
     baseText: "",
-
-    /* O Chrome não exibe o pedido de permissão de microfone dentro do painel
-       lateral — ele descarta na hora ("Permission dismissed"). Quando isso
-       acontece, abrimos uma aba da própria extensão só para o médico conceder
-       a permissão uma vez; depois o painel passa a capturar normalmente. */
-    async getMicStream() {
-      const constraints = { audio: { echoCancellation: true, noiseSuppression: true } };
-      try {
-        return await navigator.mediaDevices.getUserMedia(constraints);
-      } catch (e) {
-        const name = e?.name || "";
-        const msg = String(e?.message || e);
-        const needsPrompt =
-          name === "NotAllowedError" || /dismissed|denied|permission/i.test(msg);
-        if (!needsPrompt) throw e;
-        try {
-          chrome.tabs.create({ url: chrome.runtime.getURL("mic-permission.html") });
-        } catch {}
-        throw new Error(
-          "Abrimos uma aba para você autorizar o microfone. Clique em Permitir e depois toque no microfone novamente.",
-        );
-      }
-    },
 
     async fetchToken() {
       const token = await MC_AUTH.token();
@@ -378,7 +378,7 @@
         const tk = await this.fetchToken();
         const access_token = tk.access_token;
         const subproto = tk.mode === "grant" ? "bearer" : "token";
-        const stream = await this.getMicStream();
+        const stream = await getMicStream();
         this.stream = stream;
         const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
           ? "audio/webm;codecs=opus"
