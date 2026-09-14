@@ -1842,7 +1842,7 @@
                                                       #m-video .mhd{cursor:move;user-select:none}
                                                       #m-video.minimized{
                                                         width:280px !important;
-                                                        height:210px !important;
+                                                        height:236px !important;
                                                         border-radius:18px !important;
                                                         overflow:hidden !important;
                                                         box-shadow:0 16px 50px rgba(0,0,0,.35),0 6px 20px rgba(0,0,0,.22) !important;
@@ -1890,6 +1890,19 @@
                                                       #m-video.minimized .vc-tile{border-radius:0;border:none}
                                                       #m-video.minimized .vc-tile-name{display:none}
                                                       #m-video.minimized .vc-tile-avatar{transform:scale(.55)}
+                                                      /* --- PiP do médico (espelhado) sobre o vídeo do paciente, no modal minimizado --- */
+                                                      #m-video.minimized .vc-tile.vc-tile-pip{
+                                                        position:absolute;
+                                                        bottom:9px;right:9px;
+                                                        width:70px;height:92px;
+                                                        border-radius:12px !important;
+                                                        border:2px solid rgba(255,255,255,.85) !important;
+                                                        box-shadow:0 6px 16px rgba(0,0,0,.4);
+                                                        z-index:6;
+                                                        background:#1e293b;
+                                                      }
+                                                      #m-video.minimized .vc-tile.vc-tile-pip video{transform:scaleX(-1)}
+                                                      #m-video.minimized .vc-tile.vc-tile-pip .vc-tile-avatar{width:34px;height:34px;font-size:11px}
 
                                                       /* ===== VIDEOCHAMADA — LIQUID GLASS (call object daily-js) ===== */
                                                       .vc-body{position:relative;display:flex;overflow:hidden;background:#0b1220}
@@ -2098,6 +2111,16 @@
 .dialer-trigger.incall{background:linear-gradient(135deg,#34d399,#059669);color:#fff;border-color:transparent;box-shadow:0 4px 14px -3px rgba(5,150,105,.5)}
 .dialer-pulse{width:7px;height:7px;background:#34d399;border-radius:50%;position:absolute;top:-2px;right:-2px;border:1.5px solid #fff;animation:dialerPulse 1.4s ease-in-out infinite}
 @keyframes dialerPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.3)}}
+
+/* ========== ATALHO DE VIDEOCHAMADA EM ANDAMENTO (topbar) ========== */
+.videocall-topbar-chip{display:none;align-items:center;gap:6px;height:28px;padding:0 12px 0 10px;margin-right:2px;border-radius:999px;border:none;background:linear-gradient(135deg,#34d399,#059669);color:#fff;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;box-shadow:0 4px 14px -3px rgba(5,150,105,.5);transition:filter .14s,transform .12s;position:relative}
+.videocall-topbar-chip.show{display:inline-flex}
+.videocall-topbar-chip:hover{filter:brightness(1.05)}
+.videocall-topbar-chip:active{transform:translateY(1px)}
+.videocall-topbar-chip .ti{font-size:14px;flex-shrink:0}
+.videocall-topbar-chip .vc-chip-dot{width:6px;height:6px;background:#fff;border-radius:50%;flex-shrink:0;animation:dialerPulse 1.4s ease-in-out infinite}
+.videocall-topbar-chip .vc-chip-timer{font-variant-numeric:tabular-nums;opacity:.9}
+@media (max-width:900px){.videocall-topbar-chip span.vc-chip-lbl{display:none}.videocall-topbar-chip{padding:0 9px}}
 .dialer-panel{position:fixed;top:62px;right:16px;width:288px;background:rgba(255,255,255,.82);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border:1px solid rgba(255,255,255,.9);border-radius:24px;box-shadow:0 24px 60px -12px rgba(5,60,45,.22),0 2px 8px rgba(0,0,0,.06);z-index:1100;overflow:hidden;display:none}
 .dialer-panel.open{display:block}
 .dialer-blob{position:absolute;border-radius:50%;filter:blur(40px);opacity:.45;pointer-events:none}
@@ -2422,6 +2445,20 @@
                 <i class="ti ti-sparkles"></i>
               </button>
             </div>
+            <!-- ATALHO: chamada de vídeo em andamento -->
+            <button
+              type="button"
+              class="videocall-topbar-chip"
+              id="videocall-topbar-chip"
+              onclick="restoreVideoCallFromTopbar()"
+              title="Voltar para a chamada de vídeo"
+              style="display:none"
+            >
+              <i class="ti ti-video"></i>
+              <span class="vc-chip-dot"></span>
+              <span class="vc-chip-lbl">Chamada em andamento</span>
+              <span class="vc-chip-timer" id="videocall-topbar-chip-timer">00:00</span>
+            </button>
             <!-- DISCADOR -->
             <div class="dialer-wrap" id="dialer-wrap">
               <button class="dialer-trigger" id="dialer-trigger" onclick="dialerToggle()" title="Discador">
@@ -19623,7 +19660,10 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                   window.__vcElapsed++;
                                                                   const el=document.getElementById('vc-call-timer');
                                                                   if(el) el.textContent=vcFmtTime(window.__vcElapsed);
+                                                                  const chipTimer=document.getElementById('videocall-topbar-chip-timer');
+                                                                  if(chipTimer) chipTimer.textContent=vcFmtTime(window.__vcElapsed);
                                                                 },1000);
+                                                                showVideoCallTopbarChip();
                                                                 renderVcGrid();
                                                               }catch(err){
                                                                 if(btn){ btn.disabled=false; btn.innerHTML='<i class="ti ti-door-enter"></i> Entrar na sala'; }
@@ -19640,26 +19680,40 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               try{ parts=cf.participants()||{}; }catch{}
                                                               let list=Object.values(parts);
                                                               const minimized=modal && modal.classList.contains('minimized');
+                                                              // Participante exibido em miniatura (PiP) sobre o vídeo principal —
+                                                              // só existe no modo minimizado e quando há médico + paciente na sala.
+                                                              let pipParticipant=null;
                                                               if(minimized){
-                                                                // No modo minimizado mostra preferencialmente o outro participante.
+                                                                // No modo minimizado, o paciente fica em destaque (tela cheia da
+                                                                // janela pequena) e o médico aparece espelhado em um PiP no canto.
                                                                 const remote=list.filter(p=>!p.local);
-                                                                list = remote.length ? [remote[0]] : [list.find(p=>p.local)||list[0]];
+                                                                const localP=list.find(p=>p.local);
+                                                                if(remote.length){
+                                                                  list=[remote[0]];
+                                                                  pipParticipant=localP||null;
+                                                                }else{
+                                                                  list=[localP||list[0]];
+                                                                }
                                                                 grid.className='vc-grid';
                                                               }else{
                                                                 grid.className='vc-grid'+(list.length>=3?' n4':list.length===2?' n2':'');
                                                               }
-                                                              grid.innerHTML=list.map(p=>{
+                                                              const vcTileHtml=(p, tileId, extraClass)=>{
                                                                 const name = p.local ? 'Você' : (p.user_name || 'Participante');
                                                                 const hasVideo = p.tracks && p.tracks.video && p.tracks.video.state==='playable' && p.tracks.video.persistentTrack;
                                                                 const micOn = p.audio !== false;
-                                                                return '<div class="vc-tile'+(p.speaking?' speaking':'')+'" id="vc-tile-'+p.session_id+'">'
+                                                                return '<div class="vc-tile'+(extraClass?' '+extraClass:'')+(p.speaking?' speaking':'')+'" id="'+tileId+'">'
                                                                   + '<video autoplay playsinline'+(p.local?' muted':'')+'></video>'
                                                                   + (hasVideo ? '' : '<div class="vc-tile-avatar">'+vcInitials(name)+'</div>')
                                                                   + '<div class="vc-tile-name"><i class="ti ti-microphone'+(micOn?'':'-off')+'"></i> '+name+'</div>'
                                                                   + '</div>';
-                                                              }).join('');
-                                                              list.forEach(p=>{
-                                                                const tile=document.getElementById('vc-tile-'+p.session_id);
+                                                              };
+                                                              grid.innerHTML=list.map(p=>vcTileHtml(p,'vc-tile-'+p.session_id)).join('')
+                                                                + (pipParticipant ? vcTileHtml(pipParticipant,'vc-tile-pip','vc-tile-pip') : '');
+                                                              const attachTargets=list.map(p=>({p,id:'vc-tile-'+p.session_id}));
+                                                              if(pipParticipant) attachTargets.push({p:pipParticipant,id:'vc-tile-pip'});
+                                                              attachTargets.forEach(({p,id})=>{
+                                                                const tile=document.getElementById(id);
                                                                 const videoEl=tile && tile.querySelector('video');
                                                                 if(!videoEl) return;
                                                                 const vt = p.tracks && p.tracks.video && p.tracks.video.persistentTrack;
@@ -19810,6 +19864,31 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               m.classList.remove('minimized');
                                                               document.getElementById('modal-overlay').classList.remove('open');
                                                               document.getElementById('modal-overlay').classList.remove('video-floating');
+                                                              hideVideoCallTopbarChip();
+                                                            }
+
+                                                            /* ===== ATALHO DE VIDEOCHAMADA NO TOPBAR ===== */
+                                                            function showVideoCallTopbarChip(){
+                                                              const chip=document.getElementById('videocall-topbar-chip');
+                                                              if(chip) chip.classList.add('show');
+                                                            }
+                                                            function hideVideoCallTopbarChip(){
+                                                              const chip=document.getElementById('videocall-topbar-chip');
+                                                              if(chip) chip.classList.remove('show');
+                                                            }
+                                                            function restoreVideoCallFromTopbar(){
+                                                              if(!window.__vcJoined) return;
+                                                              const m=document.getElementById('m-video');
+                                                              const ov=document.getElementById('modal-overlay');
+                                                              if(!m||!ov) return;
+                                                              m.style.display='flex';m.style.flexDirection='column';
+                                                              m.classList.remove('minimized');
+                                                              ov.classList.add('open');
+                                                              ov.classList.remove('video-floating');
+                                                              const icon=document.getElementById('vc-minimize-icon');
+                                                              if(icon) icon.className='ti ti-minus';
+                                                              vcShowView('call');
+                                                              renderVcGrid();
                                                             }
 
                                                             async function toggleCallTranscription(){
