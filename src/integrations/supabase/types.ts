@@ -24,6 +24,7 @@ export type Database = {
           id: string
           id_medico: string
           medico_nome: string | null
+          modalidade: string
           motivo: string | null
           observacoes: string | null
           origem: string | null
@@ -33,6 +34,9 @@ export type Database = {
           telefone: string | null
           tipo: string | null
           updated_at: string
+          video_link_enviado_em: string | null
+          video_room_name: string | null
+          video_room_url: string | null
         }
         Insert: {
           cpf?: string | null
@@ -43,6 +47,7 @@ export type Database = {
           id?: string
           id_medico: string
           medico_nome?: string | null
+          modalidade?: string
           motivo?: string | null
           observacoes?: string | null
           origem?: string | null
@@ -52,6 +57,9 @@ export type Database = {
           telefone?: string | null
           tipo?: string | null
           updated_at?: string
+          video_link_enviado_em?: string | null
+          video_room_name?: string | null
+          video_room_url?: string | null
         }
         Update: {
           cpf?: string | null
@@ -62,6 +70,7 @@ export type Database = {
           id?: string
           id_medico?: string
           medico_nome?: string | null
+          modalidade?: string
           motivo?: string | null
           observacoes?: string | null
           origem?: string | null
@@ -71,6 +80,9 @@ export type Database = {
           telefone?: string | null
           tipo?: string | null
           updated_at?: string
+          video_link_enviado_em?: string | null
+          video_room_name?: string | null
+          video_room_url?: string | null
         }
         Relationships: [
           {
@@ -1468,6 +1480,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      protocolo_estudio_rascunhos: {
+        Row: {
+          created_at: string
+          grafo: Json
+          id: string
+          titulo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          grafo?: Json
+          id?: string
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          grafo?: Json
+          id?: string
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       protocolo_regras: {
         Row: {
