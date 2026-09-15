@@ -8,13 +8,21 @@ export const Route = createFileRoute("/api/daily-room")({
         if (!apiKey) {
           return new Response("Missing DAILY_API_KEY", { status: 500 });
         }
-        let body: { name?: string } = {};
+        let body: { name?: string; exp?: number; createOnly?: boolean } = {};
         try {
-          body = (await request.json()) as { name?: string };
+          body = (await request.json()) as {
+            name?: string;
+            exp?: number;
+            createOnly?: boolean;
+          };
         } catch {
           /* no body */
         }
-        const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 2; // 2h
+        // Por padrão a sala expira em 2h (chamada iniciada agora). Quando a
+        // sala é pré-criada no momento do agendamento (consulta pode ser
+        // dias/semanas no futuro), o chamador informa `exp` calculado a
+        // partir da data/hora da consulta (+ duração + margem).
+        const exp = body.exp || Math.floor(Date.now() / 1000) + 60 * 60 * 2;
         const dgKey = process.env.DEEPGRAM_API_KEY;
         const payload: Record<string, unknown> = {
           privacy: "public",
@@ -76,6 +84,12 @@ export const Route = createFileRoute("/api/daily-room")({
           }
         }
         const roomName = data.name || body.name;
+        // Modo "createOnly": usado ao pré-criar a sala no agendamento, antes
+        // de haver um médico logado na chamada. Não gera token de host —
+        // isso é feito depois, quando a chamada é de fato aberta.
+        if (body.createOnly) {
+          return Response.json({ url: data.url, name: roomName, expires_at: exp });
+        }
         let token: string | undefined;
         if (roomName) {
           const tr = await fetch("https://api.daily.co/v1/meeting-tokens", {

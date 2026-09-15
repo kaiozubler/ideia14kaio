@@ -2044,6 +2044,9 @@
                                                       .lgm-chip.active{border-color:transparent;color:#fff}
                                                       .lgm-chip.active.emerald{background:linear-gradient(135deg,#34d399,#059669)}
                                                       .lgm-chip.active.violet{background:linear-gradient(135deg,#a78bfa,#7c3aed)}
+                                                      .lgm-chip.active.sky{background:linear-gradient(135deg,#38bdf8,#0284c7)}
+                                                      .lgm-hint{display:flex;align-items:flex-start;gap:7px;font-size:11.5px;color:#64748b;line-height:1.4;margin-top:-2px}
+                                                      .lgm-hint .ti{font-size:14px;flex-shrink:0;margin-top:1px;color:#0284c7}
                                                       .lgm-foot{display:flex;justify-content:flex-end;gap:10px;padding:16px 26px;border-top:1px solid rgba(255,255,255,.6);background:rgba(255,255,255,.3)}
                                                       .lgm-btn{padding:10px 20px;border-radius:999px;border:none;font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px;cursor:pointer}
                                                       .lgm-btn.ghost{background:rgba(255,255,255,.7);color:#475569;border:1px solid rgba(203,213,225,.8)}
@@ -6271,6 +6274,18 @@
               <button type="button" class="lgm-chip violet" data-val="Retorno" onclick="agmSetTipo('Retorno')">Retorno</button>
               <button type="button" class="lgm-chip violet" data-val="Exame" onclick="agmSetTipo('Exame')">Exame</button>
               <button type="button" class="lgm-chip violet" data-val="Procedimento" onclick="agmSetTipo('Procedimento')">Procedimento</button>
+            </div>
+          </div>
+
+          <div class="lgm-fld">
+            <label>Modalidade</label>
+            <div class="lgm-chip-group" id="lgm-modalidade-group">
+              <button type="button" class="lgm-chip sky active" data-val="presencial" onclick="agmSetModalidade('presencial')"><i class="ti ti-building" style="margin-right:4px"></i>Presencial</button>
+              <button type="button" class="lgm-chip emerald" data-val="video" onclick="agmSetModalidade('video')"><i class="ti ti-video" style="margin-right:4px"></i>Vídeo por link</button>
+            </div>
+            <div class="lgm-hint" id="lgm-modalidade-hint" style="display:none">
+              <i class="ti ti-info-circle"></i>
+              <span>Um link de chamada será gerado e enviado ao paciente antes da consulta. O médico acessa a mesma sala direto pelo atendimento.</span>
             </div>
           </div>
 
@@ -19193,7 +19208,7 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                criando um paciente novo apenas com o nome quando não há
                                                                seleção, e grava o agendamento em `agendamentos`.
                                                                ================================================================ */
-                                                            const AGM_STATE={selectedPatientId:null,duracao:30,tipo:'Consulta',searchTimer:null};
+                                                            const AGM_STATE={selectedPatientId:null,duracao:30,tipo:'Consulta',modalidade:'presencial',searchTimer:null};
 
                                                             function agmFindDoctorByPatientText(txt){
                                                               if(!txt)return null;
@@ -19215,12 +19230,14 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                             }
 
                                                             function agmResetForm(){
-                                                              AGM_STATE.selectedPatientId=null;AGM_STATE.duracao=30;AGM_STATE.tipo='Consulta';
+                                                              AGM_STATE.selectedPatientId=null;AGM_STATE.duracao=30;AGM_STATE.tipo='Consulta';AGM_STATE.modalidade='presencial';
                                                               ['lgm-nome','lgm-cpf','lgm-tel','lgm-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
                                                               const medico=document.getElementById('lgm-medico');if(medico)medico.value='';
                                                               const spec=document.getElementById('lgm-especialidade');if(spec)spec.value='';
                                                               document.querySelectorAll('#lgm-duracao-group .lgm-chip').forEach(b=>b.classList.toggle('active',b.dataset.val==='30'));
                                                               document.querySelectorAll('#lgm-tipo-group .lgm-chip').forEach(b=>b.classList.toggle('active',b.dataset.val==='Consulta'));
+                                                              document.querySelectorAll('#lgm-modalidade-group .lgm-chip').forEach(b=>b.classList.toggle('active',b.dataset.val==='presencial'));
+                                                              const modHint=document.getElementById('lgm-modalidade-hint');if(modHint)modHint.style.display='none';
                                                               const now=new Date();
                                                               const pad=n=>String(n).padStart(2,'0');
                                                               const dia=document.getElementById('lgm-dia');if(dia)dia.value=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate());
@@ -19343,6 +19360,34 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               AGM_STATE.tipo=v;
                                                               document.querySelectorAll('#lgm-tipo-group .lgm-chip').forEach(b=>b.classList.toggle('active',b.dataset.val===v));
                                                             }
+                                                            function agmSetModalidade(v){
+                                                              AGM_STATE.modalidade=v;
+                                                              document.querySelectorAll('#lgm-modalidade-group .lgm-chip').forEach(b=>b.classList.toggle('active',b.dataset.val===v));
+                                                              const hint=document.getElementById('lgm-modalidade-hint');
+                                                              if(hint) hint.style.display=(v==='video')?'flex':'none';
+                                                            }
+
+                                                            // Cria (ou reaproveita, se já existir) a sala Daily de um agendamento
+                                                            // de vídeo e grava video_room_name/video_room_url na própria linha —
+                                                            // esse é o link que vai para o paciente e que o médico reabre depois
+                                                            // pelo atendimento (mesma sala, sem gerar outra na hora da chamada).
+                                                            async function agmCreateVideoRoomForAgendamento(agendamentoId,dataHoraIso,duracaoMin){
+                                                              const name=('consulta-'+agendamentoId).toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,40);
+                                                              // Expira a sala 3h depois do fim previsto da consulta — dá margem
+                                                              // para atrasos sem deixar a sala aberta indefinidamente.
+                                                              const exp=Math.floor(new Date(dataHoraIso).getTime()/1000)+((duracaoMin||30)*60)+3*3600;
+                                                              const r=await fetch('/api/daily-room',{
+                                                                method:'POST',headers:{'Content-Type':'application/json'},
+                                                                body:JSON.stringify({name,exp,createOnly:true})
+                                                              });
+                                                              if(!r.ok) throw new Error(await r.text());
+                                                              const room=await r.json();
+                                                              const{error}=await sb.from('agendamentos').update({
+                                                                video_room_name:room.name||name,video_room_url:room.url
+                                                              }).eq('id',agendamentoId);
+                                                              if(error) throw error;
+                                                              return room;
+                                                            }
 
                                                             async function agmSubmit(){
                                                               const nome=(document.getElementById('lgm-nome').value||'').trim();
@@ -19373,11 +19418,19 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                   data_hora:dataHora,duracao_min:AGM_STATE.duracao,status:'agendado',
                                                                   motivo:AGM_STATE.tipo+(especialidade?' — '+especialidade:''),origem:'secretaria',
                                                                   tipo:AGM_STATE.tipo,especialidade:especialidade,medico_nome:doc?doc.name:null,
-                                                                  telefone:telefone||null,cpf:cpfDigits||null,observacoes:obs||null
+                                                                  telefone:telefone||null,cpf:cpfDigits||null,observacoes:obs||null,
+                                                                  modalidade:AGM_STATE.modalidade
                                                                 };
-                                                                const{error:agErr}=await sb.from('agendamentos').insert(agPayload);
+                                                                const{data:agRow,error:agErr}=await sb.from('agendamentos').insert(agPayload).select('id').single();
                                                                 if(agErr)throw agErr;
                                                                 showToast&&showToast('Agendamento criado com sucesso','success');
+                                                                // Consulta por vídeo: pré-cria a sala do Daily já vinculada a este
+                                                                // agendamento (mesmo link que depois vai para o paciente e que o
+                                                                // médico reaproveita ao abrir a chamada pelo atendimento).
+                                                                if(AGM_STATE.modalidade==='video' && agRow&&agRow.id){
+                                                                  agmCreateVideoRoomForAgendamento(agRow.id,dataHora,AGM_STATE.duracao)
+                                                                    .catch(e=>console.warn('Não foi possível pré-criar a sala de vídeo:',e));
+                                                                }
                                                                 // Sinaliza para a IA de encerramento que já existe um agendamento
                                                                 // real criado nesta consulta — evita sugerir marcar outro.
                                                                 if(typeof atendEmAndamento!=='undefined'&&atendEmAndamento&&atendEmAndamento.patientId&&pacienteId===atendEmAndamento.patientId){
@@ -19549,6 +19602,26 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               try{ await window.__vcDestroying; } finally{ window.__vcDestroying=null; }
                                                             }
 
+                                                            // Procura um agendamento por vídeo deste paciente próximo do horário
+                                                            // atual (janela de 12h para tolerar atrasos), para reaproveitar a
+                                                            // MESMA sala Daily que foi (ou será) enviada ao paciente, em vez de
+                                                            // o médico abrir uma sala nova e diferente na hora da chamada.
+                                                            async function findLinkedVideoAgendamento(patientId){
+                                                              if(!patientId) return null;
+                                                              try{
+                                                                const now=Date.now();
+                                                                const from=new Date(now-12*3600*1000).toISOString();
+                                                                const to=new Date(now+12*3600*1000).toISOString();
+                                                                const{data,error}=await sb.from('agendamentos')
+                                                                  .select('id,data_hora,duracao_min,modalidade,video_room_name,video_room_url')
+                                                                  .eq('paciente_id',patientId).eq('modalidade','video')
+                                                                  .gte('data_hora',from).lte('data_hora',to);
+                                                                if(error||!data||!data.length) return null;
+                                                                data.sort((a,b)=>Math.abs(new Date(a.data_hora)-now)-Math.abs(new Date(b.data_hora)-now));
+                                                                return data[0];
+                                                              }catch(e){ console.warn('findLinkedVideoAgendamento falhou:',e); return null; }
+                                                            }
+
                                                             async function openVideoCall(){
                                                               const ov=document.getElementById('modal-overlay');
                                                               const m=document.getElementById('m-video');
@@ -19575,10 +19648,26 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               try{
                                                                 if(!(window.__vcRoom && window.__vcRoom.expires_at*1000 > Date.now()+60000)){
                                                                   const pid=(typeof currentPatient!=='undefined'&&currentPatient&&currentPatient.id)?String(currentPatient.id):'';
-                                                                  const name=('consulta-'+pid+'-'+Date.now().toString(36)).toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,40);
+                                                                  const linkedAg = pid ? await findLinkedVideoAgendamento(pid) : null;
+                                                                  window.__vcLinkedAgendamentoId = linkedAg ? linkedAg.id : null;
+                                                                  let name;
+                                                                  if(linkedAg && linkedAg.video_room_name){
+                                                                    name = linkedAg.video_room_name;
+                                                                  }else if(linkedAg){
+                                                                    name = ('consulta-'+linkedAg.id).toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,40);
+                                                                  }else{
+                                                                    name=('consulta-'+pid+'-'+Date.now().toString(36)).toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,40);
+                                                                  }
                                                                   const r=await fetch('/api/daily-room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
                                                                   if(!r.ok){throw new Error(await r.text());}
                                                                   window.__vcRoom=await r.json();
+                                                                  // Se a sala pertence a um agendamento que ainda não tinha o link
+                                                                  // salvo (ex.: modalidade mudou para vídeo depois de criado), grava agora.
+                                                                  if(linkedAg && (!linkedAg.video_room_name || !linkedAg.video_room_url)){
+                                                                    sb.from('agendamentos').update({
+                                                                      video_room_name:window.__vcRoom.name,video_room_url:window.__vcRoom.url
+                                                                    }).eq('id',linkedAg.id).then(()=>{}).catch(()=>{});
+                                                                  }
                                                                 }
                                                                 if(!window.DailyIframe){ throw new Error('SDK do Daily não carregou. Verifique sua conexão e recarregue a página.'); }
                                                                 const copyTxt=document.getElementById('vc-copy-url-txt');
