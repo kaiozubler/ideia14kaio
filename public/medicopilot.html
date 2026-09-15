@@ -20015,6 +20015,12 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                   if(chat) chat.classList.remove('open');
                                                                   if(people) people.classList.remove('open');
                                                                   renderVcGrid();
+                                                                }else if(!willMinimize && window.__vcJoined){
+                                                                  // Ao restaurar (desminimizar), recalcula o layout do grid
+                                                                  // (n2/n4) imediatamente — sem isso ele ficava um instante com
+                                                                  // o layout de coluna única do modo minimizado, distorcendo
+                                                                  // os vídeos até a próxima atualização do Daily.
+                                                                  renderVcGrid();
                                                                 }
                                                               };
                                                             })();
