@@ -7,7 +7,7 @@
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
   html, body { margin: 0; padding: 0; background: #f8fafc; }
   #root { width: 100%; height: 100vh; }
@@ -39,6 +39,17 @@
   // O anon/publishable key é público e pode permanecer neste arquivo estático.
   window.__STUDIO_SUPABASE_URL__ = "https://lgsywisgyvgorppuoehy.supabase.co";
   window.__STUDIO_SUPABASE_ANON_KEY__ = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxnc3l3aXNneXZnb3JwcHVvZWh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNzY1NjgsImV4cCI6MjA5Njc1MjU2OH0.1bHdi8zXHDg8oxNWbqr8pcAadAVBfDEktSd6SchYCPw";
+
+  // Rede de segurança: se algum script falhar (CDN fora do ar, erro de
+  // configuração etc.), mostra o erro na tela em vez de deixar a página em
+  // branco sem pista nenhuma do que aconteceu.
+  window.addEventListener("error", function (e) {
+    var root = document.getElementById("root");
+    if (root && !root.hasChildNodes()) {
+      root.innerHTML = '<div style="max-width:640px;margin:60px auto;padding:24px;font-family:sans-serif;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;color:#7c2d12;white-space:pre-wrap">'
+        + '<b>Erro ao carregar o Studio:</b>\n' + (e.message || e) + '</div>';
+    }
+  });
 </script>
 <script type="text/babel" data-presets="react">
 // Ícones inline — substituem o pacote lucide-react pra este arquivo não
