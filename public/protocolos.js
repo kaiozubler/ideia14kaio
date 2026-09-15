@@ -777,7 +777,13 @@
         <div style="display:flex;gap:12px;align-items:center">
           <button class="pt-btn pt-pill ghost" data-back="1">←</button>
           <div><h1>Meus protocolos</h1><p>${S.protocols.length} protocolos cadastrados</p></div></div>
-        <button class="pt-btn primary" data-new="1">+ Novo protocolo</button></div>
+        <div style="display:flex;gap:10px">
+          <a href="/protocolo-studio.html" target="_blank" rel="noopener"
+             class="pt-btn pt-pill ghost" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+            🧬 Studio de protocolo
+          </a>
+          <button class="pt-btn primary" data-new="1">+ Novo protocolo</button>
+        </div></div>
       <div class="pt-search pt-pill" style="margin-bottom:18px"><span>🔍</span><input id="pt-pq" placeholder="Buscar por nome ou CID..." value="${esc(S.psearch)}"></div>
       ${list.length ? list.map((p) => `<div class="pt-card pt-plist-card ${p.active ? "" : "inactive"}">
         <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:14px">

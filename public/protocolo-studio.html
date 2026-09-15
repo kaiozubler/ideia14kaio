@@ -1,0 +1,1894 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Studio de Protocolos — MediCopilot</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+  window.supabase = { createClient };
+</script>
+<style>
+  html, body { margin: 0; padding: 0; background: #f8fafc; }
+  #root { width: 100%; height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!--
+  FERRAMENTA EXPERIMENTAL, EM PARALELO ao fluxo oficial de protocolos.
+  Página estática (sem build/bundler) — arquivo isolado em público, não faz
+  parte do app React principal.
+
+  O que já funciona:
+  - "Gerar com IA" chama /api/ia/gerar-fluxo (proxy de backend, chave da
+    Anthropic fica só no servidor).
+  - "Salvar rascunho" e "Meus rascunhos" chamam /api/protocolos/estudio-rascunho
+    (tabela protocolo_estudio_rascunhos, grafo inteiro em jsonb — ver migration
+    20260915140000_protocolo-studio-grafo-rascunhos.sql).
+
+  Configuração pública abaixo usa os mesmos valores do app principal.
+  - Em produção (fora do preview do Lovable), a sessão do Supabase é gravada
+    em localStorage puro, então se esta página for servida no MESMO domínio
+    do app, ela reaproveita o login que a pessoa já fez lá. Fora disso (ex:
+    testando local, ou dentro do preview do Lovable), aparece um login simples
+    de e-mail/senha abaixo.
+-->
+<script>
+  // O anon/publishable key é público e pode permanecer neste arquivo estático.
+  window.__STUDIO_SUPABASE_URL__ = "https://lgsywisgyvgorppuoehy.supabase.co";
+  window.__STUDIO_SUPABASE_ANON_KEY__ = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxnc3l3aXNneXZnb3JwcHVvZWh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNzY1NjgsImV4cCI6MjA5Njc1MjU2OH0.1bHdi8zXHDg8oxNWbqr8pcAadAVBfDEktSd6SchYCPw";
+
+  // Rede de segurança: se algum script falhar (CDN fora do ar, erro de
+  // configuração etc.), mostra o erro na tela em vez de deixar a página em
+  // branco sem pista nenhuma do que aconteceu.
+  window.addEventListener("error", function (e) {
+    var root = document.getElementById("root");
+    if (root && !root.hasChildNodes()) {
+      root.innerHTML = '<div style="max-width:640px;margin:60px auto;padding:24px;font-family:sans-serif;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;color:#7c2d12;white-space:pre-wrap">'
+        + '<b>Erro ao carregar o Studio:</b>\n' + (e.message || e) + '</div>';
+    }
+  });
+</script>
+<script type="text/babel" data-presets="react">
+// Ícones inline — substituem o pacote lucide-react pra este arquivo não
+// precisar de bundler/npm. Mesmo contrato de props (size, color, strokeWidth)
+// usado no resto do componente.
+function IconBase({ size = 24, color = "currentColor", strokeWidth = 2, children }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color}
+      strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      {children}
+    </svg>
+  );
+}
+function FlaskConical(p) {
+  return <IconBase {...p}><path d="M9 3h6M10 3v5.5L4.5 18a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L14 8.5V3" /><path d="M7 14h10" /></IconBase>;
+}
+function Pill(p) {
+  return <IconBase {...p}><rect x="3" y="8" width="18" height="8" rx="4" transform="rotate(45 12 12)" /><line x1="8.5" y1="8.5" x2="15.5" y2="15.5" transform="rotate(45 12 12)" /></IconBase>;
+}
+function Stethoscope(p) {
+  return <IconBase {...p}><path d="M6 3v5a4 4 0 0 0 8 0V3" /><path d="M10 13v2a5 5 0 0 0 10 0v-2" /><circle cx="20" cy="10" r="2" /></IconBase>;
+}
+function GitBranch(p) {
+  return <IconBase {...p}><line x1="6" y1="3" x2="6" y2="15" /><circle cx="18" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M18 9a9 9 0 0 1-9 9" /></IconBase>;
+}
+function AlertTriangle(p) {
+  const color = p.color || "currentColor";
+  return <IconBase {...p}><path d="M12 3l10 18H2z" /><line x1="12" y1="9" x2="12" y2="14" /><circle cx="12" cy="17.3" r="0.6" fill={color} stroke="none" /></IconBase>;
+}
+function X(p) {
+  return <IconBase {...p}><line x1="5" y1="5" x2="19" y2="19" /><line x1="19" y1="5" x2="5" y2="19" /></IconBase>;
+}
+function Plus(p) {
+  return <IconBase {...p}><line x1="12" y1="4" x2="12" y2="20" /><line x1="4" y1="12" x2="20" y2="12" /></IconBase>;
+}
+function ChevronDown(p) {
+  return <IconBase {...p}><polyline points="6 9 12 15 18 9" /></IconBase>;
+}
+function Trash2(p) {
+  return <IconBase {...p}><polyline points="4 7 20 7" /><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" /><path d="M10 11v6M14 11v6" /><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3" /></IconBase>;
+}
+function ShieldCheck(p) {
+  return <IconBase {...p}><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6l7-3z" /><polyline points="9 12 11 14 15 10" /></IconBase>;
+}
+
+const { useState, useRef, useCallback, useMemo, useEffect } = React;
+
+// --- Auth (Supabase) ---------------------------------------------------
+// Página estática, sem sessão vinda do app principal por build/import — só
+// reaproveita o localStorage se estiver no mesmo domínio (ver comentário no
+// <head>). Client único, reusado por toda a página.
+const supabaseClient = (window.__STUDIO_SUPABASE_URL__ && window.__STUDIO_SUPABASE_ANON_KEY__)
+  ? window.supabase.createClient(window.__STUDIO_SUPABASE_URL__, window.__STUDIO_SUPABASE_ANON_KEY__)
+  : null;
+
+async function getAccessToken() {
+  if (!supabaseClient) throw new Error("Studio sem configuração do Supabase (preencha SUPABASE_URL/ANON_KEY no topo do arquivo).");
+  const { data } = await supabaseClient.auth.getSession();
+  const token = data?.session?.access_token;
+  if (!token) throw new Error("Sessão expirada ou não autenticado. Faça login novamente.");
+  return token;
+}
+
+// Fetch autenticado pras rotas /api/... do backend (não confundir com a
+// chamada direta ao Supabase acima — essas rotas usam Authorization: Bearer).
+async function studioFetch(path, options = {}) {
+  const token = await getAccessToken();
+  const resp = await fetch(path, {
+    ...options,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...(options.headers || {}) },
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data?.error || `Erro ${resp.status}`);
+  return data;
+}
+
+// ---------------------------------------------------------------------------
+// Tokens — paleta liquid-glass (tudo via inline style, sem depender de
+// nenhuma folha Tailwind externa)
+// ---------------------------------------------------------------------------
+const TYPE_STYLE = {
+  Consulta: { Icon: Stethoscope, grad: "linear-gradient(135deg,#38bdf8,#2563eb)", accent: "#0284c7", soft: "rgba(224,242,254,0.9)", label: "Consulta" },
+  Exame: { Icon: FlaskConical, grad: "linear-gradient(135deg,#a78bfa,#7c3aed)", accent: "#7c3aed", soft: "rgba(245,243,255,0.9)", label: "Exame" },
+  Medicamento: { Icon: Pill, grad: "linear-gradient(135deg,#34d399,#059669)", accent: "#059669", soft: "rgba(236,253,245,0.9)", label: "Medicamento" },
+  Condicao: { Icon: GitBranch, grad: "linear-gradient(135deg,#fbbf24,#d97706)", accent: "#b45309", soft: "rgba(255,251,235,0.9)", label: "Condição" },
+  Evento: { Icon: AlertTriangle, grad: "linear-gradient(135deg,#fb7185,#e11d48)", accent: "#be123c", soft: "rgba(255,241,242,0.9)", label: "Evento" },
+  Admissao: { Icon: ShieldCheck, grad: "linear-gradient(135deg,#2dd4bf,#0f766e)", accent: "#0f766e", soft: "rgba(240,253,250,0.9)", label: "Admissão" },
+};
+const SNAP_GRAD = "linear-gradient(135deg,#38bdf8,#2563eb)"; // degradê azul do ímã / hover da seta
+
+const TUSS_CATALOG = [
+  { id: "tuss-1", codigo: "40304361", nome: "TSH" },
+  { id: "tuss-2", codigo: "40302016", nome: "Hemoglobina glicada (HbA1c)" },
+  { id: "tuss-3", codigo: "40311214", nome: "Creatinina sérica" },
+  { id: "tuss-4", codigo: "40316897", nome: "Hemograma completo" },
+  { id: "tuss-5", codigo: "40301489", nome: "Glicemia de jejum" },
+  { id: "tuss-6", codigo: "40907017", nome: "Ultrassonografia obstétrica" },
+  { id: "tuss-7", codigo: "40302040", nome: "Glicemia aleatória (ao acaso)" },
+  { id: "tuss-8", codigo: "40311680", nome: "TOTG 75g (2h)" },
+  { id: "tuss-9", codigo: "40312058", nome: "Peptídeo C" },
+  { id: "tuss-10", codigo: "40312899", nome: "Marcadores autoimunes (Anti-ICA/IAA/GAD/IA2)" },
+  { id: "tuss-11", codigo: "40318033", nome: "Automonitorização glicêmica (AMG) — registro" },
+];
+const SUBSTANCIA_CATALOG = [
+  { id: "sub-1", nome: "Levotiroxina sódica" },
+  { id: "sub-2", nome: "Metformina" },
+  { id: "sub-3", nome: "Losartana potássica" },
+  { id: "sub-4", nome: "Insulina NPH" },
+  { id: "sub-5", nome: "Insulina Regular" },
+  { id: "sub-6", nome: "Insulina Lispro / Asparte / Glulisina (análogo rápido)" },
+  { id: "sub-7", nome: "Insulina Glargina / Detemir / Degludeca (análogo prolongado)" },
+];
+const CAMPO_OPTIONS = [
+  { id: "numero", label: "Resultado numérico do exame-gatilho" },
+  { id: "texto", label: "Resultado em texto do exame-gatilho" },
+  { id: "achado", label: "Achado / conceito clínico (laudo, imagem)" },
+];
+const OPERADORES_NUMERO = [
+  { id: "maior_que", label: "maior que" }, { id: "menor_que", label: "menor que" },
+  { id: "maior_ou_igual", label: "maior ou igual a" }, { id: "menor_ou_igual", label: "menor ou igual a" },
+  { id: "entre", label: "entre" }, { id: "igual", label: "igual a" },
+];
+const OPERADORES_TEXTO = [{ id: "igual", label: "igual a" }, { id: "contem", label: "contém" }];
+const OPERADORES_ENUM = [{ id: "igual", label: "é" }];
+const PATIENT_VARS = [
+  { id: "sexo", label: "Sexo", kind: "enum", options: ["M", "F"] },
+  { id: "idade", label: "Idade", kind: "numero" },
+  { id: "peso", label: "Peso (kg)", kind: "numero" },
+  { id: "altura", label: "Altura (cm)", kind: "numero" },
+  { id: "gestante", label: "Gestante", kind: "enum", options: ["Sim", "Não"] },
+  { id: "cid", label: "CID", kind: "texto" },
+];
+const RAIL_ITEMS = [
+  { type: "Exame", label: "Exame" },
+  { type: "Medicamento", label: "Medicamento" },
+  { type: "Consulta", label: "Consulta" },
+  { type: "Condicao", label: "Condição" },
+];
+const RAIL_ADVANCED = [{ type: "Evento", label: "Evento" }, { type: "Admissao", label: "Admissão" }];
+
+const uid = () => Math.random().toString(36).slice(2, 10);
+const NODE_W = 192;
+const STANDARD_GAP = 195; // espaçamento padrão vertical ao encaixar no ímã
+const SNAP_RADIUS = 46; // raio (px) em que o cursor "gruda" numa seta
+
+function seedGraphDM1() {
+  // ---- Admissão: portão de entrada, só dado de paciente -----------------
+  const nAdmissao = { id: uid(), type: "Admissao", name: "Admissão — CID compatível", x: 260, y: 20, lapso: 0,
+    clauses: [{ id: uid(), sourceKind: "paciente", sourceNodeId: null, variavel: "cid", operador: "contem", valor: "E10", conector: null }] };
+  const nForaEscopo = { id: uid(), type: "Evento", name: "Fora do escopo do protocolo", x: -60, y: 220, lapso: 0,
+    acao: "notificar_usuario", destinatario: "Médico responsável", conteudo: "CID informado não corresponde a DM1 (E10.x) — revisar indicação.", motivo: "Reprovado na admissão" };
+
+  // ---- Diagnóstico: 4 exames "clássicos" + via alternativa (LADA) -------
+  const nGlicAleat = { id: uid(), type: "Exame", name: "Glicemia aleatória", x: 60, y: 220, lapso: 0, tussId: "tuss-7" };
+  const nGlicJejum = { id: uid(), type: "Exame", name: "Glicemia de jejum", x: 280, y: 220, lapso: 0, tussId: "tuss-5" };
+  const nHbA1c = { id: uid(), type: "Exame", name: "Hemoglobina glicada (HbA1c)", x: 500, y: 220, lapso: 0, tussId: "tuss-2" };
+  const nTOTG = { id: uid(), type: "Exame", name: "TOTG 75g (2h)", x: 720, y: 220, lapso: 0, tussId: "tuss-8" };
+  const nPeptC = { id: uid(), type: "Exame", name: "Peptídeo C", x: 940, y: 220, lapso: 0, tussId: "tuss-9" };
+  const nMarcadores = { id: uid(), type: "Exame", name: "Marcadores autoimunes", x: 1160, y: 220, lapso: 0, tussId: "tuss-10" };
+
+  const nCondDiag = { id: uid(), type: "Condicao", name: "Confirmar diagnóstico DM1", x: 260, y: 420, lapso: 0,
+    branches: [
+      { id: uid(), descricao: "Critério diagnóstico confirmado", clauses: [
+        { id: uid(), sourceKind: "exame", sourceNodeId: nGlicAleat.id, campo: "numero", operador: "maior_que", numero: "200", conector: null },
+        { id: uid(), sourceKind: "exame", sourceNodeId: nGlicJejum.id, campo: "numero", operador: "maior_ou_igual", numero: "126", conector: "OU" },
+        { id: uid(), sourceKind: "exame", sourceNodeId: nHbA1c.id, campo: "numero", operador: "maior_ou_igual", numero: "6.5", conector: "OU" },
+        { id: uid(), sourceKind: "exame", sourceNodeId: nTOTG.id, campo: "numero", operador: "maior_ou_igual", numero: "200", conector: "OU" },
+      ] },
+      { id: uid(), isDefault: true, descricao: "Sem critério confirmado" },
+    ] };
+  const nReavaliar = { id: uid(), type: "Evento", name: "Solicitar reavaliação fora de evento agudo", x: 20, y: 620, lapso: 0,
+    acao: "notificar_usuario", destinatario: "Médico responsável", conteudo: "Hiperglicemia pode ser de estresse agudo — reavaliar fora do evento.", motivo: "Nenhum critério diagnóstico bateu" };
+
+  const nCondLada = { id: uid(), type: "Condicao", name: "Avaliar LADA (adulto)", x: 1040, y: 420, lapso: 0,
+    branches: [
+      { id: uid(), descricao: "Critérios de LADA preenchidos", clauses: [
+        { id: uid(), sourceKind: "exame", sourceNodeId: nPeptC.id, campo: "numero", operador: "menor_que", numero: "0.6", conector: null },
+        { id: uid(), sourceKind: "exame", sourceNodeId: nMarcadores.id, campo: "achado", conceito: "AUTOIMUNE_POSITIVO", presente: true, conector: "E" },
+      ] },
+      { id: uid(), isDefault: true, descricao: "Critérios de LADA não preenchidos" },
+    ] };
+
+  // ---- Início do tratamento (basal-bolus) --------------------------------
+  const nMedNPH = { id: uid(), type: "Medicamento", name: "Insulina NPH (basal)", x: 140, y: 640, lapso: 0,
+    substanciaId: "sub-4", dose: "0,5–1,0 UI/kg/dia (40–60% basal)", posologia: "2 a 3x/dia — dose noturna às 22h" };
+  const nMedRegular = { id: uid(), type: "Medicamento", name: "Insulina Regular (bolus)", x: 400, y: 640, lapso: 0,
+    substanciaId: "sub-5", dose: "40–60% da dose total, fracionada", posologia: "30 min antes das refeições" };
+  const nConsultaAMG = { id: uid(), type: "Consulta", name: "Orientação — automonitorização (AMG)", x: 270, y: 830, lapso: 0, especialidade: "Educação em diabetes" };
+
+  // ---- Gestante (evento disparado por dado de paciente) ------------------
+  const nCondGestante = { id: uid(), type: "Condicao", name: "Verificar gestação", x: 620, y: 640, lapso: 0,
+    branches: [
+      { id: uid(), descricao: "Paciente gestante", clauses: [{ id: uid(), sourceKind: "paciente", sourceNodeId: null, variavel: "gestante", operador: "igual", valor: "Sim", conector: null }] },
+      { id: uid(), isDefault: true, descricao: "Não gestante" },
+    ] };
+  const nEventoGestante = { id: uid(), type: "Evento", name: "Ajustar esquema para gestação", x: 620, y: 830, lapso: 0,
+    acao: "ajustar", alvoId: nMedNPH.id, fator: "Basal <50% / bolus >50% — reduzir 9-16ª sem, dobrar no 3º trimestre",
+    motivo: "Meta HbA1c pré-concepção/gestação: 6,0–6,5%" };
+
+  // ---- Avaliação de falha / critério de troca para análogo ---------------
+  const nExAMGReg = { id: uid(), type: "Exame", name: "Registro de hipoglicemias (AMG)", x: 500, y: 1040, lapso: 90, tussId: "tuss-11" };
+  const nCondTroca = { id: uid(), type: "Condicao", name: "Avaliar critério de troca para análogo", x: 140, y: 1040, lapso: 90,
+    branches: [
+      { id: uid(), descricao: "Critério preenchido", clauses: [
+        { id: uid(), sourceKind: "medicamento", sourceNodeId: nMedNPH.id, estado: "em_uso", conector: null },
+        { id: uid(), sourceKind: "exame", sourceNodeId: nExAMGReg.id, campo: "achado", conceito: "HIPOGLICEMIA_GRAVE_REPETIDA", presente: true, conector: "E" },
+        { id: uid(), sourceKind: "exame", sourceNodeId: nHbA1c.id, campo: "numero", operador: "maior_que", numero: "7.0", conector: "OU" },
+      ] },
+      { id: uid(), isDefault: true, descricao: "Manter NPH + Regular — ajustar dose/dieta/adesão" },
+    ] };
+  const nConsultaRetorno = { id: uid(), type: "Consulta", name: "Retorno — reavaliação em 3 meses", x: -100, y: 1240, lapso: 0, especialidade: "Endocrinologia" };
+
+  const nMedAnalogoRapido = { id: uid(), type: "Medicamento", name: "Insulina Lispro/Asparte/Glulisina (análogo rápido)", x: 140, y: 1240, lapso: 0,
+    substanciaId: "sub-6", dose: "mantém cálculo por kg/dia em uso", posologia: "5–15 min antes ou logo após a refeição" };
+  const nMedAnalogoProlongado = { id: uid(), type: "Medicamento", name: "Insulina Glargina/Detemir/Degludeca (análogo prolongado)", x: 420, y: 1240, lapso: 0,
+    substanciaId: "sub-7", dose: "40–60% basal", posologia: "1x/dia, mesmo horário" };
+
+  // ---- Manutenção ----------------------------------------------------------
+  const nCondManut = { id: uid(), type: "Condicao", name: "Avaliar resposta ao análogo", x: 260, y: 1440, lapso: 90,
+    branches: [
+      { id: uid(), descricao: "Meta de HbA1c atingida", clauses: [{ id: uid(), sourceKind: "exame", sourceNodeId: nHbA1c.id, campo: "numero", operador: "menor_que", numero: "7.0", conector: null }] },
+      { id: uid(), isDefault: true, descricao: "Meta não atingida" },
+    ] };
+  const nConsultaManut = { id: uid(), type: "Consulta", name: "Manutenção — acompanhamento periódico", x: 60, y: 1640, lapso: 0, especialidade: "Endocrinologia" };
+  const nEventoRetomar = { id: uid(), type: "Evento", name: "Retomar NPH/Regular", x: 420, y: 1640, lapso: 0,
+    acao: "mensagem_paciente", conteudo: "Ajuste de esquema necessário — retorno ao basal-bolus humano até nova avaliação.", motivo: "Sem queda de HbA1c ≥0,5% / sem redução de hipoglicemias" };
+
+  const nodes = [
+    nAdmissao, nForaEscopo,
+    nGlicAleat, nGlicJejum, nHbA1c, nTOTG, nPeptC, nMarcadores,
+    nCondDiag, nReavaliar, nCondLada,
+    nMedNPH, nMedRegular, nConsultaAMG,
+    nCondGestante, nEventoGestante,
+    nExAMGReg, nCondTroca, nConsultaRetorno, nMedAnalogoRapido, nMedAnalogoProlongado,
+    nCondManut, nConsultaManut, nEventoRetomar,
+  ];
+
+  const edges = [
+    { id: uid(), from: nAdmissao.id, to: nForaEscopo.id, fromHandle: "nao_admitido", lapso: 0 },
+    { id: uid(), from: nAdmissao.id, to: nGlicAleat.id, fromHandle: "admitido", lapso: 0 },
+    { id: uid(), from: nAdmissao.id, to: nGlicJejum.id, fromHandle: "admitido", lapso: 0 },
+    { id: uid(), from: nAdmissao.id, to: nHbA1c.id, fromHandle: "admitido", lapso: 0 },
+    { id: uid(), from: nAdmissao.id, to: nTOTG.id, fromHandle: "admitido", lapso: 0 },
+    { id: uid(), from: nAdmissao.id, to: nPeptC.id, fromHandle: "admitido", lapso: 0 },
+    { id: uid(), from: nAdmissao.id, to: nMarcadores.id, fromHandle: "admitido", lapso: 0 },
+
+    { id: uid(), from: nGlicAleat.id, to: nCondDiag.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nGlicJejum.id, to: nCondDiag.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nHbA1c.id, to: nCondDiag.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nTOTG.id, to: nCondDiag.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nPeptC.id, to: nCondLada.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nMarcadores.id, to: nCondLada.id, fromHandle: null, lapso: 0 },
+
+    { id: uid(), from: nCondDiag.id, to: nReavaliar.id, fromHandle: nCondDiag.branches[1].id, lapso: 0 },
+    { id: uid(), from: nCondDiag.id, to: nMedNPH.id, fromHandle: nCondDiag.branches[0].id, lapso: 0 },
+    { id: uid(), from: nCondDiag.id, to: nMedRegular.id, fromHandle: nCondDiag.branches[0].id, lapso: 0 },
+    { id: uid(), from: nCondDiag.id, to: nCondGestante.id, fromHandle: nCondDiag.branches[0].id, lapso: 0 },
+    { id: uid(), from: nCondLada.id, to: nMedNPH.id, fromHandle: nCondLada.branches[0].id, lapso: 0 },
+
+    { id: uid(), from: nMedNPH.id, to: nConsultaAMG.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nMedRegular.id, to: nConsultaAMG.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nCondGestante.id, to: nEventoGestante.id, fromHandle: nCondGestante.branches[0].id, lapso: 0 },
+
+    { id: uid(), from: nConsultaAMG.id, to: nCondTroca.id, fromHandle: null, lapso: 90 },
+    { id: uid(), from: nExAMGReg.id, to: nCondTroca.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nHbA1c.id, to: nCondTroca.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nCondTroca.id, to: nConsultaRetorno.id, fromHandle: nCondTroca.branches[1].id, lapso: 0 },
+    { id: uid(), from: nCondTroca.id, to: nMedAnalogoRapido.id, fromHandle: nCondTroca.branches[0].id, lapso: 0 },
+    { id: uid(), from: nCondTroca.id, to: nMedAnalogoProlongado.id, fromHandle: nCondTroca.branches[0].id, lapso: 0 },
+
+    { id: uid(), from: nMedAnalogoRapido.id, to: nCondManut.id, fromHandle: null, lapso: 90 },
+    { id: uid(), from: nMedAnalogoProlongado.id, to: nCondManut.id, fromHandle: null, lapso: 90 },
+    { id: uid(), from: nHbA1c.id, to: nCondManut.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nCondManut.id, to: nConsultaManut.id, fromHandle: nCondManut.branches[0].id, lapso: 0 },
+    { id: uid(), from: nCondManut.id, to: nEventoRetomar.id, fromHandle: nCondManut.branches[1].id, lapso: 0 },
+  ];
+  return { nodes, edges };
+}
+
+// ---------------------------------------------------------------------------
+// Protocolo 2 — Hipertensão Arterial Sistêmica (HAS), pra validar o studio
+// contra um protocolo com formato bem diferente: roteamento por população
+// (adulto/criança/gestante), valores em par (PAS/PAD) e limiares por
+// percentil (que viram achado, calculado fora do motor de condição).
+// ---------------------------------------------------------------------------
+function seedGraphHAS() {
+  // ---- Admissão -----------------------------------------------------------
+  const nAdmissao = { id: uid(), type: "Admissao", name: "Admissão — CID compatível", x: 400, y: 20, lapso: 0,
+    clauses: [
+      { id: uid(), sourceKind: "paciente", sourceNodeId: null, variavel: "cid", operador: "contem", valor: "I10", conector: null },
+      { id: uid(), sourceKind: "paciente", sourceNodeId: null, variavel: "cid", operador: "contem", valor: "I15", conector: "OU" },
+      { id: uid(), sourceKind: "paciente", sourceNodeId: null, variavel: "cid", operador: "contem", valor: "O1", conector: "OU" },
+    ] };
+  const nForaEscopo = { id: uid(), type: "Evento", name: "Fora do escopo do protocolo", x: 60, y: 220, lapso: 0,
+    acao: "notificar_usuario", destinatario: "Médico responsável", conteudo: "CID não corresponde a HAS (I10/I15) nem a hipertensão gestacional (O1x).", motivo: "Reprovado na admissão" };
+
+  // ---- Roteamento por população (só dado de paciente) ----------------------
+  const nCondRota = { id: uid(), type: "Condicao", name: "Rotear por população", x: 400, y: 220, lapso: 0,
+    branches: [
+      { id: uid(), descricao: "Gestante", clauses: [{ id: uid(), sourceKind: "paciente", sourceNodeId: null, variavel: "gestante", operador: "igual", valor: "Sim", conector: null }] },
+      { id: uid(), descricao: "Criança/adolescente (<18a)", clauses: [{ id: uid(), sourceKind: "paciente", sourceNodeId: null, variavel: "idade", operador: "menor_que", valor: "18", conector: null }] },
+      { id: uid(), isDefault: true, descricao: "Adulto" },
+    ] };
+
+  // ======================= ADULTO ==========================================
+  const nExPAS = { id: uid(), type: "Exame", name: "PA sistólica (consultório)", x: 40, y: 420, lapso: 0, tussId: null };
+  const nExPAD = { id: uid(), type: "Exame", name: "PA diastólica (consultório)", x: 260, y: 420, lapso: 0, tussId: null };
+  const nExLesaoOrgao = { id: uid(), type: "Exame", name: "Sinais de lesão aguda em órgão-alvo", x: 480, y: 420, lapso: 0, tussId: null };
+
+  const nCondClassifPA = { id: uid(), type: "Condicao", name: "Classificar PA — consultório", x: 40, y: 620, lapso: 0,
+    branches: [
+      { id: uid(), descricao: "HAS Grau 3", clauses: [
+        { id: uid(), sourceKind: "exame", sourceNodeId: nExPAS.id, campo: "numero", operador: "maior_ou_igual", numero: "180", conector: null },
+        { id: uid(), sourceKind: "exame", sourceNodeId: nExPAD.id, campo: "numero", operador: "maior_ou_igual", numero: "110", conector: "OU" },
+      ] },
+      { id: uid(), descricao: "HAS Grau 2", clauses: [
+        { id: uid(), sourceKind: "exame", sourceNodeId: nExPAS.id, campo: "numero", operador: "maior_ou_igual", numero: "160", conector: null },
+        { id: uid(), sourceKind: "exame", sourceNodeId: nExPAD.id, campo: "numero", operador: "maior_ou_igual", numero: "100", conector: "OU" },
+      ] },
+      { id: uid(), descricao: "HAS Grau 1 (suspeita)", clauses: [
+        { id: uid(), sourceKind: "exame", sourceNodeId: nExPAS.id, campo: "numero", operador: "maior_ou_igual", numero: "140", conector: null },
+        { id: uid(), sourceKind: "exame", sourceNodeId: nExPAD.id, campo: "numero", operador: "maior_ou_igual", numero: "90", conector: "OU" },
+      ] },
+      { id: uid(), descricao: "PA normal-alta", clauses: [
+        { id: uid(), sourceKind: "exame", sourceNodeId: nExPAS.id, campo: "numero", operador: "maior_ou_igual", numero: "130", conector: null },
+        { id: uid(), sourceKind: "exame", sourceNodeId: nExPAD.id, campo: "numero", operador: "maior_ou_igual", numero: "85", conector: "OU" },
+      ] },
+      { id: uid(), isDefault: true, descricao: "PA normal/ótima" },
+    ] };
+
+  const nCondCrise = { id: uid(), type: "Condicao", name: "Triagem de crise hipertensiva", x: 480, y: 800, lapso: 0,
+    branches: [
+      { id: uid(), descricao: "Emergência — risco de vida", clauses: [{ id: uid(), sourceKind: "exame", sourceNodeId: nExLesaoOrgao.id, campo: "achado", conceito: "LESAO_AGUDA_ORGAO_ALVO", presente: true, conector: null }] },
+      { id: uid(), isDefault: true, descricao: "Urgência / pseudocrise" },
+    ] };
+  const nEventoEmergencia = { id: uid(), type: "Evento", name: "Emergência hipertensiva — CTI", x: 480, y: 1000, lapso: 0,
+    acao: "notificar_usuario", destinatario: "Equipe de emergência", conteudo: "Lesão aguda de órgão-alvo — encaminhar/exames/CTI imediato.", motivo: "PAS≥180 ou PAD≥120 com lesão aguda" };
+  const nEventoUrgencia = { id: uid(), type: "Evento", name: "Urgência hipertensiva — observação", x: 700, y: 1000, lapso: 0,
+    acao: "notificar_usuario", destinatario: "Médico responsável", conteudo: "Repetir medida em 15 min; internar se PA mantida.", motivo: "Sem sinais de lesão aguda" };
+
+  const nConsultaConfirmar = { id: uid(), type: "Consulta", name: "Confirmar em 2 medições (7–14 dias)", x: 40, y: 800, lapso: 10, especialidade: "Clínica geral" };
+  const nExMAPA = { id: uid(), type: "Exame", name: "MAPA 24h (média)", x: 40, y: 980, lapso: 0, tussId: null };
+  const nCondConfirmaMAPA = { id: uid(), type: "Condicao", name: "Confirmar HAS via MAPA", x: 40, y: 1160, lapso: 0,
+    branches: [
+      { id: uid(), descricao: "Confirma HAS", clauses: [{ id: uid(), sourceKind: "exame", sourceNodeId: nExMAPA.id, campo: "numero", operador: "maior_ou_igual", numero: "130", conector: null }] },
+      { id: uid(), isDefault: true, descricao: "Não confirma — reforçar MEV" },
+    ] };
+
+  const nConsultaReavaliar = { id: uid(), type: "Consulta", name: "Reavaliar em 1 ano", x: 700, y: 620, lapso: 365, especialidade: "Clínica geral" };
+  const nConsultaMEV = { id: uid(), type: "Consulta", name: "Orientação — mudança de estilo de vida (MEV)", x: 500, y: 620, lapso: 0, especialidade: "Nutrição" };
+
+  const nMedBSRA = { id: uid(), type: "Medicamento", name: "IECA/BRA (BSRA)", x: -160, y: 1160, lapso: 0, substanciaId: null, dose: "dose inicial padrão", posologia: "1x/dia" };
+  const nMedBCC = { id: uid(), type: "Medicamento", name: "Bloqueador de canal de cálcio (ação prolongada)", x: 60, y: 1160, lapso: 0, substanciaId: null, dose: "dose inicial padrão", posologia: "1x/dia" };
+  const nMedDT = { id: uid(), type: "Medicamento", name: "Diurético tiazídico (longa ação)", x: 260, y: 1160, lapso: 0, substanciaId: null, dose: "dose inicial padrão", posologia: "1x/dia" };
+
+  const nCondHAR = { id: uid(), type: "Condicao", name: "Avaliar hipertensão resistente (HAR)", x: 60, y: 1360, lapso: 90,
+    branches: [
+      { id: uid(), descricao: "HAR confirmada", clauses: [
+        { id: uid(), sourceKind: "medicamento", sourceNodeId: nMedBSRA.id, estado: "em_uso", conector: null },
+        { id: uid(), sourceKind: "medicamento", sourceNodeId: nMedBCC.id, estado: "em_uso", conector: "E" },
+        { id: uid(), sourceKind: "medicamento", sourceNodeId: nMedDT.id, estado: "em_uso", conector: "E" },
+        { id: uid(), sourceKind: "exame", sourceNodeId: nExPAS.id, campo: "numero", operador: "maior_ou_igual", numero: "140", conector: "E" },
+      ] },
+      { id: uid(), isDefault: true, descricao: "PA controlada com o esquema atual" },
+    ] };
+  const nMed4Linha = { id: uid(), type: "Medicamento", name: "4ª linha — espironolactona ou similar", x: 60, y: 1560, lapso: 0, substanciaId: null, dose: "dose inicial padrão", posologia: "1x/dia" };
+
+  const nMedAINE = { id: uid(), type: "Medicamento", name: "AINE em uso (fator exógeno)", x: 320, y: 1360, lapso: 0, substanciaId: null, dose: "", posologia: "" };
+  const nCondFatorExogeno = { id: uid(), type: "Condicao", name: "Verificar fator exógeno elevando PA", x: 320, y: 1560, lapso: 0,
+    branches: [
+      { id: uid(), descricao: "Fator exógeno em uso", clauses: [{ id: uid(), sourceKind: "medicamento", sourceNodeId: nMedAINE.id, estado: "em_uso", conector: null }] },
+      { id: uid(), isDefault: true, descricao: "Sem fator exógeno identificado" },
+    ] };
+  const nEventoSuspenderExogeno = { id: uid(), type: "Evento", name: "Revisar/suspender fator exógeno", x: 320, y: 1760, lapso: 0,
+    acao: "suspender", alvoId: nMedAINE.id, motivo: "AINEs, corticoides, descongestionantes, tricíclicos, anabolizantes e ACO podem elevar a PA" };
+
+  // ======================= GESTANTE ========================================
+  const nExPASGest = { id: uid(), type: "Exame", name: "PA sistólica (gestante)", x: 900, y: 420, lapso: 0, tussId: null };
+  const nExPADGest = { id: uid(), type: "Exame", name: "PA diastólica (gestante)", x: 1120, y: 420, lapso: 0, tussId: null };
+  const nCondPAGestante = { id: uid(), type: "Condicao", name: "PA ≥ 140/90 na gestante?", x: 1000, y: 620, lapso: 0,
+    branches: [
+      { id: uid(), descricao: "PA elevada", clauses: [
+        { id: uid(), sourceKind: "exame", sourceNodeId: nExPASGest.id, campo: "numero", operador: "maior_ou_igual", numero: "140", conector: null },
+        { id: uid(), sourceKind: "exame", sourceNodeId: nExPADGest.id, campo: "numero", operador: "maior_ou_igual", numero: "90", conector: "OU" },
+      ] },
+      { id: uid(), isDefault: true, descricao: "PA normal — pré-natal de rotina" },
+    ] };
+  const nConsultaPreNatal = { id: uid(), type: "Consulta", name: "Acompanhamento pré-natal de rotina", x: 1220, y: 800, lapso: 0, especialidade: "Obstetrícia" };
+
+  const nExIdadeGestAchado = { id: uid(), type: "Exame", name: "Idade gestacional (< 20 semanas)", x: 800, y: 800, lapso: 0, tussId: null };
+  const nExProteinuria = { id: uid(), type: "Exame", name: "Proteinúria", x: 1000, y: 800, lapso: 0, tussId: null };
+  const nCondClassifGestacional = { id: uid(), type: "Condicao", name: "Classificar hipertensão na gestação", x: 900, y: 1000, lapso: 0,
+    branches: [
+      { id: uid(), descricao: "HAS pré-existente / crise / avental branco", clauses: [{ id: uid(), sourceKind: "exame", sourceNodeId: nExIdadeGestAchado.id, campo: "achado", conceito: "IDADE_GESTACIONAL_MENOR_20SEM", presente: true, conector: null }] },
+      { id: uid(), descricao: "Pré-eclâmpsia", clauses: [{ id: uid(), sourceKind: "exame", sourceNodeId: nExProteinuria.id, campo: "numero", operador: "maior_que", numero: "300", conector: null }] },
+      { id: uid(), isDefault: true, descricao: "Hipertensão gestacional (sem proteinúria)" },
+    ] };
+  const nEventoSuspenderIECA = { id: uid(), type: "Evento", name: "Suspender IECA/BRA (contraindicado na gestação)", x: 900, y: 1200, lapso: 0,
+    acao: "suspender", alvoId: nMedBSRA.id, motivo: "IECA/BRA contraindicados durante a gestação" };
+
+  // ======================= PEDIÁTRICO ======================================
+  const nExPAPediatrica = { id: uid(), type: "Exame", name: "PA (criança/adolescente) — percentil", x: 460, y: 220 - 0, lapso: 0, tussId: null };
+  // (posicionado mais abaixo, no cluster pediátrico)
+  nExPAPediatrica.x = 460; nExPAPediatrica.y = 420;
+  const nCondClassifPediatrica = { id: uid(), type: "Condicao", name: "Classificar PA pediátrica", x: 460, y: 620, lapso: 0,
+    branches: [
+      { id: uid(), descricao: "HAS Grau 1/2 infantil", clauses: [{ id: uid(), sourceKind: "exame", sourceNodeId: nExPAPediatrica.id, campo: "achado", conceito: "PA_ACIMA_P95", presente: true, conector: null }] },
+      { id: uid(), descricao: "PA elevada — acompanhar", clauses: [{ id: uid(), sourceKind: "exame", sourceNodeId: nExPAPediatrica.id, campo: "achado", conceito: "PA_ENTRE_P90_P95", presente: true, conector: null }] },
+      { id: uid(), isDefault: true, descricao: "PA normal (< P90)" },
+    ] };
+  const nConsultaPediatrica = { id: uid(), type: "Consulta", name: "Acompanhamento — 3 visitas distintas", x: 460, y: 800, lapso: 0, especialidade: "Pediatria" };
+
+  const nodes = [
+    nAdmissao, nForaEscopo, nCondRota,
+    nExPAS, nExPAD, nExLesaoOrgao, nCondClassifPA, nCondCrise, nEventoEmergencia, nEventoUrgencia,
+    nConsultaConfirmar, nExMAPA, nCondConfirmaMAPA, nConsultaReavaliar, nConsultaMEV,
+    nMedBSRA, nMedBCC, nMedDT, nCondHAR, nMed4Linha, nMedAINE, nCondFatorExogeno, nEventoSuspenderExogeno,
+    nExPASGest, nExPADGest, nCondPAGestante, nConsultaPreNatal, nExIdadeGestAchado, nExProteinuria, nCondClassifGestacional, nEventoSuspenderIECA,
+    nExPAPediatrica, nCondClassifPediatrica, nConsultaPediatrica,
+  ];
+
+  const edges = [
+    { id: uid(), from: nAdmissao.id, to: nForaEscopo.id, fromHandle: "nao_admitido", lapso: 0 },
+    { id: uid(), from: nAdmissao.id, to: nCondRota.id, fromHandle: "admitido", lapso: 0 },
+
+    { id: uid(), from: nCondRota.id, to: nExPAS.id, fromHandle: nCondRota.branches[2].id, lapso: 0 },
+    { id: uid(), from: nCondRota.id, to: nExPAD.id, fromHandle: nCondRota.branches[2].id, lapso: 0 },
+    { id: uid(), from: nCondRota.id, to: nExPASGest.id, fromHandle: nCondRota.branches[0].id, lapso: 0 },
+    { id: uid(), from: nCondRota.id, to: nExPADGest.id, fromHandle: nCondRota.branches[0].id, lapso: 0 },
+    { id: uid(), from: nCondRota.id, to: nExPAPediatrica.id, fromHandle: nCondRota.branches[1].id, lapso: 0 },
+
+    // adulto
+    { id: uid(), from: nExPAS.id, to: nCondClassifPA.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nExPAD.id, to: nCondClassifPA.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nCondClassifPA.id, to: nCondCrise.id, fromHandle: nCondClassifPA.branches[0].id, lapso: 0 },
+    { id: uid(), from: nExPAS.id, to: nCondCrise.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nExLesaoOrgao.id, to: nCondCrise.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nCondCrise.id, to: nEventoEmergencia.id, fromHandle: nCondCrise.branches[0].id, lapso: 0 },
+    { id: uid(), from: nCondCrise.id, to: nEventoUrgencia.id, fromHandle: nCondCrise.branches[1].id, lapso: 0 },
+
+    { id: uid(), from: nCondClassifPA.id, to: nConsultaConfirmar.id, fromHandle: nCondClassifPA.branches[2].id, lapso: 0 },
+    { id: uid(), from: nCondClassifPA.id, to: nConsultaConfirmar.id, fromHandle: nCondClassifPA.branches[1].id, lapso: 0 },
+    { id: uid(), from: nConsultaConfirmar.id, to: nExMAPA.id, fromHandle: null, lapso: 10 },
+    { id: uid(), from: nExMAPA.id, to: nCondConfirmaMAPA.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nCondConfirmaMAPA.id, to: nMedBSRA.id, fromHandle: nCondConfirmaMAPA.branches[0].id, lapso: 0 },
+    { id: uid(), from: nCondConfirmaMAPA.id, to: nMedBCC.id, fromHandle: nCondConfirmaMAPA.branches[0].id, lapso: 0 },
+    { id: uid(), from: nCondConfirmaMAPA.id, to: nMedDT.id, fromHandle: nCondConfirmaMAPA.branches[0].id, lapso: 0 },
+    { id: uid(), from: nCondConfirmaMAPA.id, to: nConsultaMEV.id, fromHandle: nCondConfirmaMAPA.branches[1].id, lapso: 0 },
+
+    { id: uid(), from: nCondClassifPA.id, to: nConsultaMEV.id, fromHandle: nCondClassifPA.branches[3].id, lapso: 0 },
+    { id: uid(), from: nCondClassifPA.id, to: nConsultaReavaliar.id, fromHandle: nCondClassifPA.branches[4].id, lapso: 0 },
+    { id: uid(), from: nCondCrise.id, to: nMedBSRA.id, fromHandle: nCondCrise.branches[1].id, lapso: 0 },
+    { id: uid(), from: nCondCrise.id, to: nMedBCC.id, fromHandle: nCondCrise.branches[1].id, lapso: 0 },
+    { id: uid(), from: nCondCrise.id, to: nMedDT.id, fromHandle: nCondCrise.branches[1].id, lapso: 0 },
+
+    { id: uid(), from: nMedBSRA.id, to: nCondHAR.id, fromHandle: null, lapso: 90 },
+    { id: uid(), from: nMedBCC.id, to: nCondHAR.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nMedDT.id, to: nCondHAR.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nExPAS.id, to: nCondHAR.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nCondHAR.id, to: nMed4Linha.id, fromHandle: nCondHAR.branches[0].id, lapso: 0 },
+
+    { id: uid(), from: nMedAINE.id, to: nCondFatorExogeno.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nCondFatorExogeno.id, to: nEventoSuspenderExogeno.id, fromHandle: nCondFatorExogeno.branches[0].id, lapso: 0 },
+
+    // gestante
+    { id: uid(), from: nExPASGest.id, to: nCondPAGestante.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nExPADGest.id, to: nCondPAGestante.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nCondPAGestante.id, to: nConsultaPreNatal.id, fromHandle: nCondPAGestante.branches[1].id, lapso: 0 },
+    { id: uid(), from: nCondPAGestante.id, to: nExIdadeGestAchado.id, fromHandle: nCondPAGestante.branches[0].id, lapso: 0 },
+    { id: uid(), from: nCondPAGestante.id, to: nExProteinuria.id, fromHandle: nCondPAGestante.branches[0].id, lapso: 0 },
+    { id: uid(), from: nExIdadeGestAchado.id, to: nCondClassifGestacional.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nExProteinuria.id, to: nCondClassifGestacional.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nCondClassifGestacional.id, to: nEventoSuspenderIECA.id, fromHandle: nCondClassifGestacional.branches[0].id, lapso: 0 },
+    { id: uid(), from: nCondClassifGestacional.id, to: nEventoSuspenderIECA.id, fromHandle: nCondClassifGestacional.branches[1].id, lapso: 0 },
+    { id: uid(), from: nCondClassifGestacional.id, to: nEventoSuspenderIECA.id, fromHandle: nCondClassifGestacional.branches[2].id, lapso: 0 },
+
+    // pediátrico
+    { id: uid(), from: nExPAPediatrica.id, to: nCondClassifPediatrica.id, fromHandle: null, lapso: 0 },
+    { id: uid(), from: nCondClassifPediatrica.id, to: nConsultaPediatrica.id, fromHandle: nCondClassifPediatrica.branches[0].id, lapso: 0 },
+    { id: uid(), from: nCondClassifPediatrica.id, to: nConsultaPediatrica.id, fromHandle: nCondClassifPediatrica.branches[1].id, lapso: 0 },
+    { id: uid(), from: nCondClassifPediatrica.id, to: nConsultaPediatrica.id, fromHandle: nCondClassifPediatrica.branches[2].id, lapso: 0 },
+  ];
+
+  return { nodes, edges };
+}
+
+const PROTOCOLS = {
+  dm1: { label: "Diabetes Tipo 1 (DM1)", seed: seedGraphDM1 },
+  has: { label: "Hipertensão (HAS)", seed: seedGraphHAS },
+};
+
+// ---------------------------------------------------------------------------
+// Botão de IA — converte um texto de protocolo colado num grafo, usando o
+// mesmo contrato de dados dos nós/arestas manuais. O modelo devolve ids
+// "locais" (n1, n2, b1...) que a gente remapeia pra uid()s reais aqui,
+// então a ordem/nomeação que a IA escolher não importa.
+// ---------------------------------------------------------------------------
+const AI_SCHEMA_PROMPT = `Você converte um protocolo clínico em texto para um grafo JSON usado por um editor visual de protocolos.
+
+Responda APENAS com um objeto JSON válido, sem markdown, sem \`\`\`, sem texto antes ou depois.
+
+Formato exato esperado:
+{
+  "name": "Nome curto do protocolo",
+  "nodes": [
+    { "localId": "n1", "type": "Admissao", "name": "...", "clauses": [ {"sourceKind":"paciente","variavel":"cid","operador":"contem","valor":"E10","conector":null} ] },
+    { "localId": "n2", "type": "Exame", "name": "...", },
+    { "localId": "n3", "type": "Medicamento", "name": "...", "dose": "...", "posologia": "..." },
+    { "localId": "n4", "type": "Consulta", "name": "...", "especialidade": "..." },
+    { "localId": "n5", "type": "Condicao", "name": "...", "branches": [
+        { "localId": "b1", "isDefault": false, "descricao": "...", "clauses": [
+            {"sourceKind":"exame","sourceLocalId":"n2","campo":"numero","operador":"maior_ou_igual","numero":"126","conector":null},
+            {"sourceKind":"medicamento","sourceLocalId":"n3","estado":"em_uso","conector":"E"},
+            {"sourceKind":"paciente","variavel":"idade","operador":"maior_que","valor":"18","conector":"OU"}
+        ] },
+        { "localId": "b2", "isDefault": true }
+    ] },
+    { "localId": "n6", "type": "Evento", "name": "...", "acao": "notificar_usuario", "alvoLocalId": "n3", "motivo": "...", "conteudo": "...", "destinatario": "..." }
+  ],
+  "edges": [
+    { "fromLocalId": "n1", "fromHandle": "admitido", "toLocalId": "n2", "lapso": 0 },
+    { "fromLocalId": "n5", "fromHandle": "b1", "toLocalId": "n6", "lapso": 0 }
+  ]
+}
+
+Regras do schema:
+- "type" só pode ser: Admissao, Exame, Medicamento, Consulta, Condicao, Evento.
+- Admissao: só clauses (nunca branches), sourceKind quase sempre "paciente". Saídas fixas ao conectar: "admitido" / "nao_admitido".
+- Condicao: só branches (nunca clauses direto); cada branch tem seu próprio "clauses" (cadeia E/OU) OU "isDefault": true (fallback, sem clauses). Handle da aresta = o "localId" do branch.
+- clause.sourceKind: "exame" | "medicamento" | "paciente". "exame" e "medicamento" exigem "sourceLocalId" apontando pra um nó Exame/Medicamento já listado. "paciente" usa "variavel" (sexo/idade/peso/altura/gestante/cid) em vez de sourceLocalId.
+- clause de exame: "campo" é "numero"|"texto"|"achado". Se numero: "operador" é maior_que/menor_que/maior_ou_igual/menor_ou_igual/entre/igual, com "numero" (ou numero_min/numero_max se entre). Se achado: "conceito" (texto) + "presente" (bool).
+- clause de medicamento: só "estado": "em_uso" | "suspenso".
+- clause de paciente: "operador" (maior_que/menor_que/maior_ou_igual/menor_ou_igual/entre/igual/contem) + "valor" (string).
+- A 1ª clause de uma cadeia tem "conector": null; as seguintes têm "E" ou "OU".
+- Evento.acao: suspender | ajustar | mensagem_paciente | notificar_usuario | gerar_receita | enviar_receita | solicitar_exame. "alvoLocalId" referencia outro nó do fluxo (opcional).
+- edges: "fromHandle" é null pra Exame/Medicamento/Consulta/Evento (saída única), "admitido"/"nao_admitido" pra Admissao, e o localId do branch pra Condicao.
+- IMPORTANTE — limite de tamanho: gere no máximo 8 nós no total, focando só no caminho principal do protocolo (não tente cobrir cada exceção). Nomes e textos curtos e diretos.`;
+
+async function generateFlowFromAI(protocolText) {
+  // Via proxy de backend (/api/ia/gerar-fluxo) — chave fica só no servidor,
+  // nunca no navegador. Ver src/routes/api/ia/gerar-fluxo.ts. Usa o AI
+  // Gateway do Lovable (mesmo do resto do app), resposta no formato
+  // OpenAI-compatible: choices[0].message.content.
+  const data = await studioFetch("/api/ia/gerar-fluxo", {
+    method: "POST",
+    body: JSON.stringify({ prompt: `${AI_SCHEMA_PROMPT}\n\nPROTOCOLO:\n"""\n${protocolText}\n"""` }),
+  });
+  const text = data?.choices?.[0]?.message?.content || "";
+  const cleaned = text.replace(/```json|```/g, "").trim();
+  let spec;
+  try { spec = JSON.parse(cleaned); }
+  catch { throw new Error("A IA não devolveu um JSON válido. Tente um texto mais curto/direto."); }
+  return spec;
+}
+
+// --- Rascunhos (salvar/carregar) ---------------------------------------
+async function listarRascunhos() {
+  const data = await studioFetch("/api/protocolos/estudio-rascunho", { method: "GET" });
+  return data.rascunhos || [];
+}
+async function carregarRascunho(id) {
+  return studioFetch(`/api/protocolos/estudio-rascunho?id=${id}`, { method: "GET" });
+}
+async function salvarRascunho({ id, titulo, grafo }) {
+  return studioFetch("/api/protocolos/estudio-rascunho", {
+    method: "POST",
+    body: JSON.stringify({ id: id ?? null, titulo, grafo }),
+  });
+}
+
+function buildGraphFromAiSpec(spec) {
+  const idMap = {}; const handleMap = {};
+  const ensureId = (localId) => { if (!localId) return null; if (!idMap[localId]) idMap[localId] = uid(); return idMap[localId]; };
+  function mapClause(c) {
+    const base = { id: uid(), sourceKind: c.sourceKind, conector: c.conector ?? null };
+    if (c.sourceKind === "medicamento") { base.sourceNodeId = ensureId(c.sourceLocalId); base.estado = c.estado || "em_uso"; }
+    else if (c.sourceKind === "paciente") { base.sourceNodeId = null; base.variavel = c.variavel || "idade"; base.operador = c.operador || "igual"; base.valor = c.valor ?? ""; }
+    else { base.sourceKind = "exame"; base.sourceNodeId = ensureId(c.sourceLocalId); base.campo = c.campo || "numero"; base.operador = c.operador || "maior_que";
+      base.numero = c.numero; base.numero_min = c.numero_min; base.numero_max = c.numero_max; base.texto = c.texto; base.conceito = c.conceito; base.presente = c.presente; }
+    return base;
+  }
+  const nodes = (spec.nodes || []).map((n) => {
+    const id = ensureId(n.localId);
+    const base = { id, type: n.type, name: n.name || n.type, x: 0, y: 0, lapso: 0 };
+    if (n.type === "Condicao") {
+      const branches = (n.branches || []).map((b) => {
+        const bId = uid();
+        if (b.localId) handleMap[b.localId] = bId;
+        return { id: bId, isDefault: !!b.isDefault, descricao: b.descricao || "", clauses: (b.clauses || []).map(mapClause) };
+      });
+      return { ...base, branches: branches.length ? branches : [{ id: uid(), isDefault: true, descricao: "Caso padrão" }] };
+    }
+    if (n.type === "Admissao") return { ...base, clauses: (n.clauses || []).map(mapClause) };
+    if (n.type === "Evento") return { ...base, acao: n.acao || "notificar_usuario", alvoId: ensureId(n.alvoLocalId), motivo: n.motivo || "", conteudo: n.conteudo || "", destinatario: n.destinatario || "", fator: n.fator || "" };
+    if (n.type === "Medicamento") return { ...base, substanciaId: null, dose: n.dose || "", posologia: n.posologia || "" };
+    if (n.type === "Consulta") return { ...base, especialidade: n.especialidade || "" };
+    return { ...base, tussId: null }; // Exame
+  });
+  const edges = (spec.edges || []).map((e) => {
+    let fromHandle = e.fromHandle ?? null;
+    if (fromHandle && fromHandle !== "admitido" && fromHandle !== "nao_admitido" && handleMap[fromHandle]) fromHandle = handleMap[fromHandle];
+    return { id: uid(), from: ensureId(e.fromLocalId), to: ensureId(e.toLocalId), fromHandle, lapso: Number(e.lapso) || 0 };
+  }).filter((e) => e.from && e.to);
+  return { nodes, edges };
+}
+
+// Lapso "de verdade" pra exibir no rosto do card: se o nó tem entrada(s), o
+// lapso vem da(s) aresta(s) que chegam nele (única fonte usada no layout
+// temporal); só um nó-raiz (sem entrada) usa o próprio campo `lapso`.
+function displayLapso(node, edges) {
+  const incoming = edges.filter((e) => e.to === node.id);
+  if (!incoming.length) return Number(node.lapso) || 0;
+  const vals = new Set(incoming.map((e) => Number(e.lapso) || 0));
+  if (vals.size === 1) return [...vals][0];
+  return null; // varia por conexão — não dá pra resumir num número só
+}
+
+// Profundidade "topológica" — maior distância entre qualquer raiz e o nó,
+// considerando TODOS os pais quando há reuso (fan-in). Sem isso, um nó
+// alimentado por pais em profundidades diferentes podia acabar acima de um deles.
+function computeDepths(nodes, edges) {
+  const childrenOf = {};
+  const indeg = {};
+  nodes.forEach((n) => (indeg[n.id] = 0));
+  edges.forEach((e) => { (childrenOf[e.from] = childrenOf[e.from] || []).push(e.to); if (indeg[e.to] !== undefined) indeg[e.to] += 1; });
+  const depth = {};
+  const queue = nodes.filter((n) => indeg[n.id] === 0).map((n) => n.id);
+  queue.forEach((id) => (depth[id] = 0));
+  const work = { ...indeg };
+  for (let i = 0; i < queue.length; i++) {
+    const id = queue[i];
+    (childrenOf[id] || []).forEach((cid) => {
+      depth[cid] = Math.max(depth[cid] ?? 0, (depth[id] ?? 0) + 1);
+      work[cid] -= 1;
+      if (work[cid] === 0) queue.push(cid);
+    });
+  }
+  nodes.forEach((n) => { if (depth[n.id] === undefined) depth[n.id] = 0; }); // fallback (ciclo/nó isolado)
+  return depth;
+}
+
+function autoLayout(nodes, edges, mode) {
+  const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
+  const children = {}; const hasParent = new Set();
+  edges.forEach((e) => { (children[e.from] = children[e.from] || []).push(e); hasParent.add(e.to); });
+  const roots = nodes.filter((n) => !hasParent.has(n.id));
+  const COL_W = 250, PX_PER_DAY = 26;
+
+  const depthOf = computeDepths(nodes, edges);
+  const maxDepth = Math.max(0, ...nodes.map((n) => depthOf[n.id] || 0));
+  const rowH = [];
+  for (let d = 0; d <= maxDepth; d++) {
+    const atDepth = nodes.filter((n) => (depthOf[n.id] || 0) === d);
+    rowH[d] = Math.max(110, ...atDepth.map((n) => cardBottomOffset(n))) + 80;
+  }
+  const rowY = [50];
+  for (let d = 1; d <= maxDepth; d++) rowY[d] = rowY[d - 1] + rowH[d - 1];
+
+  let leaf = 0; const next = {};
+  function place(node, cumDays) {
+    if (next[node.id]) return next[node.id].x; // já posicionado por outro pai (reuso/fan-in) — não reprocessa
+    const kids = children[node.id] || [];
+    const y = mode === "temporal" ? 50 + cumDays * PX_PER_DAY : rowY[depthOf[node.id] || 0];
+    if (!kids.length) { next[node.id] = { x: leaf * COL_W, y }; leaf += 1; return next[node.id].x; }
+    const xs = kids.map((e) => { const c = byId[e.to]; return c ? place(c, cumDays + (Number(e.lapso) || 0)) : 0; });
+    const x = xs.reduce((a, b) => a + b, 0) / xs.length; // média — um filho isolado não puxa mais o pai inteiro
+    next[node.id] = { x, y }; return x;
+  }
+  roots.forEach((r) => place(r, Number(r.lapso) || 0));
+
+  // Pós-processo: a média usada pra centralizar o pai reduz bastante os
+  // exageros de antes, mas ainda pode deixar dois irmãos da MESMA linha com
+  // x parecido (principalmente com nós reaproveitados por vários pais). Aqui
+  // garantimos uma distância mínima de verdade, não só uma tendência.
+  const MIN_GAP = NODE_W + 60;
+  const rowKeyOf = (id) => (mode === "temporal" ? Math.round(next[id].y / 8) : (depthOf[id] || 0));
+  const byRow = {};
+  nodes.forEach((n) => { if (!next[n.id]) return; const k = rowKeyOf(n.id); (byRow[k] = byRow[k] || []).push(n.id); });
+  Object.values(byRow).forEach((ids) => {
+    const sorted = ids.sort((a, b) => next[a].x - next[b].x);
+    for (let i = 1; i < sorted.length; i++) {
+      const prevX = next[sorted[i - 1]].x;
+      if (next[sorted[i]].x - prevX < MIN_GAP) next[sorted[i]].x = prevX + MIN_GAP;
+    }
+  });
+
+  return nodes.map((n) => ({ ...n, x: next[n.id]?.x ?? n.x, y: next[n.id]?.y ?? n.y }));
+}
+
+function handlesForNode(node) {
+  if (node.type === "Condicao") return node.branches.map((b) => ({ id: b.id, label: b.isDefault ? "Caso padrão" : (b.descricao || "Ramo") }));
+  if (node.type === "Admissao") return [{ id: "admitido", label: "Admitido" }, { id: "nao_admitido", label: "Não admitido" }];
+  return [{ id: null, label: "Próximo" }];
+}
+function clauseSummary(c, nodesById) {
+  if (c.sourceKind === "medicamento") {
+    const n = nodesById[c.sourceNodeId];
+    return `${n?.name || "Medicamento"} está ${c.estado === "em_uso" ? "em uso" : "suspenso"}`;
+  }
+  if (c.sourceKind === "paciente") {
+    const v = PATIENT_VARS.find((p) => p.id === c.variavel);
+    const opLabel = (v?.kind === "numero" ? OPERADORES_NUMERO : v?.kind === "texto" ? OPERADORES_TEXTO : OPERADORES_ENUM).find((o) => o.id === c.operador)?.label || c.operador;
+    return `${v?.label || c.variavel} ${opLabel} ${c.valor ?? "?"}`;
+  }
+  // exame
+  const n = nodesById[c.sourceNodeId];
+  const prefix = n?.name ? `${n.name}: ` : "Exame: ";
+  if (c.campo === "achado") return `${prefix}achado "${c.conceito || "?"}" ${c.presente === false ? "ausente" : "presente"}`;
+  if (c.operador === "entre") return `${prefix}entre ${c.numero_min ?? "?"} e ${c.numero_max ?? "?"}`;
+  const opLabel = (c.campo === "numero" ? OPERADORES_NUMERO : OPERADORES_TEXTO).find((o) => o.id === c.operador)?.label || c.operador;
+  return `${prefix}${opLabel} ${c.campo === "numero" ? (c.numero ?? "?") : `"${c.texto ?? "?"}"`}`;
+}
+function branchSummary(b, nodesById) {
+  if (b.isDefault) return "Nenhuma regra anterior bateu";
+  if (!b.clauses || !b.clauses.length) return "(sem cláusulas)";
+  return b.clauses.map((c, i) => (i === 0 ? "" : `${c.conector === "OU" ? "OU " : "E "}`) + clauseSummary(c, nodesById)).join(" ");
+}
+function clauseChainSummary(clauses, nodesById) {
+  if (!clauses || !clauses.length) return "(sem critérios definidos)";
+  return clauses.map((c, i) => (i === 0 ? "" : `${c.conector === "OU" ? "OU " : "E "}`) + clauseSummary(c, nodesById)).join(" ");
+}
+
+// Altura aproximada do card até a borda inferior — os cantos (setas) se apoiam aqui.
+function cardBottomOffset(node) {
+  const header = 46, bodyPad = 16;
+  if (node.type === "Condicao") {
+    const lines = node.branches.reduce((acc, b) => acc + Math.max(1, (b.clauses?.length || 0)), 0);
+    return header + bodyPad + lines * 15;
+  }
+  if (node.type === "Admissao") return header + bodyPad + Math.max(1, (node.clauses?.length || 0)) * 15;
+  return header + bodyPad + 14;
+}
+// Pontos de saída de um nó, em coordenadas do canvas — 1 seta (canto direito) para
+// nós de saída única; distribuídas dos dois cantos pra dentro quando há vários ramos.
+function outputAnchors(node) {
+  const bottom = cardBottomOffset(node);
+  const handles = handlesForNode(node);
+  if (handles.length === 1) return [{ ...handles[0], x: node.x + NODE_W / 2, y: node.y + bottom }];
+  return handles.map((h, i) => ({ ...h, x: node.x + 24 + (NODE_W - 48) * (i / (handles.length - 1)), y: node.y + bottom }));
+}
+function findSnapTarget(localX, localY, nodes, excludeNodeId) {
+  let best = null, bestDist = SNAP_RADIUS;
+  nodes.forEach((n) => {
+    if (n.id === excludeNodeId) return;
+    outputAnchors(n).forEach((a) => {
+      const d = Math.hypot(a.x - localX, a.y - localY);
+      if (d < bestDist) { bestDist = d; best = { nodeId: n.id, handleId: a.id, x: a.x, y: a.y }; }
+    });
+  });
+  return best;
+}
+// Ponto de CHEGADA de uma aresta específica no card de destino. Antes era sempre
+// o centro-topo fixo — se várias arestas iam pro mesmo nó, todas convergiam pro
+// mesmo pixel ("cortando no mesmo lugar"). Agora distribui pela borda de cima,
+// igual já fazemos com as saídas na borda de baixo.
+function inputAnchor(toNode, edgeId, allEdges) {
+  const incoming = allEdges.filter((e) => e.to === toNode.id);
+  const idx = Math.max(0, incoming.findIndex((e) => e.id === edgeId));
+  const n = incoming.length;
+  if (n <= 1) return { x: toNode.x + NODE_W / 2, y: toNode.y };
+  return { x: toNode.x + 24 + (NODE_W - 48) * (idx / (n - 1)), y: toNode.y };
+}
+
+const glass = (extra) => ({
+  background: "rgba(255,255,255,0.68)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
+  border: "1px solid rgba(255,255,255,0.85)", boxShadow: "0 8px 24px rgba(100,90,140,0.14)", ...extra,
+});
+
+function ProtocolCanvas() {
+  const [protocolKey, setProtocolKey] = useState("dm1");
+  const [graph, setGraph] = useState(() => PROTOCOLS.dm1.seed());
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiText, setAiText] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
+  const [customLabel, setCustomLabel] = useState(null);
+
+  const [draftId, setDraftId] = useState(null);
+  const [draftTitle, setDraftTitle] = useState("Rascunho sem título");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [rascunhosOpen, setRascunhosOpen] = useState(false);
+  const [rascunhos, setRascunhos] = useState([]);
+  const [rascunhosLoading, setRascunhosLoading] = useState(false);
+
+  async function handleSalvarRascunho() {
+    setSaving(true); setSaveError(null);
+    try {
+      const result = await salvarRascunho({ id: draftId, titulo: draftTitle, grafo: graph });
+      setDraftId(result.id);
+    } catch (err) {
+      setSaveError(err.message || String(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleAbrirRascunhos() {
+    setRascunhosOpen(true);
+    setRascunhosLoading(true);
+    try {
+      setRascunhos(await listarRascunhos());
+    } catch (err) {
+      setSaveError(err.message || String(err));
+    } finally {
+      setRascunhosLoading(false);
+    }
+  }
+
+  async function handleCarregarRascunho(id) {
+    setRascunhosLoading(true);
+    try {
+      const r = await carregarRascunho(id);
+      setGraph(r.grafo && r.grafo.nodes ? r.grafo : { nodes: [], edges: [] });
+      setDraftId(r.id);
+      setDraftTitle(r.titulo);
+      setCustomLabel(null);
+      setSelectedId(null);
+      setPan({ x: 220, y: 40 });
+      setRascunhosOpen(false);
+    } catch (err) {
+      setSaveError(err.message || String(err));
+    } finally {
+      setRascunhosLoading(false);
+    }
+  }
+
+  async function handleAiGenerate() {
+    if (!aiText.trim() || aiLoading) return;
+    setAiLoading(true); setAiError(null);
+    try {
+      const spec = await generateFlowFromAI(aiText);
+      const built = buildGraphFromAiSpec(spec);
+      if (!built.nodes.length) throw new Error("A IA não gerou nenhum nó — tenta reformular o texto.");
+      const laidOutNodes = autoLayout(built.nodes, built.edges, "proximidade");
+      setGraph({ nodes: laidOutNodes, edges: built.edges });
+      setCustomLabel(spec.name || "Fluxo gerado por IA");
+      setSelectedId(null);
+      setPan({ x: 220, y: 40 });
+      setAiOpen(false);
+      setAiText("");
+    } catch (err) {
+      setAiError(err.message || String(err));
+    } finally {
+      setAiLoading(false);
+    }
+  }
+  const [layoutMode, setLayoutMode] = useState("proximidade");
+  const [selectedId, setSelectedId] = useState(null);
+  const [connecting, setConnecting] = useState(null);
+  const [cursorPos, setCursorPos] = useState(null);
+  const [hoveredId, setHoveredId] = useState(null);
+  const [hoveredArrow, setHoveredArrow] = useState(null); // "nodeId:handleId"
+  const [snapTarget, setSnapTarget] = useState(null);
+  const [isDraggingNode, setIsDraggingNode] = useState(false);
+  const [overTrash, setOverTrash] = useState(false);
+  const [pan, setPan] = useState({ x: 220, y: 40 });
+  const canvasRef = useRef(null);
+  const trashRef = useRef(null);
+
+  const dragRef = useRef(null);
+  const panningRef = useRef(null);
+  const connectingRef = useRef(null);
+  const snapTargetRef = useRef(null);
+  const overTrashRef = useRef(false);
+  const panRef = useRef(pan);
+  const graphRef = useRef(graph);
+  useEffect(() => { panRef.current = pan; }, [pan]);
+  useEffect(() => { connectingRef.current = connecting; }, [connecting]);
+  useEffect(() => { graphRef.current = graph; }, [graph]);
+
+  const nodesById = useMemo(() => Object.fromEntries(graph.nodes.map((n) => [n.id, n])), [graph.nodes]);
+  const selected = selectedId ? nodesById[selectedId] : null;
+
+  const fontesDoNo = useCallback((nodeId) => {
+    return graph.edges
+      .filter((e) => e.to === nodeId)
+      .map((e) => nodesById[e.from])
+      .filter((n) => n && (n.type === "Exame" || n.type === "Medicamento"));
+  }, [graph.edges, nodesById]);
+
+  const updateNode = useCallback((id, patch) => setGraph((g) => ({ ...g, nodes: g.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)) })), []);
+  const updateEdge = useCallback((id, patch) => setGraph((g) => ({ ...g, edges: g.edges.map((e) => (e.id === id ? { ...e, ...patch } : e)) })), []);
+  const removeNode = useCallback((id) => { setGraph((g) => ({ nodes: g.nodes.filter((n) => n.id !== id), edges: g.edges.filter((e) => e.from !== id && e.to !== id) })); setSelectedId(null); }, []);
+  const removeEdge = useCallback((id) => setGraph((g) => ({ ...g, edges: g.edges.filter((e) => e.id !== id) })), []);
+  const addEdgeIfMissing = useCallback((from, fromHandle, to) => {
+    setGraph((g) => {
+      const exists = g.edges.some((ed) => ed.from === from && ed.to === to && ed.fromHandle === fromHandle);
+      return exists ? g : { ...g, edges: [...g.edges, { id: uid(), from, to, fromHandle, lapso: 0 }] };
+    });
+  }, []);
+
+  function applyLayout(mode) { setLayoutMode(mode); setGraph((g) => ({ ...g, nodes: autoLayout(g.nodes, g.edges, mode) })); }
+
+  function makeNode(type, x, y) {
+    const base = { id: uid(), type, x, y, lapso: 0 };
+    if (type === "Condicao") return { ...base, name: "Nova condição", branches: [
+      { id: uid(), descricao: "", clauses: [] },
+      { id: uid(), isDefault: true, descricao: "Caso padrão" },
+    ] };
+    if (type === "Evento") return { ...base, name: "Novo evento", acao: "suspender", alvoId: null, motivo: "" };
+    if (type === "Admissao") return { ...base, name: "Critério de admissão", clauses: [] };
+    if (type === "Medicamento") return { ...base, name: "Novo medicamento", substanciaId: null, dose: "", posologia: "" };
+    if (type === "Exame") return { ...base, name: "Novo exame", tussId: null };
+    return { ...base, name: "Nova consulta", especialidade: "" };
+  }
+
+  function addFromRail(type) {
+    const count = graph.nodes.length;
+    const node = makeNode(type, 40 + (count % 5) * 40, 40 + Math.floor(count / 5) * 60);
+    setGraph((g) => ({ ...g, nodes: [...g.nodes, node] }));
+    setSelectedId(node.id);
+  }
+
+  function localFromClient(clientX, clientY) {
+    const rect = canvasRef.current.getBoundingClientRect();
+    return { x: clientX - rect.left - panRef.current.x, y: clientY - rect.top - panRef.current.y };
+  }
+
+  function handleCanvasDragOver(e) {
+    e.preventDefault();
+    const local = localFromClient(e.clientX, e.clientY);
+    const snap = findSnapTarget(local.x, local.y, graphRef.current.nodes, null);
+    snapTargetRef.current = snap;
+    setSnapTarget(snap);
+  }
+
+  function handleCanvasDrop(e) {
+    e.preventDefault();
+    const raw = e.dataTransfer.getData("application/x-protocol-node");
+    const snap = snapTargetRef.current;
+    snapTargetRef.current = null; setSnapTarget(null);
+    if (!raw) return;
+    const item = JSON.parse(raw);
+    const local = localFromClient(e.clientX, e.clientY);
+    let node;
+    if (snap) {
+      node = makeNode(item.type, snap.x - NODE_W / 2, snap.y + STANDARD_GAP);
+    } else {
+      node = makeNode(item.type, local.x - 90, local.y - 30);
+    }
+    setGraph((g) => ({ ...g, nodes: [...g.nodes, node] }));
+    setSelectedId(node.id);
+    if (snap) addEdgeIfMissing(snap.nodeId, snap.handleId, node.id);
+  }
+
+  function onNodeMouseDown(e, node) {
+    if (e.target.closest("[data-nocard-drag]") || e.target.closest("[data-arrow]")) return;
+    e.preventDefault();
+    const local = localFromClient(e.clientX, e.clientY);
+    dragRef.current = { id: node.id, offX: local.x - node.x, offY: local.y - node.y };
+    setSelectedId(node.id);
+    setIsDraggingNode(true);
+  }
+  function onCanvasMouseDown(e) {
+    if (e.target !== canvasRef.current && !e.target.dataset.canvasBg) return;
+    setSelectedId(null);
+    panningRef.current = { startX: e.clientX - pan.x, startY: e.clientY - pan.y };
+  }
+  function startConnection(e, node, handleId) {
+    e.preventDefault(); e.stopPropagation();
+    const c = { from: node.id, fromHandle: handleId };
+    connectingRef.current = c;
+    setConnecting(c);
+  }
+
+  useEffect(() => {
+    function onMove(e) {
+      if (dragRef.current) {
+        const local = localFromClient(e.clientX, e.clientY);
+        const nx = local.x - dragRef.current.offX, ny = local.y - dragRef.current.offY;
+        updateNode(dragRef.current.id, { x: nx, y: ny });
+
+        // lixeira: mede a distância do cursor (em coordenadas de tela) até o ícone
+        let over = false;
+        if (trashRef.current) {
+          const r = trashRef.current.getBoundingClientRect();
+          const d = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
+          over = d < 42;
+        }
+        overTrashRef.current = over;
+        setOverTrash(over);
+
+        // ímã: usa a posição real do cursor pra ver se está sobre a seta de outro nó
+        // (some com a prioridade do ímã sempre que estiver sobre a lixeira)
+        const snap = over ? null : findSnapTarget(local.x, local.y, graphRef.current.nodes, dragRef.current.id);
+        snapTargetRef.current = snap;
+        setSnapTarget(snap);
+      } else if (panningRef.current) {
+        setPan({ x: e.clientX - panningRef.current.startX, y: e.clientY - panningRef.current.startY });
+      } else if (connectingRef.current) {
+        setCursorPos(localFromClient(e.clientX, e.clientY));
+      }
+    }
+    function onUp(e) {
+      if (dragRef.current) {
+        if (overTrashRef.current) {
+          removeNode(dragRef.current.id);
+        } else if (snapTargetRef.current) {
+          const snap = snapTargetRef.current;
+          const draggedId = dragRef.current.id;
+          if (snap.nodeId !== draggedId) {
+            updateNode(draggedId, { x: snap.x - NODE_W / 2, y: snap.y + STANDARD_GAP });
+            addEdgeIfMissing(snap.nodeId, snap.handleId, draggedId);
+          }
+        }
+      }
+      if (connectingRef.current) {
+        const nodeEl = e.target.closest && e.target.closest("[data-node-id]");
+        const c = connectingRef.current;
+        if (nodeEl) {
+          const targetId = nodeEl.getAttribute("data-node-id");
+          if (targetId !== c.from) {
+            addEdgeIfMissing(c.from, c.fromHandle, targetId);
+            connectingRef.current = null; setConnecting(null); setCursorPos(null);
+          }
+          // soltou de volta no próprio nó de origem -> mantém armado
+        } else {
+          connectingRef.current = null; setConnecting(null); setCursorPos(null);
+        }
+      }
+      dragRef.current = null;
+      panningRef.current = null;
+      snapTargetRef.current = null;
+      overTrashRef.current = false;
+      setSnapTarget(null);
+      setIsDraggingNode(false);
+      setOverTrash(false);
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp, true);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp, true);
+    };
+  }, [updateNode, addEdgeIfMissing, removeNode]);
+
+  function edgePath(x1, y1, x2, y2) { const midY = (y1 + y2) / 2; return `M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}`; }
+
+  return (
+    <div style={{ width: "100%", height: 720, borderRadius: 28, position: "relative", overflow: "hidden",
+      fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif",
+      background: "linear-gradient(135deg, #eef8f1 0%, #f3f1fb 45%, #fdf6ec 100%)" }}>
+      <div style={{ position: "absolute", width: 420, height: 420, top: -140, right: -120, borderRadius: "50%", background: "#ddd6fe", opacity: 0.5, filter: "blur(70px)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", width: 360, height: 360, bottom: -120, left: 80, borderRadius: "50%", background: "#a7f3d0", opacity: 0.5, filter: "blur(70px)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", width: 300, height: 300, top: 260, left: -100, borderRadius: "50%", background: "#fde68a", opacity: 0.4, filter: "blur(70px)", pointerEvents: "none" }} />
+
+      <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px", zIndex: 30 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1e293b" }}>Protocolo:</div>
+          <select value={protocolKey}
+            onChange={(e) => {
+              const key = e.target.value;
+              setProtocolKey(key);
+              setGraph(PROTOCOLS[key].seed());
+              setSelectedId(null);
+              setPan({ x: 220, y: 40 });
+              setCustomLabel(null);
+            }}
+            style={{ fontSize: 13, fontWeight: 700, color: "#1e293b", background: "rgba(255,255,255,0.75)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 10, padding: "6px 10px", cursor: "pointer", outline: "none" }}>
+            {Object.entries(PROTOCOLS).map(([key, p]) => <option key={key} value={key}>{p.label}</option>)}
+          </select>
+          <button onClick={() => { setAiOpen(true); setAiError(null); }}
+            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 700, color: "#fff", border: "none", borderRadius: 999,
+              padding: "8px 14px", cursor: "pointer", background: "linear-gradient(135deg,#c084fc,#7c3aed)", boxShadow: "0 4px 14px rgba(124,58,237,0.35)" }}>
+            ✨ Gerar com IA
+          </button>
+          <input value={draftTitle} onChange={(e) => setDraftTitle(e.target.value)}
+            placeholder="Título do rascunho"
+            style={{ fontSize: 12.5, fontWeight: 600, color: "#1e293b", background: "rgba(255,255,255,0.75)",
+              border: "1px solid rgba(255,255,255,0.85)", borderRadius: 10, padding: "7px 10px", outline: "none", width: 170 }} />
+          <button onClick={handleSalvarRascunho} disabled={saving}
+            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 700, color: "#1e293b",
+              border: "1px solid rgba(255,255,255,0.85)", borderRadius: 999, padding: "8px 14px",
+              cursor: saving ? "default" : "pointer", background: "rgba(255,255,255,0.75)" }}>
+            {saving ? "Salvando…" : draftId ? "💾 Atualizar" : "💾 Salvar rascunho"}
+          </button>
+          <button onClick={handleAbrirRascunhos}
+            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 700, color: "#1e293b",
+              border: "1px solid rgba(255,255,255,0.85)", borderRadius: 999, padding: "8px 14px",
+              cursor: "pointer", background: "rgba(255,255,255,0.75)" }}>
+            📂 Meus rascunhos
+          </button>
+          {saveError && (
+            <div style={{ fontSize: 11.5, fontWeight: 600, color: "#dc2626", background: "rgba(254,242,242,0.9)", border: "1px solid rgba(220,38,38,0.25)", borderRadius: 999, padding: "5px 10px" }}>
+              {saveError}
+            </div>
+          )}
+          {rascunhosOpen && (
+            <div style={{ position: "absolute", top: 54, left: 20, zIndex: 60, minWidth: 260, maxHeight: 320, overflowY: "auto",
+              background: "#fff", borderRadius: 14, boxShadow: "0 10px 30px rgba(0,0,0,0.18)", border: "1px solid #e5e7eb", padding: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 6px 8px" }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#475569" }}>Meus rascunhos</span>
+                <button onClick={() => setRascunhosOpen(false)} style={{ border: "none", background: "none", cursor: "pointer", color: "#94a3b8" }}><X size={14} /></button>
+              </div>
+              {rascunhosLoading && <div style={{ fontSize: 12, color: "#94a3b8", padding: 8 }}>Carregando…</div>}
+              {!rascunhosLoading && rascunhos.length === 0 && <div style={{ fontSize: 12, color: "#94a3b8", padding: 8 }}>Nenhum rascunho salvo ainda.</div>}
+              {!rascunhosLoading && rascunhos.map((r) => (
+                <button key={r.id} onClick={() => handleCarregarRascunho(r.id)}
+                  style={{ display: "block", width: "100%", textAlign: "left", border: "none", background: "none", cursor: "pointer",
+                    padding: "8px 6px", borderRadius: 8, fontSize: 12.5, fontWeight: 600, color: "#1e293b" }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "#f1f5f9"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "none"}>
+                  {r.titulo}
+                  <div style={{ fontSize: 10.5, fontWeight: 500, color: "#94a3b8" }}>{new Date(r.updated_at).toLocaleString("pt-BR")}</div>
+                </button>
+              ))}
+            </div>
+          )}
+          {customLabel && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 600, color: "#7c3aed", background: "rgba(245,243,255,0.9)", border: "1px solid rgba(124,58,237,0.25)", borderRadius: 999, padding: "5px 10px" }}>
+              {customLabel}
+              <button onClick={() => setCustomLabel(null)} style={{ border: "none", background: "none", color: "#a78bfa", cursor: "pointer", fontSize: 12, lineHeight: 1, padding: 0 }}>×</button>
+            </div>
+          )}
+          <div style={{ flex: 1 }} />
+          <div style={{ display: "flex", ...glass({ borderRadius: 999, padding: 4, boxShadow: "0 2px 8px rgba(100,90,140,0.1)" }), gap: 2 }}>
+            {[{ id: "proximidade", label: "Por proximidade" }, { id: "temporal", label: "Por lapso (dias)" }].map((m) => (
+              <button key={m.id} onClick={() => applyLayout(m.id)}
+                style={{ padding: "6px 14px", borderRadius: 999, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  background: layoutMode === m.id ? "#fff" : "transparent", color: layoutMode === m.id ? "#7c3aed" : "#64748b",
+                  boxShadow: layoutMode === m.id ? "0 2px 6px rgba(0,0,0,.08)" : "none", transition: "all .15s" }}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ flex: 1, display: "flex", position: "relative", overflow: "hidden" }}>
+          <div ref={canvasRef} data-canvas-bg="1" onDrop={handleCanvasDrop} onDragOver={handleCanvasDragOver} onMouseDown={onCanvasMouseDown}
+            style={{ flex: 1, position: "relative", overflow: "hidden", cursor: panningRef.current ? "grabbing" : "grab",
+              backgroundImage: "radial-gradient(#d6d3ea 1.4px, transparent 1.4px)", backgroundSize: "24px 24px",
+              backgroundPosition: `${pan.x % 24}px ${pan.y % 24}px` }}>
+
+            {/* Camada de fundo da barra lateral — deixa claro que ela é fixa na tela,
+                separada do canvas, mesmo se algum card acabar posicionado atrás dela. */}
+            <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 116, zIndex: 19, pointerEvents: "none",
+              background: "linear-gradient(90deg, rgba(248,250,252,0.9) 55%, rgba(248,250,252,0) 100%)" }} />
+
+            <div style={{ position: "absolute", left: 20, top: 24, zIndex: 20, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+              {RAIL_ITEMS.map((item, i) => {
+                const s = TYPE_STYLE[item.type];
+                return (
+                  <FloatingButton key={item.type} item={item} style={s} offset={i % 2 ? 10 : 0} size={54} iconSize={36}
+                    onDragStart={(e) => { e.dataTransfer.setData("application/x-protocol-node", JSON.stringify(item)); setIsDraggingNode(true); }}
+                    onDragEnd={() => { setIsDraggingNode(false); setOverTrash(false); }}
+                    onClick={() => addFromRail(item.type)} />
+                );
+              })}
+              <div style={{ width: 24, height: 1, background: "rgba(100,116,139,0.35)", margin: "2px 0" }} />
+              {RAIL_ADVANCED.map((item) => {
+                const s = TYPE_STYLE[item.type];
+                return (
+                  <FloatingButton key={item.type} item={item} style={s} offset={0} size={42} iconSize={28} muted
+                    onDragStart={(e) => { e.dataTransfer.setData("application/x-protocol-node", JSON.stringify(item)); setIsDraggingNode(true); }}
+                    onDragEnd={() => { setIsDraggingNode(false); setOverTrash(false); }}
+                    onClick={() => addFromRail(item.type)} />
+                );
+              })}
+            </div>
+
+            <div data-canvas-bg="1" style={{ position: "absolute", left: pan.x, top: pan.y, width: 4000, height: 4000 }}>
+              <svg data-canvas-bg="1" width={4000} height={4000} style={{ position: "absolute", left: 0, top: 0, pointerEvents: "none" }}>
+                {graph.edges.map((e) => {
+                  const from = nodesById[e.from], to = nodesById[e.to];
+                  if (!from || !to) return null;
+                  const anchor = outputAnchors(from).find((a) => a.id === e.fromHandle) || outputAnchors(from)[0];
+                  const target = inputAnchor(to, e.id, graph.edges);
+                  const color = TYPE_STYLE[from.type]?.accent || "#94a3b8";
+                  const related = selectedId && (e.from === selectedId || e.to === selectedId);
+                  const dimmed = selectedId && !related;
+                  return <g key={e.id}><path d={edgePath(anchor.x, anchor.y, target.x, target.y)} stroke={color} strokeWidth={related ? 3.5 : 2.5} fill="none" opacity={dimmed ? 0.12 : related ? 1 : 0.75} strokeLinecap="round" /><circle cx={target.x} cy={target.y} r={related ? 5 : 4} fill={color} opacity={dimmed ? 0.12 : 1} /></g>;
+                })}
+                {connecting && cursorPos && (() => {
+                  const from = nodesById[connecting.from]; if (!from) return null;
+                  const anchor = outputAnchors(from).find((a) => a.id === connecting.fromHandle) || outputAnchors(from)[0];
+                  return <path d={edgePath(anchor.x, anchor.y, cursorPos.x, cursorPos.y)} stroke={TYPE_STYLE[from.type].accent} strokeWidth={2.5} strokeDasharray="6 5" fill="none" opacity={0.9} />;
+                })()}
+              </svg>
+
+              {graph.edges.map((e) => {
+                const from = nodesById[e.from], to = nodesById[e.to];
+                if (!from || !to) return null;
+                const anchor = outputAnchors(from).find((a) => a.id === e.fromHandle) || outputAnchors(from)[0];
+                const target = inputAnchor(to, e.id, graph.edges);
+                const midX = (anchor.x + target.x) / 2, midY = (anchor.y + target.y) / 2;
+                const related = selectedId && (e.from === selectedId || e.to === selectedId);
+                const dimmed = selectedId && !related;
+                return (
+                  <div key={e.id + "-badge"} style={{ position: "absolute", left: midX - 42, top: midY - 13, width: 84, zIndex: 10, opacity: dimmed ? 0.2 : 1, transition: "opacity .15s",
+                    display: "flex", justifyContent: "center", alignItems: "center", gap: 4, ...glass({ borderRadius: 999, padding: "3px 6px", border: related ? "1.5px solid rgba(37,99,235,0.5)" : "1px solid rgba(255,255,255,0.85)" }) }}>
+                    <input type="number" min={0} value={e.lapso} onChange={(ev) => updateEdge(e.id, { lapso: Number(ev.target.value) })}
+                      style={{ width: 34, fontSize: 11, textAlign: "center", background: "transparent", border: "none", outline: "none", color: "#334155", fontWeight: 600 }} title="Lapso em dias" />
+                    <span style={{ fontSize: 9, color: "#94a3b8" }}>dias</span>
+                    <button onClick={() => removeEdge(e.id)} style={{ border: "none", background: "none", color: "#fb7185", fontSize: 12, cursor: "pointer", lineHeight: 1, padding: 0 }}>×</button>
+                  </div>
+                );
+              })}
+
+              {graph.nodes.map((node) => {
+                const s = TYPE_STYLE[node.type];
+                const isSelected = selectedId === node.id;
+                const isHovered = hoveredId === node.id && connecting && connecting.from !== node.id;
+                const highlight = isSelected || isHovered;
+                return (
+                  <div key={node.id} data-node-id={node.id} onMouseDown={(e) => onNodeMouseDown(e, node)}
+                    onMouseEnter={() => setHoveredId(node.id)} onMouseLeave={() => setHoveredId((h) => (h === node.id ? null : h))}
+                    onClick={() => setSelectedId(node.id)}
+                    style={{ position: "absolute", left: node.x, top: node.y, width: NODE_W, borderRadius: 20, zIndex: isSelected ? 10 : 2,
+                      cursor: dragRef.current?.id === node.id ? "grabbing" : "grab", userSelect: "none",
+                      ...glass({ border: highlight ? `1.5px solid ${s.accent}` : "1px solid rgba(255,255,255,0.85)", boxShadow: highlight ? `0 0 0 3px ${s.soft}, 0 8px 20px rgba(100,90,140,0.16)` : "0 8px 20px rgba(100,90,140,0.12)" }) }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderBottom: "1px solid rgba(226,232,240,0.7)" }}>
+                      <div style={{ width: 28, height: 28, borderRadius: "50%", background: s.grad, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "inset 0 1px 2px rgba(255,255,255,0.4)" }}>
+                        <s.Icon size={14} color="#fff" strokeWidth={2.3} />
+                      </div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: 11.5, fontWeight: 700, color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{node.name}</div>
+                        {(node.type === "Exame" || node.type === "Medicamento") && (
+                          <div style={{ fontSize: 9, fontWeight: 600, color: node.tussId || node.substanciaId ? "#059669" : "#d97706" }}>
+                            {node.tussId || node.substanciaId ? "✓ vinculado ao catálogo" : "⚠ sem vínculo"}
+                          </div>
+                        )}
+                      </div>
+                      <button data-nocard-drag="1" onClick={(ev) => { ev.stopPropagation(); removeNode(node.id); }} style={{ border: "none", background: "transparent", color: "#cbd5e1", cursor: "pointer", padding: 2, display: "flex" }}>
+                        <X size={13} />
+                      </button>
+                    </div>
+
+                    {node.type === "Condicao" ? (
+                      <div style={{ padding: "8px 10px", fontSize: 10, color: "#92400e", lineHeight: 1.5 }}>
+                        {node.branches.map((b, i) => <div key={b.id}><b>{i + 1}.</b> {branchSummary(b, nodesById)}</div>)}
+                      </div>
+                    ) : node.type === "Admissao" ? (
+                      <div style={{ padding: "8px 10px", fontSize: 10, color: "#0f766e", lineHeight: 1.5 }}>
+                        {clauseChainSummary(node.clauses, nodesById)}
+                      </div>
+                    ) : node.type === "Evento" ? (
+                      <div style={{ padding: "8px 10px", fontSize: 10.5, color: "#9f1239" }}>
+                        {eventoResumo(node, nodesById)}
+                      </div>
+                    ) : (
+                      <div style={{ padding: "8px 10px", fontSize: 10.5, color: "#64748b" }}>
+                        Lapso: <b>{(() => { const l = displayLapso(node, graph.edges); return l === null ? "varia por conexão" : `${l}d`; })()}</b>
+                      </div>
+                    )}
+
+                    <NodeCorners node={node} s={s} connecting={connecting} snapTarget={snapTarget}
+                      hoveredArrow={hoveredArrow} setHoveredArrow={setHoveredArrow} startConnection={startConnection} />
+                  </div>
+                );
+              })}
+            </div>
+
+            {connecting && (
+              <div style={{ position: "absolute", left: 16, bottom: 16, fontSize: 11, background: "rgba(30,41,59,0.92)", color: "#fff", padding: "8px 12px", borderRadius: 12, zIndex: 30, boxShadow: "0 8px 20px rgba(0,0,0,.2)" }}>
+                Arraste até um nó para conectar, ou clique nele — clique numa área vazia do canvas para cancelar.
+              </div>
+            )}
+
+            {isDraggingNode && (
+              <div ref={trashRef}
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setOverTrash(true); }}
+                onDragLeave={(e) => { e.stopPropagation(); setOverTrash(false); }}
+                onDrop={(e) => { e.preventDefault(); e.stopPropagation(); setOverTrash(false); setIsDraggingNode(false); }}
+                style={{ position: "absolute", left: 47, top: 360, transform: `translateX(-50%) scale(${overTrash ? 1.15 : 1})`,
+                  width: 56, height: 56, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 40,
+                  transition: "transform .12s, background .12s, box-shadow .12s",
+                  background: overTrash ? "linear-gradient(135deg,#fb7185,#e11d48)" : "rgba(255,255,255,0.75)",
+                  backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+                  border: overTrash ? "1px solid transparent" : "1px solid rgba(255,255,255,0.85)",
+                  boxShadow: overTrash ? "0 10px 26px rgba(225,29,72,0.45)" : "0 8px 20px rgba(100,90,140,0.2)" }}>
+                <Trash2 size={overTrash ? 24 : 20} color={overTrash ? "#fff" : "#e11d48"} strokeWidth={2.2} />
+              </div>
+            )}
+          </div>
+
+          {selected && (
+            <div style={{ width: 300, padding: 16, overflowY: "auto", zIndex: 25, ...glass({ borderRadius: 0, borderTop: "none", borderRight: "none", borderBottom: "none" }) }}>
+              <NodeInspector node={selected} graph={graph} fontes={fontesDoNo(selected.id)} onChange={(patch) => updateNode(selected.id, patch)} />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {aiOpen && (
+        <div onClick={() => !aiLoading && setAiOpen(false)}
+          style={{ position: "absolute", inset: 0, background: "rgba(15,23,42,0.5)", backdropFilter: "blur(4px)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 520, maxWidth: "100%", ...glass({ borderRadius: 24, padding: 22, boxShadow: "0 24px 60px rgba(15,23,42,0.35)" }) }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+              <div style={{ width: 34, height: 34, borderRadius: "50%", background: "linear-gradient(135deg,#c084fc,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>✨</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "#1e293b" }}>Gerar fluxo com IA</div>
+            </div>
+            <div style={{ fontSize: 11.5, color: "#64748b", marginBottom: 14, lineHeight: 1.5 }}>
+              Cole o texto de um protocolo (ou um trecho dele). A IA monta um esboço do fluxo — exames, condições, medicamentos — pra você refinar depois.
+              <br /><b>Fica compacto (até ~8 nós)</b>: é um ponto de partida, não o protocolo inteiro modelado.
+            </div>
+            <textarea value={aiText} onChange={(e) => setAiText(e.target.value)} disabled={aiLoading}
+              placeholder="Cole aqui o texto do protocolo..."
+              style={{ width: "100%", minHeight: 160, fontSize: 12.5, padding: 12, borderRadius: 12, border: "1px solid #dbe1ea", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit", outline: "none", marginBottom: 10 }} />
+            {aiError && (
+              <div style={{ fontSize: 11, color: "#e11d48", background: "rgba(255,241,242,0.8)", borderRadius: 10, padding: "8px 10px", marginBottom: 10 }}>⚠ {aiError}</div>
+            )}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button onClick={() => setAiOpen(false)} disabled={aiLoading}
+                style={{ padding: "9px 16px", borderRadius: 10, border: "none", fontSize: 12.5, fontWeight: 600, color: "#64748b", background: "#f1f5f9", cursor: aiLoading ? "default" : "pointer" }}>
+                Cancelar
+              </button>
+              <button onClick={handleAiGenerate} disabled={aiLoading || !aiText.trim()}
+                style={{ padding: "9px 18px", borderRadius: 10, border: "none", fontSize: 12.5, fontWeight: 700, color: "#fff", cursor: aiLoading || !aiText.trim() ? "default" : "pointer",
+                  background: aiLoading || !aiText.trim() ? "#c4b5fd" : "linear-gradient(135deg,#c084fc,#7c3aed)" }}>
+                {aiLoading ? "Gerando…" : "Gerar fluxo"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NodeCorners({ node, s, connecting, snapTarget, hoveredArrow, setHoveredArrow, startConnection }) {
+  const handles = handlesForNode(node);
+  if (handles.length === 1) {
+    const h = handles[0];
+    return (
+      <OutputChevron center s={s} node={node} h={h} keyId={`${node.id}:${h.id ?? "default"}`}
+        connecting={connecting} snapTarget={snapTarget} hoveredArrow={hoveredArrow}
+        setHoveredArrow={setHoveredArrow} startConnection={startConnection} />
+    );
+  }
+  return (
+    <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, display: "flex", justifyContent: "space-between", padding: "0 20px" }}>
+      {handles.map((h) => (
+        <OutputChevron key={h.id} inline s={s} node={node} h={h} keyId={`${node.id}:${h.id}`}
+          connecting={connecting} snapTarget={snapTarget} hoveredArrow={hoveredArrow}
+          setHoveredArrow={setHoveredArrow} startConnection={startConnection} />
+      ))}
+    </div>
+  );
+}
+
+// Chevron discreto centralizado na borda inferior — só o desenho em repouso,
+// levemente translúcido. Ativo (hover / conectando / alvo do ímã): vira um
+// círculo com o gradiente azul por trás, um pouco maior.
+function OutputChevron({ center, inline, s, node, h, keyId, connecting, snapTarget, hoveredArrow, setHoveredArrow, startConnection }) {
+  const isConnectingFrom = connecting?.from === node.id && connecting?.fromHandle === h.id;
+  const isSnapTarget = snapTarget && snapTarget.nodeId === node.id && snapTarget.handleId === h.id;
+  const isHovered = hoveredArrow === keyId;
+  const active = isConnectingFrom || isSnapTarget || isHovered;
+  const size = active ? 34 : 20;
+  const posStyle = center
+    ? { position: "absolute", left: "50%", bottom: 0, transform: "translate(-50%, 45%)" }
+    : { position: "relative", transform: "translateY(45%)" };
+  return (
+    <div data-arrow="1" title={h.label}
+      onMouseDown={(e) => startConnection(e, node, h.id)}
+      onMouseEnter={() => setHoveredArrow(keyId)}
+      onMouseLeave={() => setHoveredArrow((cur) => (cur === keyId ? null : cur))}
+      style={{ ...posStyle, width: size, height: size, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+        cursor: "crosshair", zIndex: 5, background: active ? SNAP_GRAD : "transparent",
+        boxShadow: active ? "0 6px 14px rgba(37,99,235,0.38)" : "none", opacity: active ? 1 : 0.62, transition: "all .15s" }}>
+      <ChevronDown size={active ? 18 : 15} color={active ? "#fff" : s.accent} strokeWidth={2.8} />
+    </div>
+  );
+}
+
+function FloatingButton({ item, style: s, offset, size, iconSize, muted, onDragStart, onDragEnd, onClick }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <div draggable onDragStart={onDragStart} onDragEnd={onDragEnd} onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      style={{ position: "relative", marginLeft: offset, width: size, height: size, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+        cursor: "grab", transition: "transform .15s, box-shadow .15s", transform: hover ? "scale(1.1)" : "scale(1)", opacity: muted ? 0.88 : 1,
+        ...glass({ boxShadow: hover ? "0 10px 26px rgba(100,90,140,0.28)" : "0 6px 18px rgba(100,90,140,0.18)" }) }}>
+      <div style={{ width: iconSize, height: iconSize, borderRadius: "50%", background: s.grad, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "inset 0 1px 2px rgba(255,255,255,0.4)" }}>
+        <s.Icon size={Math.round(iconSize * 0.44)} color="#fff" strokeWidth={2.3} />
+      </div>
+      {hover && (
+        <span style={{ position: "absolute", left: size + 10, top: "50%", transform: "translateY(-50%)", whiteSpace: "nowrap",
+          background: "rgba(30,41,59,0.92)", color: "#fff", fontSize: 11, fontWeight: 500, padding: "5px 10px", borderRadius: 8, boxShadow: "0 6px 16px rgba(0,0,0,.2)", pointerEvents: "none" }}>
+          {item.label}
+        </span>
+      )}
+    </div>
+  );
+}
+
+const EVENTO_ACOES = [
+  { id: "suspender", label: "Suspender", alvoTipo: ["Medicamento", "Exame", "Consulta"] },
+  { id: "ajustar", label: "Ajustar dose", alvoTipo: ["Medicamento"] },
+  { id: "mensagem_paciente", label: "Enviar mensagem ao paciente", alvoTipo: null },
+  { id: "notificar_usuario", label: "Notificar usuário", alvoTipo: null },
+  { id: "gerar_receita", label: "Gerar receita", alvoTipo: ["Medicamento"] },
+  { id: "enviar_receita", label: "Enviar receita", alvoTipo: ["Medicamento"] },
+  { id: "solicitar_exame", label: "Solicitar exame", alvoTipo: ["Exame"] },
+];
+function eventoResumo(node, nodesById) {
+  const alvoNome = nodesById[node.alvoId]?.name;
+  switch (node.acao) {
+    case "suspender": return <>Suspende <b>{alvoNome || "(alvo não definido)"}</b></>;
+    case "ajustar": return <>Ajusta <b>{alvoNome || "(alvo não definido)"}</b></>;
+    case "gerar_receita": return <>Gera receita de <b>{alvoNome || "(alvo não definido)"}</b></>;
+    case "enviar_receita": return <>Envia receita de <b>{alvoNome || "(alvo não definido)"}</b></>;
+    case "solicitar_exame": return <>Solicita <b>{alvoNome || "(exame não definido)"}</b></>;
+    case "mensagem_paciente": return <>Envia mensagem ao paciente{node.conteudo ? <>: <b>"{node.conteudo.slice(0, 40)}{node.conteudo.length > 40 ? "…" : ""}"</b></> : null}</>;
+    case "notificar_usuario": return <>Notifica <b>{node.destinatario || "(destinatário não definido)"}</b></>;
+    default: return "(efeito não definido)";
+  }
+}
+
+function NodeInspector({ node, graph, fontes, onChange }) {
+  const s = TYPE_STYLE[node.type];
+  const label = { fontSize: 10.5, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4, display: "block" };
+  const input = { width: "100%", fontSize: 12.5, padding: "8px 10px", borderRadius: 10, border: "1px solid #dbe1ea", marginBottom: 12, boxSizing: "border-box", background: "rgba(255,255,255,0.85)", outline: "none" };
+  const nodesById = useMemo(() => Object.fromEntries(graph.nodes.map((n) => [n.id, n])), [graph.nodes]);
+
+  function addBranch() {
+    const branches = [...node.branches];
+    branches.splice(branches.length - 1, 0, { id: uid(), descricao: "", clauses: [] });
+    onChange({ branches });
+  }
+  const updateBranch = (id, patch) => onChange({ branches: node.branches.map((b) => (b.id === id ? { ...b, ...patch } : b)) });
+  const removeBranch = (id) => onChange({ branches: node.branches.filter((b) => b.id !== id) });
+
+  function makeClause(sourceKind, sourceNodeId, conector) {
+    if (sourceKind === "medicamento") return { id: uid(), sourceKind, sourceNodeId, estado: "em_uso", conector };
+    if (sourceKind === "paciente") return { id: uid(), sourceKind, sourceNodeId: null, variavel: "idade", operador: "maior_que", valor: "", conector };
+    return { id: uid(), sourceKind: "exame", sourceNodeId, campo: "numero", operador: "maior_que", numero: "", conector };
+  }
+  function addClause(branchId, sourceKind, sourceNodeId) {
+    const branch = node.branches.find((b) => b.id === branchId);
+    const conector = branch.clauses.length === 0 ? null : "E";
+    updateBranch(branchId, { clauses: [...branch.clauses, makeClause(sourceKind, sourceNodeId, conector)] });
+  }
+  function updateClause(branchId, clauseId, patch) {
+    const branch = node.branches.find((b) => b.id === branchId);
+    updateBranch(branchId, { clauses: branch.clauses.map((c) => (c.id === clauseId ? { ...c, ...patch } : c)) });
+  }
+  function removeClause(branchId, clauseId) {
+    const branch = node.branches.find((b) => b.id === branchId);
+    const clauses = branch.clauses.filter((c) => c.id !== clauseId);
+    if (clauses.length) clauses[0] = { ...clauses[0], conector: null }; // a primeira nunca tem conector
+    updateBranch(branchId, { clauses });
+  }
+
+  const outrosNos = graph.nodes.filter((n) => n.id !== node.id && ["Medicamento", "Exame", "Consulta"].includes(n.type));
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+        <div style={{ width: 32, height: 32, borderRadius: "50%", background: s.grad, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <s.Icon size={16} color="#fff" strokeWidth={2.3} />
+        </div>
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: s.accent, textTransform: "uppercase", letterSpacing: 0.4 }}>{s.label}</div>
+      </div>
+
+      <label style={label}>Nome do nó</label>
+      <input style={input} value={node.name} onChange={(e) => onChange({ name: e.target.value })} />
+
+      {node.type === "Exame" && (
+        <>
+          <label style={label}>Procedimento (catálogo TUSS)</label>
+          <input style={input} list="tuss-list" value={TUSS_CATALOG.find((t) => t.id === node.tussId)?.nome || ""}
+            onChange={(e) => { const hit = TUSS_CATALOG.find((t) => t.nome === e.target.value); onChange(hit ? { tussId: hit.id, name: hit.nome } : { tussId: null }); }}
+            placeholder="Buscar exame no catálogo..." />
+          <datalist id="tuss-list">{TUSS_CATALOG.map((t) => <option key={t.id} value={t.nome} />)}</datalist>
+          {node.tussId && <div style={{ fontSize: 10.5, color: "#059669", marginTop: -8, marginBottom: 12 }}>TUSS {TUSS_CATALOG.find((t) => t.id === node.tussId)?.codigo}</div>}
+        </>
+      )}
+      {node.type === "Consulta" && (<><label style={label}>Especialidade (opcional)</label><input style={input} value={node.especialidade || ""} onChange={(e) => onChange({ especialidade: e.target.value })} /></>)}
+      {node.type === "Medicamento" && (
+        <>
+          <label style={label}>Substância (catálogo)</label>
+          <input style={input} list="sub-list" value={SUBSTANCIA_CATALOG.find((s2) => s2.id === node.substanciaId)?.nome || ""}
+            onChange={(e) => { const hit = SUBSTANCIA_CATALOG.find((s2) => s2.nome === e.target.value); onChange(hit ? { substanciaId: hit.id, name: hit.nome } : { substanciaId: null }); }}
+            placeholder="Buscar substância..." />
+          <datalist id="sub-list">{SUBSTANCIA_CATALOG.map((s2) => <option key={s2.id} value={s2.nome} />)}</datalist>
+          <label style={label}>Dose</label>
+          <input style={input} value={node.dose || ""} onChange={(e) => onChange({ dose: e.target.value })} placeholder="Ex: 75mcg" />
+          <label style={label}>Posologia</label>
+          <input style={input} value={node.posologia || ""} onChange={(e) => onChange({ posologia: e.target.value })} placeholder="Ex: 1x/dia" />
+        </>
+      )}
+
+      {node.type === "Condicao" && (
+        <>
+          {!fontes.length && (
+            <div style={{ fontSize: 10.5, padding: "8px 10px", borderRadius: 10, marginBottom: 12, color: "#b45309", background: "rgba(254,243,199,0.6)" }}>
+              ⚠ Conecte um Exame ou Medicamento na entrada — cada cláusula usa um deles como fonte (além dos dados do paciente, sempre disponíveis).
+            </div>
+          )}
+
+          <label style={label}>Fontes para montar cláusulas</label>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+            {fontes.map((f) => {
+              const fs = TYPE_STYLE[f.type];
+              return (
+                <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10.5, fontWeight: 600, color: fs.accent, background: fs.soft, border: `1px solid ${fs.accent}33`, borderRadius: 999, padding: "4px 9px" }}>
+                  <fs.Icon size={11} /> {f.name}
+                </div>
+              );
+            })}
+            <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10.5, fontWeight: 600, color: "#475569", background: "#f1f5f9", borderRadius: 999, padding: "4px 9px" }}>
+              🧍 Dado do paciente
+            </div>
+          </div>
+          <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 14, marginTop: -8 }}>
+            Clique em "+ Cláusula" dentro de cada regra abaixo e escolha uma dessas fontes.
+          </div>
+
+          <label style={label}>Regras, em ordem (a primeira cuja cadeia de cláusulas bater decide o ramo)</label>
+          {node.branches.map((b, i) => (
+            <div key={b.id} style={{ borderRadius: 12, padding: 10, marginBottom: 8, border: `1px dashed ${b.isDefault ? "#cbd5e1" : "#fbbf24"}`, background: b.isDefault ? "rgba(248,250,252,0.6)" : "rgba(255,251,235,0.6)" }}>
+              <div style={{ fontSize: 9.5, fontWeight: 700, color: "#94a3b8", marginBottom: 6 }}>{i + 1}. {b.isDefault ? "CASO PADRÃO (fallback)" : "REGRA"}</div>
+              {!b.isDefault && (
+                <>
+                  {b.clauses.map((c) => (
+                    <ClauseEditor key={c.id} clause={c} nodesById={nodesById}
+                      onChange={(patch) => updateClause(b.id, c.id, patch)}
+                      onRemove={() => removeClause(b.id, c.id)} inputStyle={input} />
+                  ))}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: b.clauses.length ? 4 : 0, marginBottom: 6 }}>
+                    {fontes.map((f) => {
+                      const fs = TYPE_STYLE[f.type];
+                      return (
+                        <button key={f.id} onClick={() => addClause(b.id, f.type === "Exame" ? "exame" : "medicamento", f.id)}
+                          style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 600, color: fs.accent, background: "#fff", border: `1px solid ${fs.accent}55`, borderRadius: 8, padding: "4px 8px", cursor: "pointer" }}>
+                          <Plus size={10} /> {f.name}
+                        </button>
+                      );
+                    })}
+                    <button onClick={() => addClause(b.id, "paciente", null)}
+                      style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 600, color: "#475569", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, padding: "4px 8px", cursor: "pointer" }}>
+                      <Plus size={10} /> Dado do paciente
+                    </button>
+                  </div>
+                  <button onClick={() => removeBranch(b.id)} style={{ fontSize: 10.5, color: "#e11d48", background: "none", border: "none", cursor: "pointer", padding: 0 }}>Remover regra</button>
+                </>
+              )}
+            </div>
+          ))}
+          <button onClick={addBranch} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 4, fontSize: 11.5, fontWeight: 600, color: s.accent, background: s.soft, border: "none", borderRadius: 10, padding: "8px 10px", cursor: "pointer", marginBottom: 4 }}>
+            <Plus size={13} /> Regra
+          </button>
+          <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 12 }}>
+            ⚠ Compor cláusulas de mais de uma fonte (ex: exame E medicamento) ainda não é avaliado pelo motor real — precisa da migração que discutimos (condição com contexto completo do paciente).
+          </div>
+        </>
+      )}
+
+      {node.type === "Admissao" && (() => {
+        const addAdmClause = (sourceKind, sourceNodeId) => {
+          const conector = node.clauses.length === 0 ? null : "E";
+          onChange({ clauses: [...node.clauses, makeClause(sourceKind, sourceNodeId, conector)] });
+        };
+        const updateAdmClause = (clauseId, patch) => onChange({ clauses: node.clauses.map((c) => (c.id === clauseId ? { ...c, ...patch } : c)) });
+        const removeAdmClause = (clauseId) => {
+          const clauses = node.clauses.filter((c) => c.id !== clauseId);
+          if (clauses.length) clauses[0] = { ...clauses[0], conector: null };
+          onChange({ clauses });
+        };
+        return (
+          <>
+            <div style={{ fontSize: 10.5, padding: "8px 10px", borderRadius: 10, marginBottom: 14, color: "#0f766e", background: "rgba(240,253,250,0.8)" }}>
+              Portão de entrada do protocolo — só dados do paciente, avaliados antes de qualquer exame. Duas saídas fixas: <b>Admitido</b> e <b>Não admitido</b>.
+            </div>
+
+            <label style={label}>Critérios (cadeia E/OU)</label>
+            {node.clauses.map((c) => (
+              <ClauseEditor key={c.id} clause={c} nodesById={nodesById}
+                onChange={(patch) => updateAdmClause(c.id, patch)}
+                onRemove={() => removeAdmClause(c.id)} inputStyle={input} />
+            ))}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: node.clauses.length ? 4 : 0, marginBottom: 12 }}>
+              {fontes.map((f) => {
+                const fs = TYPE_STYLE[f.type];
+                return (
+                  <button key={f.id} onClick={() => addAdmClause(f.type === "Exame" ? "exame" : "medicamento", f.id)}
+                    style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 600, color: fs.accent, background: "#fff", border: `1px solid ${fs.accent}55`, borderRadius: 8, padding: "4px 8px", cursor: "pointer" }}>
+                    <Plus size={10} /> {f.name}
+                  </button>
+                );
+              })}
+              <button onClick={() => addAdmClause("paciente", null)}
+                style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 600, color: "#475569", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, padding: "4px 8px", cursor: "pointer" }}>
+                <Plus size={10} /> Dado do paciente
+              </button>
+            </div>
+            <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 12 }}>
+              Conecte a saída <b>Admitido</b> ao restante do protocolo, e a <b>Não admitido</b> a um Evento explicando a recusa (ex: notificar usuário).
+            </div>
+          </>
+        );
+      })()}
+
+      {node.type === "Evento" && (() => {
+        const acaoAtual = EVENTO_ACOES.find((a) => a.id === node.acao) || EVENTO_ACOES[0];
+        const precisaAlvo = !!acaoAtual.alvoTipo;
+        const precisaMensagem = node.acao === "mensagem_paciente" || node.acao === "notificar_usuario";
+        const alvosFiltrados = precisaAlvo ? outrosNos.filter((n) => acaoAtual.alvoTipo.includes(n.type)) : [];
+        return (
+          <>
+            <label style={label}>Efeito</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+              {EVENTO_ACOES.map((op) => (
+                <button key={op.id} onClick={() => onChange({ acao: op.id })}
+                  style={{ flex: "1 1 calc(50% - 6px)", minWidth: 110, padding: "7px 6px", borderRadius: 10, border: "none", fontSize: 10.5, fontWeight: 700, cursor: "pointer", lineHeight: 1.25,
+                    background: node.acao === op.id ? s.grad : "#f1f5f9", color: node.acao === op.id ? "#fff" : "#64748b" }}>{op.label}</button>
+              ))}
+            </div>
+
+            {precisaAlvo && (
+              <>
+                <label style={label}>{node.acao === "solicitar_exame" ? "Exame alvo" : "Ação alvo"} (nó existente no fluxo)</label>
+                <select style={input} value={node.alvoId || ""} onChange={(e) => onChange({ alvoId: e.target.value || null })}>
+                  <option value="">Selecione…</option>
+                  {alvosFiltrados.map((n) => <option key={n.id} value={n.id}>{n.name} ({TYPE_STYLE[n.type].label})</option>)}
+                </select>
+                {alvosFiltrados.length === 0 && (
+                  <div style={{ fontSize: 10, color: "#b45309", marginTop: -8, marginBottom: 12 }}>
+                    Nenhum nó de {acaoAtual.alvoTipo.join("/")} no fluxo ainda pra apontar como alvo.
+                  </div>
+                )}
+              </>
+            )}
+            {node.acao === "ajustar" && (<><label style={label}>Novo valor / fator de ajuste</label><input style={input} value={node.fator || ""} onChange={(e) => onChange({ fator: e.target.value })} placeholder="Ex: 75mcg, ou fator 1.5" /></>)}
+
+            {precisaMensagem && (
+              <>
+                {node.acao === "notificar_usuario" && (
+                  <>
+                    <label style={label}>Notificar (usuário/perfil)</label>
+                    <input style={input} value={node.destinatario || ""} onChange={(e) => onChange({ destinatario: e.target.value })} placeholder="Ex: Médico responsável" />
+                  </>
+                )}
+                <label style={label}>{node.acao === "mensagem_paciente" ? "Mensagem para o paciente" : "Mensagem da notificação"}</label>
+                <textarea style={{ ...input, minHeight: 64, resize: "vertical", fontFamily: "inherit" }} value={node.conteudo || ""}
+                  onChange={(e) => onChange({ conteudo: e.target.value })} placeholder="Escreva a mensagem..." />
+              </>
+            )}
+
+            <label style={label}>Motivo (aparece na auditoria)</label>
+            <input style={input} value={node.motivo || ""} onChange={(e) => onChange({ motivo: e.target.value })} placeholder="Ex: Gestação em curso" />
+            <div style={{ fontSize: 10, color: "#e11d48", background: "rgba(255,241,242,0.7)", borderRadius: 10, padding: "8px 10px" }}>
+              ⚠ Nenhum desses efeitos existe no schema ainda — hoje uma regra só cria tarefas novas. Essas opções descrevem a intenção; a execução real (suspender, mandar mensagem, gerar receita etc.) precisa ser construída na Fase 2.
+            </div>
+          </>
+        );
+      })()}
+
+      {(() => {
+        const incoming = graph.edges.filter((e) => e.to === node.id);
+        if (!incoming.length) {
+          return (
+            <>
+              <label style={{ ...label, marginTop: 12 }}>Lapso desde o início do protocolo (dias)</label>
+              <input type="number" min={0} style={input} value={node.lapso} onChange={(e) => onChange({ lapso: Number(e.target.value) })} />
+              <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: -6 }}>Este nó não tem entrada — é a raiz do protocolo (ou de um sub-fluxo), então o lapso conta a partir do início.</div>
+            </>
+          );
+        }
+        return (
+          <>
+            <label style={{ ...label, marginTop: 12 }}>Lapso desde o(s) nó(s) anterior(es)</label>
+            <div style={{ borderRadius: 10, background: "rgba(241,245,249,0.7)", padding: "8px 10px", marginBottom: 4 }}>
+              {incoming.map((e) => {
+                const from = graph.nodes.find((n) => n.id === e.from);
+                return <div key={e.id} style={{ fontSize: 11, color: "#475569" }}>{from?.name || "?"} → <b>{e.lapso}d</b></div>;
+              })}
+            </div>
+            <div style={{ fontSize: 10.5, color: "#94a3b8" }}>Definido na(s) linha(s) de conexão, não aqui — edite direto no badge da linha, no canvas.</div>
+          </>
+        );
+      })()}
+    </div>
+  );
+}
+
+// Uma cláusula dentro da cadeia de uma regra: opcionalmente um alternador E/OU
+// (ausente na primeira cláusula), a fonte de onde ela vem (badge fixo, não editável
+// depois de criada), e os campos específicos daquele tipo de fonte.
+function ClauseEditor({ clause, nodesById, onChange, onRemove, inputStyle }) {
+  const srcNode = clause.sourceNodeId ? nodesById[clause.sourceNodeId] : null;
+  const srcStyle = srcNode ? TYPE_STYLE[srcNode.type] : null;
+  const smallInput = { ...inputStyle, marginBottom: 0, padding: "6px 8px", fontSize: 11.5 };
+
+  return (
+    <div style={{ borderRadius: 10, padding: 8, marginBottom: 6, background: "rgba(255,255,255,0.6)", border: "1px solid rgba(203,213,225,0.7)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
+        {clause.conector !== null && (
+          <div style={{ display: "flex", gap: 3 }}>
+            {["E", "OU"].map((op) => (
+              <button key={op} onClick={() => onChange({ conector: op })}
+                style={{ padding: "2px 8px", borderRadius: 6, border: "none", fontSize: 10, fontWeight: 700, cursor: "pointer",
+                  background: clause.conector === op ? "#1e293b" : "#e2e8f0", color: clause.conector === op ? "#fff" : "#64748b" }}>
+                {op}
+              </button>
+            ))}
+          </div>
+        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700,
+          color: clause.sourceKind === "paciente" ? "#475569" : srcStyle?.accent,
+          background: clause.sourceKind === "paciente" ? "#f1f5f9" : srcStyle?.soft, borderRadius: 999, padding: "2px 8px" }}>
+          {clause.sourceKind === "paciente" ? "🧍 Paciente" : `${srcStyle?.label}: ${srcNode?.name || "?"}`}
+        </div>
+        <div style={{ flex: 1 }} />
+        <button onClick={onRemove} style={{ border: "none", background: "none", color: "#cbd5e1", cursor: "pointer", padding: 0, display: "flex" }}><X size={13} /></button>
+      </div>
+
+      {clause.sourceKind === "medicamento" && (
+        <select style={smallInput} value={clause.estado} onChange={(e) => onChange({ estado: e.target.value })}>
+          <option value="em_uso">está em uso</option>
+          <option value="suspenso">está suspenso</option>
+        </select>
+      )}
+
+      {clause.sourceKind === "exame" && (
+        <>
+          <select style={{ ...smallInput, width: "100%", marginBottom: 6 }} value={clause.campo} onChange={(e) => onChange({ campo: e.target.value })}>
+            {CAMPO_OPTIONS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+          </select>
+          {clause.campo === "achado" ? (
+            <div style={{ display: "flex", gap: 6 }}>
+              <input style={{ ...smallInput, flex: 1 }} value={clause.conceito || ""} onChange={(e) => onChange({ conceito: e.target.value })} placeholder="Ex: FIBRILACAO_ATRIAL" />
+              <select style={{ ...smallInput, width: 90 }} value={String(clause.presente ?? true)} onChange={(e) => onChange({ presente: e.target.value === "true" })}>
+                <option value="true">presente</option><option value="false">ausente</option>
+              </select>
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 6 }}>
+              <select style={{ ...smallInput, flex: 1 }} value={clause.operador} onChange={(e) => onChange({ operador: e.target.value })}>
+                {(clause.campo === "numero" ? OPERADORES_NUMERO : OPERADORES_TEXTO).map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+              </select>
+              {clause.operador === "entre" ? (
+                <>
+                  <input style={{ ...smallInput, width: 56 }} value={clause.numero_min || ""} onChange={(e) => onChange({ numero_min: e.target.value })} placeholder="min" />
+                  <input style={{ ...smallInput, width: 56 }} value={clause.numero_max || ""} onChange={(e) => onChange({ numero_max: e.target.value })} placeholder="max" />
+                </>
+              ) : (
+                <input style={{ ...smallInput, flex: 1 }} value={clause.campo === "numero" ? (clause.numero || "") : (clause.texto || "")}
+                  onChange={(e) => onChange(clause.campo === "numero" ? { numero: e.target.value } : { texto: e.target.value })} placeholder="Valor" />
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {clause.sourceKind === "paciente" && (() => {
+        const v = PATIENT_VARS.find((p) => p.id === clause.variavel);
+        const ops = v?.kind === "numero" ? OPERADORES_NUMERO : v?.kind === "texto" ? OPERADORES_TEXTO : OPERADORES_ENUM;
+        return (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <select style={{ ...smallInput, flex: 1, minWidth: 90 }} value={clause.variavel}
+              onChange={(e) => onChange({ variavel: e.target.value, operador: "igual", valor: "" })}>
+              {PATIENT_VARS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+            </select>
+            <select style={{ ...smallInput, width: 84 }} value={clause.operador} onChange={(e) => onChange({ operador: e.target.value })}>
+              {ops.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+            </select>
+            {v?.kind === "enum" ? (
+              <select style={{ ...smallInput, width: 80 }} value={clause.valor} onChange={(e) => onChange({ valor: e.target.value })}>
+                <option value="">—</option>
+                {v.options.map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+            ) : (
+              <input style={{ ...smallInput, width: 80 }} value={clause.valor} onChange={(e) => onChange({ valor: e.target.value })} placeholder="Valor" />
+            )}
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+
+// Gate de autenticação. Se a sessão do Supabase do app principal já estiver
+// em localStorage (mesmo domínio, produção — ver comentário no <head>), isso
+// nem aparece: o useEffect abaixo já encontra a sessão de cara. Só mostra o
+// formulário se realmente não houver sessão.
+function App() {
+  const [session, setSession] = useState(undefined); // undefined = carregando
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState(null);
+  const [loggingIn, setLoggingIn] = useState(false);
+
+  useEffect(() => {
+    if (!supabaseClient) { setSession(null); return; }
+    supabaseClient.auth.getSession().then(({ data }) => setSession(data?.session || null));
+    const { data: sub } = supabaseClient.auth.onAuthStateChange((_event, s) => setSession(s));
+    return () => sub?.subscription?.unsubscribe();
+  }, []);
+
+  if (!supabaseClient) {
+    return (
+      <div style={{ padding: 40, fontFamily: "sans-serif", color: "#7c2d12", background: "#fff7ed", maxWidth: 560, margin: "60px auto", borderRadius: 12, border: "1px solid #fed7aa" }}>
+        <b>Studio sem configuração.</b> Preencha <code>SUPABASE_URL</code> e <code>SUPABASE_ANON_KEY</code>
+        {" "}no bloco <code>&lt;script&gt;</code> no topo deste arquivo (são os mesmos valores públicos usados no app principal).
+      </div>
+    );
+  }
+
+  if (session === undefined) {
+    return <div style={{ padding: 40, fontFamily: "sans-serif", color: "#64748b" }}>Carregando…</div>;
+  }
+
+  if (!session) {
+    async function handleLogin(e) {
+      e.preventDefault();
+      setLoggingIn(true); setLoginError(null);
+      const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) setLoginError(error.message);
+      setLoggingIn(false);
+    }
+    return (
+      <form onSubmit={handleLogin} style={{ maxWidth: 340, margin: "100px auto", fontFamily: "sans-serif", display: "flex", flexDirection: "column", gap: 10 }}>
+        <h2 style={{ fontSize: 18, marginBottom: 4 }}>Entrar no Studio</h2>
+        <input type="email" placeholder="E-mail" value={email} onChange={(e) => setEmail(e.target.value)}
+          style={{ padding: 10, borderRadius: 8, border: "1px solid #cbd5e1" }} required />
+        <input type="password" placeholder="Senha" value={password} onChange={(e) => setPassword(e.target.value)}
+          style={{ padding: 10, borderRadius: 8, border: "1px solid #cbd5e1" }} required />
+        {loginError && <div style={{ color: "#dc2626", fontSize: 12.5 }}>{loginError}</div>}
+        <button type="submit" disabled={loggingIn}
+          style={{ padding: 10, borderRadius: 8, border: "none", background: "#7c3aed", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
+          {loggingIn ? "Entrando…" : "Entrar"}
+        </button>
+      </form>
+    );
+  }
+
+  return <ProtocolCanvas />;
+}
+
+const rootEl = document.getElementById("root");
+const root = ReactDOM.createRoot(rootEl);
+root.render(<App />);
+
+</script>
+</body>
+</html>

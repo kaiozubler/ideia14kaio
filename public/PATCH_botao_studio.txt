@@ -1,0 +1,41 @@
+PATCH — adicionar botão "Studio de protocolo"
+================================================
+Arquivo: public/protocolos.js
+Local: função myProtocolsHtml() (tela "Meus protocolos"), perto da linha 780.
+
+ANTES:
+------
+        <button class="pt-btn primary" data-new="1">+ Novo protocolo</button></div>
+
+DEPOIS (troque pela linha acima):
+----------------------------------
+        <div style="display:flex;gap:10px">
+          <a href="/protocolo-studio.html" target="_blank" rel="noopener"
+             class="pt-btn pt-pill ghost" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+            🧬 Studio de protocolo
+          </a>
+          <button class="pt-btn primary" data-new="1">+ Novo protocolo</button>
+        </div></div>
+
+Notas:
+- ATUALIZADO: o arquivo do Studio é public/protocolo-studio.html, não
+  medicopilot.html — esse nome já é usado pelo app principal inteiro
+  (public/medicopilot.html, ~20k linhas). Usar medicopilot.html aqui
+  sobrescreveria o app inteiro.
+- Não precisei mexer no sistema de eventos deles (a lista gigante de
+  "data-*" na função de delegação de cliques) porque é um <a> normal
+  abrindo em nova aba — não passa por data-act/data-new etc.
+- Se preferirem abrir na MESMA aba em vez de nova aba, é só tirar o
+  target="_blank".
+- public/protocolo-studio.html já está no repo, servido na raiz como
+  /protocolo-studio.html — igual o padrão que vocês já usam pros outros
+  arquivos estáticos dessa pasta.
+- O Studio ainda é experimental/paralelo ao fluxo oficial de criar
+  protocolo (não substitui o modal atual). Ele chama /api/ia/gerar-fluxo
+  (já existe, ver src/routes/api/ia/gerar-fluxo.ts) e
+  /api/protocolos/estudio-rascunho (novo, ver esse arquivo) pra
+  gerar com IA e salvar/carregar rascunhos.
+- IMPORTANTE: antes de publicar, abra public/protocolo-studio.html e
+  preencha SUPABASE_URL e SUPABASE_ANON_KEY no <script> do topo (mesmos
+  valores públicos já usados no app principal — não é segredo). Sem isso
+  o Studio mostra um aviso de "sem configuração" em vez do canvas.

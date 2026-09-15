@@ -31,10 +31,12 @@ import { Route as ApiBryCreateEnvelopeRouteImport } from './routes/api/bry/creat
 import { Route as ApiBryDownloadDocumentRouteImport } from './routes/api/bry/download-document'
 import { Route as ApiBryGetEnvelopeRouteImport } from './routes/api/bry/get-envelope'
 import { Route as ApiCidBuscarRouteImport } from './routes/api/cid/buscar'
+import { Route as ApiIaGerarFluxoRouteImport } from './routes/api/ia/gerar-fluxo'
 import { Route as ApiMedicamentosBuscarRouteImport } from './routes/api/medicamentos/buscar'
 import { Route as ApiMedicamentosSimplificarApresentacoesRouteImport } from './routes/api/medicamentos/simplificar-apresentacoes'
 import { Route as ApiPacientesMigrarRouteImport } from './routes/api/pacientes/migrar'
 import { Route as ApiProtocolosAvaliarExameRouteImport } from './routes/api/protocolos/avaliar-exame'
+import { Route as ApiProtocolosEstudioRascunhoRouteImport } from './routes/api/protocolos/estudio-rascunho'
 import { Route as ApiProtocolosGerarIaRouteImport } from './routes/api/protocolos/gerar-ia'
 import { Route as ApiProtocolosSincronizarRouteImport } from './routes/api/protocolos/sincronizar'
 import { Route as ApiQuestionariosGerarIaRouteImport } from './routes/api/questionarios/gerar-ia'
@@ -177,6 +179,11 @@ const ApiCidBuscarRoute = ApiCidBuscarRouteImport.update({
   path: '/api/cid/buscar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiIaGerarFluxoRoute = ApiIaGerarFluxoRouteImport.update({
+  id: '/api/ia/gerar-fluxo',
+  path: '/api/ia/gerar-fluxo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMedicamentosBuscarRoute = ApiMedicamentosBuscarRouteImport.update({
   id: '/api/medicamentos/buscar',
   path: '/api/medicamentos/buscar',
@@ -197,6 +204,12 @@ const ApiProtocolosAvaliarExameRoute =
   ApiProtocolosAvaliarExameRouteImport.update({
     id: '/api/protocolos/avaliar-exame',
     path: '/api/protocolos/avaliar-exame',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiProtocolosEstudioRascunhoRoute =
+  ApiProtocolosEstudioRascunhoRouteImport.update({
+    id: '/api/protocolos/estudio-rascunho',
+    path: '/api/protocolos/estudio-rascunho',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiProtocolosGerarIaRoute = ApiProtocolosGerarIaRouteImport.update({
@@ -366,10 +379,12 @@ export interface FileRoutesByFullPath {
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/cid/buscar': typeof ApiCidBuscarRoute
+  '/api/ia/gerar-fluxo': typeof ApiIaGerarFluxoRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
   '/api/pacientes/migrar': typeof ApiPacientesMigrarRoute
   '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
+  '/api/protocolos/estudio-rascunho': typeof ApiProtocolosEstudioRascunhoRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
   '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
@@ -420,10 +435,12 @@ export interface FileRoutesByTo {
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/cid/buscar': typeof ApiCidBuscarRoute
+  '/api/ia/gerar-fluxo': typeof ApiIaGerarFluxoRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
   '/api/pacientes/migrar': typeof ApiPacientesMigrarRoute
   '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
+  '/api/protocolos/estudio-rascunho': typeof ApiProtocolosEstudioRascunhoRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
   '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
@@ -475,10 +492,12 @@ export interface FileRoutesById {
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/cid/buscar': typeof ApiCidBuscarRoute
+  '/api/ia/gerar-fluxo': typeof ApiIaGerarFluxoRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
   '/api/pacientes/migrar': typeof ApiPacientesMigrarRoute
   '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
+  '/api/protocolos/estudio-rascunho': typeof ApiProtocolosEstudioRascunhoRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
   '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
@@ -531,10 +550,12 @@ export interface FileRouteTypes {
     | '/api/bry/download-document'
     | '/api/bry/get-envelope'
     | '/api/cid/buscar'
+    | '/api/ia/gerar-fluxo'
     | '/api/medicamentos/buscar'
     | '/api/medicamentos/simplificar-apresentacoes'
     | '/api/pacientes/migrar'
     | '/api/protocolos/avaliar-exame'
+    | '/api/protocolos/estudio-rascunho'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
     | '/api/questionarios/gerar-ia'
@@ -585,10 +606,12 @@ export interface FileRouteTypes {
     | '/api/bry/download-document'
     | '/api/bry/get-envelope'
     | '/api/cid/buscar'
+    | '/api/ia/gerar-fluxo'
     | '/api/medicamentos/buscar'
     | '/api/medicamentos/simplificar-apresentacoes'
     | '/api/pacientes/migrar'
     | '/api/protocolos/avaliar-exame'
+    | '/api/protocolos/estudio-rascunho'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
     | '/api/questionarios/gerar-ia'
@@ -639,10 +662,12 @@ export interface FileRouteTypes {
     | '/api/bry/download-document'
     | '/api/bry/get-envelope'
     | '/api/cid/buscar'
+    | '/api/ia/gerar-fluxo'
     | '/api/medicamentos/buscar'
     | '/api/medicamentos/simplificar-apresentacoes'
     | '/api/pacientes/migrar'
     | '/api/protocolos/avaliar-exame'
+    | '/api/protocolos/estudio-rascunho'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
     | '/api/questionarios/gerar-ia'
@@ -694,10 +719,12 @@ export interface RootRouteChildren {
   ApiBryDownloadDocumentRoute: typeof ApiBryDownloadDocumentRoute
   ApiBryGetEnvelopeRoute: typeof ApiBryGetEnvelopeRoute
   ApiCidBuscarRoute: typeof ApiCidBuscarRoute
+  ApiIaGerarFluxoRoute: typeof ApiIaGerarFluxoRoute
   ApiMedicamentosBuscarRoute: typeof ApiMedicamentosBuscarRoute
   ApiMedicamentosSimplificarApresentacoesRoute: typeof ApiMedicamentosSimplificarApresentacoesRoute
   ApiPacientesMigrarRoute: typeof ApiPacientesMigrarRoute
   ApiProtocolosAvaliarExameRoute: typeof ApiProtocolosAvaliarExameRoute
+  ApiProtocolosEstudioRascunhoRoute: typeof ApiProtocolosEstudioRascunhoRoute
   ApiProtocolosGerarIaRoute: typeof ApiProtocolosGerarIaRoute
   ApiProtocolosSincronizarRoute: typeof ApiProtocolosSincronizarRoute
   ApiQuestionariosGerarIaRoute: typeof ApiQuestionariosGerarIaRoute
@@ -882,6 +909,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCidBuscarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ia/gerar-fluxo': {
+      id: '/api/ia/gerar-fluxo'
+      path: '/api/ia/gerar-fluxo'
+      fullPath: '/api/ia/gerar-fluxo'
+      preLoaderRoute: typeof ApiIaGerarFluxoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/medicamentos/buscar': {
       id: '/api/medicamentos/buscar'
       path: '/api/medicamentos/buscar'
@@ -908,6 +942,13 @@ declare module '@tanstack/react-router' {
       path: '/api/protocolos/avaliar-exame'
       fullPath: '/api/protocolos/avaliar-exame'
       preLoaderRoute: typeof ApiProtocolosAvaliarExameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/protocolos/estudio-rascunho': {
+      id: '/api/protocolos/estudio-rascunho'
+      path: '/api/protocolos/estudio-rascunho'
+      fullPath: '/api/protocolos/estudio-rascunho'
+      preLoaderRoute: typeof ApiProtocolosEstudioRascunhoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/protocolos/gerar-ia': {
@@ -1119,11 +1160,13 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBryDownloadDocumentRoute: ApiBryDownloadDocumentRoute,
   ApiBryGetEnvelopeRoute: ApiBryGetEnvelopeRoute,
   ApiCidBuscarRoute: ApiCidBuscarRoute,
+  ApiIaGerarFluxoRoute: ApiIaGerarFluxoRoute,
   ApiMedicamentosBuscarRoute: ApiMedicamentosBuscarRoute,
   ApiMedicamentosSimplificarApresentacoesRoute:
     ApiMedicamentosSimplificarApresentacoesRoute,
   ApiPacientesMigrarRoute: ApiPacientesMigrarRoute,
   ApiProtocolosAvaliarExameRoute: ApiProtocolosAvaliarExameRoute,
+  ApiProtocolosEstudioRascunhoRoute: ApiProtocolosEstudioRascunhoRoute,
   ApiProtocolosGerarIaRoute: ApiProtocolosGerarIaRoute,
   ApiProtocolosSincronizarRoute: ApiProtocolosSincronizarRoute,
   ApiQuestionariosGerarIaRoute: ApiQuestionariosGerarIaRoute,
