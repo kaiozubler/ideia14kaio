@@ -7,9 +7,15 @@
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<script type="module">
-  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-  window.supabase = { createClient };
+<script>
+  // import() dinâmico em vez de <script type="module"> estático: alguma
+  // camada de proxy/preview neste ambiente estava reinjetando a tag de
+  // módulo sem preservar o atributo type="module" (daí o "Cannot use
+  // import statement outside a module" disparado de dentro de um
+  // appendChild). import() funciona dentro de um <script> comum, sem
+  // precisar de type="module" na tag, então nada tem como mexer nisso.
+  window.__studioSupabaseReady = import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm")
+    .then((mod) => { window.supabase = { createClient: mod.createClient }; return mod.createClient; });
 </script>
 <style>
   html, body { margin: 0; padding: 0; background: #f8fafc; }
@@ -103,14 +109,25 @@ const { useState, useRef, useCallback, useMemo, useEffect } = React;
 // --- Auth (Supabase) ---------------------------------------------------
 // Página estática, sem sessão vinda do app principal por build/import — só
 // reaproveita o localStorage se estiver no mesmo domínio (ver comentário no
-// <head>). Client único, reusado por toda a página.
-const supabaseClient = (window.__STUDIO_SUPABASE_URL__ && window.__STUDIO_SUPABASE_ANON_KEY__)
-  ? window.supabase.createClient(window.__STUDIO_SUPABASE_URL__, window.__STUDIO_SUPABASE_ANON_KEY__)
-  : null;
+// <head>). Client único, reusado por toda a página — criado de forma
+// preguiçosa/assíncrona porque o supabase-js chega via import() dinâmico
+// (ver <head>), então não dá pra assumir que window.supabase já existe
+// no momento em que este script roda.
+let _supabaseClientPromise = null;
+function getSupabaseClient() {
+  if (!_supabaseClientPromise) {
+    _supabaseClientPromise = window.__studioSupabaseReady.then((createClient) => {
+      if (!window.__STUDIO_SUPABASE_URL__ || !window.__STUDIO_SUPABASE_ANON_KEY__) return null;
+      return createClient(window.__STUDIO_SUPABASE_URL__, window.__STUDIO_SUPABASE_ANON_KEY__);
+    });
+  }
+  return _supabaseClientPromise;
+}
 
 async function getAccessToken() {
-  if (!supabaseClient) throw new Error("Studio sem configuração do Supabase (preencha SUPABASE_URL/ANON_KEY no topo do arquivo).");
-  const { data } = await supabaseClient.auth.getSession();
+  const client = await getSupabaseClient();
+  if (!client) throw new Error("Studio sem configuração do Supabase (preencha SUPABASE_URL/ANON_KEY no topo do arquivo).");
+  const { data } = await client.auth.getSession();
   const token = data?.session?.access_token;
   if (!token) throw new Error("Sessão expirada ou não autenticado. Faça login novamente.");
   return token;
@@ -1832,6 +1849,7 @@ function ClauseEditor({ clause, nodesById, onChange, onRemove, inputStyle }) {
 // nem aparece: o useEffect abaixo já encontra a sessão de cara. Só mostra o
 // formulário se realmente não houver sessão.
 function App() {
+  const [client, setClient] = useState(undefined); // undefined = ainda resolvendo o supabase-js
   const [session, setSession] = useState(undefined); // undefined = carregando
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -1839,30 +1857,40 @@ function App() {
   const [loggingIn, setLoggingIn] = useState(false);
 
   useEffect(() => {
-    if (!supabaseClient) { setSession(null); return; }
-    supabaseClient.auth.getSession().then(({ data }) => setSession(data?.session || null));
-    const { data: sub } = supabaseClient.auth.onAuthStateChange((_event, s) => setSession(s));
-    return () => sub?.subscription?.unsubscribe();
+    let unsub = null;
+    getSupabaseClient().then((c) => {
+      setClient(c);
+      if (!c) { setSession(null); return; }
+      c.auth.getSession().then(({ data }) => setSession(data?.session || null));
+      const { data: sub } = c.auth.onAuthStateChange((_event, s) => setSession(s));
+      unsub = () => sub?.subscription?.unsubscribe();
+    }).catch((err) => {
+      setClient(null);
+      setSession(null);
+      setLoginError(err.message || String(err));
+    });
+    return () => unsub && unsub();
   }, []);
 
-  if (!supabaseClient) {
+  if (client === undefined || session === undefined) {
+    return <div style={{ padding: 40, fontFamily: "sans-serif", color: "#64748b" }}>Carregando…</div>;
+  }
+
+  if (!client) {
     return (
       <div style={{ padding: 40, fontFamily: "sans-serif", color: "#7c2d12", background: "#fff7ed", maxWidth: 560, margin: "60px auto", borderRadius: 12, border: "1px solid #fed7aa" }}>
         <b>Studio sem configuração.</b> Preencha <code>SUPABASE_URL</code> e <code>SUPABASE_ANON_KEY</code>
         {" "}no bloco <code>&lt;script&gt;</code> no topo deste arquivo (são os mesmos valores públicos usados no app principal).
+        {loginError && <div style={{ marginTop: 10, fontSize: 12.5 }}>{loginError}</div>}
       </div>
     );
-  }
-
-  if (session === undefined) {
-    return <div style={{ padding: 40, fontFamily: "sans-serif", color: "#64748b" }}>Carregando…</div>;
   }
 
   if (!session) {
     async function handleLogin(e) {
       e.preventDefault();
       setLoggingIn(true); setLoginError(null);
-      const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      const { error } = await client.auth.signInWithPassword({ email, password });
       if (error) setLoginError(error.message);
       setLoggingIn(false);
     }
