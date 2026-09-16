@@ -3306,14 +3306,39 @@
                         >
                           <i class="ti ti-stethoscope"></i> Conduta
                         </button>
-                        <button
-                          class="btn sm primary"
-                          onclick="openVideoCall()"
-                          title="Iniciar chamada de vídeo"
-                          style="background:linear-gradient(135deg,#60a5fa,#2563eb);border-color:rgba(37,99,235,.5)"
-                        >
-                          <i class="ti ti-video"></i> Vídeo
-                        </button>
+                        <div class="video-split-btn" id="video-split-btn" style="position:relative;display:inline-flex">
+                          <button
+                            class="btn sm primary"
+                            onclick="openVideoCall()"
+                            title="Acessar sala da chamada de vídeo"
+                            style="background:linear-gradient(135deg,#60a5fa,#2563eb);border-color:rgba(37,99,235,.5);border-top-right-radius:0;border-bottom-right-radius:0"
+                          >
+                            <i class="ti ti-video"></i> Vídeo
+                          </button>
+                          <button
+                            class="btn sm primary"
+                            onclick="event.stopPropagation();toggleVideoCallMenu()"
+                            title="Mais opções da chamada de vídeo"
+                            style="background:linear-gradient(135deg,#60a5fa,#2563eb);border-color:rgba(37,99,235,.5);border-top-left-radius:0;border-bottom-left-radius:0;border-left:1px solid rgba(255,255,255,.35);padding-left:6px;padding-right:6px"
+                          >
+                            <i class="ti ti-chevron-down" style="font-size:12px"></i>
+                          </button>
+                          <div
+                            class="dropdown-menu"
+                            id="video-call-menu"
+                            style="display:none;position:absolute;left:0;top:calc(100% + 6px);z-index:150;min-width:210px;background:#fff;border:0.5px solid var(--n200);border-radius:var(--r8);box-shadow:0 12px 32px rgba(0,0,0,.12);padding:5px"
+                          >
+                            <div class="dm-item" onclick="closeVideoCallMenu();openVideoCall()">
+                              <i class="ti ti-door-enter"></i> Acessar sala
+                            </div>
+                            <div class="dm-item" onclick="closeVideoCallMenu();criarNovaSalaVideo()">
+                              <i class="ti ti-refresh"></i> Criar nova sala
+                            </div>
+                            <div class="dm-item" onclick="closeVideoCallMenu();copiarLinkChamadaAtual()">
+                              <i class="ti ti-link"></i> Copiar link da chamada
+                            </div>
+                          </div>
+                        </div>
                       </div>
                       <div class="ai-input-row">
                         <input
@@ -19707,9 +19732,13 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                 // A sala em cache só pode ser reaproveitada se ainda não expirou
                                                                 // E for do MESMO paciente — sem isso, trocar de atendimento e
                                                                 // clicar em "Vídeo" reabria a sala do paciente anterior.
-                                                                const cacheValido = window.__vcRoom && window.__vcRoomPatientId===pid && window.__vcRoom.expires_at*1000 > Date.now()+60000;
+                                                                const cacheValido = window.__vcRoom && window.__vcRoomPatientId===pid && window.__vcRoom.expires_at*1000 > Date.now()+60000 && !window.__vcForceNewRoom;
                                                                 if(!cacheValido){
-                                                                  const linkedAg = pid ? await findLinkedVideoAgendamento(pid) : null;
+                                                                  // "Criar nova sala" (menu do botão Vídeo) pula a busca pelo
+                                                                  // agendamento vinculado de propósito, para não recair na
+                                                                  // mesma sala de novo.
+                                                                  const linkedAg = (pid && !window.__vcForceNewRoom) ? await findLinkedVideoAgendamento(pid) : null;
+                                                                  window.__vcForceNewRoom=false;
                                                                   window.__vcLinkedAgendamentoId = linkedAg ? linkedAg.id : null;
                                                                   let name;
                                                                   if(linkedAg && linkedAg.video_room_name){
@@ -20033,15 +20062,22 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                             }
                                                             async function restoreVideoCallFromTopbar(){
                                                               if(!window.__vcJoined) return;
-                                                              // Sempre reabre o atendimento (prontuário) do paciente desta
-                                                              // chamada — não dá pra confiar em currentPatient para decidir se
-                                                              // é preciso, pois navegar para outras telas (kanban, agenda etc.)
-                                                              // não necessariamente limpa essa variável, mesmo com a tela
-                                                              // visível sendo outra. Sem isso, o atalho só reabria a janela
-                                                              // flutuante por cima de qualquer tela em que o médico estivesse.
-                                                              if(window.__vcActivePatientId){
-                                                                try{ await openPatient(window.__vcActivePatientId); }
-                                                                catch(e){ console.warn('Não foi possível reabrir o atendimento da chamada:',e); }
+                                                              // Não basta abrir o cadastro do paciente: a transcrição e o
+                                                              // copiloto dependem do ATENDIMENTO em andamento (aba
+                                                              // "Atendimentos", atendEmAndamento). Se o rascunho em memória
+                                                              // ainda for deste mesmo paciente, retoma exatamente ele (mesma
+                                                              // função usada pelo botão global "Continuar atendimento").
+                                                              // Só cai para abrir o cadastro puro se não houver mais um
+                                                              // atendimento em andamento para este paciente.
+                                                              const pid=window.__vcActivePatientId;
+                                                              if(pid){
+                                                                try{
+                                                                  if(typeof atendEmAndamento!=='undefined'&&atendEmAndamento&&atendEmAndamento.dirty&&String(atendEmAndamento.patientId)===String(pid)){
+                                                                    await continuarAtendimentoGlobal();
+                                                                  }else{
+                                                                    await openPatient(pid);
+                                                                  }
+                                                                }catch(e){ console.warn('Não foi possível reabrir o atendimento da chamada:',e); }
                                                               }
                                                               const m=document.getElementById('m-video');
                                                               const ov=document.getElementById('modal-overlay');
@@ -20122,6 +20158,64 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                 lbl.textContent='Link copiado!';
                                                                 setTimeout(()=>{lbl.textContent=prev;},1800);
                                                               }).catch(()=>{ if(typeof toast==='function') toast('Não foi possível copiar o link.'); });
+                                                            }
+
+                                                            /* ===== MENU DO BOTÃO "VÍDEO" (copiloto) ===== */
+                                                            function toggleVideoCallMenu(){
+                                                              const m=document.getElementById('video-call-menu');
+                                                              if(!m) return;
+                                                              m.style.display=(m.style.display==='block')?'none':'block';
+                                                            }
+                                                            function closeVideoCallMenu(){
+                                                              const m=document.getElementById('video-call-menu');
+                                                              if(m) m.style.display='none';
+                                                            }
+                                                            document.addEventListener('click',e=>{
+                                                              if(!e.target.closest('#video-split-btn')) closeVideoCallMenu();
+                                                            });
+                                                            // "Criar nova sala": ignora a sala em cache e o agendamento
+                                                            // vinculado de propósito (ver openVideoCall), gerando uma sala
+                                                            // avulsa nova para esta sessão. Não mexe no video_room_url salvo
+                                                            // no agendamento — aquele link continua sendo o que foi enviado
+                                                            // ao paciente; esta é só uma alternativa manual do médico.
+                                                            async function criarNovaSalaVideo(){
+                                                              window.__vcRoom=null;
+                                                              window.__vcRoomPatientId=null;
+                                                              window.__vcForceNewRoom=true;
+                                                              await openVideoCall();
+                                                            }
+                                                            // "Copiar link da chamada": resolve a URL da sala (reaproveitando
+                                                            // a mesma lógica de vinculação por agendamento) SEM entrar na
+                                                            // chamada — útil pra colar manualmente numa mensagem ao paciente.
+                                                            async function copiarLinkChamadaAtual(){
+                                                              try{
+                                                                const pid=(typeof currentPatient!=='undefined'&&currentPatient&&currentPatient.id)?String(currentPatient.id):'';
+                                                                let url=(window.__vcRoom&&window.__vcRoomPatientId===pid)?window.__vcRoom.url:null;
+                                                                let linkedAg=null;
+                                                                if(!url){
+                                                                  linkedAg = pid ? await findLinkedVideoAgendamento(pid) : null;
+                                                                  if(linkedAg && linkedAg.video_room_url){
+                                                                    url=linkedAg.video_room_url;
+                                                                  }else{
+                                                                    const name = linkedAg
+                                                                      ? ('consulta-'+linkedAg.id).toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,40)
+                                                                      : ('consulta-'+pid+'-'+Date.now().toString(36)).toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,40);
+                                                                    const r=await fetch('/api/daily-room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,createOnly:true})});
+                                                                    if(!r.ok) throw new Error(await r.text());
+                                                                    const room=await r.json();
+                                                                    url=room.url;
+                                                                    if(linkedAg){
+                                                                      sb.from('agendamentos').update({video_room_name:room.name||name,video_room_url:room.url}).eq('id',linkedAg.id).then(()=>{}).catch(()=>{});
+                                                                    }
+                                                                  }
+                                                                }
+                                                                if(!url){ showToast&&showToast('Não foi possível gerar o link da chamada','error'); return; }
+                                                                await navigator.clipboard.writeText(url);
+                                                                showToast&&showToast('Link da chamada copiado','success');
+                                                              }catch(e){
+                                                                console.error('copiarLinkChamadaAtual falhou:',e);
+                                                                showToast&&showToast('Não foi possível copiar o link da chamada','error');
+                                                              }
                                                             }
 
                                                             /* ===== ARRASTAR E MINIMIZAR JANELA DE VÍDEO ===== */
