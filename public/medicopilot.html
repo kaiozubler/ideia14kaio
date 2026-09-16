@@ -19686,6 +19686,9 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               ov.classList.add('open');
                                                               ov.classList.remove('video-floating');
                                                               vcShowView('lobby');
+                                                              // Guarda de qual paciente é esta chamada, para o atalho do topbar
+                                                              // conseguir reabrir o atendimento certo ao restaurar a chamada.
+                                                              window.__vcActivePatientId=(typeof currentPatient!=='undefined'&&currentPatient&&currentPatient.id)?currentPatient.id:null;
                                                               const sub=document.getElementById('vc-lobby-sub');
                                                               const joinBtn=document.getElementById('vc-join-btn');
                                                               if(sub) sub.textContent='Criando sala…';
@@ -19700,8 +19703,12 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                 try{ await dgLive.stop(); }catch(e){ console.warn('dgLive.stop falhou:',e); }
                                                               }
                                                               try{
-                                                                if(!(window.__vcRoom && window.__vcRoom.expires_at*1000 > Date.now()+60000)){
-                                                                  const pid=(typeof currentPatient!=='undefined'&&currentPatient&&currentPatient.id)?String(currentPatient.id):'';
+                                                                const pid=(typeof currentPatient!=='undefined'&&currentPatient&&currentPatient.id)?String(currentPatient.id):'';
+                                                                // A sala em cache só pode ser reaproveitada se ainda não expirou
+                                                                // E for do MESMO paciente — sem isso, trocar de atendimento e
+                                                                // clicar em "Vídeo" reabria a sala do paciente anterior.
+                                                                const cacheValido = window.__vcRoom && window.__vcRoomPatientId===pid && window.__vcRoom.expires_at*1000 > Date.now()+60000;
+                                                                if(!cacheValido){
                                                                   const linkedAg = pid ? await findLinkedVideoAgendamento(pid) : null;
                                                                   window.__vcLinkedAgendamentoId = linkedAg ? linkedAg.id : null;
                                                                   let name;
@@ -19715,6 +19722,7 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                   const r=await fetch('/api/daily-room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
                                                                   if(!r.ok){throw new Error(await r.text());}
                                                                   window.__vcRoom=await r.json();
+                                                                  window.__vcRoomPatientId=pid;
                                                                   // Se a sala pertence a um agendamento que ainda não tinha o link
                                                                   // salvo (ex.: modalidade mudou para vídeo depois de criado), grava agora.
                                                                   if(linkedAg && (!linkedAg.video_room_name || !linkedAg.video_room_url)){
@@ -20000,6 +20008,10 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               clearInterval(window.__vcTimer);
                                                               await destroyDailyCallObject();
                                                               window.__vcJoined=false;
+                                                              window.__vcRoom=null;
+                                                              window.__vcRoomPatientId=null;
+                                                              window.__vcActivePatientId=null;
+                                                              window.__vcLinkedAgendamentoId=null;
                                                               if(dgLive.active){ try{ dgLive.stop(); }catch{} }
                                                               listening=false; setOrbState('idle'); setListenBtnState('idle');
                                                               const td=document.getElementById('tdot'); if(td) td.classList.remove('live');
@@ -20019,8 +20031,16 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               const chip=document.getElementById('videocall-topbar-chip');
                                                               if(chip) chip.classList.remove('show');
                                                             }
-                                                            function restoreVideoCallFromTopbar(){
+                                                            async function restoreVideoCallFromTopbar(){
                                                               if(!window.__vcJoined) return;
+                                                              // Traz de volta o atendimento (prontuário) do paciente desta
+                                                              // chamada — sem isso, o atalho só reabria a janela flutuante por
+                                                              // cima de qualquer tela em que o médico estivesse, sem contexto
+                                                              // do paciente/atendimento por trás.
+                                                              if(window.__vcActivePatientId && (!currentPatient||currentPatient.id!==window.__vcActivePatientId)){
+                                                                try{ await openPatient(window.__vcActivePatientId); }
+                                                                catch(e){ console.warn('Não foi possível reabrir o atendimento da chamada:',e); }
+                                                              }
                                                               const m=document.getElementById('m-video');
                                                               const ov=document.getElementById('modal-overlay');
                                                               if(!m||!ov) return;
