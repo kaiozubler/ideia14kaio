@@ -109,7 +109,15 @@ export async function buildReceitaPdf(params: {
   pacienteNome?: string | null;
   pacienteCpf?: string | null;
   pacienteIdade?: number | string | null;
-  medicamentos: { nome: string; apresentacao?: string; quantidade?: string; posologia?: string }[];
+  medicamentos: {
+    nome: string;
+    apresentacao?: string;
+    quantidade?: string;
+    posologia?: string;
+    duracao_texto?: string | null;
+    data_fim?: string | null;
+    uso_continuo?: boolean;
+  }[];
 }): Promise<Uint8Array> {
   const ctx = await newCtx("Receita médica", params.doctor);
   field(ctx, "Paciente", params.pacienteNome || "—");
@@ -120,8 +128,13 @@ export async function buildReceitaPdf(params: {
   );
   writeText(ctx, "PRESCRIÇÃO", { size: 8.5, color: MUTED, gap: 6 });
   params.medicamentos.forEach((m, i) => {
+    const dataFimBr = m.data_fim ? m.data_fim.split("-").reverse().join("/") : null;
+    const duracao = m.uso_continuo
+      ? "Uso contínuo"
+      : [m.duracao_texto ? `Duração: ${m.duracao_texto}` : null, dataFimBr ? `até ${dataFimBr}` : null].filter(Boolean).join("  —  ");
     writeText(ctx, `${i + 1}. ${m.nome}${m.apresentacao ? " — " + m.apresentacao : ""}`, { size: 12.5, bold: true, gap: 3 });
-    writeText(ctx, [m.quantidade, m.posologia].filter(Boolean).join("  —  ") || "—", { size: 10.5, color: MUTED, gap: 10 });
+    writeText(ctx, [m.quantidade, m.posologia].filter(Boolean).join("  —  ") || "—", { size: 10.5, color: MUTED, gap: duracao ? 3 : 10 });
+    if (duracao) writeText(ctx, duracao, { size: 10.5, color: MUTED, gap: 10 });
   });
   return ctx.doc.save();
 }
