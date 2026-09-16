@@ -20033,11 +20033,13 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                             }
                                                             async function restoreVideoCallFromTopbar(){
                                                               if(!window.__vcJoined) return;
-                                                              // Traz de volta o atendimento (prontuário) do paciente desta
-                                                              // chamada — sem isso, o atalho só reabria a janela flutuante por
-                                                              // cima de qualquer tela em que o médico estivesse, sem contexto
-                                                              // do paciente/atendimento por trás.
-                                                              if(window.__vcActivePatientId && (!currentPatient||currentPatient.id!==window.__vcActivePatientId)){
+                                                              // Sempre reabre o atendimento (prontuário) do paciente desta
+                                                              // chamada — não dá pra confiar em currentPatient para decidir se
+                                                              // é preciso, pois navegar para outras telas (kanban, agenda etc.)
+                                                              // não necessariamente limpa essa variável, mesmo com a tela
+                                                              // visível sendo outra. Sem isso, o atalho só reabria a janela
+                                                              // flutuante por cima de qualquer tela em que o médico estivesse.
+                                                              if(window.__vcActivePatientId){
                                                                 try{ await openPatient(window.__vcActivePatientId); }
                                                                 catch(e){ console.warn('Não foi possível reabrir o atendimento da chamada:',e); }
                                                               }
