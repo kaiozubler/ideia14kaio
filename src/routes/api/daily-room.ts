@@ -4,9 +4,16 @@ export const Route = createFileRoute("/api/daily-room")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const apiKey = process.env.DAILY_API_KEY;
+        const apiKey = process.env["DAILY_API_KEY"];
         if (!apiKey) {
-          return new Response("Missing DAILY_API_KEY", { status: 500 });
+          console.error("[daily-room] DAILY_API_KEY não está disponível neste ambiente");
+          return Response.json(
+            {
+              error: "VIDEO_SERVICE_UNAVAILABLE",
+              message: "A videochamada não está disponível neste ambiente.",
+            },
+            { status: 503 },
+          );
         }
         let body: { name?: string; exp?: number; createOnly?: boolean } = {};
         try {
@@ -23,7 +30,7 @@ export const Route = createFileRoute("/api/daily-room")({
         // dias/semanas no futuro), o chamador informa `exp` calculado a
         // partir da data/hora da consulta (+ duração + margem).
         const exp = body.exp || Math.floor(Date.now() / 1000) + 60 * 60 * 2;
-        const dgKey = process.env.DEEPGRAM_API_KEY;
+        const dgKey = process.env["DEEPGRAM_API_KEY"];
         const payload: Record<string, unknown> = {
           privacy: "public",
           properties: {
@@ -66,10 +73,14 @@ export const Route = createFileRoute("/api/daily-room")({
             // Condição de corrida: a sala foi criada entre a checagem acima e este POST.
             // Nesse caso, busca a sala existente em vez de retornar erro.
             const alreadyExists =
-              r.status === 400 && /already exists/i.test(text) && body.name;
+              r.status === 400 && /already exists/i.test(text) && Boolean(body.name);
             if (alreadyExists) {
+              const existingRoomName = body.name;
+              if (!existingRoomName) {
+                return new Response("Nome da sala ausente", { status: 400 });
+              }
               const existing = await fetch(
-                `https://api.daily.co/v1/rooms/${encodeURIComponent(body.name!)}`,
+                `https://api.daily.co/v1/rooms/${encodeURIComponent(existingRoomName)}`,
                 { headers: { Authorization: `Bearer ${apiKey}` } }
               );
               if (existing.ok) {
