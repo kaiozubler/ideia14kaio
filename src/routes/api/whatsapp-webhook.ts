@@ -16,12 +16,13 @@ import { createFileRoute } from "@tanstack/react-router";
  * 5) Respondemos ao paciente pela própria Cloud API.
  *
  * Requer as variáveis de ambiente:
- *   WHATSAPP_ACCESS_TOKEN  — token do WhatsApp Business (Meta Cloud API)
+ *   WHATSAPP_PHONE_NUMBER_ID — ID do número remetente no WhatsApp Business
+ *   WHATSAPP_ACCESS_TOKEN    — token do WhatsApp Business (Meta Cloud API)
  *   WHATSAPP_VERIFY_TOKEN  — token arbitrário usado na verificação do webhook (GET)
  *   PUBLIC_BASE_URL        — usado para montar a URL interna do assistente (opcional)
  */
 
-const GRAPH_BASE = "https://graph.facebook.com/v20.0";
+const GRAPH_BASE = "https://graph.facebook.com/v21.0";
 const MAX_HISTORICO = 20; // mensagens mantidas por conversa, para não crescer sem limite
 
 function onlyDigits(v?: string | null) {
@@ -56,10 +57,13 @@ async function verifySignature(req: Request, rawBody: string): Promise<boolean> 
   return diff === 0;
 }
 
-async function enviarWhatsApp(phoneNumberId: string, para: string, texto: string) {
+async function enviarWhatsApp(para: string, texto: string) {
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
-  if (!token) {
-    console.error("[whatsapp-webhook] WHATSAPP_ACCESS_TOKEN ausente — resposta não enviada.");
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  if (!token || !phoneNumberId) {
+    console.error(
+      "[whatsapp-webhook] WHATSAPP_ACCESS_TOKEN ou WHATSAPP_PHONE_NUMBER_ID ausente — resposta não enviada.",
+    );
     return;
   }
   try {
@@ -207,7 +211,7 @@ export const Route = createFileRoute("/api/whatsapp-webhook")({
         }
         if (!config.agendamento_ativo) {
           const aviso = "Olá! O agendamento automático por aqui está temporariamente desativado. Por favor, entre em contato diretamente com a clínica.";
-          await enviarWhatsApp(phoneNumberId, telefonePaciente, aviso);
+           await enviarWhatsApp(telefonePaciente, aviso);
           await supabaseAdmin.from("whatsapp_messages").insert({
             wa_from: telefonePaciente,
             direction: "outbound",
@@ -255,7 +259,7 @@ export const Route = createFileRoute("/api/whatsapp-webhook")({
             conversa?.id || null,
             [...novoHistorico, { role: "assistant", content: reply }],
           );
-          await enviarWhatsApp(phoneNumberId, telefonePaciente, reply);
+           await enviarWhatsApp(telefonePaciente, reply);
           await supabaseAdmin.from("whatsapp_messages").insert({
             wa_from: telefonePaciente,
             direction: "outbound",
@@ -264,9 +268,8 @@ export const Route = createFileRoute("/api/whatsapp-webhook")({
           });
         } catch (e) {
           console.error("[whatsapp-webhook] Falha ao processar mensagem:", e);
-          await enviarWhatsApp(
-            phoneNumberId,
-            telefonePaciente,
+           await enviarWhatsApp(
+             telefonePaciente,
             "Desculpe, tive um problema para responder agora. Tente novamente em instantes.",
           );
         }
