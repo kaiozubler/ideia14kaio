@@ -83,6 +83,12 @@ APRESENTAÇÃO E POSOLOGIA DOS MEDICAMENTOS
   * Para a posologia não existe catálogo — proponha uma posologia usual para aquela apresentação, deixando claro que é uma sugestão, e peça confirmação do médico antes de incluir na receita.
   * Se não encontrar o medicamento no catálogo, avise e peça que o médico informe a apresentação/posologia manualmente.
 
+DURAÇÃO DO TRATAMENTO
+- Todo medicamento da receita precisa de uma duração: preencha duracao_valor + duracao_unidade (dias, semanas ou meses) ou marque uso_continuo=true.
+- Se o médico já disser o tempo na própria frase ("por 7 dias", "durante 3 meses"), extraia dali e não pergunte de novo.
+- Se ele não disser nada sobre tempo, proponha uma duração usual para aquele medicamento deixando claro que é sugestão, ou pergunte se é uso contínuo, e só gere a receita depois da confirmação.
+- Nunca invente uma duração sem avisar o médico de que é uma sugestão.
+
 APÓS GERAR DOCUMENTO
 - Sempre pergunte se deseja enviar por WhatsApp.
 - Se o paciente tem cadastro com telefone: ao confirmar, envie (enviar_mensagem com confirmado=true).
@@ -324,6 +330,23 @@ const tools: ToolDef[] = [
                 apresentacao: { type: "string" },
                 quantidade: { type: "string" },
                 posologia: { type: "string" },
+                duracao_valor: {
+                  type: "number",
+                  description: "Por quanto tempo o paciente vai usar o medicamento. Ex.: 7, 2, 3.",
+                },
+                duracao_unidade: {
+                  type: "string",
+                  enum: ["dias", "semanas", "meses"],
+                  description: "Unidade da duracao_valor. Padrao: dias.",
+                },
+                uso_continuo: {
+                  type: "boolean",
+                  description: "true quando o medicamento e de uso continuo, sem data de termino.",
+                },
+                data_inicio: {
+                  type: "string",
+                  description: "Data de inicio do uso no formato AAAA-MM-DD. Se omitido, assume hoje.",
+                },
               },
               required: ["nome"],
             },
@@ -1025,8 +1048,43 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
     }
 
     case "gerar_receita": {
-      const medicamentos = Array.isArray(args.medicamentos) ? args.medicamentos : [];
-      if (!medicamentos.length) return { erro: "Informe ao menos um medicamento." };
+      const medicamentosBrutos = Array.isArray(args.medicamentos) ? args.medicamentos : [];
+      if (!medicamentosBrutos.length) return { erro: "Informe ao menos um medicamento." };
+
+      // Duração do tratamento: converte o que veio (valor + unidade) em dias,
+      // calcula a data do último dia de uso e guarda junto com o medicamento.
+      const DIAS_POR_UNIDADE: Record<string, number> = { dias: 1, dia: 1, semanas: 7, semana: 7, meses: 30, mes: 30, mês: 30 };
+      const hojeISO = new Date().toISOString().slice(0, 10);
+      const medicamentos = medicamentosBrutos.map((m: any) => {
+        const usoContinuo = m?.uso_continuo === true;
+        const unidade = String(m?.duracao_unidade || "dias").toLowerCase();
+        const valor = Number(m?.duracao_valor);
+        const temValor = Number.isFinite(valor) && valor > 0;
+        const diasInformados = Number(m?.duracao_dias);
+        const dias = Number.isFinite(diasInformados) && diasInformados > 0
+          ? Math.round(diasInformados)
+          : temValor
+            ? Math.round(valor * (DIAS_POR_UNIDADE[unidade] ?? 1))
+            : null;
+        const dataInicio = String(m?.data_inicio || hojeISO).slice(0, 10);
+        let dataFim: string | null = null;
+        if (!usoContinuo && dias) {
+          const d = new Date(`${dataInicio}T12:00:00Z`);
+          d.setUTCDate(d.getUTCDate() + dias - 1);
+          dataFim = d.toISOString().slice(0, 10);
+        }
+        return {
+          ...m,
+          uso_continuo: usoContinuo,
+          duracao_valor: temValor ? Math.round(valor) : dias,
+          duracao_unidade: temValor ? (unidade === "dia" ? "dias" : unidade === "semana" ? "semanas" : unidade === "mes" || unidade === "mês" ? "meses" : unidade) : "dias",
+          duracao_dias: dias,
+          duracao_texto: usoContinuo ? "Uso contínuo" : temValor ? `${Math.round(valor)} ${unidade}` : dias ? `${dias} dias` : null,
+          data_inicio: dataInicio,
+          data_fim: dataFim,
+        };
+      });
+
       const cpfDigits = onlyDigits(args.paciente_cpf);
       if (cpfDigits.length !== 11) {
         return {
@@ -1069,6 +1127,22 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         }
       }
 
+      // Texto em linguagem natural que vai para o prontuário e é lido pelas automações de IA.
+      const fmtData = (iso: string | null) => (iso ? iso.split("-").reverse().join("/") : "");
+      const textoReceita =
+        `Receita emitida em ${fmtData(hojeISO)}:\n` +
+        medicamentos
+          .map((m: any) => {
+            const partes = [m.nome, m.apresentacao, m.quantidade, m.posologia].filter(Boolean).join(" — ");
+            const duracao = m.uso_continuo
+              ? "uso contínuo, sem data de término"
+              : m.duracao_texto
+                ? `uso por ${m.duracao_texto}${m.data_fim ? `, término do uso em ${fmtData(m.data_fim)}` : ""}`
+                : "duração não informada";
+            return `- ${partes} — ${duracao}.`;
+          })
+          .join("\n");
+
       let documentoId: string | null = null;
       if (medicoId) {
         const { data } = await db
@@ -1078,11 +1152,32 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
             paciente_id: args.paciente_id || null,
             paciente_nome: args.paciente_nome || null,
             tipo: "receita",
+            texto: textoReceita,
             conteudo: { medicamentos, paciente_cpf: args.paciente_cpf, paciente_idade: args.paciente_idade },
           })
           .select("id")
           .single();
         documentoId = data?.id ?? null;
+      }
+
+      // Registra cada medicamento na tabela de uso, com a data fim calculada.
+      if (medicoId && args.paciente_id) {
+        const linhasUso = medicamentos.map((m: any) => ({
+          user_id: medicoId,
+          paciente_id: args.paciente_id,
+          documento_id: documentoId,
+          medicamento_nome: String(m.nome || "").trim(),
+          apresentacao: m.apresentacao || null,
+          posologia: m.posologia || null,
+          duracao_valor: m.duracao_valor ?? null,
+          duracao_unidade: m.duracao_unidade ?? null,
+          duracao_dias: m.duracao_dias ?? null,
+          uso_continuo: !!m.uso_continuo,
+          data_inicio: m.data_inicio,
+          data_fim: m.data_fim,
+        }));
+        const { error: usoErr } = await db.from("medicamentos_em_uso").insert(linhasUso);
+        if (usoErr) console.warn("[gerar_receita] falha ao registrar medicamentos em uso:", usoErr.message);
       }
       let arquivo: { arquivo_path: string; arquivo_nome: string } | null = null;
       if (medicoId && documentoId) {

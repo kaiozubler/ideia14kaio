@@ -204,11 +204,20 @@
 
   async function buildReceitaDoc(a) {
     const itens = (a.medicamentos || [])
-      .map(
-        (m, i) =>
+      .map((m, i) => {
+        const dataFimBr = m.data_fim ? m.data_fim.split("-").reverse().join("/") : null;
+        const duracao = m.uso_continuo
+          ? "Uso contínuo"
+          : [m.duracao_texto ? "Duração: " + m.duracao_texto : null, dataFimBr ? "até " + dataFimBr : null]
+              .filter(Boolean)
+              .join(" — ");
+        return (
           `<div class="rx-item"><b>${i + 1}. ${escHtml(m.nome)}${m.apresentacao ? " — " + escHtml(m.apresentacao) : ""}</b>` +
-          `<div>${escHtml([m.quantidade, m.posologia].filter(Boolean).join(" — ") || "—")}</div></div>`,
-      )
+          `<div>${escHtml([m.quantidade, m.posologia].filter(Boolean).join(" — ") || "—")}</div>` +
+          (duracao ? `<div class="muted">${escHtml(duracao)}</div>` : "") +
+          `</div>`
+        );
+      })
       .join("");
     const header = await docHeader("Receita médica");
     return docBase(

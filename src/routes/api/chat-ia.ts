@@ -101,10 +101,16 @@ Tipos de ação disponíveis:
       "nome": "Nome comercial ou princípio ativo",
       "apresentacao": "Ex: 500mg comprimido",
       "quantidade": "Ex: 1 caixa",
-      "posologia": "Ex: 1 comprimido de 8/8h por 5 dias"
+      "posologia": "Ex: 1 comprimido de 8/8h",
+      "duracao_valor": 5,
+      "duracao_unidade": "dias",
+      "uso_continuo": false
     }
   ]
 }
+Sempre preencha a duração: "duracao_valor" + "duracao_unidade" ("dias", "semanas" ou "meses"),
+ou "uso_continuo": true quando for medicamento de uso contínuo. Se o médico não falar de tempo,
+sugira uma duração usual deixando claro no "reply" que é uma sugestão a confirmar.
 
 2. Orientações ao paciente (não precisa de assinatura):
 {
