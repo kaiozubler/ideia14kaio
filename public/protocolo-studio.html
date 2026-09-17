@@ -151,28 +151,37 @@ const TYPE_STYLE = {
 };
 const SNAP_GRAD = "linear-gradient(135deg,#38bdf8,#2563eb)"; // degradê azul do ímã / hover da seta
 
-const TUSS_CATALOG = [
-  { id: "tuss-1", codigo: "40304361", nome: "TSH" },
-  { id: "tuss-2", codigo: "40302016", nome: "Hemoglobina glicada (HbA1c)" },
-  { id: "tuss-3", codigo: "40311214", nome: "Creatinina sérica" },
-  { id: "tuss-4", codigo: "40316897", nome: "Hemograma completo" },
-  { id: "tuss-5", codigo: "40301489", nome: "Glicemia de jejum" },
-  { id: "tuss-6", codigo: "40907017", nome: "Ultrassonografia obstétrica" },
-  { id: "tuss-7", codigo: "40302040", nome: "Glicemia aleatória (ao acaso)" },
-  { id: "tuss-8", codigo: "40311680", nome: "TOTG 75g (2h)" },
-  { id: "tuss-9", codigo: "40312058", nome: "Peptídeo C" },
-  { id: "tuss-10", codigo: "40312899", nome: "Marcadores autoimunes (Anti-ICA/IAA/GAD/IA2)" },
-  { id: "tuss-11", codigo: "40318033", nome: "Automonitorização glicêmica (AMG) — registro" },
-];
-const SUBSTANCIA_CATALOG = [
-  { id: "sub-1", nome: "Levotiroxina sódica" },
-  { id: "sub-2", nome: "Metformina" },
-  { id: "sub-3", nome: "Losartana potássica" },
-  { id: "sub-4", nome: "Insulina NPH" },
-  { id: "sub-5", nome: "Insulina Regular" },
-  { id: "sub-6", nome: "Insulina Lispro / Asparte / Glulisina (análogo rápido)" },
-  { id: "sub-7", nome: "Insulina Glargina / Detemir / Degludeca (análogo prolongado)" },
-];
+// Busca real no catálogo (mesmos endpoints que o resto do app já usa —
+// ver public/protocolos.js:catalogSearchRun). Substitui os antigos arrays
+// fixos TUSS_CATALOG/SUBSTANCIA_CATALOG, que nunca bateram no banco de
+// verdade.
+async function buscarTussApi(termo) {
+  if (!termo || termo.trim().length < 2) return [];
+  const data = await studioFetch("/api/tuss/buscar?q=" + encodeURIComponent(termo), { method: "GET" });
+  return (data.items || []).map((it) => ({ id: it.id, codigo: it.codigo_tuss, nome: it.nome }));
+}
+async function buscarSubstanciaApi(termo) {
+  if (!termo || termo.trim().length < 2) return [];
+  const data = await studioFetch("/api/medicamentos/buscar?q=" + encodeURIComponent(termo), { method: "GET" });
+  return (data.items || []).map((it) => ({ id: it.id_substancia, nome: it.nome_exibicao }));
+}
+// Debounce simples e genérico pra ligar num useEffect de busca.
+function useDebouncedSearch(termo, searchFn, delayMs) {
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (!termo || termo.trim().length < 2) { setResults([]); return; }
+    let cancelled = false;
+    setLoading(true);
+    const t = setTimeout(() => {
+      searchFn(termo).then((r) => { if (!cancelled) setResults(r); })
+        .catch(() => { if (!cancelled) setResults([]); })
+        .finally(() => { if (!cancelled) setLoading(false); });
+    }, delayMs || 300);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [termo]);
+  return { results, loading };
+}
 const CAMPO_OPTIONS = [
   { id: "numero", label: "Resultado numérico do exame-gatilho" },
   { id: "texto", label: "Resultado em texto do exame-gatilho" },
@@ -1375,7 +1384,7 @@ function ProtocolCanvas() {
 
           {selected && (
             <div style={{ width: 300, padding: 16, overflowY: "auto", zIndex: 25, ...glass({ borderRadius: 0, borderTop: "none", borderRight: "none", borderBottom: "none" }) }}>
-              <NodeInspector node={selected} graph={graph} fontes={fontesDoNo(selected.id)} onChange={(patch) => updateNode(selected.id, patch)} />
+              <NodeInspector key={selected.id} node={selected} graph={graph} fontes={fontesDoNo(selected.id)} onChange={(patch) => updateNode(selected.id, patch)} />
             </div>
           )}
         </div>
@@ -1527,6 +1536,15 @@ function NodeInspector({ node, graph, fontes, onChange }) {
   const input = { width: "100%", fontSize: 12.5, padding: "8px 10px", borderRadius: 10, border: "1px solid #dbe1ea", marginBottom: 12, boxSizing: "border-box", background: "rgba(255,255,255,0.85)", outline: "none" };
   const nodesById = useMemo(() => Object.fromEntries(graph.nodes.map((n) => [n.id, n])), [graph.nodes]);
 
+  // Busca ao vivo no catálogo (TUSS / substâncias) — chamados incondicionalmente
+  // (regra dos hooks), mesmo que o nó não seja Exame/Medicamento; o componente é
+  // remontado por node.id (ver key no <NodeInspector> pai), então o estado de
+  // busca começa limpo a cada nó selecionado.
+  const [tussQuery, setTussQuery] = useState(node.tussId ? node.name : "");
+  const tussSearch = useDebouncedSearch(tussQuery, buscarTussApi);
+  const [subQuery, setSubQuery] = useState(node.substanciaId ? node.name : "");
+  const subSearch = useDebouncedSearch(subQuery, buscarSubstanciaApi);
+
   function addBranch() {
     const branches = [...node.branches];
     branches.splice(branches.length - 1, 0, { id: uid(), descricao: "", clauses: [] });
@@ -1573,21 +1591,34 @@ function NodeInspector({ node, graph, fontes, onChange }) {
       {node.type === "Exame" && (
         <>
           <label style={label}>Procedimento (catálogo TUSS)</label>
-          <input style={input} list="tuss-list" value={TUSS_CATALOG.find((t) => t.id === node.tussId)?.nome || ""}
-            onChange={(e) => { const hit = TUSS_CATALOG.find((t) => t.nome === e.target.value); onChange(hit ? { tussId: hit.id, name: hit.nome } : { tussId: null }); }}
-            placeholder="Buscar exame no catálogo..." />
-          <datalist id="tuss-list">{TUSS_CATALOG.map((t) => <option key={t.id} value={t.nome} />)}</datalist>
-          {node.tussId && <div style={{ fontSize: 10.5, color: "#059669", marginTop: -8, marginBottom: 12 }}>TUSS {TUSS_CATALOG.find((t) => t.id === node.tussId)?.codigo}</div>}
+          <input style={input} list="tuss-list" value={tussQuery}
+            onChange={(e) => {
+              const v = e.target.value; setTussQuery(v);
+              const hit = tussSearch.results.find((t) => t.nome === v);
+              onChange(hit ? { tussId: hit.id, name: hit.nome } : { tussId: null, name: v });
+            }}
+            placeholder="Buscar exame no catálogo TUSS..." />
+          <datalist id="tuss-list">{tussSearch.results.map((t) => <option key={t.id} value={t.nome} />)}</datalist>
+          {tussSearch.loading && <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: -8, marginBottom: 12 }}>Buscando…</div>}
+          {node.tussId && <div style={{ fontSize: 10.5, color: "#059669", marginTop: -8, marginBottom: 12 }}>TUSS {tussSearch.results.find((t) => t.id === node.tussId)?.codigo || ""} — vinculado</div>}
+          {!node.tussId && tussQuery.trim().length >= 2 && !tussSearch.loading && <div style={{ fontSize: 10.5, color: "#d97706", marginTop: -8, marginBottom: 12 }}>Não vinculado ao catálogo — escolha uma opção da lista</div>}
         </>
       )}
       {node.type === "Consulta" && (<><label style={label}>Especialidade (opcional)</label><input style={input} value={node.especialidade || ""} onChange={(e) => onChange({ especialidade: e.target.value })} /></>)}
       {node.type === "Medicamento" && (
         <>
           <label style={label}>Substância (catálogo)</label>
-          <input style={input} list="sub-list" value={SUBSTANCIA_CATALOG.find((s2) => s2.id === node.substanciaId)?.nome || ""}
-            onChange={(e) => { const hit = SUBSTANCIA_CATALOG.find((s2) => s2.nome === e.target.value); onChange(hit ? { substanciaId: hit.id, name: hit.nome } : { substanciaId: null }); }}
+          <input style={input} list="sub-list" value={subQuery}
+            onChange={(e) => {
+              const v = e.target.value; setSubQuery(v);
+              const hit = subSearch.results.find((s2) => s2.nome === v);
+              onChange(hit ? { substanciaId: hit.id, name: hit.nome } : { substanciaId: null, name: v });
+            }}
             placeholder="Buscar substância..." />
-          <datalist id="sub-list">{SUBSTANCIA_CATALOG.map((s2) => <option key={s2.id} value={s2.nome} />)}</datalist>
+          <datalist id="sub-list">{subSearch.results.map((s2) => <option key={s2.id} value={s2.nome} />)}</datalist>
+          {subSearch.loading && <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: -8, marginBottom: 12 }}>Buscando…</div>}
+          {node.substanciaId && <div style={{ fontSize: 10.5, color: "#059669", marginTop: -8, marginBottom: 12 }}>Vinculado ao catálogo</div>}
+          {!node.substanciaId && subQuery.trim().length >= 2 && !subSearch.loading && <div style={{ fontSize: 10.5, color: "#d97706", marginTop: -8, marginBottom: 12 }}>Não vinculado ao catálogo — escolha uma opção da lista</div>}
           <label style={label}>Dose</label>
           <input style={input} value={node.dose || ""} onChange={(e) => onChange({ dose: e.target.value })} placeholder="Ex: 75mcg" />
           <label style={label}>Posologia</label>
