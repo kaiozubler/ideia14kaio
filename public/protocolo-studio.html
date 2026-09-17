@@ -42,12 +42,21 @@
 
   // Rede de segurança: se algum script falhar (CDN fora do ar, erro de
   // configuração etc.), mostra o erro na tela em vez de deixar a página em
-  // branco sem pista nenhuma do que aconteceu.
+  // branco sem pista nenhuma do que aconteceu. Também lista TODAS as tags
+  // <script> que existem de fato no DOM nesse momento — inclusive as que
+  // não estão no nosso arquivo-fonte, caso algo externo (proxy/preview)
+  // esteja injetando algo na página.
   window.addEventListener("error", function (e) {
     var root = document.getElementById("root");
     if (root && !root.hasChildNodes()) {
-      root.innerHTML = '<div style="max-width:640px;margin:60px auto;padding:24px;font-family:sans-serif;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;color:#7c2d12;white-space:pre-wrap">'
-        + '<b>Erro ao carregar o Studio:</b>\n' + (e.message || e) + '</div>';
+      var scriptsInfo = Array.prototype.map.call(document.getElementsByTagName("script"), function (s, i) {
+        var kind = s.src ? ("src=" + s.src) : ("inline, type=\"" + (s.type || "(vazio)") + "\", " + (s.text || s.textContent || "").slice(0, 60).replace(/</g, "&lt;"));
+        return (i + 1) + ". " + kind;
+      }).join("\n");
+      root.innerHTML = '<div style="max-width:720px;margin:40px auto;padding:24px;font-family:sans-serif;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;color:#7c2d12;white-space:pre-wrap;font-size:13px">'
+        + '<b>Erro ao carregar o Studio:</b>\n' + (e.message || e)
+        + '\n\n<b>Scripts presentes no DOM neste momento (' + document.getElementsByTagName("script").length + '):</b>\n' + scriptsInfo
+        + '</div>';
     }
   });
 </script>
