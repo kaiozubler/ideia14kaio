@@ -4272,6 +4272,25 @@
               </div>
 
               <div style="border-top:1px solid var(--n200);padding-top:16px">
+                <div style="font-size:13px;font-weight:600;color:var(--n700);margin-bottom:4px">Meu usuário</div>
+                <div style="font-size:11.5px;color:var(--n400);margin-bottom:10px">
+                  Identificador técnico do número conectado ao Assistente IA. Este campo não é o telefone público da clínica.
+                </div>
+                <div class="fld" style="max-width:420px">
+                  <label for="cli-whatsapp-phone-id">Phone Number ID da Meta</label>
+                  <input
+                    type="text"
+                    id="cli-whatsapp-phone-id"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    autocomplete="off"
+                    placeholder="Ex.: 1456440990878494"
+                    oninput="this.value=this.value.replace(/\D/g,'')"
+                  />
+                </div>
+              </div>
+
+              <div style="border-top:1px solid var(--n200);padding-top:16px">
                 <div style="font-size:13px;font-weight:600;color:var(--n700);margin-bottom:10px">Endereço</div>
                 <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px">
                   <div class="fld" style="grid-column:span 2">
@@ -6598,7 +6617,7 @@
 
                                                             /* ========== MINHA CLÍNICA ========== */
                                                             const CLINICA_KEY='clinicaCfg';
-                                                            function loadClinica(){
+                                                            async function loadClinica(){
                                                               let c={};try{c=JSON.parse(localStorage.getItem(CLINICA_KEY)||'{}');}catch(e){}
                                                               const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
                                                               set('cli-fantasia',c.fantasia);set('cli-razao',c.razao);set('cli-fiscal',c.fiscal);
@@ -6608,6 +6627,11 @@
                                                               const rm=document.getElementById('cli-logo-remove');
                                                               if(c.logo){prev.innerHTML=`<img src="${c.logo}" style="width:100%;height:100%;object-fit:contain">`;rm.style.display='inline-flex';}
                                                               else{prev.innerHTML='<i class="ti ti-photo" style="font-size:28px"></i>';rm.style.display='none';}
+                                                              if(currentUser?.id){
+                                                                const {data,error}=await sb.from('medico_whatsapp_config').select('phone_number_id').eq('id_medico',currentUser.id).maybeSingle();
+                                                                if(error)console.error('[minha-clinica] Falha ao carregar Phone Number ID:',error.message);
+                                                                else set('cli-whatsapp-phone-id',data?.phone_number_id||'');
+                                                              }
                                                             }
                                                             function handleClinicaLogo(ev){
                                                               const f=ev.target.files&&ev.target.files[0];if(!f)return;
@@ -6625,8 +6649,17 @@
                                                               const inp=document.getElementById('cli-logo');if(inp)inp.value='';
                                                               loadClinica();
                                                             }
-                                                            function saveClinica(){
+                                                            async function saveClinica(){
                                                               const get=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
+                                                              const phoneNumberId=get('cli-whatsapp-phone-id');
+                                                              if(phoneNumberId&&!/^\d+$/.test(phoneNumberId)){
+                                                                if(typeof toast==='function')toast('Informe somente os dígitos do Phone Number ID');
+                                                                return;
+                                                              }
+                                                              if(!currentUser?.id){
+                                                                if(typeof toast==='function')toast('Não foi possível identificar o usuário conectado');
+                                                                return;
+                                                              }
                                                               let c={};try{c=JSON.parse(localStorage.getItem(CLINICA_KEY)||'{}');}catch(e){}
                                                               const next={
                                                                 fantasia:get('cli-fantasia'),razao:get('cli-razao'),fiscal:get('cli-fiscal'),
@@ -6635,6 +6668,17 @@
                                                                 logo:c.logo||null,
                                                               };
                                                               localStorage.setItem(CLINICA_KEY,JSON.stringify(next));
+                                                              const {error}=await sb.from('medico_whatsapp_config').upsert({
+                                                                id_medico:currentUser.id,
+                                                                phone_number_id:phoneNumberId||null,
+                                                                agendamento_ativo:true,
+                                                                updated_at:new Date().toISOString(),
+                                                              },{onConflict:'id_medico'});
+                                                              if(error){
+                                                                console.error('[minha-clinica] Falha ao salvar Phone Number ID:',error.message);
+                                                                if(typeof toast==='function')toast('Não foi possível salvar o Phone Number ID');
+                                                                return;
+                                                              }
                                                               if(typeof toast==='function')toast('Dados da clínica salvos');
                                                             }
 
