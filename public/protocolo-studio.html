@@ -600,14 +600,17 @@ Regras do schema:
 - edges: "fromHandle" é null pra Exame/Medicamento/Consulta/Evento (saída única), "admitido"/"nao_admitido" pra Admissao, e o localId do branch pra Condicao.
 - IMPORTANTE — limite de tamanho: gere no máximo 8 nós no total, focando só no caminho principal do protocolo (não tente cobrir cada exceção). Nomes e textos curtos e diretos.`;
 
-async function generateFlowFromAI(protocolText) {
+async function generateFlowFromAI(protocolText, pdf) {
   // Via proxy de backend (/api/ia/gerar-fluxo) — chave fica só no servidor,
   // nunca no navegador. Ver src/routes/api/ia/gerar-fluxo.ts. Usa o AI
   // Gateway do Lovable (mesmo do resto do app), resposta no formato
   // OpenAI-compatible: choices[0].message.content.
+  // pdf (opcional): { base64, filename } — a IA lê o PDF anexado direto,
+  // igual o fluxo oficial de gerar protocolo já faz.
+  const prompt = `${AI_SCHEMA_PROMPT}\n\nPROTOCOLO:\n"""\n${protocolText || "(ver documento PDF anexo)"}\n"""`;
   const data = await studioFetch("/api/ia/gerar-fluxo", {
     method: "POST",
-    body: JSON.stringify({ prompt: `${AI_SCHEMA_PROMPT}\n\nPROTOCOLO:\n"""\n${protocolText}\n"""` }),
+    body: JSON.stringify({ prompt, pdfBase64: pdf?.base64 || null, filename: pdf?.filename || null }),
   });
   const text = data?.choices?.[0]?.message?.content || "";
   const cleaned = text.replace(/```json|```/g, "").trim();
@@ -615,6 +618,16 @@ async function generateFlowFromAI(protocolText) {
   try { spec = JSON.parse(cleaned); }
   catch { throw new Error("A IA não devolveu um JSON válido. Tente um texto mais curto/direto."); }
   return spec;
+}
+
+// Lê um File (PDF) como base64 puro (sem o prefixo data:...;base64,).
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+    reader.onerror = () => reject(reader.error || new Error("Falha ao ler o arquivo"));
+    reader.readAsDataURL(file);
+  });
 }
 
 // --- Rascunhos (salvar/carregar) ---------------------------------------
@@ -835,6 +848,7 @@ function ProtocolCanvas() {
   const [graph, setGraph] = useState(() => PROTOCOLS.novo.seed());
   const [aiOpen, setAiOpen] = useState(false);
   const [aiText, setAiText] = useState("");
+  const [aiPdfFile, setAiPdfFile] = useState(null); // { name, base64 } | null
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState(null);
   const [customLabel, setCustomLabel] = useState(null);
@@ -890,10 +904,10 @@ function ProtocolCanvas() {
   }
 
   async function handleAiGenerate() {
-    if (!aiText.trim() || aiLoading) return;
+    if ((!aiText.trim() && !aiPdfFile) || aiLoading) return;
     setAiLoading(true); setAiError(null);
     try {
-      const spec = await generateFlowFromAI(aiText);
+      const spec = await generateFlowFromAI(aiText, aiPdfFile ? { base64: aiPdfFile.base64, filename: aiPdfFile.name } : null);
       const built = buildGraphFromAiSpec(spec);
       if (!built.nodes.length) throw new Error("A IA não gerou nenhum nó — tenta reformular o texto.");
       const laidOutNodes = autoLayout(built.nodes, built.edges, "proximidade");
@@ -903,10 +917,24 @@ function ProtocolCanvas() {
       setPan({ x: 220, y: 40 });
       setAiOpen(false);
       setAiText("");
+      setAiPdfFile(null);
     } catch (err) {
       setAiError(err.message || String(err));
     } finally {
       setAiLoading(false);
+    }
+  }
+
+  async function handleAiPdfSelect(file) {
+    if (!file) return;
+    if (file.type !== "application/pdf") { setAiError("Só é aceito arquivo PDF."); return; }
+    if (file.size > 10 * 1024 * 1024) { setAiError("PDF muito grande (máx. 10MB)."); return; }
+    setAiError(null);
+    try {
+      const base64 = await fileToBase64(file);
+      setAiPdfFile({ name: file.name, base64 });
+    } catch {
+      setAiError("Não consegui ler o PDF. Tenta de novo.");
     }
   }
   const [layoutMode, setLayoutMode] = useState("proximidade");
@@ -1362,12 +1390,27 @@ function ProtocolCanvas() {
               <div style={{ fontSize: 15, fontWeight: 700, color: "#1e293b" }}>Gerar fluxo com IA</div>
             </div>
             <div style={{ fontSize: 11.5, color: "#64748b", marginBottom: 14, lineHeight: 1.5 }}>
-              Cole o texto de um protocolo (ou um trecho dele). A IA monta um esboço do fluxo — exames, condições, medicamentos — pra você refinar depois.
+              Cole o texto de um protocolo (ou um trecho dele), anexe um PDF, ou os dois. A IA monta um esboço do fluxo — exames, condições, medicamentos — pra você refinar depois.
               <br /><b>Fica compacto (até ~8 nós)</b>: é um ponto de partida, não o protocolo inteiro modelado.
             </div>
             <textarea value={aiText} onChange={(e) => setAiText(e.target.value)} disabled={aiLoading}
-              placeholder="Cole aqui o texto do protocolo..."
-              style={{ width: "100%", minHeight: 160, fontSize: 12.5, padding: 12, borderRadius: 12, border: "1px solid #dbe1ea", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit", outline: "none", marginBottom: 10 }} />
+              placeholder="Cole aqui o texto do protocolo (opcional se anexar PDF)..."
+              style={{ width: "100%", minHeight: 130, fontSize: 12.5, padding: 12, borderRadius: 12, border: "1px solid #dbe1ea", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit", outline: "none", marginBottom: 10 }} />
+            <div style={{ marginBottom: 10 }}>
+              {aiPdfFile ? (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 600, color: "#1e293b", background: "#f1f5f9", borderRadius: 999, padding: "6px 12px" }}>
+                  📄 {aiPdfFile.name}
+                  <button onClick={() => setAiPdfFile(null)} disabled={aiLoading}
+                    style={{ border: "none", background: "none", color: "#94a3b8", cursor: aiLoading ? "default" : "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
+                </div>
+              ) : (
+                <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "#7c3aed", cursor: aiLoading ? "default" : "pointer", background: "#f5f3ff", borderRadius: 999, padding: "6px 12px" }}>
+                  📎 Anexar PDF
+                  <input type="file" accept="application/pdf" disabled={aiLoading} style={{ display: "none" }}
+                    onChange={(e) => { handleAiPdfSelect(e.target.files?.[0]); e.target.value = ""; }} />
+                </label>
+              )}
+            </div>
             {aiError && (
               <div style={{ fontSize: 11, color: "#e11d48", background: "rgba(255,241,242,0.8)", borderRadius: 10, padding: "8px 10px", marginBottom: 10 }}>⚠ {aiError}</div>
             )}
@@ -1376,9 +1419,9 @@ function ProtocolCanvas() {
                 style={{ padding: "9px 16px", borderRadius: 10, border: "none", fontSize: 12.5, fontWeight: 600, color: "#64748b", background: "#f1f5f9", cursor: aiLoading ? "default" : "pointer" }}>
                 Cancelar
               </button>
-              <button onClick={handleAiGenerate} disabled={aiLoading || !aiText.trim()}
-                style={{ padding: "9px 18px", borderRadius: 10, border: "none", fontSize: 12.5, fontWeight: 700, color: "#fff", cursor: aiLoading || !aiText.trim() ? "default" : "pointer",
-                  background: aiLoading || !aiText.trim() ? "#c4b5fd" : "linear-gradient(135deg,#c084fc,#7c3aed)" }}>
+              <button onClick={handleAiGenerate} disabled={aiLoading || (!aiText.trim() && !aiPdfFile)}
+                style={{ padding: "9px 18px", borderRadius: 10, border: "none", fontSize: 12.5, fontWeight: 700, color: "#fff", cursor: aiLoading || (!aiText.trim() && !aiPdfFile) ? "default" : "pointer",
+                  background: aiLoading || (!aiText.trim() && !aiPdfFile) ? "#c4b5fd" : "linear-gradient(135deg,#c084fc,#7c3aed)" }}>
                 {aiLoading ? "Gerando…" : "Gerar fluxo"}
               </button>
             </div>
