@@ -60,7 +60,7 @@
     }
   });
 </script>
-<script type="text/babel" data-presets="react">
+<script id="app-source" type="text/plain">
 // Ícones inline — substituem o pacote lucide-react pra este arquivo não
 // precisar de bundler/npm. Mesmo contrato de props (size, color, strokeWidth)
 // usado no resto do componente.
@@ -1897,6 +1897,22 @@ const rootEl = document.getElementById("root");
 const root = ReactDOM.createRoot(rootEl);
 root.render(<App />);
 
+</script>
+<script>
+  // Transformação manual (em vez de deixar o Babel Standalone escanear
+  // automaticamente scripts type="text/babel"): a versão mais recente do
+  // Babel usa por padrão o "automatic JSX runtime", que gera um
+  // `import {...} from "react/jsx-runtime"` no código transpilado -- e como
+  // aqui o React é carregado como script UMD clássico (variável global, sem
+  // sistema de módulos), esse import quebra tudo ("Cannot use import
+  // statement outside a module"). Forçando runtime: "classic" o Babel gera
+  // React.createElement(...) em vez disso, usando o React global — sem
+  // nenhum import.
+  var appSource = document.getElementById("app-source").textContent;
+  var transformed = Babel.transform(appSource, { presets: [["react", { runtime: "classic" }]] }).code;
+  var appScript = document.createElement("script");
+  appScript.text = transformed;
+  document.body.appendChild(appScript);
 </script>
 </body>
 </html>
