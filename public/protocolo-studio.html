@@ -598,7 +598,7 @@ Regras do schema:
 - A 1ª clause de uma cadeia tem "conector": null; as seguintes têm "E" ou "OU".
 - Evento.acao: suspender | ajustar | mensagem_paciente | notificar_usuario | gerar_receita | enviar_receita | solicitar_exame. "alvoLocalId" referencia outro nó do fluxo (opcional).
 - edges: "fromHandle" é null pra Exame/Medicamento/Consulta/Evento (saída única), "admitido"/"nao_admitido" pra Admissao, e o localId do branch pra Condicao.
-- IMPORTANTE — limite de tamanho: gere no máximo 8 nós no total, focando só no caminho principal do protocolo (não tente cobrir cada exceção). Nomes e textos curtos e diretos.`;
+- IMPORTANTE — cubra o protocolo completo: modele todos os ramos e exceções relevantes descritos no texto/PDF (não só o caminho principal), até um limite de 40 nós no total. Se o protocolo for maior que isso, priorize completude clínica (todas as condições/exames/medicamentos citados) sobre detalhamento de cada um — nomes e textos curtos e diretos.`;
 
 async function generateFlowFromAI(protocolText, pdf) {
   // Via proxy de backend (/api/ia/gerar-fluxo) — chave fica só no servidor,
@@ -1390,8 +1390,8 @@ function ProtocolCanvas() {
               <div style={{ fontSize: 15, fontWeight: 700, color: "#1e293b" }}>Gerar fluxo com IA</div>
             </div>
             <div style={{ fontSize: 11.5, color: "#64748b", marginBottom: 14, lineHeight: 1.5 }}>
-              Cole o texto de um protocolo (ou um trecho dele), anexe um PDF, ou os dois. A IA monta um esboço do fluxo — exames, condições, medicamentos — pra você refinar depois.
-              <br /><b>Fica compacto (até ~8 nós)</b>: é um ponto de partida, não o protocolo inteiro modelado.
+              Cole o texto de um protocolo (ou um trecho dele), anexe um PDF, ou os dois. A IA monta o fluxo completo — exames, condições, medicamentos, ramificações e exceções — pra você refinar depois.
+              <br /><b>Até ~40 nós</b>: protocolos maiores que isso podem sair truncados ou pedir uma segunda passada de ajuste.
             </div>
             <textarea value={aiText} onChange={(e) => setAiText(e.target.value)} disabled={aiLoading}
               placeholder="Cole aqui o texto do protocolo (opcional se anexar PDF)..."

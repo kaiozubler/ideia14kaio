@@ -67,6 +67,7 @@ export const Route = createFileRoute("/api/ia/gerar-fluxo")({
           },
           body: JSON.stringify({
             model: MODEL,
+            max_tokens: 8000,
             messages: [{ role: "user", content }],
           }),
         });
