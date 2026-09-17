@@ -1,0 +1,290 @@
+import { createFileRoute } from "@tanstack/react-router";
+
+/**
+ * Webhook do WhatsApp para o canal Médico ↔ assistente_ai.
+ *
+ * Diferente de whatsapp-webhook.ts (que atende PACIENTES escrevendo para o
+ * número da CLÍNICA, um número por médico via medico_whatsapp_config), esta
+ * rota atende o número ÚNICO do próprio app — o mesmo para todos os médicos —
+ * usado para conversar com o assistente com permissão completa (gerar
+ * receita, exame, atestado, consultar/editar agenda etc. — canal "interno").
+ *
+ * Identificação: o médico é encontrado comparando o telefone de quem mandou
+ * a mensagem com o campo "telefone" salvo no user_metadata de cada usuário
+ * (tela Configurações > Minha equipe > Meu usuário). Essa rota NÃO usa
+ * medico_whatsapp_config — essa tabela é exclusiva do canal paciente/clínica.
+ *
+ * Para continuar a mesma conversa a cada nova mensagem (em vez de criar uma
+ * conversa nova em ia_assist_conversas, com título gerado, toda hora), o
+ * mapeamento telefone -> conversa fica em medico_assistente_sessoes_whatsapp.
+ *
+ * Requer as MESMAS variáveis de ambiente globais do outro webhook:
+ *   WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN, WHATSAPP_VERIFY_TOKEN
+ *   (e opcionalmente WHATSAPP_APP_SECRET)
+ *
+ * IMPORTANTE: no painel do Meta, a "URL de retorno de chamada" configurada
+ * para o número do assistente_ai deve apontar para ESTA rota
+ * (/api/assistente-medico-webhook) — não para /api/whatsapp-webhook, que é
+ * do número da clínica.
+ */
+
+const GRAPH_BASE = "https://graph.facebook.com/v21.0";
+const MAX_HISTORICO = 20; // mensagens mantidas por conversa, para não crescer sem limite
+
+function onlyDigits(v?: string | null) {
+  return (v || "").replace(/\D/g, "");
+}
+
+// Compara os últimos 10 dígitos — evita falso-negativo por causa de DDI (55)
+// presente em um lado e ausente no outro, ou formatação diferente.
+function telefonesEquivalentes(a?: string | null, b?: string | null) {
+  const da = onlyDigits(a);
+  const dbNum = onlyDigits(b);
+  if (da.length < 8 || dbNum.length < 8) return false;
+  return da.slice(-10) === dbNum.slice(-10);
+}
+
+type Db = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
+
+// Confirma que a chamada realmente veio da Meta (HMAC-SHA256 do corpo com o App Secret).
+// Mesma lógica de whatsapp-webhook.ts.
+async function verifySignature(req: Request, rawBody: string): Promise<boolean> {
+  const appSecret = process.env.WHATSAPP_APP_SECRET;
+  if (!appSecret) return true; // segredo não configurado — mantém comportamento anterior
+  const signature = req.headers.get("x-hub-signature-256");
+  if (!signature) return false;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(appSecret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
+  const expected =
+    "sha256=" +
+    Array.from(new Uint8Array(mac))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  if (signature.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= signature.charCodeAt(i) ^ expected.charCodeAt(i);
+  return diff === 0;
+}
+
+async function enviarWhatsApp(para: string, texto: string) {
+  const token = process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  if (!token || !phoneNumberId) {
+    console.error(
+      "[assistente-medico-webhook] WHATSAPP_ACCESS_TOKEN ou WHATSAPP_PHONE_NUMBER_ID ausente — resposta não enviada.",
+    );
+    return;
+  }
+  try {
+    const res = await fetch(`${GRAPH_BASE}/${phoneNumberId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: para,
+        type: "text",
+        text: { body: texto.slice(0, 4096) },
+      }),
+    });
+    if (!res.ok) console.error("[assistente-medico-webhook] Falha ao enviar mensagem:", res.status, await res.text());
+  } catch (e) {
+    console.error("[assistente-medico-webhook] Erro de rede ao enviar mensagem:", e);
+  }
+}
+
+// Percorre os usuários do Supabase Auth procurando aquele cujo telefone
+// cadastrado (Configurações > Minha equipe > Meu usuário, user_metadata.telefone)
+// bate com quem mandou a mensagem. Não existe hoje uma tabela pública indexada
+// por telefone de médico — se a base crescer muito, vale criar uma (atualizada
+// no momento em que o médico salva o campo) para não paginar todos os
+// usuários a cada mensagem recebida.
+async function resolverMedicoPorTelefone(db: Db, telefoneRemetente: string) {
+  const PER_PAGE = 200;
+  const MAX_PAGINAS = 25; // cobre até 5.000 usuários
+  for (let page = 1; page <= MAX_PAGINAS; page++) {
+    const { data, error } = await db.auth.admin.listUsers({ page, perPage: PER_PAGE });
+    if (error || !data?.users?.length) break;
+    for (const user of data.users) {
+      const meta = (user.user_metadata || {}) as Record<string, unknown>;
+      const telefoneCadastrado = (meta.telefone as string) || (meta.phone as string) || "";
+      if (telefonesEquivalentes(telefoneCadastrado, telefoneRemetente)) {
+        return { id: user.id };
+      }
+    }
+    if (data.users.length < PER_PAGE) break; // última página
+  }
+  return null;
+}
+
+async function carregarSessao(db: Db, idMedico: string, telefone: string) {
+  const { data } = await db
+    .from("medico_assistente_sessoes_whatsapp")
+    .select("id,conversa_id")
+    .eq("id_medico", idMedico)
+    .eq("telefone", telefone)
+    .maybeSingle();
+  return data ?? null;
+}
+
+async function carregarHistoricoConversa(db: Db, conversaId: string | null) {
+  if (!conversaId) return [] as { role: string; content: string }[];
+  const { data } = await db.from("ia_assist_conversas").select("mensagens").eq("id", conversaId).maybeSingle();
+  const bruto = Array.isArray(data?.mensagens) ? data!.mensagens : [];
+  return bruto
+    .filter((m): m is { role: string; content: string } => !!m && typeof m === "object" && !Array.isArray(m))
+    .map((m) => ({ role: String((m as any).role || "user"), content: String((m as any).content || "") }))
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .slice(-MAX_HISTORICO);
+}
+
+async function salvarSessao(
+  db: Db,
+  sessaoId: string | null,
+  idMedico: string,
+  telefone: string,
+  conversaId: string | null,
+) {
+  if (sessaoId) {
+    await db
+      .from("medico_assistente_sessoes_whatsapp")
+      .update({ conversa_id: conversaId, ultima_interacao: new Date().toISOString() })
+      .eq("id", sessaoId);
+    return;
+  }
+  await db.from("medico_assistente_sessoes_whatsapp").insert({
+    id_medico: idMedico,
+    telefone,
+    conversa_id: conversaId,
+  });
+}
+
+export const Route = createFileRoute("/api/assistente-medico-webhook")({
+  server: {
+    handlers: {
+      // Verificação do webhook (handshake exigido pela Meta Cloud API ao cadastrar a URL).
+      GET: async ({ request }) => {
+        const url = new URL(request.url);
+        const mode = url.searchParams.get("hub.mode");
+        const token = url.searchParams.get("hub.verify_token");
+        const challenge = url.searchParams.get("hub.challenge");
+        if (mode === "subscribe" && token && token === process.env.WHATSAPP_VERIFY_TOKEN) {
+          return new Response(challenge || "", { status: 200 });
+        }
+        return new Response("Forbidden", { status: 403 });
+      },
+
+      POST: async ({ request }) => {
+        const rawBody = await request.text();
+
+        const isValid = await verifySignature(request, rawBody);
+        if (!isValid) {
+          return new Response("Invalid signature", { status: 401 });
+        }
+
+        let body: any;
+        try {
+          body = JSON.parse(rawBody);
+        } catch {
+          return new Response("Invalid JSON", { status: 400 });
+        }
+
+        const value = body?.entry?.[0]?.changes?.[0]?.value;
+        const msg = value?.messages?.[0];
+        const phoneNumberId: string | undefined = value?.metadata?.phone_number_id;
+        const messageType: string = msg?.type || "text";
+        const textoRecebido: string =
+          messageType === "text" ? (msg?.text?.body || "") : `[mensagem do tipo ${messageType}]`;
+        const telefoneRemetente = onlyDigits(msg?.from);
+
+        // Eventos que não são mensagem de texto (status de entrega, etc.) — apenas confirma recebimento.
+        if (!msg || !telefoneRemetente) {
+          return Response.json({ ok: true });
+        }
+
+        // Guarda de segurança: se por engano essa rota receber tráfego de outro
+        // número (ex.: webhook configurado errado no painel do Meta), não
+        // processa — evita misturar com o fluxo de paciente.
+        const numeroEsperado = process.env.WHATSAPP_PHONE_NUMBER_ID;
+        if (numeroEsperado && phoneNumberId && phoneNumberId !== numeroEsperado) {
+          console.warn(
+            "[assistente-medico-webhook] phone_number_id inesperado, ignorando:",
+            phoneNumberId,
+          );
+          return Response.json({ ok: true });
+        }
+
+        const apiKey = process.env.LOVABLE_API_KEY;
+        if (!apiKey) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
+
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+        // Registra a mensagem recebida no log bruto de mensagens (mesmo log usado pelo outro webhook).
+        await supabaseAdmin.from("whatsapp_messages").insert({
+          wa_from: telefoneRemetente,
+          direction: "inbound",
+          message_type: messageType,
+          content: textoRecebido,
+          wa_message_id: msg.id ?? null,
+        });
+
+        const medico = await resolverMedicoPorTelefone(supabaseAdmin, telefoneRemetente);
+        if (!medico) {
+          const aviso =
+            "Olá! Não encontrei nenhum médico cadastrado com este número. " +
+            "Confirme se o telefone está salvo em Configurações > Minha equipe > Meu usuário e tente novamente.";
+          await enviarWhatsApp(telefoneRemetente, aviso);
+          console.warn(
+            "[assistente-medico-webhook] Nenhum médico encontrado para o telefone remetente",
+            telefoneRemetente,
+          );
+          return Response.json({ ok: true });
+        }
+
+        const sessao = await carregarSessao(supabaseAdmin, medico.id, telefoneRemetente);
+        const historico = await carregarHistoricoConversa(supabaseAdmin, sessao?.conversa_id || null);
+        const novoHistorico = [...historico, { role: "user", content: textoRecebido }];
+
+        try {
+          const { handleAssistente } = await import("./assistente-ia");
+          const res = await handleAssistente({
+            canal: "interno",
+            messages: novoHistorico,
+            user_id: medico.id,
+            conversa_id: sessao?.conversa_id || null,
+          });
+          const data = (await res.json()) as { reply?: string; conversa_id?: string | null };
+          const reply = (data.reply || "Desculpe, não consegui responder agora. Tente novamente em instantes.").trim();
+
+          await salvarSessao(
+            supabaseAdmin,
+            sessao?.id || null,
+            medico.id,
+            telefoneRemetente,
+            data.conversa_id || sessao?.conversa_id || null,
+          );
+          await enviarWhatsApp(telefoneRemetente, reply);
+          await supabaseAdmin.from("whatsapp_messages").insert({
+            wa_from: telefoneRemetente,
+            direction: "outbound",
+            message_type: "text",
+            content: reply,
+          });
+        } catch (e) {
+          console.error("[assistente-medico-webhook] Falha ao processar mensagem:", e);
+          await enviarWhatsApp(
+            telefoneRemetente,
+            "Desculpe, tive um problema para responder agora. Tente novamente em instantes.",
+          );
+        }
+
+        return Response.json({ ok: true });
+      },
+    },
+  },
+});

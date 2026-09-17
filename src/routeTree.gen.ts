@@ -20,6 +20,7 @@ import { Route as ApiLmeIaRouteImport } from './routes/api/lme-ia'
 import { Route as ApiMapaFamiliarIaRouteImport } from './routes/api/mapa-familiar-ia'
 import { Route as ApiWhatsappConviteRouteImport } from './routes/api/whatsapp-convite'
 import { Route as ApiWhatsappWebhookRouteImport } from './routes/api/whatsapp-webhook'
+import { Route as ApiAssistenteMedicoWebhookRouteImport } from './routes/api/assistente-medico-webhook'
 import { Route as FFormIdRouteImport } from './routes/f.$formId'
 import { Route as TTermoIdRouteImport } from './routes/t.$termoId'
 import { Route as ApiBaseConhecimentoAtalhosRouteImport } from './routes/api/base-conhecimento/atalhos'
@@ -118,6 +119,11 @@ const ApiWhatsappConviteRoute = ApiWhatsappConviteRouteImport.update({
 const ApiWhatsappWebhookRoute = ApiWhatsappWebhookRouteImport.update({
   id: '/api/whatsapp-webhook',
   path: '/api/whatsapp-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAssistenteMedicoWebhookRoute = ApiAssistenteMedicoWebhookRouteImport.update({
+  id: '/api/assistente-medico-webhook',
+  path: '/api/assistente-medico-webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FFormIdRoute = FFormIdRouteImport.update({
@@ -368,6 +374,7 @@ export interface FileRoutesByFullPath {
   '/api/mapa-familiar-ia': typeof ApiMapaFamiliarIaRoute
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
+  '/api/assistente-medico-webhook': typeof ApiAssistenteMedicoWebhookRoute
   '/f/$formId': typeof FFormIdRoute
   '/t/$termoId': typeof TTermoIdRoute
   '/api/base-conhecimento/atalhos': typeof ApiBaseConhecimentoAtalhosRoute
@@ -424,6 +431,7 @@ export interface FileRoutesByTo {
   '/api/mapa-familiar-ia': typeof ApiMapaFamiliarIaRoute
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
+  '/api/assistente-medico-webhook': typeof ApiAssistenteMedicoWebhookRoute
   '/f/$formId': typeof FFormIdRoute
   '/t/$termoId': typeof TTermoIdRoute
   '/api/base-conhecimento/atalhos': typeof ApiBaseConhecimentoAtalhosRoute
@@ -481,6 +489,7 @@ export interface FileRoutesById {
   '/api/mapa-familiar-ia': typeof ApiMapaFamiliarIaRoute
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
+  '/api/assistente-medico-webhook': typeof ApiAssistenteMedicoWebhookRoute
   '/f/$formId': typeof FFormIdRoute
   '/t/$termoId': typeof TTermoIdRoute
   '/api/base-conhecimento/atalhos': typeof ApiBaseConhecimentoAtalhosRoute
@@ -539,6 +548,7 @@ export interface FileRouteTypes {
     | '/api/mapa-familiar-ia'
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
+    | '/api/assistente-medico-webhook'
     | '/f/$formId'
     | '/t/$termoId'
     | '/api/base-conhecimento/atalhos'
@@ -595,6 +605,7 @@ export interface FileRouteTypes {
     | '/api/mapa-familiar-ia'
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
+    | '/api/assistente-medico-webhook'
     | '/f/$formId'
     | '/t/$termoId'
     | '/api/base-conhecimento/atalhos'
@@ -651,6 +662,7 @@ export interface FileRouteTypes {
     | '/api/mapa-familiar-ia'
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
+    | '/api/assistente-medico-webhook'
     | '/f/$formId'
     | '/t/$termoId'
     | '/api/base-conhecimento/atalhos'
@@ -708,6 +720,7 @@ export interface RootRouteChildren {
   ApiMapaFamiliarIaRoute: typeof ApiMapaFamiliarIaRoute
   ApiWhatsappConviteRoute: typeof ApiWhatsappConviteRoute
   ApiWhatsappWebhookRoute: typeof ApiWhatsappWebhookRoute
+  ApiAssistenteMedicoWebhookRoute: typeof ApiAssistenteMedicoWebhookRoute
   FFormIdRoute: typeof FFormIdRoute
   TTermoIdRoute: typeof TTermoIdRoute
   ApiBaseConhecimentoAtalhosRoute: typeof ApiBaseConhecimentoAtalhosRoute
@@ -830,6 +843,13 @@ declare module '@tanstack/react-router' {
       path: '/api/whatsapp-webhook'
       fullPath: '/api/whatsapp-webhook'
       preLoaderRoute: typeof ApiWhatsappWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/assistente-medico-webhook': {
+      id: '/api/assistente-medico-webhook'
+      path: '/api/assistente-medico-webhook'
+      fullPath: '/api/assistente-medico-webhook'
+      preLoaderRoute: typeof ApiAssistenteMedicoWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/f/$formId': {
@@ -1148,6 +1168,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMapaFamiliarIaRoute: ApiMapaFamiliarIaRoute,
   ApiWhatsappConviteRoute: ApiWhatsappConviteRoute,
   ApiWhatsappWebhookRoute: ApiWhatsappWebhookRoute,
+  ApiAssistenteMedicoWebhookRoute: ApiAssistenteMedicoWebhookRoute,
   FFormIdRoute: FFormIdRoute,
   TTermoIdRoute: TTermoIdRoute,
   ApiBaseConhecimentoAtalhosRoute: ApiBaseConhecimentoAtalhosRoute,
