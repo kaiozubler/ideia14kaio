@@ -10652,7 +10652,7 @@ showAtendList();
                                                               const selo=temFonte
                                                                 ? `<div class="bk-fonte-badge bk-fonte-badge-click" title="${iaEscHtml(fonteBaseConhecimento.join(', '))} — clique para abrir"><i class="ti ti-database"></i> Base de conhecimento local: ${iaEscHtml(fonteBaseConhecimento.join(', '))}</div>`
                                                                 : '';
-                                                              el.innerHTML=`<span class="bbl-text">${text}</span>${selo}<span class="bbl-actions"><button class="bbl-pin-btn" onclick="togglePin('${id}')" title="Fixar"><i class="ti ti-pin"></i></button></span>`;
+                                                              el.innerHTML=`<div class="bbl-content"><span class="bbl-text">${text}</span>${selo}</div><span class="bbl-actions"><button class="bbl-pin-btn" onclick="togglePin('${id}')" title="Fixar"><i class="ti ti-pin"></i></button></span>`;
                                                               if(!bubblesVisible&&type!=='usr')el.style.display='none';
                                                               layer.appendChild(el);
                                                               if(temFonte){
