@@ -15,6 +15,10 @@ import { z } from "zod";
 // choices[0].message.content), não o da Anthropic Messages API — o front em
 // public/protocolo-studio.html (generateFlowFromAI) já espera esse formato.
 //
+// pdfBase64/filename são opcionais: quando presentes, monta um bloco
+// "file" no content igual ao que gerar.server.ts já usa pro fluxo oficial
+// (o gateway aceita PDF nesse formato, o modelo lê o documento direto).
+//
 // Já plugado em public/protocolo-studio.html (generateFlowFromAI chama
 // /api/ia/gerar-fluxo via studioFetch, que também manda o Bearer token da
 // sessão logada — essa rota exige usuário autenticado).
@@ -22,8 +26,12 @@ import { z } from "zod";
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-3.6-flash";
 
+// ~14MB em base64 (~10MB de PDF real) -- generoso o bastante pra um
+// protocolo em PDF, sem deixar o payload crescer sem limite.
 const BodySchema = z.object({
   prompt: z.string().min(1).max(20000),
+  pdfBase64: z.string().max(14_000_000).nullable().optional(),
+  filename: z.string().max(200).nullable().optional(),
 });
 
 export const Route = createFileRoute("/api/ia/gerar-fluxo")({
@@ -40,6 +48,17 @@ export const Route = createFileRoute("/api/ia/gerar-fluxo")({
         const apiKey = process.env["LOVABLE_API_KEY"];
         if (!apiKey) return Response.json({ error: "LOVABLE_API_KEY não configurada no servidor" }, { status: 500 });
 
+        const content: Array<Record<string, unknown>> = [{ type: "text", text: body.data.prompt }];
+        if (body.data.pdfBase64) {
+          content.push({
+            type: "file",
+            file: {
+              filename: body.data.filename || "protocolo.pdf",
+              file_data: `data:application/pdf;base64,${body.data.pdfBase64}`,
+            },
+          });
+        }
+
         const resp = await fetch(GATEWAY_URL, {
           method: "POST",
           headers: {
@@ -48,7 +67,8 @@ export const Route = createFileRoute("/api/ia/gerar-fluxo")({
           },
           body: JSON.stringify({
             model: MODEL,
-            messages: [{ role: "user", content: body.data.prompt }],
+            max_tokens: 8000,
+            messages: [{ role: "user", content }],
           }),
         });
 

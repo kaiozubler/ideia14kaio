@@ -7,16 +7,7 @@
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<script>
-  // import() dinâmico em vez de <script type="module"> estático: alguma
-  // camada de proxy/preview neste ambiente estava reinjetando a tag de
-  // módulo sem preservar o atributo type="module" (daí o "Cannot use
-  // import statement outside a module" disparado de dentro de um
-  // appendChild). import() funciona dentro de um <script> comum, sem
-  // precisar de type="module" na tag, então nada tem como mexer nisso.
-  window.__studioSupabaseReady = import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm")
-    .then((mod) => { window.supabase = { createClient: mod.createClient }; return mod.createClient; });
-</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   html, body { margin: 0; padding: 0; background: #f8fafc; }
   #root { width: 100%; height: 100vh; }
@@ -51,16 +42,25 @@
 
   // Rede de segurança: se algum script falhar (CDN fora do ar, erro de
   // configuração etc.), mostra o erro na tela em vez de deixar a página em
-  // branco sem pista nenhuma do que aconteceu.
+  // branco sem pista nenhuma do que aconteceu. Também lista TODAS as tags
+  // <script> que existem de fato no DOM nesse momento — inclusive as que
+  // não estão no nosso arquivo-fonte, caso algo externo (proxy/preview)
+  // esteja injetando algo na página.
   window.addEventListener("error", function (e) {
     var root = document.getElementById("root");
     if (root && !root.hasChildNodes()) {
-      root.innerHTML = '<div style="max-width:640px;margin:60px auto;padding:24px;font-family:sans-serif;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;color:#7c2d12;white-space:pre-wrap">'
-        + '<b>Erro ao carregar o Studio:</b>\n' + (e.message || e) + '</div>';
+      var scriptsInfo = Array.prototype.map.call(document.getElementsByTagName("script"), function (s, i) {
+        var kind = s.src ? ("src=" + s.src) : ("inline, type=\"" + (s.type || "(vazio)") + "\", " + (s.text || s.textContent || "").slice(0, 60).replace(/</g, "&lt;"));
+        return (i + 1) + ". " + kind;
+      }).join("\n");
+      root.innerHTML = '<div style="max-width:720px;margin:40px auto;padding:24px;font-family:sans-serif;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;color:#7c2d12;white-space:pre-wrap;font-size:13px">'
+        + '<b>Erro ao carregar o Studio:</b>\n' + (e.message || e)
+        + '\n\n<b>Scripts presentes no DOM neste momento (' + document.getElementsByTagName("script").length + '):</b>\n' + scriptsInfo
+        + '</div>';
     }
   });
 </script>
-<script type="text/babel" data-presets="react">
+<script id="app-source" type="text/plain">
 // Ícones inline — substituem o pacote lucide-react pra este arquivo não
 // precisar de bundler/npm. Mesmo contrato de props (size, color, strokeWidth)
 // usado no resto do componente.
@@ -109,25 +109,16 @@ const { useState, useRef, useCallback, useMemo, useEffect } = React;
 // --- Auth (Supabase) ---------------------------------------------------
 // Página estática, sem sessão vinda do app principal por build/import — só
 // reaproveita o localStorage se estiver no mesmo domínio (ver comentário no
-// <head>). Client único, reusado por toda a página — criado de forma
-// preguiçosa/assíncrona porque o supabase-js chega via import() dinâmico
-// (ver <head>), então não dá pra assumir que window.supabase já existe
-// no momento em que este script roda.
-let _supabaseClientPromise = null;
-function getSupabaseClient() {
-  if (!_supabaseClientPromise) {
-    _supabaseClientPromise = window.__studioSupabaseReady.then((createClient) => {
-      if (!window.__STUDIO_SUPABASE_URL__ || !window.__STUDIO_SUPABASE_ANON_KEY__) return null;
-      return createClient(window.__STUDIO_SUPABASE_URL__, window.__STUDIO_SUPABASE_ANON_KEY__);
-    });
-  }
-  return _supabaseClientPromise;
-}
+// <head>). Client único, reusado por toda a página. window.supabase já
+// existe neste ponto (script clássico, carregado em ordem, antes deste
+// bloco text/babel).
+const supabaseClient = (window.__STUDIO_SUPABASE_URL__ && window.__STUDIO_SUPABASE_ANON_KEY__)
+  ? window.supabase.createClient(window.__STUDIO_SUPABASE_URL__, window.__STUDIO_SUPABASE_ANON_KEY__)
+  : null;
 
 async function getAccessToken() {
-  const client = await getSupabaseClient();
-  if (!client) throw new Error("Studio sem configuração do Supabase (preencha SUPABASE_URL/ANON_KEY no topo do arquivo).");
-  const { data } = await client.auth.getSession();
+  if (!supabaseClient) throw new Error("Studio sem configuração do Supabase (preencha SUPABASE_URL/ANON_KEY no topo do arquivo).");
+  const { data } = await supabaseClient.auth.getSession();
   const token = data?.session?.access_token;
   if (!token) throw new Error("Sessão expirada ou não autenticado. Faça login novamente.");
   return token;
@@ -160,28 +151,37 @@ const TYPE_STYLE = {
 };
 const SNAP_GRAD = "linear-gradient(135deg,#38bdf8,#2563eb)"; // degradê azul do ímã / hover da seta
 
-const TUSS_CATALOG = [
-  { id: "tuss-1", codigo: "40304361", nome: "TSH" },
-  { id: "tuss-2", codigo: "40302016", nome: "Hemoglobina glicada (HbA1c)" },
-  { id: "tuss-3", codigo: "40311214", nome: "Creatinina sérica" },
-  { id: "tuss-4", codigo: "40316897", nome: "Hemograma completo" },
-  { id: "tuss-5", codigo: "40301489", nome: "Glicemia de jejum" },
-  { id: "tuss-6", codigo: "40907017", nome: "Ultrassonografia obstétrica" },
-  { id: "tuss-7", codigo: "40302040", nome: "Glicemia aleatória (ao acaso)" },
-  { id: "tuss-8", codigo: "40311680", nome: "TOTG 75g (2h)" },
-  { id: "tuss-9", codigo: "40312058", nome: "Peptídeo C" },
-  { id: "tuss-10", codigo: "40312899", nome: "Marcadores autoimunes (Anti-ICA/IAA/GAD/IA2)" },
-  { id: "tuss-11", codigo: "40318033", nome: "Automonitorização glicêmica (AMG) — registro" },
-];
-const SUBSTANCIA_CATALOG = [
-  { id: "sub-1", nome: "Levotiroxina sódica" },
-  { id: "sub-2", nome: "Metformina" },
-  { id: "sub-3", nome: "Losartana potássica" },
-  { id: "sub-4", nome: "Insulina NPH" },
-  { id: "sub-5", nome: "Insulina Regular" },
-  { id: "sub-6", nome: "Insulina Lispro / Asparte / Glulisina (análogo rápido)" },
-  { id: "sub-7", nome: "Insulina Glargina / Detemir / Degludeca (análogo prolongado)" },
-];
+// Busca real no catálogo (mesmos endpoints que o resto do app já usa —
+// ver public/protocolos.js:catalogSearchRun). Substitui os antigos arrays
+// fixos TUSS_CATALOG/SUBSTANCIA_CATALOG, que nunca bateram no banco de
+// verdade.
+async function buscarTussApi(termo) {
+  if (!termo || termo.trim().length < 2) return [];
+  const data = await studioFetch("/api/tuss/buscar?q=" + encodeURIComponent(termo), { method: "GET" });
+  return (data.items || []).map((it) => ({ id: it.id, codigo: it.codigo_tuss, nome: it.nome }));
+}
+async function buscarSubstanciaApi(termo) {
+  if (!termo || termo.trim().length < 2) return [];
+  const data = await studioFetch("/api/medicamentos/buscar?q=" + encodeURIComponent(termo), { method: "GET" });
+  return (data.items || []).map((it) => ({ id: it.id_substancia, nome: it.nome_exibicao }));
+}
+// Debounce simples e genérico pra ligar num useEffect de busca.
+function useDebouncedSearch(termo, searchFn, delayMs) {
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (!termo || termo.trim().length < 2) { setResults([]); return; }
+    let cancelled = false;
+    setLoading(true);
+    const t = setTimeout(() => {
+      searchFn(termo).then((r) => { if (!cancelled) setResults(r); })
+        .catch(() => { if (!cancelled) setResults([]); })
+        .finally(() => { if (!cancelled) setLoading(false); });
+    }, delayMs || 300);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [termo]);
+  return { results, loading };
+}
 const CAMPO_OPTIONS = [
   { id: "numero", label: "Resultado numérico do exame-gatilho" },
   { id: "texto", label: "Resultado em texto do exame-gatilho" },
@@ -557,6 +557,7 @@ function seedGraphHAS() {
 }
 
 const PROTOCOLS = {
+  novo: { label: "🆕 Novo (em branco)", seed: () => ({ nodes: [], edges: [] }) },
   dm1: { label: "Diabetes Tipo 1 (DM1)", seed: seedGraphDM1 },
   has: { label: "Hipertensão (HAS)", seed: seedGraphHAS },
 };
@@ -606,16 +607,19 @@ Regras do schema:
 - A 1ª clause de uma cadeia tem "conector": null; as seguintes têm "E" ou "OU".
 - Evento.acao: suspender | ajustar | mensagem_paciente | notificar_usuario | gerar_receita | enviar_receita | solicitar_exame. "alvoLocalId" referencia outro nó do fluxo (opcional).
 - edges: "fromHandle" é null pra Exame/Medicamento/Consulta/Evento (saída única), "admitido"/"nao_admitido" pra Admissao, e o localId do branch pra Condicao.
-- IMPORTANTE — limite de tamanho: gere no máximo 8 nós no total, focando só no caminho principal do protocolo (não tente cobrir cada exceção). Nomes e textos curtos e diretos.`;
+- IMPORTANTE — cubra o protocolo completo: modele todos os ramos e exceções relevantes descritos no texto/PDF (não só o caminho principal), até um limite de 40 nós no total. Se o protocolo for maior que isso, priorize completude clínica (todas as condições/exames/medicamentos citados) sobre detalhamento de cada um — nomes e textos curtos e diretos.`;
 
-async function generateFlowFromAI(protocolText) {
+async function generateFlowFromAI(protocolText, pdf) {
   // Via proxy de backend (/api/ia/gerar-fluxo) — chave fica só no servidor,
   // nunca no navegador. Ver src/routes/api/ia/gerar-fluxo.ts. Usa o AI
   // Gateway do Lovable (mesmo do resto do app), resposta no formato
   // OpenAI-compatible: choices[0].message.content.
+  // pdf (opcional): { base64, filename } — a IA lê o PDF anexado direto,
+  // igual o fluxo oficial de gerar protocolo já faz.
+  const prompt = `${AI_SCHEMA_PROMPT}\n\nPROTOCOLO:\n"""\n${protocolText || "(ver documento PDF anexo)"}\n"""`;
   const data = await studioFetch("/api/ia/gerar-fluxo", {
     method: "POST",
-    body: JSON.stringify({ prompt: `${AI_SCHEMA_PROMPT}\n\nPROTOCOLO:\n"""\n${protocolText}\n"""` }),
+    body: JSON.stringify({ prompt, pdfBase64: pdf?.base64 || null, filename: pdf?.filename || null }),
   });
   const text = data?.choices?.[0]?.message?.content || "";
   const cleaned = text.replace(/```json|```/g, "").trim();
@@ -623,6 +627,16 @@ async function generateFlowFromAI(protocolText) {
   try { spec = JSON.parse(cleaned); }
   catch { throw new Error("A IA não devolveu um JSON válido. Tente um texto mais curto/direto."); }
   return spec;
+}
+
+// Lê um File (PDF) como base64 puro (sem o prefixo data:...;base64,).
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+    reader.onerror = () => reject(reader.error || new Error("Falha ao ler o arquivo"));
+    reader.readAsDataURL(file);
+  });
 }
 
 // --- Rascunhos (salvar/carregar) ---------------------------------------
@@ -839,10 +853,11 @@ const glass = (extra) => ({
 });
 
 function ProtocolCanvas() {
-  const [protocolKey, setProtocolKey] = useState("dm1");
-  const [graph, setGraph] = useState(() => PROTOCOLS.dm1.seed());
+  const [protocolKey, setProtocolKey] = useState("novo");
+  const [graph, setGraph] = useState(() => PROTOCOLS.novo.seed());
   const [aiOpen, setAiOpen] = useState(false);
   const [aiText, setAiText] = useState("");
+  const [aiPdfFile, setAiPdfFile] = useState(null); // { name, base64 } | null
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState(null);
   const [customLabel, setCustomLabel] = useState(null);
@@ -898,10 +913,10 @@ function ProtocolCanvas() {
   }
 
   async function handleAiGenerate() {
-    if (!aiText.trim() || aiLoading) return;
+    if ((!aiText.trim() && !aiPdfFile) || aiLoading) return;
     setAiLoading(true); setAiError(null);
     try {
-      const spec = await generateFlowFromAI(aiText);
+      const spec = await generateFlowFromAI(aiText, aiPdfFile ? { base64: aiPdfFile.base64, filename: aiPdfFile.name } : null);
       const built = buildGraphFromAiSpec(spec);
       if (!built.nodes.length) throw new Error("A IA não gerou nenhum nó — tenta reformular o texto.");
       const laidOutNodes = autoLayout(built.nodes, built.edges, "proximidade");
@@ -911,10 +926,24 @@ function ProtocolCanvas() {
       setPan({ x: 220, y: 40 });
       setAiOpen(false);
       setAiText("");
+      setAiPdfFile(null);
     } catch (err) {
       setAiError(err.message || String(err));
     } finally {
       setAiLoading(false);
+    }
+  }
+
+  async function handleAiPdfSelect(file) {
+    if (!file) return;
+    if (file.type !== "application/pdf") { setAiError("Só é aceito arquivo PDF."); return; }
+    if (file.size > 10 * 1024 * 1024) { setAiError("PDF muito grande (máx. 10MB)."); return; }
+    setAiError(null);
+    try {
+      const base64 = await fileToBase64(file);
+      setAiPdfFile({ name: file.name, base64 });
+    } catch {
+      setAiError("Não consegui ler o PDF. Tenta de novo.");
     }
   }
   const [layoutMode, setLayoutMode] = useState("proximidade");
@@ -1128,6 +1157,8 @@ function ProtocolCanvas() {
               setSelectedId(null);
               setPan({ x: 220, y: 40 });
               setCustomLabel(null);
+              setDraftId(null);
+              setDraftTitle(key === "novo" ? "Rascunho sem título" : PROTOCOLS[key].label + " (cópia)");
             }}
             style={{ fontSize: 13, fontWeight: 700, color: "#1e293b", background: "rgba(255,255,255,0.75)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 10, padding: "6px 10px", cursor: "pointer", outline: "none" }}>
             {Object.entries(PROTOCOLS).map(([key, p]) => <option key={key} value={key}>{p.label}</option>)}
@@ -1210,6 +1241,11 @@ function ProtocolCanvas() {
               background: "linear-gradient(90deg, rgba(248,250,252,0.9) 55%, rgba(248,250,252,0) 100%)" }} />
 
             <div style={{ position: "absolute", left: 20, top: 24, zIndex: 20, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+              {graph.nodes.length === 0 && (
+                <div style={{ position: "absolute", left: 62, top: 4, width: 168, fontSize: 11, fontWeight: 600, color: "#64748b", lineHeight: 1.35, pointerEvents: "none" }}>
+                  Clique ou arraste um ícone pra adicionar um nó ao protocolo
+                </div>
+              )}
               {RAIL_ITEMS.map((item, i) => {
                 const s = TYPE_STYLE[item.type];
                 return (
@@ -1348,7 +1384,7 @@ function ProtocolCanvas() {
 
           {selected && (
             <div style={{ width: 300, padding: 16, overflowY: "auto", zIndex: 25, ...glass({ borderRadius: 0, borderTop: "none", borderRight: "none", borderBottom: "none" }) }}>
-              <NodeInspector node={selected} graph={graph} fontes={fontesDoNo(selected.id)} onChange={(patch) => updateNode(selected.id, patch)} />
+              <NodeInspector key={selected.id} node={selected} graph={graph} fontes={fontesDoNo(selected.id)} onChange={(patch) => updateNode(selected.id, patch)} />
             </div>
           )}
         </div>
@@ -1363,12 +1399,27 @@ function ProtocolCanvas() {
               <div style={{ fontSize: 15, fontWeight: 700, color: "#1e293b" }}>Gerar fluxo com IA</div>
             </div>
             <div style={{ fontSize: 11.5, color: "#64748b", marginBottom: 14, lineHeight: 1.5 }}>
-              Cole o texto de um protocolo (ou um trecho dele). A IA monta um esboço do fluxo — exames, condições, medicamentos — pra você refinar depois.
-              <br /><b>Fica compacto (até ~8 nós)</b>: é um ponto de partida, não o protocolo inteiro modelado.
+              Cole o texto de um protocolo (ou um trecho dele), anexe um PDF, ou os dois. A IA monta o fluxo completo — exames, condições, medicamentos, ramificações e exceções — pra você refinar depois.
+              <br /><b>Até ~40 nós</b>: protocolos maiores que isso podem sair truncados ou pedir uma segunda passada de ajuste.
             </div>
             <textarea value={aiText} onChange={(e) => setAiText(e.target.value)} disabled={aiLoading}
-              placeholder="Cole aqui o texto do protocolo..."
-              style={{ width: "100%", minHeight: 160, fontSize: 12.5, padding: 12, borderRadius: 12, border: "1px solid #dbe1ea", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit", outline: "none", marginBottom: 10 }} />
+              placeholder="Cole aqui o texto do protocolo (opcional se anexar PDF)..."
+              style={{ width: "100%", minHeight: 130, fontSize: 12.5, padding: 12, borderRadius: 12, border: "1px solid #dbe1ea", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit", outline: "none", marginBottom: 10 }} />
+            <div style={{ marginBottom: 10 }}>
+              {aiPdfFile ? (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 600, color: "#1e293b", background: "#f1f5f9", borderRadius: 999, padding: "6px 12px" }}>
+                  📄 {aiPdfFile.name}
+                  <button onClick={() => setAiPdfFile(null)} disabled={aiLoading}
+                    style={{ border: "none", background: "none", color: "#94a3b8", cursor: aiLoading ? "default" : "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
+                </div>
+              ) : (
+                <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "#7c3aed", cursor: aiLoading ? "default" : "pointer", background: "#f5f3ff", borderRadius: 999, padding: "6px 12px" }}>
+                  📎 Anexar PDF
+                  <input type="file" accept="application/pdf" disabled={aiLoading} style={{ display: "none" }}
+                    onChange={(e) => { handleAiPdfSelect(e.target.files?.[0]); e.target.value = ""; }} />
+                </label>
+              )}
+            </div>
             {aiError && (
               <div style={{ fontSize: 11, color: "#e11d48", background: "rgba(255,241,242,0.8)", borderRadius: 10, padding: "8px 10px", marginBottom: 10 }}>⚠ {aiError}</div>
             )}
@@ -1377,9 +1428,9 @@ function ProtocolCanvas() {
                 style={{ padding: "9px 16px", borderRadius: 10, border: "none", fontSize: 12.5, fontWeight: 600, color: "#64748b", background: "#f1f5f9", cursor: aiLoading ? "default" : "pointer" }}>
                 Cancelar
               </button>
-              <button onClick={handleAiGenerate} disabled={aiLoading || !aiText.trim()}
-                style={{ padding: "9px 18px", borderRadius: 10, border: "none", fontSize: 12.5, fontWeight: 700, color: "#fff", cursor: aiLoading || !aiText.trim() ? "default" : "pointer",
-                  background: aiLoading || !aiText.trim() ? "#c4b5fd" : "linear-gradient(135deg,#c084fc,#7c3aed)" }}>
+              <button onClick={handleAiGenerate} disabled={aiLoading || (!aiText.trim() && !aiPdfFile)}
+                style={{ padding: "9px 18px", borderRadius: 10, border: "none", fontSize: 12.5, fontWeight: 700, color: "#fff", cursor: aiLoading || (!aiText.trim() && !aiPdfFile) ? "default" : "pointer",
+                  background: aiLoading || (!aiText.trim() && !aiPdfFile) ? "#c4b5fd" : "linear-gradient(135deg,#c084fc,#7c3aed)" }}>
                 {aiLoading ? "Gerando…" : "Gerar fluxo"}
               </button>
             </div>
@@ -1485,6 +1536,15 @@ function NodeInspector({ node, graph, fontes, onChange }) {
   const input = { width: "100%", fontSize: 12.5, padding: "8px 10px", borderRadius: 10, border: "1px solid #dbe1ea", marginBottom: 12, boxSizing: "border-box", background: "rgba(255,255,255,0.85)", outline: "none" };
   const nodesById = useMemo(() => Object.fromEntries(graph.nodes.map((n) => [n.id, n])), [graph.nodes]);
 
+  // Busca ao vivo no catálogo (TUSS / substâncias) — chamados incondicionalmente
+  // (regra dos hooks), mesmo que o nó não seja Exame/Medicamento; o componente é
+  // remontado por node.id (ver key no <NodeInspector> pai), então o estado de
+  // busca começa limpo a cada nó selecionado.
+  const [tussQuery, setTussQuery] = useState(node.tussId ? node.name : "");
+  const tussSearch = useDebouncedSearch(tussQuery, buscarTussApi);
+  const [subQuery, setSubQuery] = useState(node.substanciaId ? node.name : "");
+  const subSearch = useDebouncedSearch(subQuery, buscarSubstanciaApi);
+
   function addBranch() {
     const branches = [...node.branches];
     branches.splice(branches.length - 1, 0, { id: uid(), descricao: "", clauses: [] });
@@ -1531,21 +1591,34 @@ function NodeInspector({ node, graph, fontes, onChange }) {
       {node.type === "Exame" && (
         <>
           <label style={label}>Procedimento (catálogo TUSS)</label>
-          <input style={input} list="tuss-list" value={TUSS_CATALOG.find((t) => t.id === node.tussId)?.nome || ""}
-            onChange={(e) => { const hit = TUSS_CATALOG.find((t) => t.nome === e.target.value); onChange(hit ? { tussId: hit.id, name: hit.nome } : { tussId: null }); }}
-            placeholder="Buscar exame no catálogo..." />
-          <datalist id="tuss-list">{TUSS_CATALOG.map((t) => <option key={t.id} value={t.nome} />)}</datalist>
-          {node.tussId && <div style={{ fontSize: 10.5, color: "#059669", marginTop: -8, marginBottom: 12 }}>TUSS {TUSS_CATALOG.find((t) => t.id === node.tussId)?.codigo}</div>}
+          <input style={input} list="tuss-list" value={tussQuery}
+            onChange={(e) => {
+              const v = e.target.value; setTussQuery(v);
+              const hit = tussSearch.results.find((t) => t.nome === v);
+              onChange(hit ? { tussId: hit.id, name: hit.nome } : { tussId: null, name: v });
+            }}
+            placeholder="Buscar exame no catálogo TUSS..." />
+          <datalist id="tuss-list">{tussSearch.results.map((t) => <option key={t.id} value={t.nome} />)}</datalist>
+          {tussSearch.loading && <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: -8, marginBottom: 12 }}>Buscando…</div>}
+          {node.tussId && <div style={{ fontSize: 10.5, color: "#059669", marginTop: -8, marginBottom: 12 }}>TUSS {tussSearch.results.find((t) => t.id === node.tussId)?.codigo || ""} — vinculado</div>}
+          {!node.tussId && tussQuery.trim().length >= 2 && !tussSearch.loading && <div style={{ fontSize: 10.5, color: "#d97706", marginTop: -8, marginBottom: 12 }}>Não vinculado ao catálogo — escolha uma opção da lista</div>}
         </>
       )}
       {node.type === "Consulta" && (<><label style={label}>Especialidade (opcional)</label><input style={input} value={node.especialidade || ""} onChange={(e) => onChange({ especialidade: e.target.value })} /></>)}
       {node.type === "Medicamento" && (
         <>
           <label style={label}>Substância (catálogo)</label>
-          <input style={input} list="sub-list" value={SUBSTANCIA_CATALOG.find((s2) => s2.id === node.substanciaId)?.nome || ""}
-            onChange={(e) => { const hit = SUBSTANCIA_CATALOG.find((s2) => s2.nome === e.target.value); onChange(hit ? { substanciaId: hit.id, name: hit.nome } : { substanciaId: null }); }}
+          <input style={input} list="sub-list" value={subQuery}
+            onChange={(e) => {
+              const v = e.target.value; setSubQuery(v);
+              const hit = subSearch.results.find((s2) => s2.nome === v);
+              onChange(hit ? { substanciaId: hit.id, name: hit.nome } : { substanciaId: null, name: v });
+            }}
             placeholder="Buscar substância..." />
-          <datalist id="sub-list">{SUBSTANCIA_CATALOG.map((s2) => <option key={s2.id} value={s2.nome} />)}</datalist>
+          <datalist id="sub-list">{subSearch.results.map((s2) => <option key={s2.id} value={s2.nome} />)}</datalist>
+          {subSearch.loading && <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: -8, marginBottom: 12 }}>Buscando…</div>}
+          {node.substanciaId && <div style={{ fontSize: 10.5, color: "#059669", marginTop: -8, marginBottom: 12 }}>Vinculado ao catálogo</div>}
+          {!node.substanciaId && subQuery.trim().length >= 2 && !subSearch.loading && <div style={{ fontSize: 10.5, color: "#d97706", marginTop: -8, marginBottom: 12 }}>Não vinculado ao catálogo — escolha uma opção da lista</div>}
           <label style={label}>Dose</label>
           <input style={input} value={node.dose || ""} onChange={(e) => onChange({ dose: e.target.value })} placeholder="Ex: 75mcg" />
           <label style={label}>Posologia</label>
@@ -1849,7 +1922,6 @@ function ClauseEditor({ clause, nodesById, onChange, onRemove, inputStyle }) {
 // nem aparece: o useEffect abaixo já encontra a sessão de cara. Só mostra o
 // formulário se realmente não houver sessão.
 function App() {
-  const [client, setClient] = useState(undefined); // undefined = ainda resolvendo o supabase-js
   const [session, setSession] = useState(undefined); // undefined = carregando
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -1857,40 +1929,44 @@ function App() {
   const [loggingIn, setLoggingIn] = useState(false);
 
   useEffect(() => {
-    let unsub = null;
-    getSupabaseClient().then((c) => {
-      setClient(c);
-      if (!c) { setSession(null); return; }
-      c.auth.getSession().then(({ data }) => setSession(data?.session || null));
-      const { data: sub } = c.auth.onAuthStateChange((_event, s) => setSession(s));
-      unsub = () => sub?.subscription?.unsubscribe();
-    }).catch((err) => {
-      setClient(null);
-      setSession(null);
-      setLoginError(err.message || String(err));
-    });
-    return () => unsub && unsub();
+    if (!supabaseClient) { setSession(null); return; }
+
+    // Se o link veio do botão "Studio de protocolo" do app principal, a
+    // sessão chega aqui via hash (#at=...&rt=...) em vez de depender de
+    // localStorage compartilhado (ver abrirStudioComSessao em protocolos.js).
+    const hash = new URLSearchParams(location.hash.replace(/^#/, ""));
+    const at = hash.get("at");
+    const rt = hash.get("rt");
+    if (at && rt) {
+      history.replaceState(null, "", location.pathname + location.search); // tira o token da URL/histórico
+      supabaseClient.auth.setSession({ access_token: at, refresh_token: rt })
+        .then(({ data }) => setSession(data?.session || null));
+    } else {
+      supabaseClient.auth.getSession().then(({ data }) => setSession(data?.session || null));
+    }
+
+    const { data: sub } = supabaseClient.auth.onAuthStateChange((_event, s) => setSession(s));
+    return () => sub?.subscription?.unsubscribe();
   }, []);
 
-  if (client === undefined || session === undefined) {
-    return <div style={{ padding: 40, fontFamily: "sans-serif", color: "#64748b" }}>Carregando…</div>;
-  }
-
-  if (!client) {
+  if (!supabaseClient) {
     return (
       <div style={{ padding: 40, fontFamily: "sans-serif", color: "#7c2d12", background: "#fff7ed", maxWidth: 560, margin: "60px auto", borderRadius: 12, border: "1px solid #fed7aa" }}>
         <b>Studio sem configuração.</b> Preencha <code>SUPABASE_URL</code> e <code>SUPABASE_ANON_KEY</code>
         {" "}no bloco <code>&lt;script&gt;</code> no topo deste arquivo (são os mesmos valores públicos usados no app principal).
-        {loginError && <div style={{ marginTop: 10, fontSize: 12.5 }}>{loginError}</div>}
       </div>
     );
+  }
+
+  if (session === undefined) {
+    return <div style={{ padding: 40, fontFamily: "sans-serif", color: "#64748b" }}>Carregando…</div>;
   }
 
   if (!session) {
     async function handleLogin(e) {
       e.preventDefault();
       setLoggingIn(true); setLoginError(null);
-      const { error } = await client.auth.signInWithPassword({ email, password });
+      const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
       if (error) setLoginError(error.message);
       setLoggingIn(false);
     }
@@ -1917,6 +1993,22 @@ const rootEl = document.getElementById("root");
 const root = ReactDOM.createRoot(rootEl);
 root.render(<App />);
 
+</script>
+<script>
+  // Transformação manual (em vez de deixar o Babel Standalone escanear
+  // automaticamente scripts type="text/babel"): a versão mais recente do
+  // Babel usa por padrão o "automatic JSX runtime", que gera um
+  // `import {...} from "react/jsx-runtime"` no código transpilado -- e como
+  // aqui o React é carregado como script UMD clássico (variável global, sem
+  // sistema de módulos), esse import quebra tudo ("Cannot use import
+  // statement outside a module"). Forçando runtime: "classic" o Babel gera
+  // React.createElement(...) em vez disso, usando o React global — sem
+  // nenhum import.
+  var appSource = document.getElementById("app-source").textContent;
+  var transformed = Babel.transform(appSource, { presets: [["react", { runtime: "classic" }]] }).code;
+  var appScript = document.createElement("script");
+  appScript.text = transformed;
+  document.body.appendChild(appScript);
 </script>
 </body>
 </html>

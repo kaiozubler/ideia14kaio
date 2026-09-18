@@ -37,6 +37,12 @@ type RequestBody = {
   paciente_cpf?: string | null;
   paciente_nome?: string | null;
   paciente_nascimento?: string | null;
+  // Id do médico dono da sessão, usado para localizar as bases de conhecimento
+  // dele. Mandado direto pelo cliente (mesmo padrão do /api/assistente-ia),
+  // já que o front deste chat não envia um header Authorization com o token
+  // Supabase. Se vier vazio, cai de volta pro header Authorization (fallback
+  // abaixo), caso algum outro caller já mande o token dessa forma.
+  user_id?: string | null;
 };
 
 const IC_FIELD_META: Record<string, { label: string; tipo: "texto" | "numero" | "select"; opcoes?: string[] }> = {
@@ -507,12 +513,17 @@ export const Route = createFileRoute("/api/chat-ia")({
           // Base de conhecimento local do médico (opcional): se ele tiver bases
           // ativas para o chat_ai, isso injeta o índice delas + os trechos que
           // batem com a última mensagem do usuário. Ver src/lib/base-conhecimento.
-          const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-          let medicoId: string | null = null;
-          if (token) {
-            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-            const { data: userData } = await supabaseAdmin.auth.getUser(token);
-            medicoId = userData.user?.id ?? null;
+          // Preferência: user_id mandado no corpo pelo cliente (mesmo padrão do
+          // /api/assistente-ia). Fallback: header Authorization com token Supabase,
+          // caso algum caller antigo/externo ainda mande dessa forma.
+          let medicoId: string | null = body.user_id || null;
+          if (!medicoId) {
+            const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+            if (token) {
+              const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+              const { data: userData } = await supabaseAdmin.auth.getUser(token);
+              medicoId = userData.user?.id ?? null;
+            }
           }
           const ultimaMensagemUsuario =
             [...history].reverse().find((m) => m?.role === "user")?.content ?? "";

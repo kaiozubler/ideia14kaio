@@ -70,6 +70,28 @@
     S.loading = false; render();
   }
 
+  // Abre o Studio de protocolo (public/protocolo-studio.html) já autenticado.
+  // Não dá pra confiar em compartilhamento implícito de localStorage aqui —
+  // no preview do Lovable a sessão às vezes só existe via um canal de
+  // postMessage com o editor (ver previewAuthStorage.ts), então uma aba nova
+  // pode não enxergar a mesma sessão. Em vez disso, pega o access/refresh
+  // token do client já autenticado desta página e manda os dois na URL (hash,
+  // não query string, pra não ir pra logs de servidor) — o Studio lê isso e
+  // chama supabase.auth.setSession(...) direto, sem depender de storage
+  // compartilhado.
+  async function abrirStudioComSessao() {
+    const win = window.open("", "_blank"); // abrir já (gesto do clique), preencher depois
+    const sb = sbc();
+    if (!sb) { if (win) win.location.href = "/protocolo-studio.html"; return; }
+    const { data: sess } = await sb.auth.getSession();
+    const at = sess && sess.session && sess.session.access_token;
+    const rt = sess && sess.session && sess.session.refresh_token;
+    const url = at && rt
+      ? "/protocolo-studio.html#at=" + encodeURIComponent(at) + "&rt=" + encodeURIComponent(rt)
+      : "/protocolo-studio.html";
+    if (win) win.location.href = url; else window.open(url, "_blank");
+  }
+
   async function sincronizarProtocolo(id) {
     const sb = sbc(); if (!sb || !id) return;
     try {
@@ -778,10 +800,10 @@
           <button class="pt-btn pt-pill ghost" data-back="1">←</button>
           <div><h1>Meus protocolos</h1><p>${S.protocols.length} protocolos cadastrados</p></div></div>
         <div style="display:flex;gap:10px">
-          <a href="/protocolo-studio.html" target="_blank" rel="noopener"
-             class="pt-btn pt-pill ghost" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+          <button data-studio="1"
+             class="pt-btn pt-pill ghost" style="display:inline-flex;align-items:center;gap:6px">
             🧬 Studio de protocolo
-          </a>
+          </button>
           <button class="pt-btn primary" data-new="1">+ Novo protocolo</button>
         </div></div>
       <div class="pt-search pt-pill" style="margin-bottom:18px"><span>🔍</span><input id="pt-pq" placeholder="Buscar por nome ou CID..." value="${esc(S.psearch)}"></div>
@@ -1019,10 +1041,11 @@
   document.addEventListener("click", (e) => {
     const root = document.getElementById("s-protocolos");
     if (!root || root.style.display === "none") return;
-    const t = e.target.closest("[data-menu],[data-act],[data-dd],[data-group],[data-bulk],[data-clear],[data-goprot],[data-back],[data-new],[data-edit],[data-toggle],[data-mclose],[data-msave],[data-mbg],[data-cidadd],[data-cidrm],[data-anew],[data-aedit],[data-adel],[data-asave],[data-acancel],[data-atype],[data-afreq],[data-zoom],[data-gact],[data-fclear],[data-fapply],[data-tladd],[data-aiopen],[data-aiclose],[data-aigen],[data-aibg],[data-rnew],[data-redit],[data-rdel],[data-rcancel],[data-rsave],[data-banew],[data-baedit],[data-badel],[data-bacancel],[data-basave],[data-batype],[data-catpick],[data-catcreate],[data-cidpick],[data-flowopen],[data-flowclose],[data-flowbg]");
+    const t = e.target.closest("[data-menu],[data-act],[data-dd],[data-group],[data-bulk],[data-clear],[data-goprot],[data-back],[data-new],[data-edit],[data-toggle],[data-mclose],[data-msave],[data-mbg],[data-cidadd],[data-cidrm],[data-anew],[data-aedit],[data-adel],[data-asave],[data-acancel],[data-atype],[data-afreq],[data-zoom],[data-gact],[data-fclear],[data-fapply],[data-tladd],[data-aiopen],[data-aiclose],[data-aigen],[data-aibg],[data-rnew],[data-redit],[data-rdel],[data-rcancel],[data-rsave],[data-banew],[data-baedit],[data-badel],[data-bacancel],[data-basave],[data-batype],[data-catpick],[data-catcreate],[data-cidpick],[data-flowopen],[data-flowclose],[data-flowbg],[data-studio]");
     if (!t) { if (S.dd) { S.dd = null; render(); } return; }
     const d = t.dataset;
     if (d.aiopen) { S.aiModal = { obs: "", pdf: null, filename: "", loading: false, error: "" }; return render(); }
+    if (d.studio) { return abrirStudioComSessao(); }
     if (d.aiclose) { S.aiModal = null; return render(); }
     if (d.aigen) return generateWithAI();
     if (d.aibg && e.target === t) { S.aiModal = null; return render(); }
