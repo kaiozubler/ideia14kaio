@@ -14,6 +14,11 @@ import { createFileRoute } from "@tanstack/react-router";
  * (tela Configurações > Minha equipe > Meu usuário). Essa rota NÃO usa
  * medico_whatsapp_config — essa tabela é exclusiva do canal paciente/clínica.
  *
+ * Controle de acesso: além de achar o telefone, confere user_metadata.tipo_user
+ * (gravado no cadastro, veja medicopilot.html) — só libera acesso completo
+ * (gerar receita, exame, atestado, mexer na agenda) para tipo_user "medico".
+ * Qualquer outro cargo cadastrado com esse telefone é recusado explicitamente.
+ *
  * Para continuar a mesma conversa a cada nova mensagem (em vez de criar uma
  * conversa nova em ia_assist_conversas, com título gerado, toda hora), o
  * mapeamento telefone -> conversa fica em medico_assistente_sessoes_whatsapp.
@@ -103,13 +108,30 @@ async function enviarWhatsApp(para: string, texto: string) {
   }
 }
 
+// Mesmo critério usado na tela "Minha equipe" (public/equipe.js: isDoctor) —
+// mantém consistência com o resto do app sobre o que conta como "médico".
+function isMedico(tipoUser: unknown) {
+  return String(tipoUser || "")
+    .toLowerCase()
+    .includes("medic");
+}
+
 // Percorre os usuários do Supabase Auth procurando aquele cujo telefone
 // cadastrado (Configurações > Minha equipe > Meu usuário, user_metadata.telefone)
 // bate com quem mandou a mensagem. Não existe hoje uma tabela pública indexada
 // por telefone de médico — se a base crescer muito, vale criar uma (atualizada
 // no momento em que o médico salva o campo) para não paginar todos os
 // usuários a cada mensagem recebida.
-async function resolverMedicoPorTelefone(db: Db, telefoneRemetente: string) {
+//
+// Também confere o cargo (user_metadata.tipo_user, gravado no cadastro —
+// veja medicopilot.html, signUp). Esse canal dá acesso completo (gerar
+// receita, exame, atestado, mexer na agenda), então só libera para quem tem
+// tipo_user "medico" — mesmo que o telefone bata com um usuário cadastrado
+// de outro cargo (ex.: secretária, quando esse tipo de conta existir).
+async function resolverMedicoPorTelefone(
+  db: Db,
+  telefoneRemetente: string,
+): Promise<{ id: string; isMedico: boolean } | null> {
   const PER_PAGE = 200;
   const MAX_PAGINAS = 25; // cobre até 5.000 usuários
   for (let page = 1; page <= MAX_PAGINAS; page++) {
@@ -119,7 +141,7 @@ async function resolverMedicoPorTelefone(db: Db, telefoneRemetente: string) {
       const meta = (user.user_metadata || {}) as Record<string, unknown>;
       const telefoneCadastrado = (meta.telefone as string) || (meta.phone as string) || "";
       if (telefonesEquivalentes(telefoneCadastrado, telefoneRemetente)) {
-        return { id: user.id };
+        return { id: user.id, isMedico: isMedico(meta.tipo_user) };
       }
     }
     if (data.users.length < PER_PAGE) break; // última página
@@ -247,6 +269,21 @@ export const Route = createFileRoute("/api/assistente-medico-webhook")({
           console.warn(
             "[assistente-medico-webhook] Nenhum médico encontrado para o telefone remetente",
             telefoneRemetente,
+          );
+          return Response.json({ ok: true });
+        }
+
+        if (!medico.isMedico) {
+          const aviso =
+            "Olá! Este número está cadastrado no sistema, mas não com permissão de médico — " +
+            "este canal é exclusivo para médicos gerarem receita, atestado, exame ou mexer na agenda. " +
+            "Se isso não deveria estar assim, fale com o responsável da clínica.";
+          await enviarWhatsApp(telefoneRemetente, aviso);
+          console.warn(
+            "[assistente-medico-webhook] Telefone pertence a usuário sem cargo de médico (tipo_user), acesso negado:",
+            telefoneRemetente,
+            "user_id:",
+            medico.id,
           );
           return Response.json({ ok: true });
         }
