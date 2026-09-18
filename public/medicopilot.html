@@ -8923,7 +8923,7 @@
                                                               atendChatHistory.push({role:'user',content:txt});
                                                               appendAdvChat('assistant','...');
                                                               const loading=document.getElementById('adv-chat-log').lastChild;
-                                                              fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'chat',messages:atendChatHistory,resumo_prontuario:atendChatContext})})
+                                                              fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'chat',messages:atendChatHistory,resumo_prontuario:atendChatContext,user_id:(typeof currentUser!=='undefined'&&currentUser)?currentUser.id:null})})
                                                                 .then(r=>r.json()).then(async j=>{
                                                                   const raw=(j.reply||'').trim()||'(sem resposta)';
                                                                   const blocks=iaExtractJsonBlocks(raw);
@@ -10647,9 +10647,18 @@ showAtendList();
                                                               const el=document.createElement('div');
                                                               el.className='bbl '+type;
                                                               el.id=id;
-                                                              el.innerHTML=`<span class="bbl-text">${text}</span><span class="bbl-actions"><button class="bbl-pin-btn" onclick="togglePin('${id}')" title="Fixar"><i class="ti ti-pin"></i></button></span>`;
+                                                              const fonteBaseConhecimento=opts&&opts.fonteBaseConhecimento;
+                                                              const temFonte=Array.isArray(fonteBaseConhecimento)&&fonteBaseConhecimento.length;
+                                                              const selo=temFonte
+                                                                ? `<div class="bk-fonte-badge bk-fonte-badge-click" title="${iaEscHtml(fonteBaseConhecimento.join(', '))} — clique para abrir"><i class="ti ti-database"></i> Base de conhecimento local: ${iaEscHtml(fonteBaseConhecimento.join(', '))}</div>`
+                                                                : '';
+                                                              el.innerHTML=`<span class="bbl-text">${text}</span>${selo}<span class="bbl-actions"><button class="bbl-pin-btn" onclick="togglePin('${id}')" title="Fixar"><i class="ti ti-pin"></i></button></span>`;
                                                               if(!bubblesVisible&&type!=='usr')el.style.display='none';
                                                               layer.appendChild(el);
+                                                              if(temFonte){
+                                                                const seloEl=el.querySelector('.bk-fonte-badge');
+                                                                if(seloEl)seloEl.addEventListener('click',()=>iaAssistAbrirBaseConhecimento(fonteBaseConhecimento));
+                                                              }
                                                               layer.scrollTop=layer.scrollHeight;
                                                               bblCount++;
                                                               if((!opts||opts.record!==false)&&atendEmAndamento){
@@ -11407,7 +11416,7 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                                                               fetch('/api/chat-ia',{
                                                                 method:'POST',
                                                                 headers:{'Content-Type':'application/json'},
-                                                                body:JSON.stringify(Object.assign({mode:'chat',messages:mensagensParaIA,resumo_prontuario:currentResumoProntuario||'',anexo:iaTakeAnexo('ai')},(function(){const p=iaExamePacienteCtx();return p?{paciente_nome:p.nome,paciente_cpf:p.cpf,paciente_nascimento:p.data_nascimento}:{};})()))
+                                                                body:JSON.stringify(Object.assign({mode:'chat',messages:mensagensParaIA,resumo_prontuario:currentResumoProntuario||'',anexo:iaTakeAnexo('ai'),user_id:(typeof currentUser!=='undefined'&&currentUser)?currentUser.id:null},(function(){const p=iaExamePacienteCtx();return p?{paciente_nome:p.nome,paciente_cpf:p.cpf,paciente_nascimento:p.data_nascimento}:{};})()))
                                                               })
                                                               .then(async r=>{if(!r.ok)throw new Error(await r.text());return r.json();})
                                                               .then(async d=>{
@@ -11426,7 +11435,7 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                                                         }
                                                         aiChatHistory.push({role:'assistant',content:reply});
                                                         removeTypingBubble(typingId);
-                                                        spawnBubble('ia',reply);
+                                                        spawnBubble('ia',reply,{fonteBaseConhecimento:d.fonte_base_conhecimento});
                                                         // Executa CADA ação encontrada (em vez de só a primeira / só exibir texto)
                                                         for(const b of withAction){
                                                           try{ await iaExecuteAction(b.action); }catch(e){ console.warn('iaExecuteAction falhou',e); }
