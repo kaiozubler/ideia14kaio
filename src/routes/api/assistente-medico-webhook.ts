@@ -23,6 +23,13 @@ import { createFileRoute } from "@tanstack/react-router";
  * conversa nova em ia_assist_conversas, com título gerado, toda hora), o
  * mapeamento telefone -> conversa fica em medico_assistente_sessoes_whatsapp.
  *
+ * Encerrar/trocar de assunto: duas formas de zerar o contexto acumulado,
+ * pra evitar que um assunto antigo "vaze" pra pergunta seguinte —
+ *  1) Comando explícito (FRASES_NOVO_ASSUNTO) — ex.: "outro assunto",
+ *     "mudando de assunto". Zera na hora, sem chamar a IA.
+ *  2) Expiração automática (INATIVIDADE_MS) — se a última mensagem foi há
+ *     mais de 30min, a próxima já começa um assunto novo sozinha.
+ *
  * Requer as MESMAS variáveis de ambiente globais do outro webhook:
  *   WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN, WHATSAPP_VERIFY_TOKEN
  *   (e opcionalmente WHATSAPP_APP_SECRET)
@@ -35,6 +42,36 @@ import { createFileRoute } from "@tanstack/react-router";
 
 const GRAPH_BASE = "https://graph.facebook.com/v21.0";
 const MAX_HISTORICO = 20; // mensagens mantidas por conversa, para não crescer sem limite
+
+// Depois de quanto tempo sem mensagem uma conversa é considerada "encerrada"
+// sozinha — a próxima mensagem começa um assunto novo automaticamente, sem
+// precisar de comando. 30 minutos é o valor inicial; ajuste aqui se precisar.
+const INATIVIDADE_MS = 30 * 60 * 1000;
+
+// Frases que, quando o médico manda, encerram o assunto atual na hora — sem
+// gastar uma chamada de IA para isso. Comparação é por inclusão de substring
+// já normalizada (sem acento, minúsculas), então variações de pontuação ou
+// maiúsculas não importam.
+const FRASES_NOVO_ASSUNTO = [
+  "outro assunto",
+  "mudando de assunto",
+  "vamos mudar de assunto",
+  "e so isso, obrigado",
+  "e so isso obrigado",
+];
+
+function normalizarTexto(v: string) {
+  return v
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+function pedeNovoAssunto(texto: string) {
+  const normalizado = normalizarTexto(texto);
+  return FRASES_NOVO_ASSUNTO.some((frase) => normalizado.includes(frase));
+}
 
 function onlyDigits(v?: string | null) {
   return (v || "").replace(/\D/g, "");
@@ -152,7 +189,7 @@ async function resolverMedicoPorTelefone(
 async function carregarSessao(db: Db, idMedico: string, telefone: string) {
   const { data } = await db
     .from("medico_assistente_sessoes_whatsapp")
-    .select("id,conversa_id")
+    .select("id,conversa_id,ultima_interacao")
     .eq("id_medico", idMedico)
     .eq("telefone", telefone)
     .maybeSingle();
@@ -300,7 +337,38 @@ export const Route = createFileRoute("/api/assistente-medico-webhook")({
         }
 
         const sessao = await carregarSessao(supabaseAdmin, medico.id, telefoneRemetente);
-        const historico = await carregarHistoricoConversa(supabaseAdmin, medico.id, sessao?.conversa_id || null);
+
+        // Comando explícito para encerrar o assunto atual — não gasta chamada
+        // de IA, só zera o vínculo com a conversa anterior e confirma.
+        if (pedeNovoAssunto(textoRecebido)) {
+          await salvarSessao(supabaseAdmin, sessao?.id || null, medico.id, telefoneRemetente, null);
+          const confirmacao = "Prontinho, encerrei o assunto anterior! Em que posso ajudar agora?";
+          await enviarWhatsApp(telefoneRemetente, confirmacao);
+          await supabaseAdmin.from("whatsapp_messages").insert({
+            wa_from: telefoneRemetente,
+            direction: "outbound",
+            message_type: "text",
+            content: confirmacao,
+          });
+          return Response.json({ ok: true });
+        }
+
+        // Expiração automática: se a última mensagem foi há muito tempo,
+        // trata como assunto novo sozinho (sem precisar de comando), pra não
+        // herdar contexto de uma conversa que na prática já tinha terminado.
+        const inativa =
+          !!sessao?.ultima_interacao && Date.now() - new Date(sessao.ultima_interacao).getTime() > INATIVIDADE_MS;
+        const conversaIdParaContinuar = inativa ? null : sessao?.conversa_id || null;
+        if (inativa) {
+          console.log(
+            "[assistente-medico-webhook] Sessão inativa há mais de",
+            INATIVIDADE_MS / 60000,
+            "min, iniciando assunto novo para",
+            telefoneRemetente,
+          );
+        }
+
+        const historico = await carregarHistoricoConversa(supabaseAdmin, medico.id, conversaIdParaContinuar);
         const novoHistorico = [...historico, { role: "user", content: textoRecebido }];
 
         try {
@@ -309,7 +377,7 @@ export const Route = createFileRoute("/api/assistente-medico-webhook")({
             canal: "interno",
             messages: novoHistorico,
             user_id: medico.id,
-            conversa_id: sessao?.conversa_id || null,
+            conversa_id: conversaIdParaContinuar,
           });
           const data = (await res.json()) as { reply?: string; conversa_id?: string | null };
           const reply = (data.reply || "Desculpe, não consegui responder agora. Tente novamente em instantes.").trim();
@@ -319,7 +387,7 @@ export const Route = createFileRoute("/api/assistente-medico-webhook")({
             sessao?.id || null,
             medico.id,
             telefoneRemetente,
-            data.conversa_id || sessao?.conversa_id || null,
+            data.conversa_id || conversaIdParaContinuar,
           );
           await enviarWhatsApp(telefoneRemetente, reply);
           await supabaseAdmin.from("whatsapp_messages").insert({
