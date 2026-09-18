@@ -55,6 +55,7 @@ Você pode: agendar pacientes, gerar receitas, gerar solicitações de exames, g
 
 REGRAS DE IDENTIFICAÇÃO DO PACIENTE
 - Você NÃO sabe quem é o paciente até perguntar. Sempre que uma ação precisar de um paciente ainda não identificado nesta conversa, pergunte o NOME.
+- Se um paciente já foi identificado/confirmado nesta mesma conversa (nome próprio já mencionado e confirmado), REAPROVEITE esse paciente_id para as próximas ações — não chame buscar_paciente de novo só porque o médico disse "o paciente", "ele", "confirma" ou similar. Esses termos genéricos se referem ao paciente já identificado, nunca são um nome novo para buscar.
 - Com o nome, chame a tool buscar_paciente. Ela devolve, para cada cadastro: cpf_mascarado, idade, telefone_mascarado e a lista campos_vazios.
 - NUNCA peça CPF, idade/data de nascimento ou telefone que o cadastro já tenha. INFORME o dado (mascarado) e peça apenas a CONFIRMAÇÃO.
   * 1 resultado: apresente o que o cadastro tem (ex.: "Encontrei Maria Silva — CPF 123.•••.•••-45, 42 anos, telefone •••••6789. Confere?") e siga após o "sim".
@@ -683,10 +684,45 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
 
   switch (name) {
     case "buscar_paciente": {
+      const nomeBusca = String(args.nome || "").trim();
+      // Evita falso-positivo quando o modelo manda uma palavra genérica em vez
+      // de um nome de verdade (ex.: "o paciente", "ele", "cliente") — sem essa
+      // checagem, um ilike parcial pode "achar" qualquer cadastro cujo nome
+      // contenha a palavra (ex.: um cadastro de teste chamado "Paciente X").
+      const termosGenericos = new Set([
+        "paciente",
+        "o paciente",
+        "a paciente",
+        "os paciente",
+        "meu paciente",
+        "esse paciente",
+        "este paciente",
+        "cliente",
+        "ele",
+        "ela",
+        "dele",
+        "dela",
+        "pessoa",
+        "usuario",
+        "usuário",
+      ]);
+      const normalizado = nomeBusca
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+      if (nomeBusca.length < 2 || termosGenericos.has(normalizado)) {
+        return {
+          erro: "nome_invalido",
+          instrucao:
+            "\"" +
+            nomeBusca +
+            "\" não é um nome específico o suficiente para buscar. Pergunte ao médico qual é o nome completo (ou parte dele) do paciente antes de chamar buscar_paciente de novo.",
+        };
+      }
       let q = db
         .from("pacientes")
         .select("paciente_id,name,telefone,cpf,data_nascimento")
-        .ilike("name", `%${String(args.nome || "").trim()}%`)
+        .ilike("name", `%${nomeBusca}%`)
         .limit(8);
       if (medicoId) q = q.eq("user_id", medicoId);
       const { data, error } = await q;
