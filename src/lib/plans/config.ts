@@ -47,8 +47,15 @@ export type PlanoBase = {
 // Equipe (usuários médicos custam mais porque usam os recursos mais caros)
 // ---------------------------------------------------------------------------
 
-export const PRECO_MEDICO_ADICIONAL = 89.9;
-export const PRECO_SECRETARIA_ADICIONAL = 39.9;
+// Estes dois valores foram calibrados de propósito: personalizar um plano
+// menor até chegar nas mesmas licenças + franquias do Enterprise precisa
+// custar pelo menos 10% A MAIS que o preço de pacote do Enterprise — senão
+// vira um jeito de "burlar" o plano fechado montando ele à la carte por
+// menos. Se mudar os preços dos planos prontos ou das franquias, revalide
+// essa conta com precoDaConfiguracao(configuracaoDoPlano(PLANOS_BASE[2]), PLANOS_BASE[1])
+// — o resultado tem que ficar acima de PLANOS_BASE[2].precoMensal * 1.1.
+export const PRECO_MEDICO_ADICIONAL = 179.9;
+export const PRECO_SECRETARIA_ADICIONAL = 79.9;
 export const MAX_MEDICOS = 30;
 export const MAX_SECRETARIAS = 30;
 
@@ -121,6 +128,35 @@ export const PLANOS_BASE: PlanoBase[] = [
 ];
 
 export const PLANO_PADRAO = PLANOS_BASE[0];
+
+// ---------------------------------------------------------------------------
+// "Personalizado" — só aparece nos seletores quando o plano Enterprise está
+// ativo. Sinaliza que aquele item vai a cotação (sem preço fixo), então o
+// CTA principal vira "Falar com nosso especialista" em vez de ir pra
+// pagamento com um valor calculado.
+// ---------------------------------------------------------------------------
+
+export const PERSONALIZADO = -1;
+
+export const OPCAO_PERSONALIZADO: TierOption = {
+  quantidade: PERSONALIZADO,
+  preco: 0,
+  label: "Personalizado",
+};
+
+/** Acrescenta a opção "Personalizado" à lista de tiers, só quando permitido (Enterprise). */
+export function opcoesComPersonalizado(tiers: TierOption[], permitir: boolean): TierOption[] {
+  return permitir ? [...tiers, OPCAO_PERSONALIZADO] : tiers;
+}
+
+/** Verdadeiro se algum item da configuração está marcado como "Personalizado" (precisa de cotação). */
+export function possuiItemPersonalizado(config: ConfiguracaoPlano): boolean {
+  return (
+    config.copiloto === PERSONALIZADO ||
+    config.whatsapp === PERSONALIZADO ||
+    config.video === PERSONALIZADO
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Pagamento anual

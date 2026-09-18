@@ -13,12 +13,12 @@ import {
   Users,
   Video,
 } from "lucide-react";
-import { toast } from "sonner";
 
 import {
   DESCONTO_ANUAL,
   MAX_MEDICOS,
   MAX_SECRETARIAS,
+  PERSONALIZADO,
   PLANOS_BASE,
   PLANO_PADRAO,
   PRECO_MEDICO_ADICIONAL,
@@ -30,6 +30,8 @@ import {
   configuracaoDoPlano,
   configuracaoIgualAncora,
   formatarPreco,
+  opcoesComPersonalizado,
+  possuiItemPersonalizado,
   precoAnualEquivalenteMensal,
   precoDaConfiguracao,
   type ConfiguracaoPlano,
@@ -72,6 +74,7 @@ function PaginaPlanos() {
 
   const ancora = PLANOS_BASE.find((p) => p.id === ancoraId) ?? PLANO_PADRAO;
   const ajustado = !configuracaoIgualAncora(config, ancora);
+  const precisaCotacao = possuiItemPersonalizado(config);
 
   const precoMensal = precoDaConfiguracao(config, ancora);
   const precoExibido = ciclo === "anual" ? precoAnualEquivalenteMensal(precoMensal) : precoMensal;
@@ -108,26 +111,28 @@ function PaginaPlanos() {
     });
   }
 
-  function continuar() {
-    toast.message("Finalização online chegando em breve", {
-      description: "Por enquanto, fala com a gente pelo WhatsApp que fechamos o seu plano na hora.",
-    });
-  }
-
   const resumoWhatsApp = useMemo(() => {
     const texto = [
-      `Olá! Quero contratar o MediCopilot.`,
+      precisaCotacao
+        ? `Olá! Quero uma cotação personalizada do MediCopilot.`
+        : `Olá! Quero contratar o MediCopilot.`,
       `Plano: ${ancora.nome}${ajustado ? " (personalizado)" : ""}`,
       `Médicos: ${config.medicos}`,
       `Secretárias/Gestão: ${config.secretarias}`,
-      `Copiloto IA: ${config.copiloto} consultas`,
-      `WhatsApp: ${config.whatsapp} conversas`,
-      `Vídeo: ${config.video ? `${config.video} minutos` : "não incluído"}`,
+      `Copiloto IA: ${config.copiloto === PERSONALIZADO ? "personalizado (sob consulta)" : `${config.copiloto} consultas`}`,
+      `WhatsApp: ${config.whatsapp === PERSONALIZADO ? "personalizado (sob consulta)" : `${config.whatsapp} conversas`}`,
+      `Vídeo: ${
+        config.video === PERSONALIZADO
+          ? "personalizado (sob consulta)"
+          : config.video
+            ? `${config.video} minutos`
+            : "não incluído"
+      }`,
       `Ciclo: ${ciclo === "anual" ? "anual" : "mensal"}`,
-      `Total estimado: ${formatarPreco(precoExibido)}/mês`,
+      precisaCotacao ? `Total: sob consulta` : `Total estimado: ${formatarPreco(precoExibido)}/mês`,
     ].join("\n");
     return `https://wa.me/${WHATSAPP_COMERCIAL}?text=${encodeURIComponent(texto)}`;
-  }, [ancora, ajustado, config, ciclo, precoExibido]);
+  }, [ancora, ajustado, config, ciclo, precoExibido, precisaCotacao]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(135deg,#eef8f1_0%,#f3f1fb_45%,#fdf6ec_100%)]">
@@ -276,7 +281,7 @@ function PaginaPlanos() {
               subtitulo="Sugestões clínicas, organização do prontuário, comandos durante a consulta e geração de condutas."
             >
               <SeletorTier
-                opcoes={TIERS_COPILOTO}
+                opcoes={opcoesComPersonalizado(TIERS_COPILOTO, !!ancora.personalizavel)}
                 valor={config.copiloto}
                 accent="violet"
                 sufixo="consultas"
@@ -291,7 +296,7 @@ function PaginaPlanos() {
               subtitulo="Atendimento, confirmações, mensagens automáticas e comunicação com pacientes."
             >
               <SeletorTier
-                opcoes={TIERS_WHATSAPP}
+                opcoes={opcoesComPersonalizado(TIERS_WHATSAPP, !!ancora.personalizavel)}
                 valor={config.whatsapp}
                 accent="sky"
                 sufixo="conversas"
@@ -301,7 +306,7 @@ function PaginaPlanos() {
 
             <SectionCard icon={Video} accent="amber" titulo="Vídeo" subtitulo="Teleconsultas diretamente pelo sistema.">
               <SeletorTier
-                opcoes={TIERS_VIDEO}
+                opcoes={opcoesComPersonalizado(TIERS_VIDEO, !!ancora.personalizavel)}
                 valor={config.video}
                 accent="amber"
                 sufixo="min"
@@ -352,45 +357,82 @@ function PaginaPlanos() {
               <LinhaResumo
                 label={`${config.secretarias} secretária${config.secretarias !== 1 ? "s" : ""} / gestão`}
               />
-              <LinhaResumo label={`Copiloto · ${config.copiloto} consultas`} />
-              <LinhaResumo label={`WhatsApp · ${config.whatsapp.toLocaleString("pt-BR")} conversas`} />
               <LinhaResumo
-                label={config.video ? `Vídeo · ${config.video.toLocaleString("pt-BR")} min` : "Vídeo · não incluído"}
+                label={`Copiloto · ${config.copiloto === PERSONALIZADO ? "personalizado (sob consulta)" : `${config.copiloto} consultas`}`}
+              />
+              <LinhaResumo
+                label={`WhatsApp · ${config.whatsapp === PERSONALIZADO ? "personalizado (sob consulta)" : `${config.whatsapp.toLocaleString("pt-BR")} conversas`}`}
+              />
+              <LinhaResumo
+                label={`Vídeo · ${
+                  config.video === PERSONALIZADO
+                    ? "personalizado (sob consulta)"
+                    : config.video
+                      ? `${config.video.toLocaleString("pt-BR")} min`
+                      : "não incluído"
+                }`}
               />
             </div>
 
             <div className="my-5 h-px bg-slate-200/70" />
 
-            <p className="text-xs text-slate-400">
-              Total {ciclo === "anual" ? "mensal (cobrado anual)" : "mensal"}
-            </p>
-            <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-bold text-slate-800">{formatarPreco(precoExibido)}</span>
-              <span className="text-sm text-slate-400">/mês</span>
-            </div>
-            {ciclo === "anual" && (
-              <p className="mt-1 text-xs text-emerald-600">
-                {formatarPreco(precoExibido * 12)}/ano · economia de {Math.round(DESCONTO_ANUAL * 100)}%
-              </p>
+            {precisaCotacao ? (
+              <>
+                <p className="text-xs text-slate-400">Total</p>
+                <p className="text-2xl font-bold text-slate-800">Sob consulta</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Um ou mais itens foi marcado como personalizado — nosso time monta o valor com você.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-slate-400">
+                  Total {ciclo === "anual" ? "mensal (cobrado anual)" : "mensal"}
+                </p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl font-bold text-slate-800">{formatarPreco(precoExibido)}</span>
+                  <span className="text-sm text-slate-400">/mês</span>
+                </div>
+                {ciclo === "anual" && (
+                  <p className="mt-1 text-xs text-emerald-600">
+                    {formatarPreco(precoExibido * 12)}/ano · economia de {Math.round(DESCONTO_ANUAL * 100)}%
+                  </p>
+                )}
+              </>
             )}
 
-            <button
-              onClick={irParaPagamento}
-              className="mt-5 w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:from-emerald-600 hover:to-emerald-700"
-            >
-              Ir para pagamento
-            </button>
-            <a
-              href={resumoWhatsApp}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100/80"
-            >
-              Falar no WhatsApp
-            </a>
+            {precisaCotacao ? (
+              <a
+                href={resumoWhatsApp}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:from-emerald-600 hover:to-emerald-700"
+              >
+                Falar com nosso especialista
+              </a>
+            ) : (
+              <>
+                <button
+                  onClick={irParaPagamento}
+                  className="mt-5 w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:from-emerald-600 hover:to-emerald-700"
+                >
+                  Ir para pagamento
+                </button>
+                <a
+                  href={resumoWhatsApp}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100/80"
+                >
+                  Falar no WhatsApp
+                </a>
+              </>
+            )}
 
             <p className="mt-3 text-center text-xs text-slate-400">
-              Pagamento recorrente no cartão de crédito. Você pode alterar seu plano depois.
+              {precisaCotacao
+                ? "Itens personalizados entram em uma cotação com nosso time."
+                : "Pagamento recorrente no cartão de crédito. Você pode alterar seu plano depois."}
             </p>
           </div>
         </div>
@@ -407,16 +449,34 @@ function PaginaPlanos() {
           className="pointer-events-auto flex items-center gap-4 rounded-full border border-white/80 bg-white/80 py-2.5 pl-6 pr-2.5 shadow-2xl shadow-slate-300/50 backdrop-blur-xl"
         >
           <div className="text-sm">
-            <span className="font-bold text-slate-800">{formatarPreco(precoExibido)}</span>
-            <span className="text-slate-400">/mês</span>
+            {precisaCotacao ? (
+              <span className="font-bold text-slate-800">Sob consulta</span>
+            ) : (
+              <>
+                <span className="font-bold text-slate-800">{formatarPreco(precoExibido)}</span>
+                <span className="text-slate-400">/mês</span>
+              </>
+            )}
           </div>
-          <button
-            onClick={irParaPagamento}
-            className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-colors hover:from-emerald-600 hover:to-emerald-700"
-          >
-            Ir para pagamento
-            <ArrowRight className="h-4 w-4" />
-          </button>
+          {precisaCotacao ? (
+            <a
+              href={resumoWhatsApp}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-colors hover:from-emerald-600 hover:to-emerald-700"
+            >
+              Falar com nosso especialista
+              <ArrowRight className="h-4 w-4" />
+            </a>
+          ) : (
+            <button
+              onClick={irParaPagamento}
+              className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-colors hover:from-emerald-600 hover:to-emerald-700"
+            >
+              Ir para pagamento
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
     </div>
