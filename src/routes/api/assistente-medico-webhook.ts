@@ -35,13 +35,18 @@ function onlyDigits(v?: string | null) {
   return (v || "").replace(/\D/g, "");
 }
 
-// Compara os últimos 10 dígitos — evita falso-negativo por causa de DDI (55)
-// presente em um lado e ausente no outro, ou formatação diferente.
+// Compara os últimos 8 dígitos — essa é a parte do número que nunca muda,
+// então evita falso-negativo por causa de:
+//  - DDI (55) presente em um lado e ausente no outro;
+//  - o "9º dígito" dos celulares brasileiros: a Meta às vezes entrega o
+//    "from" da mensagem SEM esse dígito extra, mesmo o número tendo sido
+//    cadastrado com ele (ou vice-versa). Os últimos 8 dígitos (o número em
+//    si, sem DDD/DDI/9º dígito) continuam iguais nos dois formatos.
 function telefonesEquivalentes(a?: string | null, b?: string | null) {
   const da = onlyDigits(a);
   const dbNum = onlyDigits(b);
   if (da.length < 8 || dbNum.length < 8) return false;
-  return da.slice(-10) === dbNum.slice(-10);
+  return da.slice(-8) === dbNum.slice(-8);
 }
 
 type Db = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
