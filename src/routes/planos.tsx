@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useMemo, useRef, useState } from "react";
 import {
+  ArrowRight,
   Bot,
   Check,
   MessageCircle,
@@ -15,22 +16,22 @@ import {
 import { toast } from "sonner";
 
 import {
-  CONFIG_PADRAO,
   DESCONTO_ANUAL,
-  EQUIPE_INCLUIDA,
   MAX_MEDICOS,
   MAX_SECRETARIAS,
   PLANOS_BASE,
+  PLANO_PADRAO,
   PRECO_MEDICO_ADICIONAL,
   PRECO_SECRETARIA_ADICIONAL,
   TIERS_COPILOTO,
   TIERS_VIDEO,
   TIERS_WHATSAPP,
   WHATSAPP_COMERCIAL,
-  calcularPrecoMensal,
   configuracaoDoPlano,
+  configuracaoIgualAncora,
   formatarPreco,
   precoAnualEquivalenteMensal,
+  precoDaConfiguracao,
   type ConfiguracaoPlano,
   type PlanoBaseId,
 } from "@/lib/plans/config";
@@ -60,25 +61,51 @@ export const Route = createFileRoute("/planos")({
 type Ciclo = "mensal" | "anual";
 
 function PaginaPlanos() {
-  const [planoSelecionado, setPlanoSelecionado] = useState<PlanoBaseId | "custom">("basic");
-  const [config, setConfig] = useState<ConfiguracaoPlano>(CONFIG_PADRAO);
+  const navigate = useNavigate();
+
+  const [ancoraId, setAncoraId] = useState<PlanoBaseId>(PLANO_PADRAO.id);
+  const [config, setConfig] = useState<ConfiguracaoPlano>(configuracaoDoPlano(PLANO_PADRAO));
   const [ciclo, setCiclo] = useState<Ciclo>("mensal");
+  const [jaEscolheu, setJaEscolheu] = useState(false);
 
-  const planoAtivo = PLANOS_BASE.find((p) => p.id === planoSelecionado);
+  const configuradorRef = useRef<HTMLDivElement>(null);
 
-  const precoMensal = planoAtivo ? planoAtivo.precoMensal : calcularPrecoMensal(config);
+  const ancora = PLANOS_BASE.find((p) => p.id === ancoraId) ?? PLANO_PADRAO;
+  const ajustado = !configuracaoIgualAncora(config, ancora);
+
+  const precoMensal = precoDaConfiguracao(config, ancora);
   const precoExibido = ciclo === "anual" ? precoAnualEquivalenteMensal(precoMensal) : precoMensal;
 
   function escolherPlanoPronto(id: PlanoBaseId) {
     const plano = PLANOS_BASE.find((p) => p.id === id);
     if (!plano) return;
-    setPlanoSelecionado(id);
+    setAncoraId(id);
     setConfig(configuracaoDoPlano(plano));
+    setJaEscolheu(true);
+    // Rola até o detalhamento da configuração escolhida.
+    requestAnimationFrame(() => {
+      configuradorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   function atualizarConfig(mudanca: Partial<ConfiguracaoPlano>) {
-    setPlanoSelecionado("custom");
+    setJaEscolheu(true);
     setConfig((atual) => ({ ...atual, ...mudanca }));
+  }
+
+  function irParaPagamento() {
+    navigate({
+      to: "/checkout",
+      search: {
+        plano: ancora.id,
+        medicos: config.medicos,
+        secretarias: config.secretarias,
+        copiloto: config.copiloto,
+        whatsapp: config.whatsapp,
+        video: config.video,
+        ciclo,
+      },
+    });
   }
 
   function continuar() {
@@ -88,10 +115,9 @@ function PaginaPlanos() {
   }
 
   const resumoWhatsApp = useMemo(() => {
-    const nomePlano = planoAtivo ? planoAtivo.nome : "Personalizado";
     const texto = [
       `Olá! Quero contratar o MediCopilot.`,
-      `Plano: ${nomePlano}`,
+      `Plano: ${ancora.nome}${ajustado ? " (personalizado)" : ""}`,
       `Médicos: ${config.medicos}`,
       `Secretárias/Gestão: ${config.secretarias}`,
       `Copiloto IA: ${config.copiloto} consultas`,
@@ -101,13 +127,13 @@ function PaginaPlanos() {
       `Total estimado: ${formatarPreco(precoExibido)}/mês`,
     ].join("\n");
     return `https://wa.me/${WHATSAPP_COMERCIAL}?text=${encodeURIComponent(texto)}`;
-  }, [planoAtivo, config, ciclo, precoExibido]);
+  }, [ancora, ajustado, config, ciclo, precoExibido]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(135deg,#eef8f1_0%,#f3f1fb_45%,#fdf6ec_100%)]">
       <Blobs />
 
-      <div className="relative mx-auto max-w-6xl px-4 pb-32 pt-14 md:px-8 md:pt-20">
+      <div className="relative mx-auto max-w-6xl px-4 pb-44 pt-14 md:px-8 md:pt-20">
         {/* Cabeçalho */}
         <div className="mx-auto max-w-2xl text-center">
           <h1 className="text-3xl font-bold tracking-tight text-slate-800 md:text-4xl">
@@ -137,7 +163,7 @@ function PaginaPlanos() {
           </p>
           <div className="grid gap-5 md:grid-cols-3">
             {PLANOS_BASE.map((plano) => {
-              const ativo = planoSelecionado === plano.id;
+              const ativo = ancoraId === plano.id;
               const preco =
                 ciclo === "anual" ? precoAnualEquivalenteMensal(plano.precoMensal) : plano.precoMensal;
               return (
@@ -203,16 +229,18 @@ function PaginaPlanos() {
         </div>
 
         {/* Monte seu plano + resumo */}
-        <div className="mt-14 grid gap-6 lg:grid-cols-3 lg:items-start">
+        <div ref={configuradorRef} className="mt-14 scroll-mt-6 grid gap-6 lg:grid-cols-3 lg:items-start">
           <div className="space-y-6 lg:col-span-2">
             <div className="text-center lg:text-left">
               <div className="inline-flex items-center gap-2 text-emerald-600">
                 <Sparkles className="h-4 w-4" />
-                <span className="text-sm font-semibold">Monte seu próprio plano</span>
+                <span className="text-sm font-semibold">
+                  {ajustado ? `${ancora.nome}, do seu jeito` : "Monte seu próprio plano"}
+                </span>
               </div>
               <p className="mt-1 text-sm text-slate-500">
                 Precisa de mais usuários ou mais consumo? Ajuste conforme a realidade da sua clínica —
-                o valor é recalculado na hora.
+                cada mudança soma (ou desconta) do valor mensal na hora.
               </p>
             </div>
 
@@ -222,7 +250,7 @@ function PaginaPlanos() {
                 titulo="Médicos"
                 subtitulo="Usuários que atendem pacientes"
                 valor={config.medicos}
-                min={EQUIPE_INCLUIDA.medicos}
+                min={1}
                 max={MAX_MEDICOS}
                 onChange={(v) => atualizarConfig({ medicos: v })}
               />
@@ -236,12 +264,17 @@ function PaginaPlanos() {
                 onChange={(v) => atualizarConfig({ secretarias: v })}
               />
               <p className="pt-1 text-xs text-slate-400">
-                Médico adicional: {formatarPreco(PRECO_MEDICO_ADICIONAL)}/mês · Secretária adicional:{" "}
+                Médico adicional: +{formatarPreco(PRECO_MEDICO_ADICIONAL)}/mês · Secretária adicional: +
                 {formatarPreco(PRECO_SECRETARIA_ADICIONAL)}/mês
               </p>
             </SectionCard>
 
-            <SectionCard icon={Bot} accent="violet" titulo="Copiloto IA" subtitulo="Sugestões clínicas, organização do prontuário, comandos durante a consulta e geração de condutas.">
+            <SectionCard
+              icon={Bot}
+              accent="violet"
+              titulo="Copiloto IA"
+              subtitulo="Sugestões clínicas, organização do prontuário, comandos durante a consulta e geração de condutas."
+            >
               <SeletorTier
                 opcoes={TIERS_COPILOTO}
                 valor={config.copiloto}
@@ -251,7 +284,12 @@ function PaginaPlanos() {
               />
             </SectionCard>
 
-            <SectionCard icon={MessageCircle} accent="sky" titulo="WhatsApp" subtitulo="Atendimento, confirmações, mensagens automáticas e comunicação com pacientes.">
+            <SectionCard
+              icon={MessageCircle}
+              accent="sky"
+              titulo="WhatsApp"
+              subtitulo="Atendimento, confirmações, mensagens automáticas e comunicação com pacientes."
+            >
               <SeletorTier
                 opcoes={TIERS_WHATSAPP}
                 valor={config.whatsapp}
@@ -300,9 +338,14 @@ function PaginaPlanos() {
             className="border border-white/80 bg-white/70 p-6 shadow-xl shadow-slate-200/50 backdrop-blur-xl lg:sticky lg:top-6"
           >
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Seu plano</p>
-            <h3 className="mt-1 text-xl font-bold text-slate-800">
-              {planoAtivo ? planoAtivo.nome : "Personalizado"}
-            </h3>
+            <div className="mt-1 flex items-center gap-2">
+              <h3 className="text-xl font-bold text-slate-800">{ancora.nome}</h3>
+              {ajustado && (
+                <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-700">
+                  personalizado
+                </span>
+              )}
+            </div>
 
             <div className="mt-4 space-y-2 text-sm text-slate-600">
               <LinhaResumo label={`${config.medicos} médico${config.medicos > 1 ? "s" : ""}`} />
@@ -332,10 +375,10 @@ function PaginaPlanos() {
             )}
 
             <button
-              onClick={continuar}
+              onClick={irParaPagamento}
               className="mt-5 w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:from-emerald-600 hover:to-emerald-700"
             >
-              Continuar
+              Ir para pagamento
             </button>
             <a
               href={resumoWhatsApp}
@@ -350,6 +393,30 @@ function PaginaPlanos() {
               Pagamento recorrente no cartão de crédito. Você pode alterar seu plano depois.
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Balão flutuante — aparece assim que a pessoa começa a escolher/ajustar */}
+      <div
+        className={[
+          "pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center px-4 transition-all duration-300",
+          jaEscolheu ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0",
+        ].join(" ")}
+      >
+        <div
+          className="pointer-events-auto flex items-center gap-4 rounded-full border border-white/80 bg-white/80 py-2.5 pl-6 pr-2.5 shadow-2xl shadow-slate-300/50 backdrop-blur-xl"
+        >
+          <div className="text-sm">
+            <span className="font-bold text-slate-800">{formatarPreco(precoExibido)}</span>
+            <span className="text-slate-400">/mês</span>
+          </div>
+          <button
+            onClick={irParaPagamento}
+            className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-colors hover:from-emerald-600 hover:to-emerald-700"
+          >
+            Ir para pagamento
+            <ArrowRight className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </div>

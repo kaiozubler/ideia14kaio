@@ -1,14 +1,19 @@
 // Fonte única de verdade para planos, franquias e preços do MediCopilot.
 //
-// Usado hoje pela tela pública de contratação (`/planos`). A ideia é que
-// qualquer outro ponto que precise saber "quanto custa X" (checkout,
-// faturamento dentro do app, tela de upgrade, e-mails de cobrança) importe
-// daqui em vez de duplicar números espalhados pelo código.
+// Usado hoje pela tela pública de contratação (`/planos`) e pelo resumo de
+// checkout (`/checkout`). Qualquer outro ponto que precise saber "quanto
+// custa X" deve importar daqui em vez de duplicar números espalhados pelo
+// código.
 //
 // ⚠️ PREÇOS PLACEHOLDER: os valores abaixo foram estimados a partir da
-// conversa de produto para a tela funcionar ponta a ponta. Ajuste livremente
-// — a tela inteira recalcula sozinha a partir destes números, sem precisar
-// mexer em nenhum componente.
+// conversa de produto para a tela funcionar ponta a ponta. Ajuste livremente.
+//
+// MODELO DE PREÇO: cada plano pronto (Basic/Pro/Enterprise) tem um preço de
+// pacote fechado (`precoMensal`). A partir do momento em que a pessoa mexe
+// nos contadores/seletores do "monte seu plano", o preço passa a ser esse
+// preço de pacote MAIS/MENOS a diferença (delta) de cada item em relação ao
+// que já vinha incluído naquele plano — ou seja, cada ajuste soma (ou
+// desconta) do valor mensal na hora, sem recalcular tudo do zero.
 
 export type TierOption = {
   /** Quantidade incluída neste degrau (ex: 500 conversas de WhatsApp). */
@@ -29,7 +34,7 @@ export type PlanoBase = {
   destaque?: boolean;
   /** Enterprise: preço é "a partir de" e a config é só um ponto de partida. */
   personalizavel?: boolean;
-  /** Preço de pacote fechado — não é recalculado pela fórmula à la carte. */
+  /** Preço de pacote fechado deste plano, com a config abaixo já incluída. */
   precoMensal: number;
   medicos: number;
   secretarias: number;
@@ -42,7 +47,6 @@ export type PlanoBase = {
 // Equipe (usuários médicos custam mais porque usam os recursos mais caros)
 // ---------------------------------------------------------------------------
 
-export const EQUIPE_INCLUIDA = { medicos: 1, secretarias: 1 };
 export const PRECO_MEDICO_ADICIONAL = 89.9;
 export const PRECO_SECRETARIA_ADICIONAL = 39.9;
 export const MAX_MEDICOS = 30;
@@ -73,13 +77,9 @@ export const TIERS_VIDEO: TierOption[] = [
   { quantidade: 15000, preco: 179.9 },
 ];
 
-/** Preço de entrada: 1 médico + 1 secretária + o degrau mais baixo de cada franquia. */
-export const PRECO_ENTRADA =
-  TIERS_COPILOTO[0].preco + TIERS_WHATSAPP[0].preco + TIERS_VIDEO[0].preco + 149.9;
-
 // ---------------------------------------------------------------------------
-// Planos prontos — preço de pacote fechado (mais barato que montar à la carte,
-// de propósito, pra incentivar quem não quer personalizar).
+// Planos prontos — preço de pacote fechado (mais barato que montar à la
+// carte, de propósito, pra incentivar quem não quer personalizar).
 // ---------------------------------------------------------------------------
 
 export const PLANOS_BASE: PlanoBase[] = [
@@ -120,6 +120,8 @@ export const PLANOS_BASE: PlanoBase[] = [
   },
 ];
 
+export const PLANO_PADRAO = PLANOS_BASE[0];
+
 // ---------------------------------------------------------------------------
 // Pagamento anual
 // ---------------------------------------------------------------------------
@@ -127,7 +129,7 @@ export const PLANOS_BASE: PlanoBase[] = [
 export const DESCONTO_ANUAL = 0.15; // 15% de desconto pagando anual
 
 // ---------------------------------------------------------------------------
-// "Monte seu plano" — preço à la carte
+// "Monte seu plano" — preço = pacote da âncora + soma dos ajustes
 // ---------------------------------------------------------------------------
 
 export type ConfiguracaoPlano = {
@@ -136,14 +138,6 @@ export type ConfiguracaoPlano = {
   copiloto: number;
   whatsapp: number;
   video: number;
-};
-
-export const CONFIG_PADRAO: ConfiguracaoPlano = {
-  medicos: PLANOS_BASE[0].medicos,
-  secretarias: PLANOS_BASE[0].secretarias,
-  copiloto: PLANOS_BASE[0].copiloto,
-  whatsapp: PLANOS_BASE[0].whatsapp,
-  video: PLANOS_BASE[0].video,
 };
 
 export function configuracaoDoPlano(plano: PlanoBase): ConfiguracaoPlano {
@@ -160,19 +154,33 @@ function precoDoTier(tiers: TierOption[], quantidade: number): number {
   return tiers.find((t) => t.quantidade === quantidade)?.preco ?? 0;
 }
 
-/** Preço mensal calculado a partir de uma configuração livre ("monte seu plano"). */
-export function calcularPrecoMensal(config: ConfiguracaoPlano): number {
-  const medicosExtra = Math.max(0, config.medicos - EQUIPE_INCLUIDA.medicos);
-  const secretariasExtra = Math.max(0, config.secretarias - EQUIPE_INCLUIDA.secretarias);
-
+/** Verdadeiro se a configuração atual já é exatamente a de fábrica da âncora. */
+export function configuracaoIgualAncora(config: ConfiguracaoPlano, ancora: PlanoBase): boolean {
   return (
-    149.9 +
-    medicosExtra * PRECO_MEDICO_ADICIONAL +
-    secretariasExtra * PRECO_SECRETARIA_ADICIONAL +
-    precoDoTier(TIERS_COPILOTO, config.copiloto) +
-    precoDoTier(TIERS_WHATSAPP, config.whatsapp) +
-    precoDoTier(TIERS_VIDEO, config.video)
+    config.medicos === ancora.medicos &&
+    config.secretarias === ancora.secretarias &&
+    config.copiloto === ancora.copiloto &&
+    config.whatsapp === ancora.whatsapp &&
+    config.video === ancora.video
   );
+}
+
+/**
+ * Preço mensal = preço de pacote da âncora + a diferença de cada item em
+ * relação ao que já vinha incluído nela. Cada clique em "+"/"-" ou troca de
+ * franquia soma (ou desconta) direto no total, na hora.
+ */
+export function precoDaConfiguracao(
+  config: ConfiguracaoPlano,
+  ancora: PlanoBase = PLANO_PADRAO,
+): number {
+  const deltaMedicos = (config.medicos - ancora.medicos) * PRECO_MEDICO_ADICIONAL;
+  const deltaSecretarias = (config.secretarias - ancora.secretarias) * PRECO_SECRETARIA_ADICIONAL;
+  const deltaCopiloto = precoDoTier(TIERS_COPILOTO, config.copiloto) - precoDoTier(TIERS_COPILOTO, ancora.copiloto);
+  const deltaWhatsapp = precoDoTier(TIERS_WHATSAPP, config.whatsapp) - precoDoTier(TIERS_WHATSAPP, ancora.whatsapp);
+  const deltaVideo = precoDoTier(TIERS_VIDEO, config.video) - precoDoTier(TIERS_VIDEO, ancora.video);
+
+  return ancora.precoMensal + deltaMedicos + deltaSecretarias + deltaCopiloto + deltaWhatsapp + deltaVideo;
 }
 
 export function precoAnualEquivalenteMensal(precoMensal: number): number {

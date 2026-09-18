@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as PlanosRouteImport } from './routes/planos'
 import { Route as ApiAnalisarExameRouteImport } from './routes/api/analisar-exame'
 import { Route as ApiAssistenteIaRouteImport } from './routes/api/assistente-ia'
@@ -69,6 +70,11 @@ import { Route as ApiSignatureIntegraBrySignRouteImport } from './routes/api/sig
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutRoute = CheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PlanosRoute = PlanosRouteImport.update({
@@ -371,6 +377,7 @@ const ApiSignatureIntegraBrySignRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/checkout': typeof CheckoutRoute
   '/planos': typeof PlanosRoute
   '/api/analisar-exame': typeof ApiAnalisarExameRoute
   '/api/assistente-ia': typeof ApiAssistenteIaRoute
@@ -429,6 +436,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/checkout': typeof CheckoutRoute
   '/planos': typeof PlanosRoute
   '/api/analisar-exame': typeof ApiAnalisarExameRoute
   '/api/assistente-ia': typeof ApiAssistenteIaRoute
@@ -488,6 +496,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/checkout': typeof CheckoutRoute
   '/planos': typeof PlanosRoute
   '/api/analisar-exame': typeof ApiAnalisarExameRoute
   '/api/assistente-ia': typeof ApiAssistenteIaRoute
@@ -548,6 +557,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/checkout'
     | '/planos'
     | '/api/analisar-exame'
     | '/api/assistente-ia'
@@ -606,6 +616,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/checkout'
     | '/planos'
     | '/api/analisar-exame'
     | '/api/assistente-ia'
@@ -664,6 +675,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/checkout'
     | '/planos'
     | '/api/analisar-exame'
     | '/api/assistente-ia'
@@ -723,6 +735,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CheckoutRoute: typeof CheckoutRoute
   PlanosRoute: typeof PlanosRoute
   ApiAnalisarExameRoute: typeof ApiAnalisarExameRoute
   ApiAssistenteIaRoute: typeof ApiAssistenteIaRoute
@@ -787,6 +800,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout': {
+      id: '/checkout'
+      path: '/checkout'
+      fullPath: '/checkout'
+      preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/planos': {
@@ -1179,6 +1199,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CheckoutRoute: CheckoutRoute,
   PlanosRoute: PlanosRoute,
   ApiAnalisarExameRoute: ApiAnalisarExameRoute,
   ApiAssistenteIaRoute: ApiAssistenteIaRoute,
