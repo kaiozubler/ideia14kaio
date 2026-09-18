@@ -159,9 +159,20 @@ async function carregarSessao(db: Db, idMedico: string, telefone: string) {
   return data ?? null;
 }
 
-async function carregarHistoricoConversa(db: Db, conversaId: string | null) {
+async function carregarHistoricoConversa(db: Db, idMedico: string, conversaId: string | null) {
   if (!conversaId) return [] as { role: string; content: string }[];
-  const { data } = await db.from("ia_assist_conversas").select("mensagens").eq("id", conversaId).maybeSingle();
+  // Confere id_medico também — não só por segurança, mas porque se o
+  // conversa_id guardado na sessão não pertencer (mais) a este médico
+  // (ex.: registro antigo de teste, conversa apagada/reatribuída), é
+  // melhor começar do zero silenciosamente do que arriscar carregar o
+  // histórico de uma conversa errada e confundir a IA com um assunto que
+  // não tem nada a ver com a mensagem atual.
+  const { data } = await db
+    .from("ia_assist_conversas")
+    .select("mensagens")
+    .eq("id", conversaId)
+    .eq("id_medico", idMedico)
+    .maybeSingle();
   const bruto = Array.isArray(data?.mensagens) ? data!.mensagens : [];
   return bruto
     .filter((m): m is { role: string; content: string } => !!m && typeof m === "object" && !Array.isArray(m))
@@ -289,7 +300,7 @@ export const Route = createFileRoute("/api/assistente-medico-webhook")({
         }
 
         const sessao = await carregarSessao(supabaseAdmin, medico.id, telefoneRemetente);
-        const historico = await carregarHistoricoConversa(supabaseAdmin, sessao?.conversa_id || null);
+        const historico = await carregarHistoricoConversa(supabaseAdmin, medico.id, sessao?.conversa_id || null);
         const novoHistorico = [...historico, { role: "user", content: textoRecebido }];
 
         try {
