@@ -51,6 +51,7 @@ import { Route as ApiSignatureSignRouteImport } from './routes/api/signature/sig
 import { Route as ApiTermosGerarIaRouteImport } from './routes/api/termos/gerar-ia'
 import { Route as ApiTussBuscarRouteImport } from './routes/api/tuss/buscar'
 import { Route as ApiTussCriarRouteImport } from './routes/api/tuss/criar'
+import { Route as ApiWhatsappSegurancaRouteImport } from './routes/api/whatsapp/seguranca'
 import { Route as ApiPublicExtensaoChatRouteImport } from './routes/api/public/extensao/chat'
 import { Route as ApiPublicExtensaoDeepgramTokenRouteImport } from './routes/api/public/extensao/deepgram-token'
 import { Route as ApiPublicFormulariosCodigoRouteImport } from './routes/api/public/formularios/codigo'
@@ -290,6 +291,11 @@ const ApiTussCriarRoute = ApiTussCriarRouteImport.update({
   path: '/api/tuss/criar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWhatsappSegurancaRoute = ApiWhatsappSegurancaRouteImport.update({
+  id: '/api/whatsapp/seguranca',
+  path: '/api/whatsapp/seguranca',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicExtensaoChatRoute = ApiPublicExtensaoChatRouteImport.update({
   id: '/api/public/extensao/chat',
   path: '/api/public/extensao/chat',
@@ -424,6 +430,7 @@ export interface FileRoutesByFullPath {
   '/api/termos/gerar-ia': typeof ApiTermosGerarIaRoute
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/tuss/criar': typeof ApiTussCriarRoute
+  '/api/whatsapp/seguranca': typeof ApiWhatsappSegurancaRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
   '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
@@ -484,6 +491,7 @@ export interface FileRoutesByTo {
   '/api/termos/gerar-ia': typeof ApiTermosGerarIaRoute
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/tuss/criar': typeof ApiTussCriarRoute
+  '/api/whatsapp/seguranca': typeof ApiWhatsappSegurancaRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
   '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
@@ -545,6 +553,7 @@ export interface FileRoutesById {
   '/api/termos/gerar-ia': typeof ApiTermosGerarIaRoute
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/tuss/criar': typeof ApiTussCriarRoute
+  '/api/whatsapp/seguranca': typeof ApiWhatsappSegurancaRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
   '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
@@ -607,6 +616,7 @@ export interface FileRouteTypes {
     | '/api/termos/gerar-ia'
     | '/api/tuss/buscar'
     | '/api/tuss/criar'
+    | '/api/whatsapp/seguranca'
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
     | '/api/public/formularios/codigo'
@@ -667,6 +677,7 @@ export interface FileRouteTypes {
     | '/api/termos/gerar-ia'
     | '/api/tuss/buscar'
     | '/api/tuss/criar'
+    | '/api/whatsapp/seguranca'
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
     | '/api/public/formularios/codigo'
@@ -727,6 +738,7 @@ export interface FileRouteTypes {
     | '/api/termos/gerar-ia'
     | '/api/tuss/buscar'
     | '/api/tuss/criar'
+    | '/api/whatsapp/seguranca'
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
     | '/api/public/formularios/codigo'
@@ -788,6 +800,7 @@ export interface RootRouteChildren {
   ApiTermosGerarIaRoute: typeof ApiTermosGerarIaRoute
   ApiTussBuscarRoute: typeof ApiTussBuscarRoute
   ApiTussCriarRoute: typeof ApiTussCriarRoute
+  ApiWhatsappSegurancaRoute: typeof ApiWhatsappSegurancaRoute
   ApiPublicExtensaoChatRoute: typeof ApiPublicExtensaoChatRoute
   ApiPublicExtensaoDeepgramTokenRoute: typeof ApiPublicExtensaoDeepgramTokenRoute
   ApiPublicFormulariosCodigoRoute: typeof ApiPublicFormulariosCodigoRoute
@@ -1102,6 +1115,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTussCriarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/whatsapp/seguranca': {
+      id: '/api/whatsapp/seguranca'
+      path: '/api/whatsapp/seguranca'
+      fullPath: '/api/whatsapp/seguranca'
+      preLoaderRoute: typeof ApiWhatsappSegurancaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/extensao/chat': {
       id: '/api/public/extensao/chat'
       path: '/api/public/extensao/chat'
@@ -1262,6 +1282,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTermosGerarIaRoute: ApiTermosGerarIaRoute,
   ApiTussBuscarRoute: ApiTussBuscarRoute,
   ApiTussCriarRoute: ApiTussCriarRoute,
+  ApiWhatsappSegurancaRoute: ApiWhatsappSegurancaRoute,
   ApiPublicExtensaoChatRoute: ApiPublicExtensaoChatRoute,
   ApiPublicExtensaoDeepgramTokenRoute: ApiPublicExtensaoDeepgramTokenRoute,
   ApiPublicFormulariosCodigoRoute: ApiPublicFormulariosCodigoRoute,

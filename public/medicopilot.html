@@ -2247,6 +2247,21 @@
       .cop-note{margin-top:10px;border-radius:14px;padding:10px 13px;font-size:11px;line-height:1.6}
       .cop-note.amber{background:#fffbeb;border:0.5px solid #fde68a;color:#92400e}
       .cop-note.blue{background:#eff6ff;border:0.5px solid #bfdbfe;color:#1e40af}
+      .cop-note.red{background:#fff1f2;border:0.5px solid #fda4af;color:#9f1239}
+      .cop-wa-form{display:grid;grid-template-columns:minmax(0,1fr) 180px auto;align-items:end;gap:12px}
+      .cop-wa-password{position:relative}
+      .cop-wa-password input{padding-right:42px}
+      .cop-wa-eye{position:absolute;right:5px;bottom:4px;width:34px;height:34px;padding:0!important;display:flex!important;align-items:center;justify-content:center}
+      .cop-wa-validation{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+      .cop-wa-rule{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--n400)}
+      .cop-wa-rule.ok{color:#047857}
+      .cop-wa-rule.bad{color:#be123c}
+      .cop-wa-status{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+      .cop-wa-stat{border:0.5px solid var(--n150);border-radius:12px;background:rgba(255,255,255,.62);padding:10px 12px;min-width:0}
+      .cop-wa-stat small{display:block;font-size:10px;color:var(--n400);margin-bottom:3px}
+      .cop-wa-stat strong{display:block;font-size:12px;color:var(--n700);overflow-wrap:anywhere}
+      .cop-wa-muted{font-size:11.5px;color:var(--n400)}
+      @media (max-width:760px){.cop-wa-form{grid-template-columns:1fr}.cop-wa-status{grid-template-columns:repeat(2,minmax(0,1fr))}}
       /* ===== COPILOTO — AUTOMAÇÃO POR COMANDO DE VOZ ===== */
       .cv-info{display:flex;align-items:flex-start;gap:8px}
       .cv-info i{font-size:14px;color:#3b82f6;margin-top:1px;flex-shrink:0}
@@ -4134,6 +4149,52 @@
                       automaticamente. Se confirmado, a IA envia uma mensagem ao paciente para combinar o agendamento.
                     </div>
                   </div>
+                </div>
+              </div>
+
+              <!-- COPILOTO PELO WHATSAPP — NOVA SESSÃO -->
+              <div class="cop-card cop-grid-full">
+                <div class="cop-card-hd">
+                  <div class="cop-ico-box sm" style="background:linear-gradient(135deg,#34d399,#059669)">
+                    <i class="ti ti-brand-whatsapp"></i>
+                  </div>
+                  <div style="flex:1;min-width:0">
+                    <div class="cop-card-title">Copiloto pelo WhatsApp (Nova sessão)</div>
+                    <div class="cop-card-desc">Configure a verificação de segurança para iniciar novas sessões pelo WhatsApp.</div>
+                  </div>
+                </div>
+                <div class="cop-card-body">
+                  <div class="cop-sep"></div>
+                  <div id="cop-wa-status" class="cop-wa-muted" role="status">Carregando configuração...</div>
+                  <div id="cop-wa-alert" class="cop-note" style="display:none" role="alert"></div>
+                  <div class="cop-wa-form">
+                    <div class="fld cop-wa-password" style="margin:0">
+                      <label for="cop-wa-key" style="text-transform:uppercase;font-size:10.5px;letter-spacing:.5px">Nova palavra-chave</label>
+                      <input id="cop-wa-key" type="password" autocomplete="new-password" spellcheck="false"
+                             placeholder="Digite no mínimo 12 letras" oninput="validateCopWhatsappKey()" />
+                      <button type="button" class="btn ghost cop-wa-eye" onclick="toggleCopWhatsappKey()" title="Mostrar ou ocultar palavra-chave" aria-label="Mostrar palavra-chave">
+                        <i id="cop-wa-eye-icon" class="ti ti-eye"></i>
+                      </button>
+                      <div class="cop-wa-validation" aria-live="polite">
+                        <span id="cop-wa-rule-length" class="cop-wa-rule"><i class="ti ti-circle"></i> 12 letras ou mais</span>
+                        <span id="cop-wa-rule-letters" class="cop-wa-rule"><i class="ti ti-circle"></i> somente letras</span>
+                        <span id="cop-wa-rule-repeat" class="cop-wa-rule"><i class="ti ti-circle"></i> até 2 repetições por letra</span>
+                      </div>
+                    </div>
+                    <div class="fld" style="margin:0">
+                      <label for="cop-wa-frequency" style="text-transform:uppercase;font-size:10.5px;letter-spacing:.5px">Frequência de autenticação</label>
+                      <select id="cop-wa-frequency">
+                        <option value="6">6 horas</option>
+                        <option value="12">12 horas</option>
+                        <option value="24" selected>24 horas</option>
+                        <option value="36">36 horas</option>
+                      </select>
+                    </div>
+                    <button id="cop-wa-save" type="button" class="btn primary" onclick="saveCopWhatsappSecurity()">
+                      <i class="ti ti-device-floppy"></i> Salvar
+                    </button>
+                  </div>
+                  <div class="cop-wa-muted">Por segurança, a palavra-chave atual nunca é exibida. Ao salvar, ela substitui a configuração anterior.</div>
                 </div>
               </div>
 
@@ -6768,6 +6829,7 @@
                                                               f.oninput=()=>lbl.textContent=f.value+'min';
                                                               updateCopTipoHint();updateCopEnabledState();
                                                               try{loadCopVoiceCfg();}catch(e){console.error('[copiloto-voz] ERRO inesperado ao chamar loadCopVoiceCfg:',e);}
+                                                              loadCopWhatsappSecurity();
                                                             }
                                                             function saveCopilotoCfg(){
                                                               const chk=id=>!!document.getElementById(id)?.checked;
@@ -6790,6 +6852,135 @@
                                                               const chip=document.getElementById('cop-saved-chip');
                                                               if(chip){chip.style.display='inline-flex';setTimeout(()=>{chip.style.display='none';},2200);}
                                                               if(typeof showToast==='function')showToast('Configurações salvas','success');
+                                                            }
+
+                                                            function normalizeCopWhatsappLetter(letter){
+                                                              return letter.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+                                                            }
+                                                            function getCopWhatsappKeyValidation(){
+                                                              const value=(document.getElementById('cop-wa-key')?.value||'').trim();
+                                                              const counts={};
+                                                              Array.from(value).forEach(letter=>{const normalized=normalizeCopWhatsappLetter(letter);counts[normalized]=(counts[normalized]||0)+1;});
+                                                              return {
+                                                                value,
+                                                                length:value.length>=12,
+                                                                letters:/^[A-Za-zÀ-ÿ]+$/.test(value),
+                                                                repeat:Object.values(counts).every(count=>count<=2),
+                                                              };
+                                                            }
+                                                            function validateCopWhatsappKey(){
+                                                              const validation=getCopWhatsappKeyValidation();
+                                                              const hasValue=validation.value.length>0;
+                                                              const setRule=(id,valid)=>{
+                                                                const el=document.getElementById(id);if(!el)return;
+                                                                el.classList.toggle('ok',hasValue&&valid);el.classList.toggle('bad',hasValue&&!valid);
+                                                                const icon=el.querySelector('i');if(icon)icon.className='ti '+(hasValue?(valid?'ti-circle-check':'ti-circle-x'):'ti-circle');
+                                                              };
+                                                              setRule('cop-wa-rule-length',validation.length);
+                                                              setRule('cop-wa-rule-letters',validation.letters);
+                                                              setRule('cop-wa-rule-repeat',validation.repeat);
+                                                              return validation.length&&validation.letters&&validation.repeat;
+                                                            }
+                                                            function toggleCopWhatsappKey(){
+                                                              const input=document.getElementById('cop-wa-key');const icon=document.getElementById('cop-wa-eye-icon');
+                                                              if(!input)return;
+                                                              const showing=input.type==='text';input.type=showing?'password':'text';
+                                                              if(icon)icon.className='ti '+(showing?'ti-eye':'ti-eye-off');
+                                                              const button=input.parentElement?.querySelector('.cop-wa-eye');
+                                                              if(button)button.setAttribute('aria-label',showing?'Mostrar palavra-chave':'Ocultar palavra-chave');
+                                                            }
+                                                            function copWhatsappDaysSince(dateValue){
+                                                              const time=new Date(dateValue).getTime();
+                                                              if(!Number.isFinite(time))return null;
+                                                              return Math.max(0,Math.floor((Date.now()-time)/(24*60*60*1000)));
+                                                            }
+                                                            function renderCopWhatsappSecurity(data){
+                                                              const status=document.getElementById('cop-wa-status');const alert=document.getElementById('cop-wa-alert');
+                                                              if(!status||!alert)return;
+                                                              alert.style.display='none';alert.className='cop-note';alert.textContent='';
+                                                              if(!data?.configurado){
+                                                                status.className='cop-wa-muted';status.textContent='Nenhuma palavra-chave configurada.';
+                                                                return;
+                                                              }
+                                                              const days=copWhatsappDaysSince(data.criada_em);
+                                                              const blocked=!!data.desafio_bloqueado;
+                                                              status.className='cop-wa-status';status.textContent='';
+                                                              const stats=[
+                                                                ['Criada há',days===null?'—':days+' '+(days===1?'dia':'dias')],
+                                                                ['Usos',String(Number(data.usos)||0)],
+                                                                ['Frequência',String(Number(data.frequencia_horas)||24)+'h'],
+                                                                ['Situação',blocked?'Bloqueada':'Ativa'],
+                                                              ];
+                                                              stats.forEach(([label,value])=>{
+                                                                const item=document.createElement('div');item.className='cop-wa-stat';
+                                                                const small=document.createElement('small');small.textContent=label;
+                                                                const strong=document.createElement('strong');strong.textContent=value;
+                                                                item.append(small,strong);status.appendChild(item);
+                                                              });
+                                                              const rotation=data.status_rotacao||{};
+                                                              if(rotation.precisaTrocarAgora||blocked){
+                                                                alert.className='cop-note red';alert.style.display='block';
+                                                                alert.textContent=blocked
+                                                                  ?'A verificação está bloqueada. Defina uma nova palavra-chave para liberar novas sessões.'
+                                                                  :'A palavra-chave atingiu o limite de 90 dias ou 30 usos. Troque-a agora para continuar usando novas sessões.';
+                                                              }else if(rotation.avisoTrocaEmBreve){
+                                                                alert.className='cop-note amber';alert.style.display='block';
+                                                                alert.textContent='A palavra-chave atingiu 60 dias ou 25 usos. Recomendamos trocá-la em breve.';
+                                                              }
+                                                              const frequency=document.getElementById('cop-wa-frequency');
+                                                              if(frequency&&['6','12','24','36'].includes(String(data.frequencia_horas)))frequency.value=String(data.frequencia_horas);
+                                                            }
+                                                            async function getCopWhatsappToken(){
+                                                              const {data}=await sb.auth.getSession();
+                                                              return data?.session?.access_token||null;
+                                                            }
+                                                            async function loadCopWhatsappSecurity(){
+                                                              const status=document.getElementById('cop-wa-status');const key=document.getElementById('cop-wa-key');
+                                                              if(!status)return;
+                                                              if(key){key.value='';key.type='password';validateCopWhatsappKey();}
+                                                              status.className='cop-wa-muted';status.textContent='Carregando configuração...';
+                                                              try{
+                                                                const token=await getCopWhatsappToken();
+                                                                if(!token)throw new Error('Sessão não encontrada');
+                                                                const response=await fetch('/api/whatsapp/seguranca',{headers:{Authorization:'Bearer '+token}});
+                                                                const payload=await response.json().catch(()=>({}));
+                                                                if(!response.ok)throw new Error(payload.error||'Não foi possível carregar');
+                                                                renderCopWhatsappSecurity(payload);
+                                                              }catch(error){
+                                                                status.className='cop-wa-muted';status.textContent='Não foi possível carregar a configuração de segurança.';
+                                                                console.error('[copiloto-whatsapp] Falha ao carregar configuração:',error instanceof Error?error.message:error);
+                                                              }
+                                                            }
+                                                            async function saveCopWhatsappSecurity(){
+                                                              const input=document.getElementById('cop-wa-key');const frequency=document.getElementById('cop-wa-frequency');const button=document.getElementById('cop-wa-save');
+                                                              if(!input||!frequency||!button)return;
+                                                              if(!validateCopWhatsappKey()){
+                                                                if(typeof showToast==='function')showToast('Revise os requisitos da palavra-chave','error');
+                                                                else if(typeof toast==='function')toast('Revise os requisitos da palavra-chave');
+                                                                input.focus();return;
+                                                              }
+                                                              const palavraChave=input.value.trim();
+                                                              button.disabled=true;button.innerHTML='<i class="ti ti-loader-2"></i> Salvando...';
+                                                              try{
+                                                                const token=await getCopWhatsappToken();
+                                                                if(!token)throw new Error('Sessão não encontrada');
+                                                                const response=await fetch('/api/whatsapp/seguranca',{
+                                                                  method:'POST',
+                                                                  headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
+                                                                  body:JSON.stringify({palavra_chave:palavraChave,frequencia_horas:Number(frequency.value)}),
+                                                                });
+                                                                const payload=await response.json().catch(()=>({}));
+                                                                if(!response.ok)throw new Error(payload.error||'Não foi possível salvar');
+                                                                input.value='';input.type='password';validateCopWhatsappKey();
+                                                                if(typeof showToast==='function')showToast('Segurança do WhatsApp salva','success');
+                                                                else if(typeof toast==='function')toast('Segurança do WhatsApp salva');
+                                                                await loadCopWhatsappSecurity();
+                                                              }catch(error){
+                                                                const message=error instanceof Error?error.message:'Não foi possível salvar';
+                                                                if(typeof showToast==='function')showToast(message,'error');else if(typeof toast==='function')toast(message);
+                                                              }finally{
+                                                                button.disabled=false;button.innerHTML='<i class="ti ti-device-floppy"></i> Salvar';
+                                                              }
                                                             }
 
                                                             /* ========== AUTOMAÇÃO POR COMANDO DE VOZ ========== */
