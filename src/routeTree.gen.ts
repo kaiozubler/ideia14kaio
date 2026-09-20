@@ -45,12 +45,12 @@ import { Route as ApiProtocolosSincronizarRouteImport } from './routes/api/proto
 import { Route as ApiQuestionariosGerarIaRouteImport } from './routes/api/questionarios/gerar-ia'
 import { Route as ApiSignatureAuthenticateRouteImport } from './routes/api/signature/authenticate'
 import { Route as ApiSignatureCredentialRouteImport } from './routes/api/signature/credential'
-import { Route as ApiWhatsappSegurancaRouteImport } from './routes/api/whatsapp/seguranca'
 import { Route as ApiSignatureLocalCertificateRouteImport } from './routes/api/signature/local-certificate'
 import { Route as ApiSignatureSignRouteImport } from './routes/api/signature/sign'
 import { Route as ApiTermosGerarIaRouteImport } from './routes/api/termos/gerar-ia'
 import { Route as ApiTussBuscarRouteImport } from './routes/api/tuss/buscar'
 import { Route as ApiTussCriarRouteImport } from './routes/api/tuss/criar'
+import { Route as ApiWhatsappSegurancaRouteImport } from './routes/api/whatsapp/seguranca'
 import { Route as ApiPublicExtensaoChatRouteImport } from './routes/api/public/extensao/chat'
 import { Route as ApiPublicExtensaoDeepgramTokenRouteImport } from './routes/api/public/extensao/deepgram-token'
 import { Route as ApiPublicFormulariosCodigoRouteImport } from './routes/api/public/formularios/codigo'
@@ -259,11 +259,6 @@ const ApiSignatureCredentialRoute = ApiSignatureCredentialRouteImport.update({
   path: '/api/signature/credential',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiWhatsappSegurancaRoute = ApiWhatsappSegurancaRouteImport.update({
-  id: '/api/whatsapp/seguranca',
-  path: '/api/whatsapp/seguranca',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiSignatureLocalCertificateRoute =
   ApiSignatureLocalCertificateRouteImport.update({
     id: '/api/signature/local-certificate',
@@ -288,6 +283,11 @@ const ApiTussBuscarRoute = ApiTussBuscarRouteImport.update({
 const ApiTussCriarRoute = ApiTussCriarRouteImport.update({
   id: '/api/tuss/criar',
   path: '/api/tuss/criar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWhatsappSegurancaRoute = ApiWhatsappSegurancaRouteImport.update({
+  id: '/api/whatsapp/seguranca',
+  path: '/api/whatsapp/seguranca',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicExtensaoChatRoute = ApiPublicExtensaoChatRouteImport.update({
@@ -418,12 +418,12 @@ export interface FileRoutesByFullPath {
   '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
-  '/api/whatsapp/seguranca': typeof ApiWhatsappSegurancaRoute
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
   '/api/termos/gerar-ia': typeof ApiTermosGerarIaRoute
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/tuss/criar': typeof ApiTussCriarRoute
+  '/api/whatsapp/seguranca': typeof ApiWhatsappSegurancaRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
   '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
@@ -478,12 +478,12 @@ export interface FileRoutesByTo {
   '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
-  '/api/whatsapp/seguranca': typeof ApiWhatsappSegurancaRoute
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
   '/api/termos/gerar-ia': typeof ApiTermosGerarIaRoute
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/tuss/criar': typeof ApiTussCriarRoute
+  '/api/whatsapp/seguranca': typeof ApiWhatsappSegurancaRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
   '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
@@ -539,12 +539,12 @@ export interface FileRoutesById {
   '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
-  '/api/whatsapp/seguranca': typeof ApiWhatsappSegurancaRoute
   '/api/signature/local-certificate': typeof ApiSignatureLocalCertificateRoute
   '/api/signature/sign': typeof ApiSignatureSignRoute
   '/api/termos/gerar-ia': typeof ApiTermosGerarIaRoute
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/tuss/criar': typeof ApiTussCriarRoute
+  '/api/whatsapp/seguranca': typeof ApiWhatsappSegurancaRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
   '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
@@ -601,12 +601,12 @@ export interface FileRouteTypes {
     | '/api/questionarios/gerar-ia'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
-    | '/api/whatsapp/seguranca'
     | '/api/signature/local-certificate'
     | '/api/signature/sign'
     | '/api/termos/gerar-ia'
     | '/api/tuss/buscar'
     | '/api/tuss/criar'
+    | '/api/whatsapp/seguranca'
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
     | '/api/public/formularios/codigo'
@@ -661,12 +661,12 @@ export interface FileRouteTypes {
     | '/api/questionarios/gerar-ia'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
-    | '/api/whatsapp/seguranca'
     | '/api/signature/local-certificate'
     | '/api/signature/sign'
     | '/api/termos/gerar-ia'
     | '/api/tuss/buscar'
     | '/api/tuss/criar'
+    | '/api/whatsapp/seguranca'
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
     | '/api/public/formularios/codigo'
@@ -721,12 +721,12 @@ export interface FileRouteTypes {
     | '/api/questionarios/gerar-ia'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
-    | '/api/whatsapp/seguranca'
     | '/api/signature/local-certificate'
     | '/api/signature/sign'
     | '/api/termos/gerar-ia'
     | '/api/tuss/buscar'
     | '/api/tuss/criar'
+    | '/api/whatsapp/seguranca'
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
     | '/api/public/formularios/codigo'
@@ -782,12 +782,12 @@ export interface RootRouteChildren {
   ApiQuestionariosGerarIaRoute: typeof ApiQuestionariosGerarIaRoute
   ApiSignatureAuthenticateRoute: typeof ApiSignatureAuthenticateRoute
   ApiSignatureCredentialRoute: typeof ApiSignatureCredentialRoute
-  ApiWhatsappSegurancaRoute: typeof ApiWhatsappSegurancaRoute
   ApiSignatureLocalCertificateRoute: typeof ApiSignatureLocalCertificateRoute
   ApiSignatureSignRoute: typeof ApiSignatureSignRoute
   ApiTermosGerarIaRoute: typeof ApiTermosGerarIaRoute
   ApiTussBuscarRoute: typeof ApiTussBuscarRoute
   ApiTussCriarRoute: typeof ApiTussCriarRoute
+  ApiWhatsappSegurancaRoute: typeof ApiWhatsappSegurancaRoute
   ApiPublicExtensaoChatRoute: typeof ApiPublicExtensaoChatRoute
   ApiPublicExtensaoDeepgramTokenRoute: typeof ApiPublicExtensaoDeepgramTokenRoute
   ApiPublicFormulariosCodigoRoute: typeof ApiPublicFormulariosCodigoRoute
@@ -1060,13 +1060,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSignatureCredentialRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/whatsapp/seguranca': {
-      id: '/api/whatsapp/seguranca'
-      path: '/api/whatsapp/seguranca'
-      fullPath: '/api/whatsapp/seguranca'
-      preLoaderRoute: typeof ApiWhatsappSegurancaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/signature/local-certificate': {
       id: '/api/signature/local-certificate'
       path: '/api/signature/local-certificate'
@@ -1100,6 +1093,13 @@ declare module '@tanstack/react-router' {
       path: '/api/tuss/criar'
       fullPath: '/api/tuss/criar'
       preLoaderRoute: typeof ApiTussCriarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/whatsapp/seguranca': {
+      id: '/api/whatsapp/seguranca'
+      path: '/api/whatsapp/seguranca'
+      fullPath: '/api/whatsapp/seguranca'
+      preLoaderRoute: typeof ApiWhatsappSegurancaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extensao/chat': {
@@ -1256,12 +1256,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiQuestionariosGerarIaRoute: ApiQuestionariosGerarIaRoute,
   ApiSignatureAuthenticateRoute: ApiSignatureAuthenticateRoute,
   ApiSignatureCredentialRoute: ApiSignatureCredentialRoute,
-  ApiWhatsappSegurancaRoute: ApiWhatsappSegurancaRoute,
   ApiSignatureLocalCertificateRoute: ApiSignatureLocalCertificateRoute,
   ApiSignatureSignRoute: ApiSignatureSignRoute,
   ApiTermosGerarIaRoute: ApiTermosGerarIaRoute,
   ApiTussBuscarRoute: ApiTussBuscarRoute,
   ApiTussCriarRoute: ApiTussCriarRoute,
+  ApiWhatsappSegurancaRoute: ApiWhatsappSegurancaRoute,
   ApiPublicExtensaoChatRoute: ApiPublicExtensaoChatRoute,
   ApiPublicExtensaoDeepgramTokenRoute: ApiPublicExtensaoDeepgramTokenRoute,
   ApiPublicFormulariosCodigoRoute: ApiPublicFormulariosCodigoRoute,
