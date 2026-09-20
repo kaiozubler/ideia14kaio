@@ -14,6 +14,7 @@ import {
   Video,
 } from "lucide-react";
 
+import { ChatSuporte } from "@/components/suporte/ChatSuporte";
 import {
   DESCONTO_ANUAL,
   MAX_MEDICOS,
@@ -29,9 +30,11 @@ import {
   WHATSAPP_COMERCIAL,
   configuracaoDoPlano,
   configuracaoIgualAncora,
+  descontoPercentualDoPlano,
   formatarPreco,
   opcoesComPersonalizado,
   possuiItemPersonalizado,
+  precoALaCarteDoPlano,
   precoAnualEquivalenteMensal,
   precoDaConfiguracao,
   type ConfiguracaoPlano,
@@ -171,6 +174,11 @@ function PaginaPlanos() {
               const ativo = ancoraId === plano.id;
               const preco =
                 ciclo === "anual" ? precoAnualEquivalenteMensal(plano.precoMensal) : plano.precoMensal;
+              const descontoPct = descontoPercentualDoPlano(plano);
+              const precoALaCarte =
+                ciclo === "anual"
+                  ? precoAnualEquivalenteMensal(precoALaCarteDoPlano(plano))
+                  : precoALaCarteDoPlano(plano);
               return (
                 <div
                   key={plano.id}
@@ -195,6 +203,14 @@ function PaginaPlanos() {
                   <div className="mt-5">
                     {plano.personalizavel && (
                       <span className="text-xs font-medium text-slate-400">a partir de</span>
+                    )}
+                    {descontoPct > 0.01 && (
+                      <div className="mb-1 flex items-center gap-2">
+                        <span className="text-sm text-slate-400 line-through">{formatarPreco(precoALaCarte)}</span>
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                          -{Math.round(descontoPct * 100)}% vs. à la carte
+                        </span>
+                      </div>
                     )}
                     <div className="flex items-baseline gap-1">
                       <span className="text-3xl font-bold text-slate-800">{formatarPreco(preco)}</span>
@@ -479,6 +495,8 @@ function PaginaPlanos() {
           )}
         </div>
       </div>
+
+      <ChatSuporte />
     </div>
   );
 }

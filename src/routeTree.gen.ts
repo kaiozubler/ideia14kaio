@@ -21,6 +21,7 @@ import { Route as ApiDailyRoomRouteImport } from './routes/api/daily-room'
 import { Route as ApiDeepgramTokenRouteImport } from './routes/api/deepgram-token'
 import { Route as ApiLmeIaRouteImport } from './routes/api/lme-ia'
 import { Route as ApiMapaFamiliarIaRouteImport } from './routes/api/mapa-familiar-ia'
+import { Route as ApiSuporteIaRouteImport } from './routes/api/suporte-ia'
 import { Route as ApiWhatsappConviteRouteImport } from './routes/api/whatsapp-convite'
 import { Route as ApiWhatsappWebhookRouteImport } from './routes/api/whatsapp-webhook'
 import { Route as FFormIdRouteImport } from './routes/f.$formId'
@@ -127,6 +128,11 @@ const ApiLmeIaRoute = ApiLmeIaRouteImport.update({
 const ApiMapaFamiliarIaRoute = ApiMapaFamiliarIaRouteImport.update({
   id: '/api/mapa-familiar-ia',
   path: '/api/mapa-familiar-ia',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSuporteIaRoute = ApiSuporteIaRouteImport.update({
+  id: '/api/suporte-ia',
+  path: '/api/suporte-ia',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiWhatsappConviteRoute = ApiWhatsappConviteRouteImport.update({
@@ -388,6 +394,7 @@ export interface FileRoutesByFullPath {
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/lme-ia': typeof ApiLmeIaRoute
   '/api/mapa-familiar-ia': typeof ApiMapaFamiliarIaRoute
+  '/api/suporte-ia': typeof ApiSuporteIaRoute
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
   '/f/$formId': typeof FFormIdRoute
@@ -447,6 +454,7 @@ export interface FileRoutesByTo {
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/lme-ia': typeof ApiLmeIaRoute
   '/api/mapa-familiar-ia': typeof ApiMapaFamiliarIaRoute
+  '/api/suporte-ia': typeof ApiSuporteIaRoute
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
   '/f/$formId': typeof FFormIdRoute
@@ -507,6 +515,7 @@ export interface FileRoutesById {
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/lme-ia': typeof ApiLmeIaRoute
   '/api/mapa-familiar-ia': typeof ApiMapaFamiliarIaRoute
+  '/api/suporte-ia': typeof ApiSuporteIaRoute
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
   '/f/$formId': typeof FFormIdRoute
@@ -568,6 +577,7 @@ export interface FileRouteTypes {
     | '/api/deepgram-token'
     | '/api/lme-ia'
     | '/api/mapa-familiar-ia'
+    | '/api/suporte-ia'
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
     | '/f/$formId'
@@ -627,6 +637,7 @@ export interface FileRouteTypes {
     | '/api/deepgram-token'
     | '/api/lme-ia'
     | '/api/mapa-familiar-ia'
+    | '/api/suporte-ia'
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
     | '/f/$formId'
@@ -686,6 +697,7 @@ export interface FileRouteTypes {
     | '/api/deepgram-token'
     | '/api/lme-ia'
     | '/api/mapa-familiar-ia'
+    | '/api/suporte-ia'
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
     | '/f/$formId'
@@ -746,6 +758,7 @@ export interface RootRouteChildren {
   ApiDeepgramTokenRoute: typeof ApiDeepgramTokenRoute
   ApiLmeIaRoute: typeof ApiLmeIaRoute
   ApiMapaFamiliarIaRoute: typeof ApiMapaFamiliarIaRoute
+  ApiSuporteIaRoute: typeof ApiSuporteIaRoute
   ApiWhatsappConviteRoute: typeof ApiWhatsappConviteRoute
   ApiWhatsappWebhookRoute: typeof ApiWhatsappWebhookRoute
   FFormIdRoute: typeof FFormIdRoute
@@ -877,6 +890,13 @@ declare module '@tanstack/react-router' {
       path: '/api/mapa-familiar-ia'
       fullPath: '/api/mapa-familiar-ia'
       preLoaderRoute: typeof ApiMapaFamiliarIaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/suporte-ia': {
+      id: '/api/suporte-ia'
+      path: '/api/suporte-ia'
+      fullPath: '/api/suporte-ia'
+      preLoaderRoute: typeof ApiSuporteIaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/whatsapp-convite': {
@@ -1210,6 +1230,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDeepgramTokenRoute: ApiDeepgramTokenRoute,
   ApiLmeIaRoute: ApiLmeIaRoute,
   ApiMapaFamiliarIaRoute: ApiMapaFamiliarIaRoute,
+  ApiSuporteIaRoute: ApiSuporteIaRoute,
   ApiWhatsappConviteRoute: ApiWhatsappConviteRoute,
   ApiWhatsappWebhookRoute: ApiWhatsappWebhookRoute,
   FFormIdRoute: FFormIdRoute,

@@ -223,6 +223,18 @@ export function precoAnualEquivalenteMensal(precoMensal: number): number {
   return precoMensal * (1 - DESCONTO_ANUAL);
 }
 
+/** Quanto esse plano custaria se fosse montado à la carte a partir do plano de entrada. */
+export function precoALaCarteDoPlano(plano: PlanoBase, ancora: PlanoBase = PLANO_PADRAO): number {
+  return precoDaConfiguracao(configuracaoDoPlano(plano), ancora);
+}
+
+/** % de desconto do preço de pacote deste plano em relação a montá-lo à la carte a partir do plano de entrada. 0 para o próprio plano de entrada. */
+export function descontoPercentualDoPlano(plano: PlanoBase, ancora: PlanoBase = PLANO_PADRAO): number {
+  const precoCheio = precoALaCarteDoPlano(plano, ancora);
+  if (precoCheio <= plano.precoMensal) return 0;
+  return (precoCheio - plano.precoMensal) / precoCheio;
+}
+
 export function formatarPreco(valor: number): string {
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
