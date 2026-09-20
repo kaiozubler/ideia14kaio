@@ -19,6 +19,12 @@ import { createFileRoute } from "@tanstack/react-router";
  * (gerar receita, exame, atestado, mexer na agenda) para tipo_user "medico".
  * Qualquer outro cargo cadastrado com esse telefone é recusado explicitamente.
  *
+ * Segunda camada de segurança (palavra-chave + desafio de blocos): ver
+ * src/lib/whatsapp/segurancaGate.server.ts e segurancaDesafio.ts. Protege
+ * contra perda/furto do aparelho — o telefone sozinho deixa de ser
+ * suficiente. Configurável em Minhas IAs > Copiloto > Copiloto pelo
+ * WhatsApp, via a rota /api/whatsapp/seguranca.
+ *
  * Para continuar a mesma conversa a cada nova mensagem (em vez de criar uma
  * conversa nova em ia_assist_conversas, com título gerado, toda hora), o
  * mapeamento telefone -> conversa fica em medico_assistente_sessoes_whatsapp.
@@ -333,6 +339,24 @@ export const Route = createFileRoute("/api/assistente-medico-webhook")({
             "user_id:",
             medico.id,
           );
+          return Response.json({ ok: true });
+        }
+
+        // Segunda camada de segurança: palavra-chave + desafio de blocos
+        // (ver src/lib/whatsapp/segurancaGate.server.ts). Roda antes de
+        // qualquer outra coisa — inclusive antes do comando "novo assunto" —
+        // porque enquanto a autenticação não é resolvida, nenhuma mensagem
+        // deve seguir para o assistente.
+        const { conferirSegurancaWhatsapp } = await import("@/lib/whatsapp/segurancaGate.server");
+        const resultadoSeguranca = await conferirSegurancaWhatsapp(supabaseAdmin, medico.id, textoRecebido);
+        if (!resultadoSeguranca.liberado) {
+          await enviarWhatsApp(telefoneRemetente, resultadoSeguranca.resposta);
+          await supabaseAdmin.from("whatsapp_messages").insert({
+            wa_from: telefoneRemetente,
+            direction: "outbound",
+            message_type: "text",
+            content: resultadoSeguranca.resposta,
+          });
           return Response.json({ ok: true });
         }
 
