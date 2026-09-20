@@ -35,6 +35,9 @@ import { createFileRoute } from "@tanstack/react-router";
  *     "mudando de assunto". Zera na hora, sem chamar a IA.
  *  2) Expiração automática (INATIVIDADE_MS) — se a última mensagem foi há
  *     mais de 30min, a próxima já começa um assunto novo sozinha.
+ * Uma trava leve (bloqueio_processamento_em) serializa mensagens da mesma
+ * conversa que cheguem quase juntas, pra essas duas regras não perderem
+ * efeito por uma corrida entre requisições paralelas.
  *
  * Requer as MESMAS variáveis de ambiente globais do outro webhook:
  *   WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN, WHATSAPP_VERIFY_TOKEN
@@ -190,6 +193,67 @@ async function resolverMedicoPorTelefone(
     if (data.users.length < PER_PAGE) break; // última página
   }
   return null;
+}
+
+// Trava leve para serializar mensagens da mesma conversa que chegam quase ao
+// mesmo tempo (ex.: médico manda "Outro assunto" e, um segundo depois, já
+// manda o próximo pedido). Sem isso, duas requisições em paralelo podem ler
+// o estado da sessão antes uma da outra terminar de gravar, e um reset de
+// assunto pode "não pegar" para a mensagem seguinte.
+//
+// Não é um lock distribuído de verdade (não há transação/sessão de conexão
+// persistente disponível aqui) — é uma reivindicação otimista via UPDATE
+// condicional. Suficiente para o caso comum (mensagens do mesmo médico
+// segundos depois uma da outra); não protege contra todo cenário
+// concorrente possível.
+const TRAVA_TIMEOUT_MS = 15_000; // trava considerada "expirada" (processo anterior travou/caiu)
+const TRAVA_TENTATIVAS = 6;
+const TRAVA_INTERVALO_MS = 400;
+
+function esperar(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Garante que a linha da sessão já existe, para a trava ter o que reivindicar mesmo na primeira mensagem. */
+async function garantirSessaoExiste(db: Db, idMedico: string, telefone: string) {
+  await db
+    .from("medico_assistente_sessoes_whatsapp")
+    .upsert(
+      { id_medico: idMedico, telefone, conversa_id: null } as never,
+      { onConflict: "id_medico,telefone", ignoreDuplicates: true },
+    );
+}
+
+/** Tenta reivindicar a trava; espera e tenta de novo por alguns ciclos antes de desistir (segue liberado, best-effort). */
+async function reivindicarTrava(db: Db, idMedico: string, telefone: string): Promise<boolean> {
+  await garantirSessaoExiste(db, idMedico, telefone);
+  const agora = new Date();
+  const cortIso = new Date(agora.getTime() - TRAVA_TIMEOUT_MS).toISOString();
+
+  for (let tentativa = 0; tentativa < TRAVA_TENTATIVAS; tentativa++) {
+    const { data } = await db
+      .from("medico_assistente_sessoes_whatsapp")
+      .update({ bloqueio_processamento_em: agora.toISOString() } as never)
+      .eq("id_medico", idMedico)
+      .eq("telefone", telefone)
+      .or(`bloqueio_processamento_em.is.null,bloqueio_processamento_em.lt.${cortIso}`)
+      .select("id");
+    if (data && data.length > 0) return true; // conseguiu a trava
+    await esperar(TRAVA_INTERVALO_MS);
+  }
+  console.warn(
+    "[assistente-medico-webhook] não foi possível reivindicar a trava a tempo, seguindo mesmo assim:",
+    telefone,
+  );
+  return false;
+}
+
+async function liberarTrava(db: Db, idMedico: string, telefone: string) {
+  await db
+    .from("medico_assistente_sessoes_whatsapp")
+    .update({ bloqueio_processamento_em: null } as never)
+    .eq("id_medico", idMedico)
+    .eq("telefone", telefone);
 }
 
 async function carregarSessao(db: Db, idMedico: string, telefone: string) {
@@ -360,75 +424,84 @@ export const Route = createFileRoute("/api/assistente-medico-webhook")({
           return Response.json({ ok: true });
         }
 
-        const sessao = await carregarSessao(supabaseAdmin, medico.id, telefoneRemetente);
-
-        // Comando explícito para encerrar o assunto atual — não gasta chamada
-        // de IA, só zera o vínculo com a conversa anterior e confirma.
-        if (pedeNovoAssunto(textoRecebido)) {
-          await salvarSessao(supabaseAdmin, sessao?.id || null, medico.id, telefoneRemetente, null);
-          const confirmacao = "Prontinho, encerrei o assunto anterior! Em que posso ajudar agora?";
-          await enviarWhatsApp(telefoneRemetente, confirmacao);
-          await supabaseAdmin.from("whatsapp_messages").insert({
-            wa_from: telefoneRemetente,
-            direction: "outbound",
-            message_type: "text",
-            content: confirmacao,
-          });
-          return Response.json({ ok: true });
-        }
-
-        // Expiração automática: se a última mensagem foi há muito tempo,
-        // trata como assunto novo sozinho (sem precisar de comando), pra não
-        // herdar contexto de uma conversa que na prática já tinha terminado.
-        const inativa =
-          !!sessao?.ultima_interacao && Date.now() - new Date(sessao.ultima_interacao).getTime() > INATIVIDADE_MS;
-        const conversaIdParaContinuar = inativa ? null : sessao?.conversa_id || null;
-        if (inativa) {
-          console.log(
-            "[assistente-medico-webhook] Sessão inativa há mais de",
-            INATIVIDADE_MS / 60000,
-            "min, iniciando assunto novo para",
-            telefoneRemetente,
-          );
-        }
-
-        const historico = await carregarHistoricoConversa(supabaseAdmin, medico.id, conversaIdParaContinuar);
-        const novoHistorico = [...historico, { role: "user", content: textoRecebido }];
-
+        // Trava leve: garante que, se duas mensagens do mesmo médico chegarem
+        // quase juntas, a segunda espere a primeira terminar antes de ler a
+        // sessão — evita que um reset de assunto "não pegue" pra mensagem
+        // seguinte por causa de uma corrida entre as duas requisições.
+        await reivindicarTrava(supabaseAdmin, medico.id, telefoneRemetente);
         try {
-          const { handleAssistente } = await import("./assistente-ia");
-          const res = await handleAssistente({
-            canal: "interno",
-            messages: novoHistorico,
-            user_id: medico.id,
-            conversa_id: conversaIdParaContinuar,
-          });
-          const data = (await res.json()) as { reply?: string; conversa_id?: string | null };
-          const reply = (data.reply || "Desculpe, não consegui responder agora. Tente novamente em instantes.").trim();
+          const sessao = await carregarSessao(supabaseAdmin, medico.id, telefoneRemetente);
 
-          await salvarSessao(
-            supabaseAdmin,
-            sessao?.id || null,
-            medico.id,
-            telefoneRemetente,
-            data.conversa_id || conversaIdParaContinuar,
-          );
-          await enviarWhatsApp(telefoneRemetente, reply);
-          await supabaseAdmin.from("whatsapp_messages").insert({
-            wa_from: telefoneRemetente,
-            direction: "outbound",
-            message_type: "text",
-            content: reply,
-          });
-        } catch (e) {
-          console.error("[assistente-medico-webhook] Falha ao processar mensagem:", e);
-          await enviarWhatsApp(
-            telefoneRemetente,
-            "Desculpe, tive um problema para responder agora. Tente novamente em instantes.",
-          );
+          // Comando explícito para encerrar o assunto atual — não gasta chamada
+          // de IA, só zera o vínculo com a conversa anterior e confirma.
+          if (pedeNovoAssunto(textoRecebido)) {
+            await salvarSessao(supabaseAdmin, sessao?.id || null, medico.id, telefoneRemetente, null);
+            const confirmacao = "Prontinho, encerrei o assunto anterior! Em que posso ajudar agora?";
+            await enviarWhatsApp(telefoneRemetente, confirmacao);
+            await supabaseAdmin.from("whatsapp_messages").insert({
+              wa_from: telefoneRemetente,
+              direction: "outbound",
+              message_type: "text",
+              content: confirmacao,
+            });
+            return Response.json({ ok: true });
+          }
+
+          // Expiração automática: se a última mensagem foi há muito tempo,
+          // trata como assunto novo sozinho (sem precisar de comando), pra não
+          // herdar contexto de uma conversa que na prática já tinha terminado.
+          const inativa =
+            !!sessao?.ultima_interacao && Date.now() - new Date(sessao.ultima_interacao).getTime() > INATIVIDADE_MS;
+          const conversaIdParaContinuar = inativa ? null : sessao?.conversa_id || null;
+          if (inativa) {
+            console.log(
+              "[assistente-medico-webhook] Sessão inativa há mais de",
+              INATIVIDADE_MS / 60000,
+              "min, iniciando assunto novo para",
+              telefoneRemetente,
+            );
+          }
+
+          const historico = await carregarHistoricoConversa(supabaseAdmin, medico.id, conversaIdParaContinuar);
+          const novoHistorico = [...historico, { role: "user", content: textoRecebido }];
+
+          try {
+            const { handleAssistente } = await import("./assistente-ia");
+            const res = await handleAssistente({
+              canal: "interno",
+              messages: novoHistorico,
+              user_id: medico.id,
+              conversa_id: conversaIdParaContinuar,
+            });
+            const data = (await res.json()) as { reply?: string; conversa_id?: string | null };
+            const reply = (data.reply || "Desculpe, não consegui responder agora. Tente novamente em instantes.").trim();
+
+            await salvarSessao(
+              supabaseAdmin,
+              sessao?.id || null,
+              medico.id,
+              telefoneRemetente,
+              data.conversa_id || conversaIdParaContinuar,
+            );
+            await enviarWhatsApp(telefoneRemetente, reply);
+            await supabaseAdmin.from("whatsapp_messages").insert({
+              wa_from: telefoneRemetente,
+              direction: "outbound",
+              message_type: "text",
+              content: reply,
+            });
+          } catch (e) {
+            console.error("[assistente-medico-webhook] Falha ao processar mensagem:", e);
+            await enviarWhatsApp(
+              telefoneRemetente,
+              "Desculpe, tive um problema para responder agora. Tente novamente em instantes.",
+            );
+          }
+
+          return Response.json({ ok: true });
+        } finally {
+          await liberarTrava(supabaseAdmin, medico.id, telefoneRemetente);
         }
-
-        return Response.json({ ok: true });
       },
     },
   },

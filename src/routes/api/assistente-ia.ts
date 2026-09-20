@@ -53,6 +53,9 @@ Fale sempre em português do Brasil, de forma curta, objetiva e cordial.
 
 Você pode: agendar pacientes, gerar receitas, gerar solicitações de exames, gerar atestados/declarações, responder perguntas sobre a agenda do dia, enviar mensagens/documentos ao paciente por WhatsApp, convidar um paciente a agendar sozinho pelo WhatsApp (ele conversa com uma versão restrita da IA, que só agenda/consulta/cancela o próprio atendimento dele), criar cadastro de paciente e responder dúvidas de uso do sistema.
 
+REGRA CRÍTICA — NUNCA MINTA SOBRE SUCESSO NA GERAÇÃO DE DOCUMENTOS
+- Depois de chamar gerar_receita, gerar_atestado ou gerar_solicitacao_exame, SEMPRE confira o campo arquivo_anexado do resultado. Se vier "erro", a ação falhou por completo — diga isso claramente ("não foi possível gerar", nunca "gerado com sucesso"). Se vier um campo "aviso" (arquivo_anexado: false), o registro foi salvo mas o PDF não — informe exatamente isso ao médico, sem dizer que o arquivo está pronto ou "deve aparecer em instantes". Só confirme sucesso completo quando arquivo_anexado for true e não houver "erro" nem "aviso".
+
 REGRAS DE IDENTIFICAÇÃO DO PACIENTE
 - Você NÃO sabe quem é o paciente até perguntar. Sempre que uma ação precisar de um paciente ainda não identificado nesta conversa, pergunte o NOME.
 - Se um paciente já foi identificado/confirmado nesta mesma conversa (nome próprio já mencionado e confirmado), REAPROVEITE esse paciente_id para as próximas ações — não chame buscar_paciente de novo só porque o médico disse "o paciente", "ele", "confirma" ou similar. Esses termos genéricos se referem ao paciente já identificado, nunca são um nome novo para buscar.
@@ -1190,7 +1193,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
 
       let documentoId: string | null = null;
       if (medicoId) {
-        const { data } = await db
+        const { data, error: insertErr } = await db
           .from("documentos_paciente")
           .insert({
             id_medico: medicoId,
@@ -1202,6 +1205,14 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
           })
           .select("id")
           .single();
+        if (insertErr) {
+          console.error("[gerar_receita] falha ao salvar documento:", insertErr.message);
+          return {
+            erro: "falha_ao_salvar_documento",
+            instrucao:
+              "A receita NÃO foi gerada — houve uma falha ao salvar o documento. Informe isso claramente ao médico (não diga que deu certo) e sugira tentar novamente em instantes; se persistir, use o suporte.",
+          };
+        }
         documentoId = data?.id ?? null;
       }
 
@@ -1225,6 +1236,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         if (usoErr) console.warn("[gerar_receita] falha ao registrar medicamentos em uso:", usoErr.message);
       }
       let arquivo: { arquivo_path: string; arquivo_nome: string } | null = null;
+      let pdfErro: string | null = null;
       if (medicoId && documentoId) {
         const { buildReceitaPdf } = await import("@/lib/documentos/pdfBuilder.server");
         const { getDoctorInfo, attachPdfToDocumento } = await import("@/lib/documentos/attach.server");
@@ -1243,7 +1255,9 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
             bytes,
             filename: `receita-${documentoId}.pdf`,
           });
+          if (!arquivo) pdfErro = "Não foi possível anexar o arquivo PDF (falha no armazenamento).";
         } catch (e) {
+          pdfErro = e instanceof Error ? e.message : "Erro desconhecido ao gerar o PDF.";
           console.error("[gerar_receita] falha ao gerar PDF:", e);
         }
       }
@@ -1258,7 +1272,17 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         arquivo_path: arquivo?.arquivo_path || null,
         arquivo_nome: arquivo?.arquivo_nome || null,
       };
-      return { gerado: true, documento_id: documentoId, medicamentos: medicamentos.length, arquivo_anexado: !!arquivo };
+      return {
+        gerado: true,
+        documento_id: documentoId,
+        medicamentos: medicamentos.length,
+        arquivo_anexado: !!arquivo,
+        ...(pdfErro
+          ? {
+              aviso: `O texto da receita foi salvo, mas o arquivo PDF NÃO pôde ser gerado/anexado (${pdfErro}). Informe isso claramente ao médico — não diga que o arquivo está pronto — e sugira tentar novamente.`,
+            }
+          : {}),
+      };
     }
 
     case "buscar_medicamento": {
@@ -1367,7 +1391,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
 
       let documentoId: string | null = null;
       if (medicoId) {
-        const { data } = await db
+        const { data, error: insertErr } = await db
           .from("documentos_paciente")
           .insert({
             id_medico: medicoId,
@@ -1378,9 +1402,18 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
           })
           .select("id")
           .single();
+        if (insertErr) {
+          console.error("[gerar_solicitacao_exame] falha ao salvar documento:", insertErr.message);
+          return {
+            erro: "falha_ao_salvar_documento",
+            instrucao:
+              "A solicitação de exame NÃO foi gerada — houve uma falha ao salvar o documento. Informe isso claramente ao médico (não diga que deu certo) e sugira tentar novamente em instantes; se persistir, use o suporte.",
+          };
+        }
         documentoId = data?.id ?? null;
       }
       let arquivo: { arquivo_path: string; arquivo_nome: string } | null = null;
+      let pdfErro: string | null = null;
       if (medicoId && documentoId) {
         const { buildSolicitacaoExamePdf } = await import("@/lib/documentos/pdfBuilder.server");
         const { getDoctorInfo, attachPdfToDocumento } = await import("@/lib/documentos/attach.server");
@@ -1406,7 +1439,9 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
             bytes,
             filename: `solicitacao-exames-${documentoId}.pdf`,
           });
+          if (!arquivo) pdfErro = "Não foi possível anexar o arquivo PDF (falha no armazenamento).";
         } catch (e) {
+          pdfErro = e instanceof Error ? e.message : "Erro desconhecido ao gerar o PDF.";
           console.error("[gerar_solicitacao_exame] falha ao gerar PDF:", e);
         }
       }
@@ -1434,6 +1469,11 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         exames: examesValidados.length,
         nao_encontrados: naoEncontrados.length ? naoEncontrados : undefined,
         arquivo_anexado: !!arquivo,
+        ...(pdfErro
+          ? {
+              aviso: `O pedido foi salvo, mas o arquivo PDF NÃO pôde ser gerado/anexado (${pdfErro}). Informe isso claramente ao médico — não diga que o arquivo está pronto — e sugira tentar novamente.`,
+            }
+          : {}),
       };
     }
 
@@ -1447,7 +1487,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         observacao: args.observacao ?? null,
       };
       if (medicoId) {
-        const { data } = await db
+        const { data, error: insertErr } = await db
           .from("documentos_paciente")
           .insert({
             id_medico: medicoId,
@@ -1458,9 +1498,17 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
           })
           .select("id")
           .single();
+        if (insertErr) {
+          console.error("[gerar_atestado] falha ao salvar documento:", insertErr.message);
+          return {
+            erro: "falha_ao_salvar_documento",
+            instrucao: `O ${tipo} NÃO foi gerado — houve uma falha ao salvar o documento. Informe isso claramente ao médico (não diga que deu certo) e sugira tentar novamente em instantes; se persistir, use o suporte.`,
+          };
+        }
         documentoId = data?.id ?? null;
       }
       let arquivo: { arquivo_path: string; arquivo_nome: string } | null = null;
+      let pdfErro: string | null = null;
       if (medicoId && documentoId) {
         const { buildAtestadoPdf } = await import("@/lib/documentos/pdfBuilder.server");
         const { getDoctorInfo, attachPdfToDocumento } = await import("@/lib/documentos/attach.server");
@@ -1480,7 +1528,9 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
             bytes,
             filename: `${tipo}-${documentoId}.pdf`,
           });
+          if (!arquivo) pdfErro = "Não foi possível anexar o arquivo PDF (falha no armazenamento).";
         } catch (e) {
+          pdfErro = e instanceof Error ? e.message : "Erro desconhecido ao gerar o PDF.";
           console.error("[gerar_atestado] falha ao gerar PDF:", e);
         }
       }
@@ -1493,7 +1543,17 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         arquivo_path: arquivo?.arquivo_path || null,
         arquivo_nome: arquivo?.arquivo_nome || null,
       };
-      return { gerado: true, documento_id: documentoId, ...conteudo, arquivo_anexado: !!arquivo };
+      return {
+        gerado: true,
+        documento_id: documentoId,
+        ...conteudo,
+        arquivo_anexado: !!arquivo,
+        ...(pdfErro
+          ? {
+              aviso: `O ${tipo} foi salvo, mas o arquivo PDF NÃO pôde ser gerado/anexado (${pdfErro}). Informe isso claramente ao médico — não diga que o arquivo está pronto — e sugira tentar novamente.`,
+            }
+          : {}),
+      };
     }
 
     case "reenviar_documento": {
