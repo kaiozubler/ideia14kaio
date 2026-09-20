@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   Bot,
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { ChatSuporte } from "@/components/suporte/ChatSuporte";
+import { salvarPedido } from "@/lib/contratacao/pedido";
 import {
   DESCONTO_ANUAL,
   MAX_MEDICOS,
@@ -68,12 +69,24 @@ type Ciclo = "mensal" | "anual";
 function PaginaPlanos() {
   const navigate = useNavigate();
 
-  const [ancoraId, setAncoraId] = useState<PlanoBaseId>(PLANO_PADRAO.id);
-  const [config, setConfig] = useState<ConfiguracaoPlano>(configuracaoDoPlano(PLANO_PADRAO));
+  const [ancoraId, setAncoraId] = useState<PlanoBaseId>("pro");
+  const [config, setConfig] = useState<ConfiguracaoPlano>(
+    configuracaoDoPlano(PLANOS_BASE.find((p) => p.id === "pro") ?? PLANO_PADRAO),
+  );
   const [ciclo, setCiclo] = useState<Ciclo>("mensal");
-  const [jaEscolheu, setJaEscolheu] = useState(false);
+  const [jaEscolheu, setJaEscolheu] = useState(true);
+  const [rolado, setRolado] = useState(false);
 
   const configuradorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function aoRolar() {
+      setRolado(window.scrollY > 140);
+    }
+    aoRolar();
+    window.addEventListener("scroll", aoRolar, { passive: true });
+    return () => window.removeEventListener("scroll", aoRolar);
+  }, []);
 
   const ancora = PLANOS_BASE.find((p) => p.id === ancoraId) ?? PLANO_PADRAO;
   const ajustado = !configuracaoIgualAncora(config, ancora);
@@ -100,18 +113,8 @@ function PaginaPlanos() {
   }
 
   function irParaPagamento() {
-    navigate({
-      to: "/checkout",
-      search: {
-        plano: ancora.id,
-        medicos: config.medicos,
-        secretarias: config.secretarias,
-        copiloto: config.copiloto,
-        whatsapp: config.whatsapp,
-        video: config.video,
-        ciclo,
-      },
-    });
+    salvarPedido({ plano: ancora.id, config, ciclo });
+    navigate({ to: "/contratacao/confirmar" });
   }
 
   const resumoWhatsApp = useMemo(() => {
@@ -140,6 +143,26 @@ function PaginaPlanos() {
   return (
     <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(135deg,#eef8f1_0%,#f3f1fb_45%,#fdf6ec_100%)]">
       <Blobs />
+
+      {/* Barra fixa que sobrepõe o conteúdo ao rolar, com o toggle mensal/anual sempre à mão */}
+      <div
+        className={[
+          "fixed inset-x-0 top-0 z-40 flex justify-center border-b border-white/60 bg-white/80 backdrop-blur-xl transition-all duration-300",
+          rolado ? "translate-y-0 py-2.5 opacity-100 shadow-sm" : "pointer-events-none -translate-y-full py-0 opacity-0",
+        ].join(" ")}
+      >
+        <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/70 p-1">
+          <CicloButton ativo={ciclo === "mensal"} onClick={() => setCiclo("mensal")}>
+            Mensal
+          </CicloButton>
+          <CicloButton ativo={ciclo === "anual"} onClick={() => setCiclo("anual")}>
+            Anual
+            <span className="ml-1.5 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+              -{Math.round(DESCONTO_ANUAL * 100)}%
+            </span>
+          </CicloButton>
+        </div>
+      </div>
 
       <div className="relative mx-auto max-w-6xl px-4 pb-44 pt-14 md:px-8 md:pt-20">
         {/* Cabeçalho */}
@@ -182,9 +205,18 @@ function PaginaPlanos() {
               return (
                 <div
                   key={plano.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => escolherPlanoPronto(plano.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      escolherPlanoPronto(plano.id);
+                    }
+                  }}
                   style={{ borderRadius: "32px" }}
                   className={[
-                    "relative flex flex-col p-7 backdrop-blur-xl transition-all",
+                    "relative flex cursor-pointer flex-col p-7 backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:shadow-2xl",
                     plano.destaque
                       ? "border-2 border-emerald-300/80 bg-white/70 shadow-xl shadow-emerald-200/40"
                       : "border border-white/80 bg-white/60 shadow-xl shadow-slate-200/40",
@@ -208,7 +240,7 @@ function PaginaPlanos() {
                       <div className="mb-1 flex items-center gap-2">
                         <span className="text-sm text-slate-400 line-through">{formatarPreco(precoALaCarte)}</span>
                         <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-                          -{Math.round(descontoPct * 100)}% vs. à la carte
+                          -{Math.round(descontoPct * 100)}% vs. plano Basic
                         </span>
                       </div>
                     )}
@@ -233,7 +265,10 @@ function PaginaPlanos() {
                   </ul>
 
                   <button
-                    onClick={() => escolherPlanoPronto(plano.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      escolherPlanoPronto(plano.id);
+                    }}
                     className={[
                       "mt-6 rounded-2xl px-4 py-3 text-sm font-semibold transition-colors",
                       plano.destaque

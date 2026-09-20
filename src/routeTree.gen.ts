@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as PlanosRouteImport } from './routes/planos'
 import { Route as ApiAnalisarExameRouteImport } from './routes/api/analisar-exame'
 import { Route as ApiAssistenteIaRouteImport } from './routes/api/assistente-ia'
@@ -24,6 +23,11 @@ import { Route as ApiMapaFamiliarIaRouteImport } from './routes/api/mapa-familia
 import { Route as ApiSuporteIaRouteImport } from './routes/api/suporte-ia'
 import { Route as ApiWhatsappConviteRouteImport } from './routes/api/whatsapp-convite'
 import { Route as ApiWhatsappWebhookRouteImport } from './routes/api/whatsapp-webhook'
+import { Route as ContratacaoConclusaoRouteImport } from './routes/contratacao/conclusao'
+import { Route as ContratacaoConfirmarRouteImport } from './routes/contratacao/confirmar'
+import { Route as ContratacaoDadosRouteImport } from './routes/contratacao/dados'
+import { Route as ContratacaoPagamentoRouteImport } from './routes/contratacao/pagamento'
+import { Route as ContratacaoTermosRouteImport } from './routes/contratacao/termos'
 import { Route as FFormIdRouteImport } from './routes/f.$formId'
 import { Route as TTermoIdRouteImport } from './routes/t.$termoId'
 import { Route as ApiBaseConhecimentoAtalhosRouteImport } from './routes/api/base-conhecimento/atalhos'
@@ -72,11 +76,6 @@ import { Route as ApiSignatureIntegraBrySignRouteImport } from './routes/api/sig
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CheckoutRoute = CheckoutRouteImport.update({
-  id: '/checkout',
-  path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PlanosRoute = PlanosRouteImport.update({
@@ -144,6 +143,31 @@ const ApiWhatsappConviteRoute = ApiWhatsappConviteRouteImport.update({
 const ApiWhatsappWebhookRoute = ApiWhatsappWebhookRouteImport.update({
   id: '/api/whatsapp-webhook',
   path: '/api/whatsapp-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContratacaoConclusaoRoute = ContratacaoConclusaoRouteImport.update({
+  id: '/contratacao/conclusao',
+  path: '/contratacao/conclusao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContratacaoConfirmarRoute = ContratacaoConfirmarRouteImport.update({
+  id: '/contratacao/confirmar',
+  path: '/contratacao/confirmar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContratacaoDadosRoute = ContratacaoDadosRouteImport.update({
+  id: '/contratacao/dados',
+  path: '/contratacao/dados',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContratacaoPagamentoRoute = ContratacaoPagamentoRouteImport.update({
+  id: '/contratacao/pagamento',
+  path: '/contratacao/pagamento',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContratacaoTermosRoute = ContratacaoTermosRouteImport.update({
+  id: '/contratacao/termos',
+  path: '/contratacao/termos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FFormIdRoute = FFormIdRouteImport.update({
@@ -389,7 +413,6 @@ const ApiSignatureIntegraBrySignRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/checkout': typeof CheckoutRoute
   '/planos': typeof PlanosRoute
   '/api/analisar-exame': typeof ApiAnalisarExameRoute
   '/api/assistente-ia': typeof ApiAssistenteIaRoute
@@ -403,6 +426,11 @@ export interface FileRoutesByFullPath {
   '/api/suporte-ia': typeof ApiSuporteIaRoute
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
+  '/contratacao/conclusao': typeof ContratacaoConclusaoRoute
+  '/contratacao/confirmar': typeof ContratacaoConfirmarRoute
+  '/contratacao/dados': typeof ContratacaoDadosRoute
+  '/contratacao/pagamento': typeof ContratacaoPagamentoRoute
+  '/contratacao/termos': typeof ContratacaoTermosRoute
   '/f/$formId': typeof FFormIdRoute
   '/t/$termoId': typeof TTermoIdRoute
   '/api/base-conhecimento/atalhos': typeof ApiBaseConhecimentoAtalhosRoute
@@ -450,7 +478,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/checkout': typeof CheckoutRoute
   '/planos': typeof PlanosRoute
   '/api/analisar-exame': typeof ApiAnalisarExameRoute
   '/api/assistente-ia': typeof ApiAssistenteIaRoute
@@ -464,6 +491,11 @@ export interface FileRoutesByTo {
   '/api/suporte-ia': typeof ApiSuporteIaRoute
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
+  '/contratacao/conclusao': typeof ContratacaoConclusaoRoute
+  '/contratacao/confirmar': typeof ContratacaoConfirmarRoute
+  '/contratacao/dados': typeof ContratacaoDadosRoute
+  '/contratacao/pagamento': typeof ContratacaoPagamentoRoute
+  '/contratacao/termos': typeof ContratacaoTermosRoute
   '/f/$formId': typeof FFormIdRoute
   '/t/$termoId': typeof TTermoIdRoute
   '/api/base-conhecimento/atalhos': typeof ApiBaseConhecimentoAtalhosRoute
@@ -512,7 +544,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/checkout': typeof CheckoutRoute
   '/planos': typeof PlanosRoute
   '/api/analisar-exame': typeof ApiAnalisarExameRoute
   '/api/assistente-ia': typeof ApiAssistenteIaRoute
@@ -526,6 +557,11 @@ export interface FileRoutesById {
   '/api/suporte-ia': typeof ApiSuporteIaRoute
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
+  '/contratacao/conclusao': typeof ContratacaoConclusaoRoute
+  '/contratacao/confirmar': typeof ContratacaoConfirmarRoute
+  '/contratacao/dados': typeof ContratacaoDadosRoute
+  '/contratacao/pagamento': typeof ContratacaoPagamentoRoute
+  '/contratacao/termos': typeof ContratacaoTermosRoute
   '/f/$formId': typeof FFormIdRoute
   '/t/$termoId': typeof TTermoIdRoute
   '/api/base-conhecimento/atalhos': typeof ApiBaseConhecimentoAtalhosRoute
@@ -575,7 +611,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/checkout'
     | '/planos'
     | '/api/analisar-exame'
     | '/api/assistente-ia'
@@ -589,6 +624,11 @@ export interface FileRouteTypes {
     | '/api/suporte-ia'
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
+    | '/contratacao/conclusao'
+    | '/contratacao/confirmar'
+    | '/contratacao/dados'
+    | '/contratacao/pagamento'
+    | '/contratacao/termos'
     | '/f/$formId'
     | '/t/$termoId'
     | '/api/base-conhecimento/atalhos'
@@ -636,7 +676,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/checkout'
     | '/planos'
     | '/api/analisar-exame'
     | '/api/assistente-ia'
@@ -650,6 +689,11 @@ export interface FileRouteTypes {
     | '/api/suporte-ia'
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
+    | '/contratacao/conclusao'
+    | '/contratacao/confirmar'
+    | '/contratacao/dados'
+    | '/contratacao/pagamento'
+    | '/contratacao/termos'
     | '/f/$formId'
     | '/t/$termoId'
     | '/api/base-conhecimento/atalhos'
@@ -697,7 +741,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/checkout'
     | '/planos'
     | '/api/analisar-exame'
     | '/api/assistente-ia'
@@ -711,6 +754,11 @@ export interface FileRouteTypes {
     | '/api/suporte-ia'
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
+    | '/contratacao/conclusao'
+    | '/contratacao/confirmar'
+    | '/contratacao/dados'
+    | '/contratacao/pagamento'
+    | '/contratacao/termos'
     | '/f/$formId'
     | '/t/$termoId'
     | '/api/base-conhecimento/atalhos'
@@ -759,7 +807,6 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CheckoutRoute: typeof CheckoutRoute
   PlanosRoute: typeof PlanosRoute
   ApiAnalisarExameRoute: typeof ApiAnalisarExameRoute
   ApiAssistenteIaRoute: typeof ApiAssistenteIaRoute
@@ -773,6 +820,11 @@ export interface RootRouteChildren {
   ApiSuporteIaRoute: typeof ApiSuporteIaRoute
   ApiWhatsappConviteRoute: typeof ApiWhatsappConviteRoute
   ApiWhatsappWebhookRoute: typeof ApiWhatsappWebhookRoute
+  ContratacaoConclusaoRoute: typeof ContratacaoConclusaoRoute
+  ContratacaoConfirmarRoute: typeof ContratacaoConfirmarRoute
+  ContratacaoDadosRoute: typeof ContratacaoDadosRoute
+  ContratacaoPagamentoRoute: typeof ContratacaoPagamentoRoute
+  ContratacaoTermosRoute: typeof ContratacaoTermosRoute
   FFormIdRoute: typeof FFormIdRoute
   TTermoIdRoute: typeof TTermoIdRoute
   ApiBaseConhecimentoAtalhosRoute: typeof ApiBaseConhecimentoAtalhosRoute
@@ -826,13 +878,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/checkout': {
-      id: '/checkout'
-      path: '/checkout'
-      fullPath: '/checkout'
-      preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/planos': {
@@ -924,6 +969,41 @@ declare module '@tanstack/react-router' {
       path: '/api/whatsapp-webhook'
       fullPath: '/api/whatsapp-webhook'
       preLoaderRoute: typeof ApiWhatsappWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contratacao/conclusao': {
+      id: '/contratacao/conclusao'
+      path: '/contratacao/conclusao'
+      fullPath: '/contratacao/conclusao'
+      preLoaderRoute: typeof ContratacaoConclusaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contratacao/confirmar': {
+      id: '/contratacao/confirmar'
+      path: '/contratacao/confirmar'
+      fullPath: '/contratacao/confirmar'
+      preLoaderRoute: typeof ContratacaoConfirmarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contratacao/dados': {
+      id: '/contratacao/dados'
+      path: '/contratacao/dados'
+      fullPath: '/contratacao/dados'
+      preLoaderRoute: typeof ContratacaoDadosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contratacao/pagamento': {
+      id: '/contratacao/pagamento'
+      path: '/contratacao/pagamento'
+      fullPath: '/contratacao/pagamento'
+      preLoaderRoute: typeof ContratacaoPagamentoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contratacao/termos': {
+      id: '/contratacao/termos'
+      path: '/contratacao/termos'
+      fullPath: '/contratacao/termos'
+      preLoaderRoute: typeof ContratacaoTermosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/f/$formId': {
@@ -1239,7 +1319,6 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CheckoutRoute: CheckoutRoute,
   PlanosRoute: PlanosRoute,
   ApiAnalisarExameRoute: ApiAnalisarExameRoute,
   ApiAssistenteIaRoute: ApiAssistenteIaRoute,
@@ -1253,6 +1332,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSuporteIaRoute: ApiSuporteIaRoute,
   ApiWhatsappConviteRoute: ApiWhatsappConviteRoute,
   ApiWhatsappWebhookRoute: ApiWhatsappWebhookRoute,
+  ContratacaoConclusaoRoute: ContratacaoConclusaoRoute,
+  ContratacaoConfirmarRoute: ContratacaoConfirmarRoute,
+  ContratacaoDadosRoute: ContratacaoDadosRoute,
+  ContratacaoPagamentoRoute: ContratacaoPagamentoRoute,
+  ContratacaoTermosRoute: ContratacaoTermosRoute,
   FFormIdRoute: FFormIdRoute,
   TTermoIdRoute: TTermoIdRoute,
   ApiBaseConhecimentoAtalhosRoute: ApiBaseConhecimentoAtalhosRoute,
