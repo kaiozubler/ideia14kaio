@@ -39,6 +39,13 @@ import { createFileRoute } from "@tanstack/react-router";
  * conversa que cheguem quase juntas, pra essas duas regras não perderem
  * efeito por uma corrida entre requisições paralelas.
  *
+ * Paciente ativo: o paciente identificado/confirmado na conversa fica
+ * salvo na sessão (paciente_ativo) e é reinjetado explicitamente a cada
+ * mensagem seguinte (via body.paciente_id/paciente_nome), em vez de
+ * depender só do modelo reconstruir isso lendo o histórico em texto livre
+ * — isso se mostrou pouco confiável sozinho em conversas mais longas.
+ * Zera junto com o assunto (reset explícito ou por inatividade).
+ *
  * Requer as MESMAS variáveis de ambiente globais do outro webhook:
  *   WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN, WHATSAPP_VERIFY_TOKEN
  *   (e opcionalmente WHATSAPP_APP_SECRET)
@@ -259,7 +266,7 @@ async function liberarTrava(db: Db, idMedico: string, telefone: string) {
 async function carregarSessao(db: Db, idMedico: string, telefone: string) {
   const { data } = await db
     .from("medico_assistente_sessoes_whatsapp")
-    .select("id,conversa_id,ultima_interacao")
+    .select("id,conversa_id,ultima_interacao,paciente_ativo")
     .eq("id_medico", idMedico)
     .eq("telefone", telefone)
     .maybeSingle();
@@ -288,25 +295,28 @@ async function carregarHistoricoConversa(db: Db, idMedico: string, conversaId: s
     .slice(-MAX_HISTORICO);
 }
 
+type PacienteAtivo = { paciente_id: string; nome: string } | null;
+
 async function salvarSessao(
   db: Db,
   sessaoId: string | null,
   idMedico: string,
   telefone: string,
   conversaId: string | null,
+  pacienteAtivo?: PacienteAtivo,
 ) {
   if (sessaoId) {
-    await db
-      .from("medico_assistente_sessoes_whatsapp")
-      .update({ conversa_id: conversaId, ultima_interacao: new Date().toISOString() })
-      .eq("id", sessaoId);
+    const update: Record<string, unknown> = { conversa_id: conversaId, ultima_interacao: new Date().toISOString() };
+    if (pacienteAtivo !== undefined) update.paciente_ativo = pacienteAtivo;
+    await db.from("medico_assistente_sessoes_whatsapp").update(update as never).eq("id", sessaoId);
     return;
   }
   await db.from("medico_assistente_sessoes_whatsapp").insert({
     id_medico: idMedico,
     telefone,
     conversa_id: conversaId,
-  });
+    paciente_ativo: pacienteAtivo ?? null,
+  } as never);
 }
 
 export const Route = createFileRoute("/api/assistente-medico-webhook")({
@@ -435,7 +445,7 @@ export const Route = createFileRoute("/api/assistente-medico-webhook")({
           // Comando explícito para encerrar o assunto atual — não gasta chamada
           // de IA, só zera o vínculo com a conversa anterior e confirma.
           if (pedeNovoAssunto(textoRecebido)) {
-            await salvarSessao(supabaseAdmin, sessao?.id || null, medico.id, telefoneRemetente, null);
+            await salvarSessao(supabaseAdmin, sessao?.id || null, medico.id, telefoneRemetente, null, null);
             const confirmacao = "Prontinho, encerrei o assunto anterior! Em que posso ajudar agora?";
             await enviarWhatsApp(telefoneRemetente, confirmacao);
             await supabaseAdmin.from("whatsapp_messages").insert({
@@ -464,6 +474,9 @@ export const Route = createFileRoute("/api/assistente-medico-webhook")({
 
           const historico = await carregarHistoricoConversa(supabaseAdmin, medico.id, conversaIdParaContinuar);
           const novoHistorico = [...historico, { role: "user", content: textoRecebido }];
+          const pacienteAtivoParaContinuar = inativa
+            ? null
+            : ((sessao?.paciente_ativo as PacienteAtivo | null) ?? null);
 
           try {
             const { handleAssistente } = await import("./assistente-ia");
@@ -472,8 +485,14 @@ export const Route = createFileRoute("/api/assistente-medico-webhook")({
               messages: novoHistorico,
               user_id: medico.id,
               conversa_id: conversaIdParaContinuar,
+              paciente_id: pacienteAtivoParaContinuar?.paciente_id || null,
+              paciente_nome: pacienteAtivoParaContinuar?.nome || null,
             });
-            const data = (await res.json()) as { reply?: string; conversa_id?: string | null };
+            const data = (await res.json()) as {
+              reply?: string;
+              conversa_id?: string | null;
+              paciente_ativo?: PacienteAtivo;
+            };
             const reply = (data.reply || "Desculpe, não consegui responder agora. Tente novamente em instantes.").trim();
 
             await salvarSessao(
@@ -482,6 +501,7 @@ export const Route = createFileRoute("/api/assistente-medico-webhook")({
               medico.id,
               telefoneRemetente,
               data.conversa_id || conversaIdParaContinuar,
+              data.paciente_ativo !== undefined ? data.paciente_ativo : pacienteAtivoParaContinuar,
             );
             await enviarWhatsApp(telefoneRemetente, reply);
             await supabaseAdmin.from("whatsapp_messages").insert({

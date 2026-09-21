@@ -720,6 +720,12 @@ type ToolCtx = {
   db: Db;
   medicoId: string | null;
   pendingAction: { value: unknown };
+  // Último paciente identificado/usado nesta chamada — permite ao chamador
+  // (ex.: o webhook do WhatsApp) lembrar explicitamente "o paciente ativo é
+  // X" na próxima mensagem, em vez de depender só do modelo reconstruir
+  // isso lendo o histórico em texto livre (o que se mostrou pouco confiável
+  // em conversas mais longas).
+  pacienteAtivo: { value: { paciente_id: string; nome: string } | null };
   apiKey: string;
   // Preenchidos apenas no canal "paciente": identidade já resolvida pelo webhook,
   // nunca decidida pela IA a partir do texto da conversa.
@@ -777,6 +783,9 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
       if (medicoId) q = q.eq("user_id", medicoId);
       const { data, error } = await q;
       if (error) return { erro: error.message };
+      if (data && data.length === 1) {
+        ctx.pacienteAtivo.value = { paciente_id: data[0].paciente_id, nome: data[0].name };
+      }
       return {
         total: data?.length ?? 0,
         pacientes: (data ?? []).map((p) => ({
@@ -1136,6 +1145,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
     case "gerar_receita": {
       if (args.paciente_id && !isValidUuid(args.paciente_id)) return erroPacienteIdInvalido(String(args.paciente_id));
       if (args.paciente_id && medicoId && !(await pacienteIdPertenceAoMedico(db, args.paciente_id, medicoId))) return erroPacienteNaoPertence(String(args.paciente_id));
+      if (args.paciente_id && args.paciente_nome) ctx.pacienteAtivo.value = { paciente_id: args.paciente_id, nome: String(args.paciente_nome) };
       const medicamentosBrutos = Array.isArray(args.medicamentos) ? args.medicamentos : [];
       if (!medicamentosBrutos.length) return { erro: "Informe ao menos um medicamento." };
 
@@ -1365,6 +1375,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
     case "gerar_solicitacao_exame": {
       if (args.paciente_id && !isValidUuid(args.paciente_id)) return erroPacienteIdInvalido(String(args.paciente_id));
       if (args.paciente_id && medicoId && !(await pacienteIdPertenceAoMedico(db, args.paciente_id, medicoId))) return erroPacienteNaoPertence(String(args.paciente_id));
+      if (args.paciente_id && args.paciente_nome) ctx.pacienteAtivo.value = { paciente_id: args.paciente_id, nome: String(args.paciente_nome) };
       const exames = Array.isArray(args.exames) ? args.exames : [];
       if (!exames.length) return { erro: "Informe ao menos um exame." };
       const cpfDigits = onlyDigits(args.paciente_cpf);
@@ -1522,6 +1533,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
     case "gerar_atestado": {
       if (args.paciente_id && !isValidUuid(args.paciente_id)) return erroPacienteIdInvalido(String(args.paciente_id));
       if (args.paciente_id && medicoId && !(await pacienteIdPertenceAoMedico(db, args.paciente_id, medicoId))) return erroPacienteNaoPertence(String(args.paciente_id));
+      if (args.paciente_id && args.paciente_nome) ctx.pacienteAtivo.value = { paciente_id: args.paciente_id, nome: String(args.paciente_nome) };
       const tipo = args.tipo === "declaracao" ? "declaracao" : "atestado";
       let documentoId: string | null = null;
       const conteudo = {
@@ -1893,11 +1905,15 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const pendingAction: { value: unknown } = { value: null };
+        const pacienteAtivo: { value: { paciente_id: string; nome: string } | null } = {
+          value: body.paciente_id && body.paciente_nome ? { paciente_id: body.paciente_id, nome: body.paciente_nome } : null,
+        };
         const canal = body.canal === "paciente" ? "paciente" : "interno";
         const ctx: ToolCtx = {
           db: supabaseAdmin,
           medicoId: body.user_id || null,
           pendingAction,
+          pacienteAtivo,
           apiKey,
           canal,
           pacienteFixoId: body.paciente_id || null,
@@ -1911,7 +1927,9 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
         const identContext =
           canal === "paciente"
             ? `\nPaciente da conversa: ${body.paciente_nome || "(sem nome cadastrado)"}.`
-            : "";
+            : body.paciente_id && body.paciente_nome
+              ? `\n\nPACIENTE ATIVO NESTA CONVERSA (já identificado e confirmado anteriormente): ${body.paciente_nome} (paciente_id: ${body.paciente_id}). Se a próxima solicitação do médico não mencionar outro paciente por nome, USE ESTE — não pergunte o nome de novo, não chame buscar_paciente de novo para o mesmo paciente. Se o médico mencionar um nome diferente, aí sim trate como outro paciente e busque normalmente.`
+              : "";
         const messages: ChatMessage[] = [
           {
             role: "system",
@@ -2017,6 +2035,7 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
                 reply,
                 action: pendingAction.value,
                 conversa_id: conversaId,
+                paciente_ativo: pacienteAtivo.value,
                 analise_exame: analiseExame,
                 // Nomes das bases locais que a IA confirmou ter usado nesta resposta
                 // (null se nenhuma, ou se ela considerou os trechos candidatos
@@ -2048,6 +2067,7 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
             reply: "Não consegui concluir essa solicitação agora. Pode reformular?",
             action: pendingAction.value,
             conversa_id: body.conversa_id || null,
+            paciente_ativo: pacienteAtivo.value,
           });
         } catch (err) {
           if (err instanceof Response) return err;
