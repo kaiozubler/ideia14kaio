@@ -16,14 +16,14 @@ export function LayoutContratacao({
         <div className="absolute -right-24 top-40 h-96 w-96 rounded-full bg-violet-200 opacity-60 blur-3xl" />
       </div>
 
-      <ReguaContratacao etapaAtual={etapaAtual} />
-
       {/* flex-1 + items-center: conteúdo curto fica centralizado verticalmente
-          (sem sobrar um scroll minúsculo e inútil); conteúdo mais alto que a
-          tela simplesmente cresce e flui normal, sem cortar nada — funciona
-          bem tanto em telas grandes quanto no mobile. */}
-      <div className="relative flex flex-1 items-center justify-center px-4 py-8 md:px-8 md:py-12">
-        <div className="w-full max-w-3xl">{children}</div>
+          (sem sobrar scroll minúsculo); conteúdo mais alto que a tela flui
+          normal, sem cortar nada — funciona bem em qualquer tamanho de tela. */}
+      <div className="relative flex flex-1 items-center justify-center px-4 py-6 md:px-8 md:py-8">
+        <div className="w-full max-w-3xl">
+          <ReguaContratacao etapaAtual={etapaAtual} />
+          {children}
+        </div>
       </div>
     </div>
   );

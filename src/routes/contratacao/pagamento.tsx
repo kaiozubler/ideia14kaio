@@ -69,12 +69,12 @@ function PaginaPagamento() {
         ← Voltar
       </Link>
 
-      <h1 className="mt-4 text-2xl font-bold tracking-tight text-slate-800 md:text-3xl">Pagamento</h1>
+      <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-800 md:text-3xl">Pagamento</h1>
       <p className="mt-1 text-sm text-slate-500">Confira o total e finalize.</p>
 
       <div
-        style={{ borderRadius: "28px" }}
-        className="mt-8 border border-white/80 bg-white/60 p-6 shadow-xl shadow-slate-200/40 backdrop-blur-xl md:p-8"
+        style={{ borderRadius: "24px" }}
+        className="mt-5 border border-white/80 bg-white/60 p-5 shadow-xl shadow-slate-200/40 backdrop-blur-xl md:p-6"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -95,7 +95,7 @@ function PaginaPagamento() {
           </div>
         </div>
 
-        <div className="mt-6 space-y-3 opacity-60">
+        <div className="mt-5 space-y-2.5 opacity-60">
           <div style={{ borderRadius: "16px" }} className="h-11 border border-slate-200 bg-white/70 px-4 py-2.5 text-sm text-slate-400">
             Número do cartão
           </div>
