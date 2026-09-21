@@ -654,6 +654,32 @@ function erroPacienteIdInvalido(recebido: string) {
   };
 }
 
+/**
+ * Confirma que paciente_id não só TEM formato de UUID (isValidUuid), mas
+ * REALMENTE pertence a este médico — o trigger validar_paciente_do_medico
+ * já bloqueia isso no banco, mas só com um erro cru de Postgres. Checar
+ * aqui antes permite devolver uma instrução que a IA consegue seguir (buscar
+ * de novo), em vez de um erro genérico "falha ao salvar" para o médico.
+ * Sem isso, um UUID com aparência válida mas que a IA não copiou de um
+ * buscar_paciente de verdade (ex.: um id "lembrado" errado de outro
+ * paciente/conversa) só é pego pelo banco, tarde demais.
+ */
+async function pacienteIdPertenceAoMedico(db: Db, pacienteId: string, medicoId: string): Promise<boolean> {
+  const { data } = await db
+    .from("pacientes")
+    .select("paciente_id")
+    .eq("paciente_id", pacienteId)
+    .eq("user_id", medicoId)
+    .maybeSingle();
+  return !!data;
+}
+function erroPacienteNaoPertence(pacienteId: string) {
+  return {
+    erro: "paciente_nao_pertence_ao_medico",
+    instrucao: `O id de paciente "${pacienteId}" não corresponde a nenhum paciente seu. Chame buscar_paciente pelo nome de novo e use o UUID exato do resultado — não reaproveite um id de uma conversa/paciente diferente.`,
+  };
+}
+
 function localDayRange(date = new Date()) {
   const local = new Date(date.getTime() + TZ_OFFSET_MIN * 60000);
   const y = local.getUTCFullYear();
@@ -1109,6 +1135,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
 
     case "gerar_receita": {
       if (args.paciente_id && !isValidUuid(args.paciente_id)) return erroPacienteIdInvalido(String(args.paciente_id));
+      if (args.paciente_id && medicoId && !(await pacienteIdPertenceAoMedico(db, args.paciente_id, medicoId))) return erroPacienteNaoPertence(String(args.paciente_id));
       const medicamentosBrutos = Array.isArray(args.medicamentos) ? args.medicamentos : [];
       if (!medicamentosBrutos.length) return { erro: "Informe ao menos um medicamento." };
 
@@ -1337,6 +1364,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
 
     case "gerar_solicitacao_exame": {
       if (args.paciente_id && !isValidUuid(args.paciente_id)) return erroPacienteIdInvalido(String(args.paciente_id));
+      if (args.paciente_id && medicoId && !(await pacienteIdPertenceAoMedico(db, args.paciente_id, medicoId))) return erroPacienteNaoPertence(String(args.paciente_id));
       const exames = Array.isArray(args.exames) ? args.exames : [];
       if (!exames.length) return { erro: "Informe ao menos um exame." };
       const cpfDigits = onlyDigits(args.paciente_cpf);
@@ -1493,6 +1521,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
 
     case "gerar_atestado": {
       if (args.paciente_id && !isValidUuid(args.paciente_id)) return erroPacienteIdInvalido(String(args.paciente_id));
+      if (args.paciente_id && medicoId && !(await pacienteIdPertenceAoMedico(db, args.paciente_id, medicoId))) return erroPacienteNaoPertence(String(args.paciente_id));
       const tipo = args.tipo === "declaracao" ? "declaracao" : "atestado";
       let documentoId: string | null = null;
       const conteudo = {
