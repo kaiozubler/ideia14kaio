@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { CreditCard, Lock, ShieldCheck } from "lucide-react";
 
+import { BotaoFlutuante } from "@/components/contratacao/BotaoFlutuante";
 import { LayoutContratacao } from "@/components/contratacao/LayoutContratacao";
 import { lerPedido, type Pedido } from "@/lib/contratacao/pedido";
 import {
@@ -69,12 +70,12 @@ function PaginaPagamento() {
         ← Voltar
       </Link>
 
-      <h1 className="mt-4 text-2xl font-bold tracking-tight text-slate-800 md:text-3xl">Pagamento</h1>
+      <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-800 md:text-3xl">Pagamento</h1>
       <p className="mt-1 text-sm text-slate-500">Confira o total e finalize.</p>
 
       <div
-        style={{ borderRadius: "28px" }}
-        className="mt-8 border border-white/80 bg-white/60 p-6 shadow-xl shadow-slate-200/40 backdrop-blur-xl md:p-8"
+        style={{ borderRadius: "24px" }}
+        className="mt-5 border border-white/80 bg-white/60 p-5 shadow-xl shadow-slate-200/40 backdrop-blur-xl md:p-6"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -95,7 +96,7 @@ function PaginaPagamento() {
           </div>
         </div>
 
-        <div className="mt-6 space-y-3 opacity-60">
+        <div className="mt-5 space-y-2.5 opacity-60">
           <div style={{ borderRadius: "16px" }} className="h-11 border border-slate-200 bg-white/70 px-4 py-2.5 text-sm text-slate-400">
             Número do cartão
           </div>
@@ -120,18 +121,13 @@ function PaginaPagamento() {
           </p>
         </div>
 
-        <button
-          onClick={confirmarPedido}
-          className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:from-emerald-600 hover:to-emerald-700"
-        >
-          Confirmar e falar no WhatsApp
-        </button>
-
         <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-xs text-slate-400">
           <ShieldCheck className="h-3.5 w-3.5" />
           Seus dados de pagamento nunca são armazenados por nós diretamente.
         </p>
       </div>
+
+      <BotaoFlutuante onClick={confirmarPedido}>Confirmar e falar no WhatsApp</BotaoFlutuante>
     </LayoutContratacao>
   );
 }

@@ -144,14 +144,14 @@ function PaginaPlanos() {
     <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(135deg,#eef8f1_0%,#f3f1fb_45%,#fdf6ec_100%)]">
       <Blobs />
 
-      {/* Barra fixa que sobrepõe o conteúdo ao rolar, com o toggle mensal/anual sempre à mão */}
+      {/* Balãozinho flutuante com o toggle mensal/anual, some no topo até rolar a tela */}
       <div
         className={[
-          "fixed inset-x-0 top-0 z-40 flex justify-center border-b border-white/60 bg-white/80 backdrop-blur-xl transition-all duration-300",
-          rolado ? "translate-y-0 py-2.5 opacity-100 shadow-sm" : "pointer-events-none -translate-y-full py-0 opacity-0",
+          "fixed inset-x-0 top-4 z-40 flex justify-center transition-all duration-300",
+          rolado ? "translate-y-0 opacity-100" : "pointer-events-none -translate-y-3 opacity-0",
         ].join(" ")}
       >
-        <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/70 p-1">
+        <div className="inline-flex items-center gap-1 rounded-full border border-white/70 bg-white/95 p-1 shadow-lg shadow-slate-300/40 backdrop-blur-xl">
           <CicloButton ativo={ciclo === "mensal"} onClick={() => setCiclo("mensal")}>
             Mensal
           </CicloButton>

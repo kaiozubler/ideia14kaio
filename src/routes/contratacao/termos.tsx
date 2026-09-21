@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { FileText } from "lucide-react";
 
+import { BotaoFlutuante } from "@/components/contratacao/BotaoFlutuante";
 import { LayoutContratacao } from "@/components/contratacao/LayoutContratacao";
 import { atualizarPedido, lerPedido, type Pedido } from "@/lib/contratacao/pedido";
 
@@ -40,12 +41,12 @@ function PaginaTermos() {
         ← Voltar
       </Link>
 
-      <h1 className="mt-4 text-2xl font-bold tracking-tight text-slate-800 md:text-3xl">Termo de uso</h1>
+      <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-800 md:text-3xl">Termo de uso</h1>
       <p className="mt-1 text-sm text-slate-500">Dá uma lida antes de confirmar.</p>
 
       <div
-        style={{ borderRadius: "28px" }}
-        className="mt-8 border border-white/80 bg-white/60 p-6 shadow-xl shadow-slate-200/40 backdrop-blur-xl md:p-8"
+        style={{ borderRadius: "24px" }}
+        className="mt-5 border border-white/80 bg-white/60 p-5 shadow-xl shadow-slate-200/40 backdrop-blur-xl md:p-6"
       >
         <div className="flex items-center gap-2">
           <div
@@ -58,8 +59,8 @@ function PaginaTermos() {
         </div>
 
         <div
-          style={{ borderRadius: "18px" }}
-          className="mt-5 max-h-72 space-y-3 overflow-y-auto border border-slate-200 bg-white p-5 text-sm leading-relaxed text-slate-600"
+          style={{ borderRadius: "16px" }}
+          className="mt-4 max-h-40 space-y-2.5 overflow-y-auto border border-slate-200 bg-white p-4 text-sm leading-relaxed text-slate-600"
         >
           {/* ⚠️ TEXTO PLACEHOLDER — substituir pelo termo de uso real (jurídico) antes de lançar em produção. */}
           <p>
@@ -82,7 +83,7 @@ function PaginaTermos() {
           </p>
         </div>
 
-        <label className="mt-5 flex cursor-pointer items-start gap-3">
+        <label className="mt-4 flex cursor-pointer items-start gap-3">
           <input
             type="checkbox"
             checked={aceito}
@@ -93,15 +94,11 @@ function PaginaTermos() {
             Li e aceito o termo de uso e a política de cobrança recorrente descritos acima.
           </span>
         </label>
-
-        <button
-          onClick={avancar}
-          disabled={!aceito}
-          className="mt-6 w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:from-emerald-600 hover:to-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Avançar
-        </button>
       </div>
+
+      <BotaoFlutuante onClick={avancar} disabled={!aceito}>
+        Avançar
+      </BotaoFlutuante>
     </LayoutContratacao>
   );
 }

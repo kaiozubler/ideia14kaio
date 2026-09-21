@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Building2 } from "lucide-react";
 
+import { BotaoFlutuante } from "@/components/contratacao/BotaoFlutuante";
 import { LayoutContratacao } from "@/components/contratacao/LayoutContratacao";
 import { atualizarPedido, lerPedido, type DadosCliente, type Pedido } from "@/lib/contratacao/pedido";
 
@@ -35,8 +36,7 @@ function PaginaDados() {
     return (e: React.ChangeEvent<HTMLInputElement>) => setDados((d) => ({ ...d, [chave]: e.target.value }));
   }
 
-  function avancar(e: FormEvent) {
-    e.preventDefault();
+  function avancar() {
     if (!dados.nomeClinica.trim() || !dados.responsavel.trim() || !dados.email.trim() || !dados.telefone.trim()) {
       setErro("Preenche os campos obrigatórios pra gente conseguir continuar.");
       return;
@@ -56,13 +56,16 @@ function PaginaDados() {
         ← Voltar
       </Link>
 
-      <h1 className="mt-4 text-2xl font-bold tracking-tight text-slate-800 md:text-3xl">Seus dados</h1>
+      <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-800 md:text-3xl">Seus dados</h1>
       <p className="mt-1 text-sm text-slate-500">Pra emitir a cobrança e configurar sua conta certinha.</p>
 
       <form
-        onSubmit={avancar}
-        style={{ borderRadius: "28px" }}
-        className="mt-8 border border-white/80 bg-white/60 p-6 shadow-xl shadow-slate-200/40 backdrop-blur-xl md:p-8"
+        onSubmit={(e) => {
+          e.preventDefault();
+          avancar();
+        }}
+        style={{ borderRadius: "24px" }}
+        className="mt-5 border border-white/80 bg-white/60 p-5 shadow-xl shadow-slate-200/40 backdrop-blur-xl md:p-6"
       >
         <div className="flex items-center gap-2">
           <div
@@ -74,7 +77,7 @@ function PaginaDados() {
           <h3 className="font-bold text-slate-800">Dados da clínica</h3>
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <div className="mt-5 grid gap-3.5 sm:grid-cols-2">
           <Campo label="Nome da clínica" value={dados.nomeClinica} onChange={campo("nomeClinica")} className="sm:col-span-2" />
           <Campo label="Responsável" value={dados.responsavel} onChange={campo("responsavel")} />
           <Campo label="CPF ou CNPJ" value={dados.documento} onChange={campo("documento")} />
@@ -83,14 +86,9 @@ function PaginaDados() {
         </div>
 
         {erro && <p className="mt-4 text-sm font-medium text-rose-600">{erro}</p>}
-
-        <button
-          type="submit"
-          className="mt-6 w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:from-emerald-600 hover:to-emerald-700"
-        >
-          Avançar
-        </button>
       </form>
+
+      <BotaoFlutuante onClick={avancar}>Avançar</BotaoFlutuante>
     </LayoutContratacao>
   );
 }

@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { CalendarClock, CreditCard } from "lucide-react";
+import { ArrowRight, CalendarClock, CreditCard } from "lucide-react";
 import { addYears, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+import { BotaoFlutuante } from "@/components/contratacao/BotaoFlutuante";
 import { LayoutContratacao } from "@/components/contratacao/LayoutContratacao";
 import { atualizarPedido, lerPedido, type Pedido } from "@/lib/contratacao/pedido";
 import {
@@ -58,19 +59,19 @@ function PaginaConfirmar() {
         ← Voltar para planos
       </Link>
 
-      <h1 className="mt-4 text-2xl font-bold tracking-tight text-slate-800 md:text-3xl">Confirme seu plano</h1>
+      <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-800 md:text-3xl">Confirme seu plano</h1>
       <p className="mt-1 text-sm text-slate-500">Dá uma conferida antes de seguir para os próximos passos.</p>
 
-      <div className="mt-8 grid gap-6 md:grid-cols-5">
+      <div className="mt-5 grid gap-4 md:grid-cols-5">
         {/* Resumo */}
         <div
-          style={{ borderRadius: "28px" }}
-          className="border border-white/80 bg-white/70 p-6 shadow-xl shadow-slate-200/40 backdrop-blur-xl md:col-span-2 md:order-2"
+          style={{ borderRadius: "24px" }}
+          className="border border-white/80 bg-white/70 p-5 shadow-xl shadow-slate-200/40 backdrop-blur-xl md:col-span-2 md:order-2"
         >
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Seu plano</p>
           <h3 className="mt-1 text-lg font-bold text-slate-800">{ancora.nome}</h3>
 
-          <div className="mt-4 space-y-1.5 text-sm text-slate-600">
+          <div className="mt-3 space-y-1 text-sm text-slate-600">
             <p>{pedido.config.medicos} médico{pedido.config.medicos !== 1 ? "s" : ""}</p>
             <p>{pedido.config.secretarias} secretária{pedido.config.secretarias !== 1 ? "s" : ""} / gestão</p>
             <p>
@@ -103,8 +104,8 @@ function PaginaConfirmar() {
 
         {/* Pagamento e data de cobrança */}
         <div
-          style={{ borderRadius: "28px" }}
-          className="border border-white/80 bg-white/60 p-6 shadow-xl shadow-slate-200/40 backdrop-blur-xl md:col-span-3 md:order-1"
+          style={{ borderRadius: "24px" }}
+          className="border border-white/80 bg-white/60 p-5 shadow-xl shadow-slate-200/40 backdrop-blur-xl md:col-span-3 md:order-1"
         >
           <div className="flex items-center gap-2">
             <div
@@ -120,7 +121,7 @@ function PaginaConfirmar() {
           </div>
 
           {pedido.ciclo === "mensal" ? (
-            <div className="mt-6">
+            <div className="mt-4">
               <label className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
                 <CalendarClock className="h-4 w-4 text-slate-400" />
                 Melhor dia do mês para a cobrança
@@ -139,14 +140,14 @@ function PaginaConfirmar() {
               </select>
             </div>
           ) : (
-            <p className="mt-6 text-sm text-slate-600">
+            <p className="mt-4 text-sm text-slate-600">
               No plano anual, a próxima renovação acontece em <strong>{proximaRenovacao}</strong>.
             </p>
           )}
 
           <div
-            style={{ borderRadius: "18px" }}
-            className="mt-5 border border-amber-200/70 bg-amber-50/70 p-4 text-sm text-amber-800"
+            style={{ borderRadius: "16px" }}
+            className="mt-4 border border-amber-200/70 bg-amber-50/70 p-3.5 text-sm text-amber-800"
           >
             <strong>A primeira cobrança é feita agora</strong>, ao confirmar a assinatura.{" "}
             {pedido.ciclo === "mensal" ? (
@@ -155,15 +156,13 @@ function PaginaConfirmar() {
               <>A próxima cobrança só acontece na renovação anual, em {proximaRenovacao}.</>
             )}
           </div>
-
-          <button
-            onClick={avancar}
-            className="mt-6 w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:from-emerald-600 hover:to-emerald-700"
-          >
-            Avançar
-          </button>
         </div>
       </div>
+
+      <BotaoFlutuante onClick={avancar}>
+        Avançar
+        <ArrowRight className="h-4 w-4" />
+      </BotaoFlutuante>
     </LayoutContratacao>
   );
 }
