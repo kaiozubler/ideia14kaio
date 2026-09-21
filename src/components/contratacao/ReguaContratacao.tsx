@@ -1,10 +1,8 @@
-import { Check } from "lucide-react";
-
-// Régua de progresso da contratação. Só é renderizada a partir de "Confirme
-// seu plano" em diante — a escolha do plano acontece em /planos, sem essa
-// barra (ver a conversa de produto: a régua só aparece depois do clique em
-// "avançar"). Por isso "Escolha seu plano" está na lista mas nunca é o
-// `etapaAtual` — ela sempre aparece como concluída.
+// Régua de progresso da contratação — versão discreta: rótulo do passo
+// atual + uma barra fina de progresso com pontinhos, sem escrever todos os
+// 6 nomes lado a lado (isso forçava scroll horizontal e ficava com cara de
+// wizard antigo). Só é renderizada a partir de "Confirme seu plano" em
+// diante — a escolha do plano acontece em /planos, sem essa barra.
 
 export type EtapaContratacao = "escolher" | "confirmar" | "dados" | "termos" | "pagamento" | "conclusao";
 
@@ -19,41 +17,36 @@ const ETAPAS: { id: EtapaContratacao; label: string }[] = [
 
 export function ReguaContratacao({ etapaAtual }: { etapaAtual: EtapaContratacao }) {
   const indiceAtual = ETAPAS.findIndex((e) => e.id === etapaAtual);
+  const progresso = ((indiceAtual + 1) / ETAPAS.length) * 100;
 
   return (
-    <div className="sticky top-0 z-30 border-b border-white/60 bg-white/75 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-4xl items-center gap-1 overflow-x-auto px-4 py-3.5 md:justify-center md:gap-2 md:px-8">
-        {ETAPAS.map((etapa, i) => {
-          const concluida = i < indiceAtual;
-          const atual = i === indiceAtual;
-          return (
-            <div key={etapa.id} className="flex shrink-0 items-center gap-1.5 md:gap-2">
-              <div className="flex items-center gap-1.5">
-                <span
-                  className={[
-                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-colors",
-                    concluida
-                      ? "bg-emerald-500 text-white"
-                      : atual
-                        ? "bg-slate-800 text-white"
-                        : "bg-slate-200 text-slate-500",
-                  ].join(" ")}
-                >
-                  {concluida ? <Check className="h-3 w-3" /> : i + 1}
-                </span>
-                <span
-                  className={[
-                    "whitespace-nowrap text-xs font-medium md:text-sm",
-                    atual ? "font-bold text-slate-800" : concluida ? "text-slate-600" : "text-slate-400",
-                  ].join(" ")}
-                >
-                  {etapa.label}
-                </span>
-              </div>
-              {i < ETAPAS.length - 1 && <span className="mx-0.5 h-px w-4 shrink-0 bg-slate-300 md:w-8" />}
-            </div>
-          );
-        })}
+    <div className="sticky top-0 z-30 border-b border-white/60 bg-white/70 backdrop-blur-xl">
+      <div className="mx-auto max-w-3xl px-4 py-3 md:px-8 md:py-3.5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+              Passo {indiceAtual + 1} de {ETAPAS.length}
+            </p>
+            <p className="text-sm font-bold text-slate-800">{ETAPAS[indiceAtual].label}</p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {ETAPAS.map((etapa, i) => (
+              <span
+                key={etapa.id}
+                className={[
+                  "h-1.5 rounded-full transition-all duration-300",
+                  i === indiceAtual ? "w-4 bg-emerald-500" : i < indiceAtual ? "w-1.5 bg-emerald-400" : "w-1.5 bg-slate-200",
+                ].join(" ")}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="mt-2.5 h-1 w-full overflow-hidden rounded-full bg-slate-200/70">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-500 ease-out"
+            style={{ width: `${progresso}%` }}
+          />
+        </div>
       </div>
     </div>
   );
