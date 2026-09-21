@@ -210,7 +210,7 @@ const tools: ToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          paciente_id: { type: "string" },
+          paciente_id: { type: "string", description: "UUID exato do campo paciente_id retornado por uma chamada anterior de buscar_paciente nesta conversa. NUNCA invente/adivinhe um valor (nada de placeholders como '12345') — se ainda não tiver esse UUID, chame buscar_paciente antes." },
           cpf: { type: "string" },
           telefone: { type: "string" },
           data_nascimento: { type: "string", description: "AAAA-MM-DD" },
@@ -228,7 +228,7 @@ const tools: ToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          paciente_id: { type: "string" },
+          paciente_id: { type: "string", description: "UUID exato do campo paciente_id retornado por uma chamada anterior de buscar_paciente nesta conversa. NUNCA invente/adivinhe um valor (nada de placeholders como '12345') — se ainda não tiver esse UUID, chame buscar_paciente antes." },
           paciente_nome: { type: "string" },
           data: { type: "string", description: "AAAA-MM-DD" },
           horario: { type: "string", description: "HH:MM" },
@@ -264,7 +264,7 @@ const tools: ToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          paciente_id: { type: "string" },
+          paciente_id: { type: "string", description: "UUID exato do campo paciente_id retornado por uma chamada anterior de buscar_paciente nesta conversa. NUNCA invente/adivinhe um valor (nada de placeholders como '12345') — se ainda não tiver esse UUID, chame buscar_paciente antes." },
           paciente_nome: { type: "string" },
         },
         required: ["paciente_id"],
@@ -309,7 +309,7 @@ const tools: ToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          paciente_id: { type: "string" },
+          paciente_id: { type: "string", description: "UUID exato do campo paciente_id retornado por uma chamada anterior de buscar_paciente nesta conversa. NUNCA invente/adivinhe um valor (nada de placeholders como '12345') — se ainda não tiver esse UUID, chame buscar_paciente antes." },
           anamnese_texto: { type: "string", description: "O texto EXATO da anamnese gerada por gerar_anamnese, sem resumir ou alterar." },
         },
         required: ["paciente_id", "anamnese_texto"],
@@ -325,7 +325,7 @@ const tools: ToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          paciente_id: { type: "string" },
+          paciente_id: { type: "string", description: "UUID exato do campo paciente_id retornado por uma chamada anterior de buscar_paciente nesta conversa. NUNCA invente/adivinhe um valor (nada de placeholders como '12345') — se ainda não tiver esse UUID, chame buscar_paciente antes." },
           paciente_nome: { type: "string" },
           paciente_cpf: { type: "string" },
           paciente_idade: { type: "number", description: "Idade do paciente em anos" },
@@ -404,7 +404,7 @@ const tools: ToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          paciente_id: { type: "string" },
+          paciente_id: { type: "string", description: "UUID exato do campo paciente_id retornado por uma chamada anterior de buscar_paciente nesta conversa. NUNCA invente/adivinhe um valor (nada de placeholders como '12345') — se ainda não tiver esse UUID, chame buscar_paciente antes." },
           paciente_nome: { type: "string" },
           paciente_cpf: { type: "string" },
           paciente_idade: { type: "number", description: "Idade do paciente em anos" },
@@ -440,7 +440,7 @@ const tools: ToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          paciente_id: { type: "string" },
+          paciente_id: { type: "string", description: "UUID exato do campo paciente_id retornado por uma chamada anterior de buscar_paciente nesta conversa. NUNCA invente/adivinhe um valor (nada de placeholders como '12345') — se ainda não tiver esse UUID, chame buscar_paciente antes." },
           paciente_nome: { type: "string" },
           tipo: { type: "string", enum: ["atestado", "declaracao"], description: "Padrão: atestado" },
           dias: { type: "number", description: "Dias de afastamento (só para tipo=atestado)" },
@@ -474,7 +474,7 @@ const tools: ToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          paciente_id: { type: "string" },
+          paciente_id: { type: "string", description: "UUID exato do campo paciente_id retornado por uma chamada anterior de buscar_paciente nesta conversa. NUNCA invente/adivinhe um valor (nada de placeholders como '12345') — se ainda não tiver esse UUID, chame buscar_paciente antes." },
           paciente_nome: { type: "string" },
           texto: { type: "string" },
           canal: { type: "string", enum: ["whatsapp"] },
@@ -494,7 +494,7 @@ const tools: ToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          paciente_id: { type: "string" },
+          paciente_id: { type: "string", description: "UUID exato do campo paciente_id retornado por uma chamada anterior de buscar_paciente nesta conversa. NUNCA invente/adivinhe um valor (nada de placeholders como '12345') — se ainda não tiver esse UUID, chame buscar_paciente antes." },
           paciente_nome: { type: "string" },
           confirmado: { type: "boolean" },
         },
@@ -640,6 +640,18 @@ function maskCpf(cpf?: string | null) {
 
 function onlyDigits(v?: string | null) {
   return (v || "").replace(/\D/g, "");
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isValidUuid(v?: string | null): v is string {
+  return !!v && UUID_RE.test(v);
+}
+/** Erro padrão a devolver pra IA quando ela manda um paciente_id que não é um UUID de verdade. */
+function erroPacienteIdInvalido(recebido: string) {
+  return {
+    erro: "paciente_id_invalido",
+    instrucao: `"${recebido}" não é um id de paciente válido. Chame buscar_paciente pelo nome antes e use o UUID exato do campo paciente_id que ele devolver — nunca invente um id.`,
+  };
 }
 
 function localDayRange(date = new Date()) {
@@ -1096,6 +1108,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
     }
 
     case "gerar_receita": {
+      if (args.paciente_id && !isValidUuid(args.paciente_id)) return erroPacienteIdInvalido(String(args.paciente_id));
       const medicamentosBrutos = Array.isArray(args.medicamentos) ? args.medicamentos : [];
       if (!medicamentosBrutos.length) return { erro: "Informe ao menos um medicamento." };
 
@@ -1323,6 +1336,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
     }
 
     case "gerar_solicitacao_exame": {
+      if (args.paciente_id && !isValidUuid(args.paciente_id)) return erroPacienteIdInvalido(String(args.paciente_id));
       const exames = Array.isArray(args.exames) ? args.exames : [];
       if (!exames.length) return { erro: "Informe ao menos um exame." };
       const cpfDigits = onlyDigits(args.paciente_cpf);
@@ -1478,6 +1492,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
     }
 
     case "gerar_atestado": {
+      if (args.paciente_id && !isValidUuid(args.paciente_id)) return erroPacienteIdInvalido(String(args.paciente_id));
       const tipo = args.tipo === "declaracao" ? "declaracao" : "atestado";
       let documentoId: string | null = null;
       const conteudo = {
