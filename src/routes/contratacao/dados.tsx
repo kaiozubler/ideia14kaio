@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Building2 } from "lucide-react";
 
+import { BotaoFlutuante } from "@/components/contratacao/BotaoFlutuante";
 import { LayoutContratacao } from "@/components/contratacao/LayoutContratacao";
 import { atualizarPedido, lerPedido, type DadosCliente, type Pedido } from "@/lib/contratacao/pedido";
 
@@ -35,8 +36,7 @@ function PaginaDados() {
     return (e: React.ChangeEvent<HTMLInputElement>) => setDados((d) => ({ ...d, [chave]: e.target.value }));
   }
 
-  function avancar(e: FormEvent) {
-    e.preventDefault();
+  function avancar() {
     if (!dados.nomeClinica.trim() || !dados.responsavel.trim() || !dados.email.trim() || !dados.telefone.trim()) {
       setErro("Preenche os campos obrigatórios pra gente conseguir continuar.");
       return;
@@ -60,7 +60,10 @@ function PaginaDados() {
       <p className="mt-1 text-sm text-slate-500">Pra emitir a cobrança e configurar sua conta certinha.</p>
 
       <form
-        onSubmit={avancar}
+        onSubmit={(e) => {
+          e.preventDefault();
+          avancar();
+        }}
         style={{ borderRadius: "24px" }}
         className="mt-5 border border-white/80 bg-white/60 p-5 shadow-xl shadow-slate-200/40 backdrop-blur-xl md:p-6"
       >
@@ -83,14 +86,9 @@ function PaginaDados() {
         </div>
 
         {erro && <p className="mt-4 text-sm font-medium text-rose-600">{erro}</p>}
-
-        <button
-          type="submit"
-          className="mt-5 w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:from-emerald-600 hover:to-emerald-700"
-        >
-          Avançar
-        </button>
       </form>
+
+      <BotaoFlutuante onClick={avancar}>Avançar</BotaoFlutuante>
     </LayoutContratacao>
   );
 }

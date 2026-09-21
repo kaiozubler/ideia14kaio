@@ -19,7 +19,7 @@ export function LayoutContratacao({
       {/* flex-1 + items-center: conteúdo curto fica centralizado verticalmente
           (sem sobrar scroll minúsculo); conteúdo mais alto que a tela flui
           normal, sem cortar nada — funciona bem em qualquer tamanho de tela. */}
-      <div className="relative flex flex-1 items-center justify-center px-4 py-6 md:px-8 md:py-8">
+      <div className="relative flex flex-1 items-center justify-center px-4 py-6 pb-24 md:px-8 md:py-8 md:pb-24">
         <div className="w-full max-w-3xl">
           <ReguaContratacao etapaAtual={etapaAtual} />
           {children}

@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { CalendarClock, CreditCard } from "lucide-react";
+import { ArrowRight, CalendarClock, CreditCard } from "lucide-react";
 import { addYears, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+import { BotaoFlutuante } from "@/components/contratacao/BotaoFlutuante";
 import { LayoutContratacao } from "@/components/contratacao/LayoutContratacao";
 import { atualizarPedido, lerPedido, type Pedido } from "@/lib/contratacao/pedido";
 import {
@@ -155,15 +156,13 @@ function PaginaConfirmar() {
               <>A próxima cobrança só acontece na renovação anual, em {proximaRenovacao}.</>
             )}
           </div>
-
-          <button
-            onClick={avancar}
-            className="mt-4 w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:from-emerald-600 hover:to-emerald-700"
-          >
-            Avançar
-          </button>
         </div>
       </div>
+
+      <BotaoFlutuante onClick={avancar}>
+        Avançar
+        <ArrowRight className="h-4 w-4" />
+      </BotaoFlutuante>
     </LayoutContratacao>
   );
 }

@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { CreditCard, Lock, ShieldCheck } from "lucide-react";
 
+import { BotaoFlutuante } from "@/components/contratacao/BotaoFlutuante";
 import { LayoutContratacao } from "@/components/contratacao/LayoutContratacao";
 import { lerPedido, type Pedido } from "@/lib/contratacao/pedido";
 import {
@@ -120,18 +121,13 @@ function PaginaPagamento() {
           </p>
         </div>
 
-        <button
-          onClick={confirmarPedido}
-          className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:from-emerald-600 hover:to-emerald-700"
-        >
-          Confirmar e falar no WhatsApp
-        </button>
-
         <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-xs text-slate-400">
           <ShieldCheck className="h-3.5 w-3.5" />
           Seus dados de pagamento nunca são armazenados por nós diretamente.
         </p>
       </div>
+
+      <BotaoFlutuante onClick={confirmarPedido}>Confirmar e falar no WhatsApp</BotaoFlutuante>
     </LayoutContratacao>
   );
 }

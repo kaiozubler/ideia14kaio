@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { FileText } from "lucide-react";
 
+import { BotaoFlutuante } from "@/components/contratacao/BotaoFlutuante";
 import { LayoutContratacao } from "@/components/contratacao/LayoutContratacao";
 import { atualizarPedido, lerPedido, type Pedido } from "@/lib/contratacao/pedido";
 
@@ -93,15 +94,11 @@ function PaginaTermos() {
             Li e aceito o termo de uso e a política de cobrança recorrente descritos acima.
           </span>
         </label>
-
-        <button
-          onClick={avancar}
-          disabled={!aceito}
-          className="mt-5 w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:from-emerald-600 hover:to-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Avançar
-        </button>
       </div>
+
+      <BotaoFlutuante onClick={avancar} disabled={!aceito}>
+        Avançar
+      </BotaoFlutuante>
     </LayoutContratacao>
   );
 }
