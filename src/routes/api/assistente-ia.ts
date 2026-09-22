@@ -60,7 +60,7 @@ REGRAS DE IDENTIFICAÇÃO DO PACIENTE
 - Você NÃO sabe quem é o paciente até perguntar. Sempre que uma ação precisar de um paciente ainda não identificado nesta conversa, pergunte o NOME.
 - Se um paciente já foi identificado/confirmado nesta mesma conversa (nome próprio já mencionado e confirmado), REAPROVEITE esse paciente_id para as próximas ações — não chame buscar_paciente de novo só porque o médico disse "o paciente", "ele", "confirma" ou similar. Esses termos genéricos se referem ao paciente já identificado, nunca são um nome novo para buscar.
 - Com o nome, chame a tool buscar_paciente. Ela devolve, para cada cadastro: cpf_mascarado, idade, telefone_mascarado e a lista campos_vazios.
-- NUNCA peça CPF, idade/data de nascimento ou telefone que o cadastro já tenha. INFORME o dado (mascarado) e peça apenas a CONFIRMAÇÃO.
+- NUNCA peça CPF, idade/data de nascimento ou telefone que o cadastro já tenha. INFORME o dado (mascarado) e peça apenas a CONFIRMAÇÃO. Um dado MASCARADO (ex.: "684.•••.•••-13") significa que ELE EXISTE no cadastro — mascarado é só a forma de exibição, não é "ausente". Só peça um dado ao médico se ele estiver de fato em branco (veja campos_vazios) ou se a tool de gerar documento avisar explicitamente que falta no cadastro.
   * 1 resultado: apresente o que o cadastro tem (ex.: "Encontrei Maria Silva — CPF 123.•••.•••-45, 42 anos, telefone •••••6789. Confere?").
   * vários resultados: liste os candidatos com nome, cpf_mascarado e idade e pergunte qual é o correto.
   * nenhum resultado: siga e execute a ação mesmo assim (ex.: gere a receita). NÃO bloqueie a geração do documento por falta de cadastro.
@@ -321,7 +321,7 @@ const tools: ToolDef[] = [
     function: {
       name: "gerar_receita",
       description:
-        "Gera uma receita médica com um ou mais medicamentos. Exige nome, CPF e idade do paciente. Se houver 2+ medicamentos, verifica interação automaticamente.",
+        "Gera uma receita médica com um ou mais medicamentos. Precisa de paciente_id (de buscar_paciente) — CPF e idade são preenchidos automaticamente a partir do cadastro dele, NÃO pergunte esses dois ao médico só porque buscar_paciente devolveu o CPF mascarado (isso só significa que existe CPF cadastrado, não que falta). Se houver 2+ medicamentos, verifica interação automaticamente.",
       parameters: {
         type: "object",
         properties: {
@@ -400,7 +400,7 @@ const tools: ToolDef[] = [
     function: {
       name: "gerar_solicitacao_exame",
       description:
-        "Gera uma solicitação de exames com um ou mais exames. Exige nome, CPF e idade do paciente. Nunca inclua exames odontológicos.",
+        "Gera uma solicitação de exames com um ou mais exames. Precisa de paciente_id (de buscar_paciente) — CPF e idade são preenchidos automaticamente a partir do cadastro dele, NÃO pergunte esses dois ao médico só porque buscar_paciente devolveu o CPF mascarado (isso só significa que existe CPF cadastrado, não que falta). Nunca inclua exames odontológicos.",
       parameters: {
         type: "object",
         properties: {
@@ -677,6 +677,34 @@ function erroPacienteNaoPertence(pacienteId: string) {
   return {
     erro: "paciente_nao_pertence_ao_medico",
     instrucao: `O id de paciente "${pacienteId}" não corresponde a nenhum paciente seu. Chame buscar_paciente pelo nome de novo e use o UUID exato do resultado — não reaproveite um id de uma conversa/paciente diferente.`,
+  };
+}
+
+/**
+ * Preenche CPF/idade a partir do cadastro real do paciente quando a IA não
+ * mandou esses valores no argumento da tool (ela só vê a versão MASCARADA
+ * do CPF em buscar_paciente — "684.•••.•••-13" — e não deve nunca tentar
+ * adivinhar os dígitos reais a partir disso). Sem isso, o médico era
+ * obrigado a redigitar um CPF que já está cadastrado, só porque a IA não
+ * tinha acesso ao valor puro.
+ */
+async function completarCpfIdadeDoPaciente(
+  db: Db,
+  pacienteId: string | null | undefined,
+  cpfInformado: string | null | undefined,
+  idadeInformada: number | string | null | undefined,
+): Promise<{ cpf: string | null; idade: number | null }> {
+  const cpfLimpo = onlyDigits(cpfInformado);
+  const idadeNum = Number(idadeInformada);
+  const idadeValida = Number.isFinite(idadeNum) && idadeNum > 0 && idadeNum <= 120 ? idadeNum : null;
+  if (cpfLimpo.length === 11 && idadeValida) return { cpf: cpfLimpo, idade: idadeValida };
+  if (!pacienteId) return { cpf: cpfLimpo.length === 11 ? cpfLimpo : null, idade: idadeValida };
+
+  const { data } = await db.from("pacientes").select("cpf,data_nascimento").eq("paciente_id", pacienteId).maybeSingle();
+  const cpfDoCadastro = onlyDigits(data?.cpf);
+  return {
+    cpf: cpfLimpo.length === 11 ? cpfLimpo : cpfDoCadastro.length === 11 ? cpfDoCadastro : null,
+    idade: idadeValida ?? calcIdade(data?.data_nascimento),
   };
 }
 
@@ -1183,29 +1211,30 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         };
       });
 
-      const cpfDigits = onlyDigits(args.paciente_cpf);
-      if (cpfDigits.length !== 11) {
+      const { cpf: cpfResolvido, idade: idadeResolvida } = await completarCpfIdadeDoPaciente(
+        db,
+        args.paciente_id,
+        args.paciente_cpf,
+        args.paciente_idade,
+      );
+      if (!cpfResolvido) {
         return {
           erro: "faltam_dados_paciente",
           faltando: "cpf",
-          instrucao: "O CPF informado é inválido ou está ausente. Peça o CPF completo do paciente (11 dígitos) antes de gerar a receita — nunca invente um número.",
+          instrucao:
+            "O paciente não tem CPF cadastrado. Peça o CPF completo do paciente (11 dígitos) antes de gerar a receita — nunca invente um número.",
         };
       }
-      const idadeNum = Number(args.paciente_idade);
-      if (!Number.isFinite(idadeNum) || idadeNum <= 0 || idadeNum > 120) {
+      if (!idadeResolvida) {
         return {
           erro: "faltam_dados_paciente",
           faltando: "idade",
-          instrucao: "A idade informada é inválida ou está ausente. Peça a idade real do paciente antes de gerar a receita — nunca invente um valor.",
+          instrucao:
+            "O paciente não tem idade/data de nascimento cadastrada. Peça a idade real antes de gerar a receita — nunca invente um valor.",
         };
       }
-      if (args.paciente_idade === undefined || args.paciente_idade === null || args.paciente_idade === "") {
-        return {
-          erro: "faltam_dados_paciente",
-          faltando: "idade",
-          instrucao: "Peça a idade do paciente antes de gerar a receita.",
-        };
-      }
+      args.paciente_cpf = cpfResolvido;
+      args.paciente_idade = idadeResolvida;
 
       if (medicamentos.length >= 2 && !args.interacao_confirmada) {
         const termos = medicamentos.map((m: any) => String(m?.nome || "").trim()).filter(Boolean);
@@ -1378,24 +1407,30 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
       if (args.paciente_id && args.paciente_nome) ctx.pacienteAtivo.value = { paciente_id: args.paciente_id, nome: String(args.paciente_nome) };
       const exames = Array.isArray(args.exames) ? args.exames : [];
       if (!exames.length) return { erro: "Informe ao menos um exame." };
-      const cpfDigits = onlyDigits(args.paciente_cpf);
-      if (cpfDigits.length !== 11) {
+      const { cpf: cpfResolvidoExame, idade: idadeResolvidaExame } = await completarCpfIdadeDoPaciente(
+        db,
+        args.paciente_id,
+        args.paciente_cpf,
+        args.paciente_idade,
+      );
+      if (!cpfResolvidoExame) {
         return {
           erro: "faltam_dados_paciente",
           faltando: "cpf",
           instrucao:
-            "O CPF informado é inválido ou está ausente. Peça o CPF completo do paciente (11 dígitos) antes de gerar a solicitação — nunca invente um número.",
+            "O paciente não tem CPF cadastrado. Peça o CPF completo do paciente (11 dígitos) antes de gerar a solicitação — nunca invente um número.",
         };
       }
-      const idadeNum = Number(args.paciente_idade);
-      if (!Number.isFinite(idadeNum) || idadeNum <= 0 || idadeNum > 120) {
+      if (!idadeResolvidaExame) {
         return {
           erro: "faltam_dados_paciente",
           faltando: "idade",
           instrucao:
-            "A idade informada é inválida ou está ausente. Peça a idade real do paciente antes de gerar a solicitação — nunca invente um valor.",
+            "O paciente não tem idade/data de nascimento cadastrada. Peça a idade real antes de gerar a solicitação — nunca invente um valor.",
         };
       }
+      args.paciente_cpf = cpfResolvidoExame;
+      args.paciente_idade = idadeResolvidaExame;
 
       // Confere cada exame contra o catálogo TUSS (odontologia já vem excluída) para
       // não deixar a IA "inventar" um exame que não existe no catálogo.
