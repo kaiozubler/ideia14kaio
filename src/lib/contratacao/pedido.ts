@@ -13,9 +13,14 @@ import type { ConfiguracaoPlano, PlanoBaseId } from "@/lib/plans/config";
 export type DadosCliente = {
   nomeClinica: string;
   responsavel: string;
-  documento: string; // CPF ou CNPJ
+  documento: string; // CPF ou CNPJ, com máscara
   email: string;
-  telefone: string;
+  telefone: string; // com máscara
+  cidade: string;
+  estado: string; // UF
+  especialidade: string;
+  pacientesMes: string; // faixa aproximada de pacientes atendidos por mês
+  comoConheceu: string; // origem do lead, pra estatística de aquisição
 };
 
 export type Pedido = {

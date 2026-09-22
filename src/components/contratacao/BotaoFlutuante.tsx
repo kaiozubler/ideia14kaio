@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 
-// Botão de ação principal (normalmente "Avançar") flutuando fixo no canto
-// inferior esquerdo, alinhado à coluna de conteúdo. Assim a pessoa sempre
-// vê o próximo passo sem depender de rolar a tela até o fim.
+// Botão de ação principal (normalmente "Avançar") flutuando fixo,
+// centralizado no rodapé da tela. Assim a pessoa sempre vê o próximo
+// passo sem depender de rolar a tela até o fim.
 
 export function BotaoFlutuante({
   onClick,
@@ -15,7 +15,7 @@ export function BotaoFlutuante({
 }) {
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-5 z-40 px-4 md:px-8">
-      <div className="mx-auto flex max-w-3xl justify-start">
+      <div className="mx-auto flex max-w-3xl justify-center">
         <button
           onClick={onClick}
           disabled={disabled}
