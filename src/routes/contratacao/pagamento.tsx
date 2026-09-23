@@ -42,16 +42,26 @@ function PaginaPagamento() {
 
   const linkWhatsApp = (() => {
     const c = pedido.config;
+    const d = pedido.dados;
+    const endereco = d
+      ? `${d.endereco.logradouro}, ${d.endereco.numero}${d.endereco.complemento ? ` - ${d.endereco.complemento}` : ""} - ${d.endereco.bairro}, ${d.endereco.cidade}/${d.endereco.estado} - CEP ${d.endereco.cep}`
+      : "";
+    const financeiro = d?.financeiroMesmoResponsavel
+      ? "mesmo do responsável"
+      : d?.financeiro.map((f) => `${f.nome} (${f.email}, ${f.telefone})`).join("; ") || "";
+    const juridico = d?.juridicoMesmoResponsavel
+      ? "mesmo do responsável"
+      : d?.juridico.map((f) => `${f.nome} (${f.email}, ${f.telefone})`).join("; ") || "";
     const texto = [
       `Olá! Quero finalizar a contratação do MediCopilot.`,
       `Plano: ${ancora.nome}`,
-      `Clínica: ${pedido.dados?.nomeClinica ?? ""}`,
-      `Responsável: ${pedido.dados?.responsavel ?? ""}`,
-      `CPF/CNPJ: ${pedido.dados?.documento ?? ""}`,
-      `E-mail: ${pedido.dados?.email ?? ""}`,
-      `WhatsApp: ${pedido.dados?.telefone ?? ""}`,
-      `Cidade/UF: ${pedido.dados?.cidade ?? ""}/${pedido.dados?.estado ?? ""}`,
-      `Especialidade: ${pedido.dados?.especialidade ?? ""}`,
+      `Clínica: ${d?.nomeClinica ?? ""}`,
+      `CPF/CNPJ: ${d?.documento ?? ""}`,
+      `Endereço: ${endereco}`,
+      `Responsável: ${d?.responsavel.nome ?? ""} (${d?.responsavel.cargo ?? ""}) — ${d?.responsavel.email ?? ""}, ${d?.responsavel.telefone ?? ""}`,
+      `Financeiro (recebe NF/cobrança): ${financeiro}`,
+      `Jurídico (recebe termo/contrato): ${juridico}`,
+      `Especialidade: ${d?.especialidade ?? ""}`,
       `Médicos: ${c.medicos} · Secretárias/Gestão: ${c.secretarias}`,
       `Copiloto: ${c.copiloto === PERSONALIZADO ? "personalizado" : c.copiloto}`,
       `WhatsApp (franquia): ${c.whatsapp === PERSONALIZADO ? "personalizado" : c.whatsapp}`,

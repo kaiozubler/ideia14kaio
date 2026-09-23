@@ -10,14 +10,36 @@ import type { ConfiguracaoPlano, PlanoBaseId } from "@/lib/plans/config";
 // aba fecha, então não fica um "pedido fantasma" de uma tentativa antiga se
 // a pessoa voltar dias depois — ela recomeça do /planos.
 
-export type DadosCliente = {
-  nomeClinica: string;
-  responsavel: string;
-  documento: string; // CPF ou CNPJ, com máscara
+export type Contato = {
+  nome: string;
   email: string;
-  telefone: string; // com máscara
+  telefone: string;
+};
+
+export type Endereco = {
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
   cidade: string;
   estado: string; // UF
+};
+
+export type DadosCliente = {
+  nomeClinica: string;
+  documento: string; // CPF ou CNPJ, com máscara
+  endereco: Endereco;
+  /** Contato principal — nome, telefone, e-mail e cargo na clínica. */
+  responsavel: Contato & { cargo: string };
+  /** true = usa os dados do responsável principal também para o financeiro (recebe NFs/cobrança). */
+  financeiroMesmoResponsavel: boolean;
+  /** Só usado quando financeiroMesmoResponsavel é false. Permite mais de um contato. */
+  financeiro: Contato[];
+  /** true = usa os dados do responsável principal também para o jurídico (recebe o termo/contrato). */
+  juridicoMesmoResponsavel: boolean;
+  /** Só usado quando juridicoMesmoResponsavel é false. Permite mais de um contato. */
+  juridico: Contato[];
   especialidade: string;
   pacientesMes: string; // faixa aproximada de pacientes atendidos por mês
   comoConheceu: string; // origem do lead, pra estatística de aquisição
