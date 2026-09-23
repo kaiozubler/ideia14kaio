@@ -664,19 +664,61 @@ function erroPacienteIdInvalido(recebido: string) {
  * buscar_paciente de verdade (ex.: um id "lembrado" errado de outro
  * paciente/conversa) só é pego pelo banco, tarde demais.
  */
-async function pacienteIdPertenceAoMedico(db: Db, pacienteId: string, medicoId: string): Promise<boolean> {
+/**
+ * Confirma que paciente_id não só TEM formato de UUID (isValidUuid), mas
+ * REALMENTE pertence a este médico — o trigger validar_paciente_do_medico
+ * já bloqueia isso no banco, mas só com um erro cru de Postgres. Checar
+ * aqui antes permite devolver uma instrução que a IA consegue seguir (buscar
+ * de novo), em vez de um erro genérico "falha ao salvar" para o médico.
+ * Sem isso, um UUID com aparência válida mas que a IA não copiou de um
+ * buscar_paciente de verdade (ex.: um id "lembrado" errado de outro
+ * paciente/conversa) só é pego pelo banco, tarde demais.
+ *
+ * Também devolve o nome real do cadastro, para o chamador conferir contra
+ * o paciente_nome que a IA mandou (ver checarConsistenciaPaciente) — isso
+ * pega o caso mais perigoso: a IA menciona/confirma um paciente no TEXTO
+ * (ex.: "Murilo Almenau"), mas manda o paciente_id de OUTRO paciente na
+ * chamada da tool (ex.: um id "grudado" de uma conversa anterior). Sem
+ * essa conferência, o documento sai para o paciente errado mesmo com o
+ * paciente_id tecnicamente válido e pertencente ao médico.
+ */
+async function buscarPacienteDoMedico(
+  db: Db,
+  pacienteId: string,
+  medicoId: string,
+): Promise<{ pertence: boolean; nome: string | null }> {
   const { data } = await db
     .from("pacientes")
-    .select("paciente_id")
+    .select("paciente_id,name")
     .eq("paciente_id", pacienteId)
     .eq("user_id", medicoId)
     .maybeSingle();
-  return !!data;
+  return { pertence: !!data, nome: data?.name ?? null };
 }
 function erroPacienteNaoPertence(pacienteId: string) {
   return {
     erro: "paciente_nao_pertence_ao_medico",
     instrucao: `O id de paciente "${pacienteId}" não corresponde a nenhum paciente seu. Chame buscar_paciente pelo nome de novo e use o UUID exato do resultado — não reaproveite um id de uma conversa/paciente diferente.`,
+  };
+}
+function normalizarNome(v: string) {
+  return v
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+/**
+ * REDE DE SEGURANÇA CRÍTICA: confere se paciente_nome (o que a IA disse/
+ * confirmou em texto) bate com o nome real do cadastro de paciente_id (o
+ * que vai efetivamente receber o documento). Uma divergência aqui é
+ * sempre bloqueada — é exatamente o padrão de um documento médico saindo
+ * para o paciente errado (nome certo dito à voz, id errado usado de fato).
+ */
+function erroNomeNaoBateComId(nomeInformado: string, nomeReal: string) {
+  return {
+    erro: "paciente_nome_nao_confere_com_id",
+    instrucao: `Inconsistência de segurança: o nome "${nomeInformado}" não bate com o cadastro do paciente_id usado (que é de "${nomeReal}"). NÃO gere o documento. Chame buscar_paciente de novo pelo nome correto e use o paciente_id exato que ele devolver.`,
   };
 }
 
@@ -1172,7 +1214,13 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
 
     case "gerar_receita": {
       if (args.paciente_id && !isValidUuid(args.paciente_id)) return erroPacienteIdInvalido(String(args.paciente_id));
-      if (args.paciente_id && medicoId && !(await pacienteIdPertenceAoMedico(db, args.paciente_id, medicoId))) return erroPacienteNaoPertence(String(args.paciente_id));
+      if (args.paciente_id && medicoId) {
+        const { pertence, nome: nomeReal } = await buscarPacienteDoMedico(db, args.paciente_id, medicoId);
+        if (!pertence) return erroPacienteNaoPertence(String(args.paciente_id));
+        if (args.paciente_nome && nomeReal && normalizarNome(String(args.paciente_nome)) !== normalizarNome(nomeReal)) {
+          return erroNomeNaoBateComId(String(args.paciente_nome), nomeReal);
+        }
+      }
       if (args.paciente_id && args.paciente_nome) ctx.pacienteAtivo.value = { paciente_id: args.paciente_id, nome: String(args.paciente_nome) };
       const medicamentosBrutos = Array.isArray(args.medicamentos) ? args.medicamentos : [];
       if (!medicamentosBrutos.length) return { erro: "Informe ao menos um medicamento." };
@@ -1403,7 +1451,13 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
 
     case "gerar_solicitacao_exame": {
       if (args.paciente_id && !isValidUuid(args.paciente_id)) return erroPacienteIdInvalido(String(args.paciente_id));
-      if (args.paciente_id && medicoId && !(await pacienteIdPertenceAoMedico(db, args.paciente_id, medicoId))) return erroPacienteNaoPertence(String(args.paciente_id));
+      if (args.paciente_id && medicoId) {
+        const { pertence, nome: nomeReal } = await buscarPacienteDoMedico(db, args.paciente_id, medicoId);
+        if (!pertence) return erroPacienteNaoPertence(String(args.paciente_id));
+        if (args.paciente_nome && nomeReal && normalizarNome(String(args.paciente_nome)) !== normalizarNome(nomeReal)) {
+          return erroNomeNaoBateComId(String(args.paciente_nome), nomeReal);
+        }
+      }
       if (args.paciente_id && args.paciente_nome) ctx.pacienteAtivo.value = { paciente_id: args.paciente_id, nome: String(args.paciente_nome) };
       const exames = Array.isArray(args.exames) ? args.exames : [];
       if (!exames.length) return { erro: "Informe ao menos um exame." };
@@ -1567,7 +1621,13 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
 
     case "gerar_atestado": {
       if (args.paciente_id && !isValidUuid(args.paciente_id)) return erroPacienteIdInvalido(String(args.paciente_id));
-      if (args.paciente_id && medicoId && !(await pacienteIdPertenceAoMedico(db, args.paciente_id, medicoId))) return erroPacienteNaoPertence(String(args.paciente_id));
+      if (args.paciente_id && medicoId) {
+        const { pertence, nome: nomeReal } = await buscarPacienteDoMedico(db, args.paciente_id, medicoId);
+        if (!pertence) return erroPacienteNaoPertence(String(args.paciente_id));
+        if (args.paciente_nome && nomeReal && normalizarNome(String(args.paciente_nome)) !== normalizarNome(nomeReal)) {
+          return erroNomeNaoBateComId(String(args.paciente_nome), nomeReal);
+        }
+      }
       if (args.paciente_id && args.paciente_nome) ctx.pacienteAtivo.value = { paciente_id: args.paciente_id, nome: String(args.paciente_nome) };
       const tipo = args.tipo === "declaracao" ? "declaracao" : "atestado";
       let documentoId: string | null = null;
@@ -1963,7 +2023,7 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
           canal === "paciente"
             ? `\nPaciente da conversa: ${body.paciente_nome || "(sem nome cadastrado)"}.`
             : body.paciente_id && body.paciente_nome
-              ? `\n\nPACIENTE ATIVO NESTA CONVERSA (já identificado e confirmado anteriormente): ${body.paciente_nome} (paciente_id: ${body.paciente_id}). Se a próxima solicitação do médico não mencionar outro paciente por nome, USE ESTE — não pergunte o nome de novo, não chame buscar_paciente de novo para o mesmo paciente. Se o médico mencionar um nome diferente, aí sim trate como outro paciente e busque normalmente.`
+              ? `\n\nPACIENTE ATIVO NESTA CONVERSA (lembrete de uma identificação anterior, pode estar desatualizado): ${body.paciente_nome} (paciente_id: ${body.paciente_id}). Se a próxima solicitação do médico não mencionar NENHUM nome de paciente, USE ESTE — não pergunte o nome de novo. IMPORTANTE: isso é só um lembrete, NÃO é uma fonte de verdade — se o médico mencionar QUALQUER nome (igual, parecido ou diferente) nesta conversa, ou se você chamar buscar_paciente por qualquer motivo, o resultado da busca SEMPRE tem prioridade sobre este lembrete. Ao chamar gerar_receita/gerar_atestado/gerar_solicitacao_exame, o paciente_id e paciente_nome DEVEM vir do buscar_paciente mais recente desta conversa, nunca copiados direto deste lembrete sem confirmar.`
               : "";
         const messages: ChatMessage[] = [
           {
