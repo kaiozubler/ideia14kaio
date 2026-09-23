@@ -39,12 +39,18 @@ import { createFileRoute } from "@tanstack/react-router";
  * conversa que cheguem quase juntas, pra essas duas regras não perderem
  * efeito por uma corrida entre requisições paralelas.
  *
- * Paciente ativo: o paciente identificado/confirmado na conversa fica
- * salvo na sessão (paciente_ativo) e é reinjetado explicitamente a cada
- * mensagem seguinte (via body.paciente_id/paciente_nome), em vez de
- * depender só do modelo reconstruir isso lendo o histórico em texto livre
- * — isso se mostrou pouco confiável sozinho em conversas mais longas.
- * Zera junto com o assunto (reset explícito ou por inatividade).
+ * Paciente ativo: TENTAMOS reinjetar entre mensagens um "paciente ativo"
+ * lembrado da sessão, pra evitar perguntar o nome de novo no meio de uma
+ * conversa mais longa. Foi revertido: em produção, esse lembrete às vezes
+ * "vencia" sobre uma identificação fresca feita na mesma troca de
+ * mensagens, fazendo o documento sair pra um paciente ERRADO (de uma
+ * conversa anterior). Grave demais pra manter num app médico só por
+ * conveniência. A coluna paciente_ativo continua existindo (zerada junto
+ * com o assunto), mas não é mais lida nem enviada pra IA — a continuidade
+ * "não perguntar de novo" depende só do histórico de texto da própria
+ * conversa + a REGRA CRÍTICA no prompt (assistente-ia.ts). Como rede de
+ * segurança final, gerar_receita/atestado/exame conferem se o paciente_id
+ * bate com o paciente_nome antes de salvar (buscarPacienteDoMedico).
  *
  * Requer as MESMAS variáveis de ambiente globais do outro webhook:
  *   WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN, WHATSAPP_VERIFY_TOKEN
@@ -474,9 +480,21 @@ export const Route = createFileRoute("/api/assistente-medico-webhook")({
 
           const historico = await carregarHistoricoConversa(supabaseAdmin, medico.id, conversaIdParaContinuar);
           const novoHistorico = [...historico, { role: "user", content: textoRecebido }];
-          const pacienteAtivoParaContinuar = inativa
-            ? null
-            : ((sessao?.paciente_ativo as PacienteAtivo | null) ?? null);
+          // NÃO injetamos mais paciente_ativo salvo de mensagens anteriores aqui.
+          // Foi tentado (ver histórico do arquivo) e causou o oposto do que
+          // deveria: em vez de só evitar perguntar o nome de novo, o lembrete
+          // por vezes "vencia" sobre uma identificação fresca feita na mesma
+          // troca de mensagens, fazendo o documento sair pra um paciente
+          // ERRADO (de uma conversa anterior) mesmo depois do médico confirmar
+          // corretamente outro paciente na conversa atual. Isso é grave demais
+          // num app médico pra manter só por conveniência.
+          //
+          // A continuidade "não perguntar o nome de novo no meio da mesma
+          // conversa" agora depende só do histórico de texto (novoHistorico)
+          // + da REGRA CRÍTICA no prompt do sistema (assistente-ia.ts) — e,
+          // como rede de segurança final, gerar_receita/atestado/exame
+          // conferem se o paciente_id bate com o paciente_nome antes de
+          // salvar qualquer coisa (ver buscarPacienteDoMedico).
 
           try {
             const { handleAssistente } = await import("./assistente-ia");
@@ -485,24 +503,14 @@ export const Route = createFileRoute("/api/assistente-medico-webhook")({
               messages: novoHistorico,
               user_id: medico.id,
               conversa_id: conversaIdParaContinuar,
-              paciente_id: pacienteAtivoParaContinuar?.paciente_id || null,
-              paciente_nome: pacienteAtivoParaContinuar?.nome || null,
             });
             const data = (await res.json()) as {
               reply?: string;
               conversa_id?: string | null;
-              paciente_ativo?: PacienteAtivo;
             };
             const reply = (data.reply || "Desculpe, não consegui responder agora. Tente novamente em instantes.").trim();
 
-            await salvarSessao(
-              supabaseAdmin,
-              sessao?.id || null,
-              medico.id,
-              telefoneRemetente,
-              data.conversa_id || conversaIdParaContinuar,
-              data.paciente_ativo !== undefined ? data.paciente_ativo : pacienteAtivoParaContinuar,
-            );
+            await salvarSessao(supabaseAdmin, sessao?.id || null, medico.id, telefoneRemetente, data.conversa_id || conversaIdParaContinuar);
             await enviarWhatsApp(telefoneRemetente, reply);
             await supabaseAdmin.from("whatsapp_messages").insert({
               wa_from: telefoneRemetente,
