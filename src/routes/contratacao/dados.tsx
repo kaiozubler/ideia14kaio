@@ -392,17 +392,40 @@ function SecaoResponsavelEspecial({
 }) {
   return (
     <Secao icon={icon} accent={accent} titulo={titulo} subtitulo={instrucao}>
-      <button type="button" onClick={onAlternar} className="flex items-center gap-2.5">
+      <button
+        type="button"
+        onClick={onAlternar}
+        className="inline-flex items-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2"
+      >
         <span
-          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${ativoMesmoResponsavel ? "bg-emerald-500" : "bg-slate-300"}`}
+          aria-hidden
+          style={{
+            display: "inline-block",
+            position: "relative",
+            width: 44,
+            height: 24,
+            borderRadius: 9999,
+            flexShrink: 0,
+            backgroundColor: ativoMesmoResponsavel ? "#10b981" : "#cbd5e1",
+            transition: "background-color 150ms ease",
+          }}
         >
           <span
-            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-              ativoMesmoResponsavel ? "translate-x-5" : "translate-x-0.5"
-            }`}
+            style={{
+              position: "absolute",
+              top: 2,
+              left: 2,
+              width: 20,
+              height: 20,
+              borderRadius: 9999,
+              backgroundColor: "#ffffff",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+              transform: ativoMesmoResponsavel ? "translateX(20px)" : "translateX(0)",
+              transition: "transform 150ms ease",
+            }}
           />
         </span>
-        <span className="text-sm font-medium text-slate-700">
+        <span style={{ marginLeft: 10 }} className="text-sm font-medium text-slate-700">
           {ativoMesmoResponsavel ? "Mesmo do responsável principal" : "Usar outro(s) contato(s)"}
         </span>
       </button>

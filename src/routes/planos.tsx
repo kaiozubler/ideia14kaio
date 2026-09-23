@@ -66,6 +66,43 @@ export const Route = createFileRoute("/planos")({
 
 type Ciclo = "mensal" | "anual";
 
+type SugestaoPlano = {
+  alvo: (typeof PLANOS_BASE)[number];
+  direcao: "menor" | "maior";
+  /** preço do alvo (no ciclo atual) menos o preço atual exibido — positivo = alvo é mais caro. */
+  diferenca: number;
+  beneficios?: string[];
+  aoConfirmar: () => void;
+  aoContinuar: () => void;
+};
+
+/** O que o plano `alvo` tem de sobra em relação à configuração `atual`, em texto pronto pra lista. */
+function listarBeneficiosExtras(atual: ConfiguracaoPlano, alvo: (typeof PLANOS_BASE)[number]): string[] {
+  const itens: string[] = [];
+  if (alvo.medicos > atual.medicos) {
+    const diff = alvo.medicos - atual.medicos;
+    itens.push(`+${diff} médico${diff > 1 ? "s" : ""}`);
+  }
+  if (alvo.secretarias > atual.secretarias) {
+    const diff = alvo.secretarias - atual.secretarias;
+    itens.push(`+${diff} usuário${diff > 1 ? "s" : ""} de gestão`);
+  }
+  if (atual.copiloto !== PERSONALIZADO && alvo.copiloto > atual.copiloto) {
+    itens.push(`+${(alvo.copiloto - atual.copiloto).toLocaleString("pt-BR")} consultas de Copiloto`);
+  }
+  if (atual.whatsapp !== PERSONALIZADO && alvo.whatsapp > atual.whatsapp) {
+    itens.push(`+${(alvo.whatsapp - atual.whatsapp).toLocaleString("pt-BR")} conversas de WhatsApp`);
+  }
+  if (atual.video !== PERSONALIZADO) {
+    if (atual.video === 0 && alvo.video > 0) {
+      itens.push(`Vídeo incluído (${alvo.video.toLocaleString("pt-BR")} min)`);
+    } else if (alvo.video > atual.video) {
+      itens.push(`+${(alvo.video - atual.video).toLocaleString("pt-BR")} min de vídeo`);
+    }
+  }
+  return itens;
+}
+
 function PaginaPlanos() {
   const navigate = useNavigate();
 
@@ -76,6 +113,7 @@ function PaginaPlanos() {
   const [ciclo, setCiclo] = useState<Ciclo>("mensal");
   const [jaEscolheu, setJaEscolheu] = useState(true);
   const [rolado, setRolado] = useState(false);
+  const [modal, setModal] = useState<SugestaoPlano | null>(null);
 
   const configuradorRef = useRef<HTMLDivElement>(null);
 
@@ -91,9 +129,16 @@ function PaginaPlanos() {
   const ancora = PLANOS_BASE.find((p) => p.id === ancoraId) ?? PLANO_PADRAO;
   const ajustado = !configuracaoIgualAncora(config, ancora);
   const precisaCotacao = possuiItemPersonalizado(config);
+  const indiceAncora = PLANOS_BASE.findIndex((p) => p.id === ancoraId);
+  const planoProximo = indiceAncora >= 0 && indiceAncora < PLANOS_BASE.length - 1 ? PLANOS_BASE[indiceAncora + 1] : null;
+  const planoAnterior = indiceAncora > 0 ? PLANOS_BASE[indiceAncora - 1] : null;
 
   const precoMensal = precoDaConfiguracao(config, ancora);
   const precoExibido = ciclo === "anual" ? precoAnualEquivalenteMensal(precoMensal) : precoMensal;
+
+  function precoDoPlanoExibido(plano: (typeof PLANOS_BASE)[number]): number {
+    return ciclo === "anual" ? precoAnualEquivalenteMensal(plano.precoMensal) : plano.precoMensal;
+  }
 
   function escolherPlanoPronto(id: PlanoBaseId) {
     const plano = PLANOS_BASE.find((p) => p.id === id);
@@ -101,6 +146,7 @@ function PaginaPlanos() {
     setAncoraId(id);
     setConfig(configuracaoDoPlano(plano));
     setJaEscolheu(true);
+    setModal(null);
     // Rola até o detalhamento da configuração escolhida.
     requestAnimationFrame(() => {
       configuradorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -112,7 +158,65 @@ function PaginaPlanos() {
     setConfig((atual) => ({ ...atual, ...mudanca }));
   }
 
+  /** Médicos/secretárias (licenças): se o novo valor já alcança o mínimo de um plano maior, sugere migrar pra ele. */
+  function mudarLicenca(campo: "medicos" | "secretarias", valor: number) {
+    atualizarConfig({ [campo]: valor });
+    const candidato = PLANOS_BASE.slice(indiceAncora + 1).find((p) => p[campo] > ancora[campo] && valor >= p[campo]);
+    if (!candidato) return;
+    const novoConfigParcial = { ...config, [campo]: valor };
+    const beneficios = listarBeneficiosExtras(novoConfigParcial, candidato);
+    if (beneficios.length === 0) return;
+    setModal({
+      alvo: candidato,
+      direcao: "maior",
+      diferenca: precoDoPlanoExibido(candidato) - precoDaConfiguracao(novoConfigParcial, ancora),
+      beneficios,
+      aoConfirmar: () => escolherPlanoPronto(candidato.id),
+      aoContinuar: () => setModal(null),
+    });
+  }
+
+  /** Chip de franquia abaixo do mínimo do plano atual: bloqueia e sugere o plano anterior, que já cobre esse valor de fábrica. */
+  function sugerirPlanoInferior() {
+    if (!planoAnterior) return;
+    setModal({
+      alvo: planoAnterior,
+      direcao: "menor",
+      diferenca: precoExibido - precoDoPlanoExibido(planoAnterior),
+      aoConfirmar: () => escolherPlanoPronto(planoAnterior.id),
+      aoContinuar: () => setModal(null),
+    });
+  }
+
   function irParaPagamento() {
+    if (!precisaCotacao && planoProximo) {
+      const beneficios = listarBeneficiosExtras(config, planoProximo);
+      if (beneficios.length > 0) {
+        setModal({
+          alvo: planoProximo,
+          direcao: "maior",
+          diferenca: precoDoPlanoExibido(planoProximo) - precoExibido,
+          beneficios,
+          aoConfirmar: () => {
+            const novoConfig = configuracaoDoPlano(planoProximo);
+            salvarPedido({ plano: planoProximo.id, config: novoConfig, ciclo });
+            setAncoraId(planoProximo.id);
+            setConfig(novoConfig);
+            setModal(null);
+            navigate({ to: "/contratacao/confirmar" });
+          },
+          aoContinuar: () => {
+            setModal(null);
+            confirmarPagamento();
+          },
+        });
+        return;
+      }
+    }
+    confirmarPagamento();
+  }
+
+  function confirmarPagamento() {
     salvarPedido({ plano: ancora.id, config, ciclo });
     navigate({ to: "/contratacao/confirmar" });
   }
@@ -306,18 +410,18 @@ function PaginaPlanos() {
                 titulo="Médicos"
                 subtitulo="Usuários que atendem pacientes"
                 valor={config.medicos}
-                min={1}
+                min={ancora.medicos}
                 max={MAX_MEDICOS}
-                onChange={(v) => atualizarConfig({ medicos: v })}
+                onChange={(v) => mudarLicenca("medicos", v)}
               />
               <ContadorLinha
                 icon={UserRound}
                 titulo="Secretárias / Gestão"
                 subtitulo="Usuários administrativos"
                 valor={config.secretarias}
-                min={0}
+                min={ancora.secretarias}
                 max={MAX_SECRETARIAS}
-                onChange={(v) => atualizarConfig({ secretarias: v })}
+                onChange={(v) => mudarLicenca("secretarias", v)}
               />
               <p className="pt-1 text-xs text-slate-400">
                 Médico adicional: +{formatarPreco(PRECO_MEDICO_ADICIONAL)}/mês · Secretária adicional: +
@@ -336,7 +440,9 @@ function PaginaPlanos() {
                 valor={config.copiloto}
                 accent="violet"
                 sufixo="consultas"
+                minimoIncluido={ancora.copiloto}
                 onChange={(v) => atualizarConfig({ copiloto: v })}
+                onAbaixoDoMinimo={sugerirPlanoInferior}
               />
             </SectionCard>
 
@@ -351,7 +457,9 @@ function PaginaPlanos() {
                 valor={config.whatsapp}
                 accent="sky"
                 sufixo="conversas"
+                minimoIncluido={ancora.whatsapp}
                 onChange={(v) => atualizarConfig({ whatsapp: v })}
+                onAbaixoDoMinimo={sugerirPlanoInferior}
               />
             </SectionCard>
 
@@ -361,7 +469,9 @@ function PaginaPlanos() {
                 valor={config.video}
                 accent="amber"
                 sufixo="min"
+                minimoIncluido={ancora.video}
                 onChange={(v) => atualizarConfig({ video: v })}
+                onAbaixoDoMinimo={sugerirPlanoInferior}
               />
             </SectionCard>
 
@@ -532,6 +642,56 @@ function PaginaPlanos() {
       </div>
 
       <ChatSuporte />
+
+      {modal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 backdrop-blur-sm"
+          onClick={modal.aoContinuar}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ borderRadius: "28px" }}
+            className="w-full max-w-sm border border-white/80 bg-white/95 p-6 shadow-2xl backdrop-blur-xl"
+          >
+            <h3 className="text-lg font-bold text-slate-800">
+              {modal.direcao === "menor"
+                ? `Isso já é o plano ${modal.alvo.nome}`
+                : modal.diferenca > 0
+                  ? `Por mais ${formatarPreco(modal.diferenca)}/mês você tem mais`
+                  : `O plano ${modal.alvo.nome} sai mais em conta`}
+            </h3>
+            <p className="mt-2 text-sm text-slate-600">
+              {modal.direcao === "menor"
+                ? `Essa configuração já é exatamente o plano ${modal.alvo.nome}, por ${formatarPreco(precoDoPlanoExibido(modal.alvo))}/mês — sem precisar montar à la carte. Quer trocar pra ele?`
+                : `Migrando para o ${modal.alvo.nome} você garante:`}
+            </p>
+            {modal.beneficios && modal.beneficios.length > 0 && (
+              <ul className="mt-3 space-y-1.5 text-sm text-slate-600">
+                {modal.beneficios.map((b) => (
+                  <li key={b} className="flex items-start gap-2">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                    <span>{b}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="mt-6 flex flex-col gap-2">
+              <button
+                onClick={modal.aoConfirmar}
+                className="w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:from-emerald-600 hover:to-emerald-700"
+              >
+                Trocar para {modal.alvo.nome}
+              </button>
+              <button
+                onClick={modal.aoContinuar}
+                className="w-full rounded-2xl px-4 py-3 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-100"
+              >
+                {modal.direcao === "menor" ? "Manter como está" : "Continuar sem trocar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -685,26 +845,36 @@ function SeletorTier({
   accent,
   sufixo,
   onChange,
+  minimoIncluido,
+  onAbaixoDoMinimo,
 }: {
   opcoes: { quantidade: number; preco: number; label?: string }[];
   valor: number;
   accent: Accent;
   sufixo: string;
   onChange: (v: number) => void;
+  /** Quantidade mínima já incluída no plano atual — opções abaixo disso ficam apagadas. */
+  minimoIncluido?: number;
+  /** Chamado ao clicar numa opção apagada, no lugar de onChange. */
+  onAbaixoDoMinimo?: () => void;
 }) {
   return (
     <div className="flex flex-wrap gap-2">
       {opcoes.map((opcao) => {
         const ativo = opcao.quantidade === valor;
+        const abaixoDoMinimo =
+          minimoIncluido !== undefined && opcao.quantidade !== PERSONALIZADO && opcao.quantidade < minimoIncluido;
         return (
           <button
             key={opcao.quantidade}
-            onClick={() => onChange(opcao.quantidade)}
+            onClick={() => (abaixoDoMinimo ? onAbaixoDoMinimo?.() : onChange(opcao.quantidade))}
             className={[
               "rounded-full px-4 py-2 text-sm font-semibold transition-colors",
               ativo
                 ? `${ACCENT_SOLID[accent]} text-white shadow-sm`
-                : "border border-slate-200 bg-white/70 text-slate-600 hover:bg-white",
+                : abaixoDoMinimo
+                  ? "border border-slate-100 bg-slate-50 text-slate-300 hover:bg-slate-50"
+                  : "border border-slate-200 bg-white/70 text-slate-600 hover:bg-white",
             ].join(" ")}
           >
             {opcao.label ?? `${opcao.quantidade.toLocaleString("pt-BR")} ${sufixo}`}
