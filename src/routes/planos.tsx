@@ -155,22 +155,35 @@ function PaginaPlanos() {
 
   function atualizarConfig(mudanca: Partial<ConfiguracaoPlano>) {
     setJaEscolheu(true);
-    setConfig((atual) => ({ ...atual, ...mudanca }));
+    const novo = { ...config, ...mudanca };
+    setConfig(novo);
+    avaliarSugestaoDeUpgrade(novo);
   }
 
-  /** Médicos/secretárias (licenças): se o novo valor já alcança o mínimo de um plano maior, sugere migrar pra ele. */
-  function mudarLicenca(campo: "medicos" | "secretarias", valor: number) {
-    atualizarConfig({ [campo]: valor });
-    const candidato = PLANOS_BASE.slice(indiceAncora + 1).find((p) => p[campo] > ancora[campo] && valor >= p[campo]);
+  /**
+   * Depois de qualquer mudança (equipe OU franquia): existe algum plano acima do atual que já
+   * cobre essa configuração inteira (mesmo ou mais em cada item) por um preço de pacote igual ou
+   * menor que o que sairia à la carte? Se sim, sugere migrar — é sempre um negócio melhor.
+   */
+  function avaliarSugestaoDeUpgrade(novoConfig: ConfiguracaoPlano) {
+    if (possuiItemPersonalizado(novoConfig)) return;
+    const precoALaCarteAtual = precoDaConfiguracao(novoConfig, ancora);
+    const candidato = PLANOS_BASE.slice(indiceAncora + 1).find(
+      (p) =>
+        p.medicos >= novoConfig.medicos &&
+        p.secretarias >= novoConfig.secretarias &&
+        p.copiloto >= novoConfig.copiloto &&
+        p.whatsapp >= novoConfig.whatsapp &&
+        p.video >= novoConfig.video &&
+        p.precoMensal <= precoALaCarteAtual,
+    );
     if (!candidato) return;
-    const novoConfigParcial = { ...config, [campo]: valor };
-    const beneficios = listarBeneficiosExtras(novoConfigParcial, candidato);
-    if (beneficios.length === 0) return;
+    const beneficios = listarBeneficiosExtras(novoConfig, candidato);
     setModal({
       alvo: candidato,
       direcao: "maior",
-      diferenca: precoDoPlanoExibido(candidato) - precoDaConfiguracao(novoConfigParcial, ancora),
-      beneficios,
+      diferenca: precoDoPlanoExibido(candidato) - (ciclo === "anual" ? precoAnualEquivalenteMensal(precoALaCarteAtual) : precoALaCarteAtual),
+      beneficios: beneficios.length > 0 ? beneficios : undefined,
       aoConfirmar: () => escolherPlanoPronto(candidato.id),
       aoContinuar: () => setModal(null),
     });
@@ -412,7 +425,7 @@ function PaginaPlanos() {
                 valor={config.medicos}
                 min={ancora.medicos}
                 max={MAX_MEDICOS}
-                onChange={(v) => mudarLicenca("medicos", v)}
+                onChange={(v) => atualizarConfig({ medicos: v })}
               />
               <ContadorLinha
                 icon={UserRound}
@@ -421,7 +434,7 @@ function PaginaPlanos() {
                 valor={config.secretarias}
                 min={ancora.secretarias}
                 max={MAX_SECRETARIAS}
-                onChange={(v) => mudarLicenca("secretarias", v)}
+                onChange={(v) => atualizarConfig({ secretarias: v })}
               />
               <p className="pt-1 text-xs text-slate-400">
                 Médico adicional: +{formatarPreco(PRECO_MEDICO_ADICIONAL)}/mês · Secretária adicional: +
@@ -663,7 +676,9 @@ function PaginaPlanos() {
             <p className="mt-2 text-sm text-slate-600">
               {modal.direcao === "menor"
                 ? `Essa configuração já é exatamente o plano ${modal.alvo.nome}, por ${formatarPreco(precoDoPlanoExibido(modal.alvo))}/mês — sem precisar montar à la carte. Quer trocar pra ele?`
-                : `Migrando para o ${modal.alvo.nome} você garante:`}
+                : modal.beneficios && modal.beneficios.length > 0
+                  ? `Migrando para o ${modal.alvo.nome} você garante:`
+                  : `O plano ${modal.alvo.nome} já cobre exatamente essa configuração, de fábrica, por ${modal.diferenca > 0 ? "menos" : "um valor igual ou menor"}.`}
             </p>
             {modal.beneficios && modal.beneficios.length > 0 && (
               <ul className="mt-3 space-y-1.5 text-sm text-slate-600">
