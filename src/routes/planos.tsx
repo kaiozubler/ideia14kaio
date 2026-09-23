@@ -310,15 +310,16 @@ function PaginaPlanos() {
             Escolha como começar
           </p>
           <div className="grid gap-5 md:grid-cols-3">
-            {PLANOS_BASE.map((plano) => {
+            {PLANOS_BASE.map((plano, indice) => {
               const ativo = ancoraId === plano.id;
+              const planoComparacao = indice > 0 ? PLANOS_BASE[indice - 1] : plano;
               const preco =
                 ciclo === "anual" ? precoAnualEquivalenteMensal(plano.precoMensal) : plano.precoMensal;
-              const descontoPct = descontoPercentualDoPlano(plano);
+              const descontoPct = descontoPercentualDoPlano(plano, planoComparacao);
               const precoALaCarte =
                 ciclo === "anual"
-                  ? precoAnualEquivalenteMensal(precoALaCarteDoPlano(plano))
-                  : precoALaCarteDoPlano(plano);
+                  ? precoAnualEquivalenteMensal(precoALaCarteDoPlano(plano, planoComparacao))
+                  : precoALaCarteDoPlano(plano, planoComparacao);
               return (
                 <div
                   key={plano.id}
@@ -357,7 +358,7 @@ function PaginaPlanos() {
                       <div className="mb-1 flex items-center gap-2">
                         <span className="text-sm text-slate-400 line-through">{formatarPreco(precoALaCarte)}</span>
                         <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-                          -{Math.round(descontoPct * 100)}% vs. plano Basic
+                          -{Math.round(descontoPct * 100)}% vs. plano {planoComparacao.nome}
                         </span>
                       </div>
                     )}
