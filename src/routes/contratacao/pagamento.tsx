@@ -4,6 +4,7 @@ import { CreditCard, Lock, ShieldCheck } from "lucide-react";
 
 import { BotaoFlutuante } from "@/components/contratacao/BotaoFlutuante";
 import { LayoutContratacao } from "@/components/contratacao/LayoutContratacao";
+import { atualizarContratacaoRemota } from "@/lib/contratacao/api";
 import { lerPedido, type Pedido } from "@/lib/contratacao/pedido";
 import {
   PERSONALIZADO,
@@ -72,8 +73,11 @@ function PaginaPagamento() {
     return `https://wa.me/${WHATSAPP_COMERCIAL}?text=${encodeURIComponent(texto)}`;
   })();
 
-  function confirmarPedido() {
+  async function confirmarPedido() {
     window.open(linkWhatsApp, "_blank", "noreferrer");
+    if (pedido!.contratacaoId) {
+      await atualizarContratacaoRemota(pedido!.contratacaoId, { status: "aguardando_confirmacao" });
+    }
     navigate({ to: "/contratacao/conclusao" });
   }
 

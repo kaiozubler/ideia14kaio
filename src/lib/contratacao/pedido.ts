@@ -53,6 +53,8 @@ export type Pedido = {
   diaCobranca?: number;
   dados?: DadosCliente;
   termosAceitos?: boolean;
+  /** id da linha em `contratacoes` no Supabase, uma vez criada (ver src/lib/contratacao/api.ts). */
+  contratacaoId?: string;
 };
 
 const CHAVE = "medicopilot:pedido";

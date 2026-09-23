@@ -4,6 +4,7 @@ import { BarChart3, Building2, Landmark, MapPin, Plus, Scale, Trash2, User } fro
 
 import { BotaoFlutuante } from "@/components/contratacao/BotaoFlutuante";
 import { LayoutContratacao } from "@/components/contratacao/LayoutContratacao";
+import { atualizarContratacaoRemota } from "@/lib/contratacao/api";
 import { buscarEnderecoPorCep, cepValido, formatarCep } from "@/lib/contratacao/cep";
 import { atualizarPedido, lerPedido, type Contato, type DadosCliente, type Pedido } from "@/lib/contratacao/pedido";
 import {
@@ -202,13 +203,28 @@ function PaginaDados() {
     return Object.keys(novosErros).length === 0;
   }
 
-  function avancar() {
+  async function avancar() {
     if (!validar()) {
       setErroGeral("Confere os campos destacados abaixo antes de continuar.");
       return;
     }
     setErroGeral(null);
     atualizarPedido({ dados });
+    if (pedido!.contratacaoId) {
+      await atualizarContratacaoRemota(pedido!.contratacaoId, {
+        nomeClinica: dados.nomeClinica,
+        documento: dados.documento,
+        endereco: dados.endereco,
+        responsavel: dados.responsavel,
+        financeiroMesmoResponsavel: dados.financeiroMesmoResponsavel,
+        financeiro: dados.financeiroMesmoResponsavel ? [] : dados.financeiro,
+        juridicoMesmoResponsavel: dados.juridicoMesmoResponsavel,
+        juridico: dados.juridicoMesmoResponsavel ? [] : dados.juridico,
+        especialidade: dados.especialidade,
+        pacientesMes: dados.pacientesMes,
+        comoConheceu: dados.comoConheceu,
+      });
+    }
     navigate({ to: "/contratacao/termos" });
   }
 

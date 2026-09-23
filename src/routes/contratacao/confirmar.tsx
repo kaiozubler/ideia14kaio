@@ -6,6 +6,7 @@ import { ptBR } from "date-fns/locale";
 
 import { BotaoFlutuante } from "@/components/contratacao/BotaoFlutuante";
 import { LayoutContratacao } from "@/components/contratacao/LayoutContratacao";
+import { atualizarContratacaoRemota, garantirContratacaoRemota } from "@/lib/contratacao/api";
 import { atualizarPedido, lerPedido, type Pedido } from "@/lib/contratacao/pedido";
 import {
   PERSONALIZADO,
@@ -39,6 +40,18 @@ function PaginaConfirmar() {
     }
     setPedido(atual);
     setDiaCobranca(atual.diaCobranca ?? diaDeHojeLimitado());
+
+    // Cria a linha em `contratacoes` assim que a pessoa chega aqui (mesmo que
+    // abandone logo depois — é o que permite medir abandono por etapa). Se
+    // ela voltar pra /planos e trocar de plano, isso também re-sincroniza.
+    const ancoraAtual = PLANOS_BASE.find((p) => p.id === atual.plano) ?? PLANO_PADRAO;
+    const precoAtual = precoDaConfiguracao(atual.config, ancoraAtual);
+    garantirContratacaoRemota(atual, precoAtual).then(({ contratacaoId }) => {
+      if (contratacaoId && contratacaoId !== atual.contratacaoId) {
+        atualizarPedido({ contratacaoId });
+        setPedido((p) => (p ? { ...p, contratacaoId } : p));
+      }
+    });
   }, [navigate]);
 
   if (!pedido) return null;
@@ -48,8 +61,12 @@ function PaginaConfirmar() {
   const precoExibido = pedido.ciclo === "anual" ? precoAnualEquivalenteMensal(precoMensal) : precoMensal;
   const proximaRenovacao = format(addYears(new Date(), 1), "d 'de' MMMM 'de' yyyy", { locale: ptBR });
 
-  function avancar() {
-    atualizarPedido({ diaCobranca: pedido!.ciclo === "mensal" ? diaCobranca : undefined });
+  async function avancar() {
+    const novoDia = pedido!.ciclo === "mensal" ? diaCobranca : undefined;
+    atualizarPedido({ diaCobranca: novoDia });
+    if (pedido!.contratacaoId) {
+      await atualizarContratacaoRemota(pedido!.contratacaoId, { diaCobranca: novoDia ?? null });
+    }
     navigate({ to: "/contratacao/dados" });
   }
 

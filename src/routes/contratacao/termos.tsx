@@ -4,6 +4,7 @@ import { FileText } from "lucide-react";
 
 import { BotaoFlutuante } from "@/components/contratacao/BotaoFlutuante";
 import { LayoutContratacao } from "@/components/contratacao/LayoutContratacao";
+import { atualizarContratacaoRemota } from "@/lib/contratacao/api";
 import { atualizarPedido, lerPedido, type Pedido } from "@/lib/contratacao/pedido";
 
 export const Route = createFileRoute("/contratacao/termos")({
@@ -29,9 +30,12 @@ function PaginaTermos() {
 
   if (!pedido) return null;
 
-  function avancar() {
+  async function avancar() {
     if (!aceito) return;
     atualizarPedido({ termosAceitos: true });
+    if (pedido!.contratacaoId) {
+      await atualizarContratacaoRemota(pedido!.contratacaoId, { termosAceitos: true });
+    }
     navigate({ to: "/contratacao/pagamento" });
   }
 
