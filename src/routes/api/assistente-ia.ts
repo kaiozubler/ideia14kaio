@@ -642,84 +642,40 @@ function onlyDigits(v?: string | null) {
   return (v || "").replace(/\D/g, "");
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function isValidUuid(v?: string | null): v is string {
-  return !!v && UUID_RE.test(v);
-}
-/** Erro padrão a devolver pra IA quando ela manda um paciente_id que não é um UUID de verdade. */
-function erroPacienteIdInvalido(recebido: string) {
-  return {
-    erro: "paciente_id_invalido",
-    instrucao: `"${recebido}" não é um id de paciente válido. Chame buscar_paciente pelo nome antes e use o UUID exato do campo paciente_id que ele devolver — nunca invente um id.`,
-  };
-}
-
 /**
- * Confirma que paciente_id não só TEM formato de UUID (isValidUuid), mas
- * REALMENTE pertence a este médico — o trigger validar_paciente_do_medico
- * já bloqueia isso no banco, mas só com um erro cru de Postgres. Checar
- * aqui antes permite devolver uma instrução que a IA consegue seguir (buscar
- * de novo), em vez de um erro genérico "falha ao salvar" para o médico.
- * Sem isso, um UUID com aparência válida mas que a IA não copiou de um
- * buscar_paciente de verdade (ex.: um id "lembrado" errado de outro
- * paciente/conversa) só é pego pelo banco, tarde demais.
- */
-/**
- * Confirma que paciente_id não só TEM formato de UUID (isValidUuid), mas
- * REALMENTE pertence a este médico — o trigger validar_paciente_do_medico
- * já bloqueia isso no banco, mas só com um erro cru de Postgres. Checar
- * aqui antes permite devolver uma instrução que a IA consegue seguir (buscar
- * de novo), em vez de um erro genérico "falha ao salvar" para o médico.
- * Sem isso, um UUID com aparência válida mas que a IA não copiou de um
- * buscar_paciente de verdade (ex.: um id "lembrado" errado de outro
- * paciente/conversa) só é pego pelo banco, tarde demais.
+ * ÚNICO caminho confiável de identidade do paciente para gerar um
+ * documento. NÃO confia em args.paciente_id/paciente_nome vindos direto
+ * da chamada da tool (esse canal já causou documento saindo pro paciente
+ * errado — a IA pode construir esses argumentos errado mesmo depois de
+ * mostrar/confirmar o paciente certo no texto). Em vez disso:
  *
- * Também devolve o nome real do cadastro, para o chamador conferir contra
- * o paciente_nome que a IA mandou (ver checarConsistenciaPaciente) — isso
- * pega o caso mais perigoso: a IA menciona/confirma um paciente no TEXTO
- * (ex.: "Murilo Almenau"), mas manda o paciente_id de OUTRO paciente na
- * chamada da tool (ex.: um id "grudado" de uma conversa anterior). Sem
- * essa conferência, o documento sai para o paciente errado mesmo com o
- * paciente_id tecnicamente válido e pertencente ao médico.
+ *  - ctx.pacienteAtivo é a ÚNICA fonte de verdade: só é preenchido (a) por
+ *    um buscar_paciente que achou exatamente 1 resultado nesta mesma
+ *    troca de tool-calls, ou (b) por um valor de confiança que o
+ *    CHAMADOR (webhook do WhatsApp, ou a tela de consulta do app com o
+ *    paciente que está literalmente aberto) passou no início da
+ *    requisição — nunca por texto livre reconstruído pela IA.
+ *  - Se ctx.pacienteAtivo não estiver preenchido, a geração é bloqueada —
+ *    a IA precisa chamar buscar_paciente primeiro, sem exceção.
+ *  - Se estiver preenchido, SOBRESCREVE args.paciente_id/paciente_nome com
+ *    esse valor, ignorando o que a IA mandou. Isso torna irrelevante
+ *    qualquer id/nome que a IA tenha "inventado" ou confundido — o
+ *    documento sempre sai para quem foi de fato resolvido por uma busca
+ *    verificada, nunca para outro paciente.
  */
-async function buscarPacienteDoMedico(
-  db: Db,
-  pacienteId: string,
-  medicoId: string,
-): Promise<{ pertence: boolean; nome: string | null }> {
-  const { data } = await db
-    .from("pacientes")
-    .select("paciente_id,name")
-    .eq("paciente_id", pacienteId)
-    .eq("user_id", medicoId)
-    .maybeSingle();
-  return { pertence: !!data, nome: data?.name ?? null };
-}
-function erroPacienteNaoPertence(pacienteId: string) {
-  return {
-    erro: "paciente_nao_pertence_ao_medico",
-    instrucao: `O id de paciente "${pacienteId}" não corresponde a nenhum paciente seu. Chame buscar_paciente pelo nome de novo e use o UUID exato do resultado — não reaproveite um id de uma conversa/paciente diferente.`,
-  };
-}
-function normalizarNome(v: string) {
-  return v
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
-}
-/**
- * REDE DE SEGURANÇA CRÍTICA: confere se paciente_nome (o que a IA disse/
- * confirmou em texto) bate com o nome real do cadastro de paciente_id (o
- * que vai efetivamente receber o documento). Uma divergência aqui é
- * sempre bloqueada — é exatamente o padrão de um documento médico saindo
- * para o paciente errado (nome certo dito à voz, id errado usado de fato).
- */
-function erroNomeNaoBateComId(nomeInformado: string, nomeReal: string) {
-  return {
-    erro: "paciente_nome_nao_confere_com_id",
-    instrucao: `Inconsistência de segurança: o nome "${nomeInformado}" não bate com o cadastro do paciente_id usado (que é de "${nomeReal}"). NÃO gere o documento. Chame buscar_paciente de novo pelo nome correto e use o paciente_id exato que ele devolver.`,
-  };
+function resolverIdentidadePaciente(ctx: ToolCtx, args: Record<string, any>): { erro: unknown } | null {
+  if (!ctx.pacienteAtivo.value) {
+    return {
+      erro: {
+        erro: "paciente_nao_identificado",
+        instrucao:
+          "Nenhum paciente foi identificado por busca ainda nesta conversa. Chame buscar_paciente pelo nome do paciente ANTES de gerar este documento — nunca informe um paciente_id sem uma busca correspondente.",
+      },
+    };
+  }
+  args.paciente_id = ctx.pacienteAtivo.value.paciente_id;
+  args.paciente_nome = ctx.pacienteAtivo.value.nome;
+  return null;
 }
 
 /**
@@ -795,7 +751,7 @@ type ToolCtx = {
   // X" na próxima mensagem, em vez de depender só do modelo reconstruir
   // isso lendo o histórico em texto livre (o que se mostrou pouco confiável
   // em conversas mais longas).
-  pacienteAtivo: { value: { paciente_id: string; nome: string } | null };
+  pacienteAtivo: { value: { paciente_id: string | null; nome: string } | null };
   apiKey: string;
   // Preenchidos apenas no canal "paciente": identidade já resolvida pelo webhook,
   // nunca decidida pela IA a partir do texto da conversa.
@@ -855,6 +811,12 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
       if (error) return { erro: error.message };
       if (data && data.length === 1) {
         ctx.pacienteAtivo.value = { paciente_id: data[0].paciente_id, nome: data[0].name };
+      } else if (!data || data.length === 0) {
+        // Paciente não cadastrado — segue mesmo assim (só com o nome, sem
+        // paciente_id), conforme a regra "nenhum resultado: siga e execute
+        // a ação mesmo assim". Isso também conta como identificação
+        // resolvida para fins de resolverIdentidadePaciente.
+        ctx.pacienteAtivo.value = { paciente_id: null, nome: nomeBusca };
       }
       return {
         total: data?.length ?? 0,
@@ -1213,15 +1175,8 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
     }
 
     case "gerar_receita": {
-      if (args.paciente_id && !isValidUuid(args.paciente_id)) return erroPacienteIdInvalido(String(args.paciente_id));
-      if (args.paciente_id && medicoId) {
-        const { pertence, nome: nomeReal } = await buscarPacienteDoMedico(db, args.paciente_id, medicoId);
-        if (!pertence) return erroPacienteNaoPertence(String(args.paciente_id));
-        if (args.paciente_nome && nomeReal && normalizarNome(String(args.paciente_nome)) !== normalizarNome(nomeReal)) {
-          return erroNomeNaoBateComId(String(args.paciente_nome), nomeReal);
-        }
-      }
-      if (args.paciente_id && args.paciente_nome) ctx.pacienteAtivo.value = { paciente_id: args.paciente_id, nome: String(args.paciente_nome) };
+      const identidadeErro = resolverIdentidadePaciente(ctx, args);
+      if (identidadeErro) return identidadeErro.erro;
       const medicamentosBrutos = Array.isArray(args.medicamentos) ? args.medicamentos : [];
       if (!medicamentosBrutos.length) return { erro: "Informe ao menos um medicamento." };
 
@@ -1450,15 +1405,8 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
     }
 
     case "gerar_solicitacao_exame": {
-      if (args.paciente_id && !isValidUuid(args.paciente_id)) return erroPacienteIdInvalido(String(args.paciente_id));
-      if (args.paciente_id && medicoId) {
-        const { pertence, nome: nomeReal } = await buscarPacienteDoMedico(db, args.paciente_id, medicoId);
-        if (!pertence) return erroPacienteNaoPertence(String(args.paciente_id));
-        if (args.paciente_nome && nomeReal && normalizarNome(String(args.paciente_nome)) !== normalizarNome(nomeReal)) {
-          return erroNomeNaoBateComId(String(args.paciente_nome), nomeReal);
-        }
-      }
-      if (args.paciente_id && args.paciente_nome) ctx.pacienteAtivo.value = { paciente_id: args.paciente_id, nome: String(args.paciente_nome) };
+      const identidadeErro = resolverIdentidadePaciente(ctx, args);
+      if (identidadeErro) return identidadeErro.erro;
       const exames = Array.isArray(args.exames) ? args.exames : [];
       if (!exames.length) return { erro: "Informe ao menos um exame." };
       const { cpf: cpfResolvidoExame, idade: idadeResolvidaExame } = await completarCpfIdadeDoPaciente(
@@ -1620,15 +1568,8 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
     }
 
     case "gerar_atestado": {
-      if (args.paciente_id && !isValidUuid(args.paciente_id)) return erroPacienteIdInvalido(String(args.paciente_id));
-      if (args.paciente_id && medicoId) {
-        const { pertence, nome: nomeReal } = await buscarPacienteDoMedico(db, args.paciente_id, medicoId);
-        if (!pertence) return erroPacienteNaoPertence(String(args.paciente_id));
-        if (args.paciente_nome && nomeReal && normalizarNome(String(args.paciente_nome)) !== normalizarNome(nomeReal)) {
-          return erroNomeNaoBateComId(String(args.paciente_nome), nomeReal);
-        }
-      }
-      if (args.paciente_id && args.paciente_nome) ctx.pacienteAtivo.value = { paciente_id: args.paciente_id, nome: String(args.paciente_nome) };
+      const identidadeErro = resolverIdentidadePaciente(ctx, args);
+      if (identidadeErro) return identidadeErro.erro;
       const tipo = args.tipo === "declaracao" ? "declaracao" : "atestado";
       let documentoId: string | null = null;
       const conteudo = {
@@ -2000,7 +1941,7 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const pendingAction: { value: unknown } = { value: null };
-        const pacienteAtivo: { value: { paciente_id: string; nome: string } | null } = {
+        const pacienteAtivo: { value: { paciente_id: string | null; nome: string } | null } = {
           value: body.paciente_id && body.paciente_nome ? { paciente_id: body.paciente_id, nome: body.paciente_nome } : null,
         };
         const canal = body.canal === "paciente" ? "paciente" : "interno";
