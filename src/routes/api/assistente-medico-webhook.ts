@@ -80,17 +80,18 @@ const INATIVIDADE_MS = 30 * 60 * 1000;
 // IA tenha inventado por conta própria.
 const PACIENTE_TTL_MS = 10 * 60 * 1000;
 
-// Frases que, quando o médico manda, encerram o assunto atual na hora — sem
-// gastar uma chamada de IA para isso. Comparação é por inclusão de substring
-// já normalizada (sem acento, minúsculas), então variações de pontuação ou
-// maiúsculas não importam.
-const FRASES_NOVO_ASSUNTO = [
-  "outro assunto",
-  "mudando de assunto",
-  "vamos mudar de assunto",
-  "e so isso, obrigado",
-  "e so isso obrigado",
-];
+// Frases/padrões que, quando o médico manda, encerram o assunto atual na
+// hora — sem gastar uma chamada de IA para isso. Duas camadas:
+//  1) Padrão (regex): um verbo de troca/encerramento + "assunto"/"tópico"/
+//     "tema" em qualquer ordem próxima — cobre "mude de assunto", "novo
+//     assunto", "trocar de assunto", "encerra esse assunto" etc. sem
+//     precisar prever cada variação exata de antemão.
+//  2) Frases fixas sem a palavra "assunto" (ex.: despedida).
+// Comparação é por texto já normalizado (sem acento, minúsculas), então
+// variações de pontuação ou maiúsculas não importam.
+const PADRAO_NOVO_ASSUNTO =
+  /\b(mud\w*|troc\w*|outr\w*|nov\w*|encerr\w*|finaliz\w*|termin\w*|acab\w*)\b[\s\w]{0,20}\b(assunto|topico|tema)\b|\b(assunto|topico|tema)\b[\s\w]{0,20}\b(mud\w*|troc\w*|outr\w*|nov\w*|encerr\w*|finaliz\w*|termin\w*|acab\w*)\b/;
+const FRASES_NOVO_ASSUNTO_FIXAS = ["e so isso, obrigado", "e so isso obrigado", "e so isso, obrigada", "e so isso obrigada"];
 
 function normalizarTexto(v: string) {
   return v
@@ -102,7 +103,7 @@ function normalizarTexto(v: string) {
 
 function pedeNovoAssunto(texto: string) {
   const normalizado = normalizarTexto(texto);
-  return FRASES_NOVO_ASSUNTO.some((frase) => normalizado.includes(frase));
+  return PADRAO_NOVO_ASSUNTO.test(normalizado) || FRASES_NOVO_ASSUNTO_FIXAS.some((frase) => normalizado.includes(frase));
 }
 
 function onlyDigits(v?: string | null) {
