@@ -1,17 +1,27 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   Bot,
+  BookOpen,
+  Calendar,
   Check,
+  ChevronDown,
+  ClipboardList,
+  FileSignature,
+  FileText,
+  FlaskConical,
   MessageCircle,
   Minus,
+  Network,
   Plus,
+  Receipt,
   Sparkles,
   Stethoscope,
   UserRound,
   Users,
   Video,
+  Workflow,
 } from "lucide-react";
 
 import { ChatSuporte } from "@/components/suporte/ChatSuporte";
@@ -63,6 +73,113 @@ export const Route = createFileRoute("/planos")({
   }),
   component: PaginaPlanos,
 });
+
+type RecursoItem = {
+  icon: React.ComponentType<{ className?: string }>;
+  titulo: string;
+  descricao: string;
+};
+
+type CategoriaRecursos = {
+  categoria: string;
+  itens: RecursoItem[];
+};
+
+// Levantamento a partir do que já existe no produto (módulos em public/*.js,
+// public/medicopilot.html e as automações em src/routes/api) — resumido em
+// linguagem comercial pra quem nunca usou o sistema.
+const RECURSOS: CategoriaRecursos[] = [
+  {
+    categoria: "Atendimento",
+    itens: [
+      {
+        icon: Calendar,
+        titulo: "Agenda",
+        descricao: "Agendamento online, lembretes automáticos, encaixes e bloqueios de horário.",
+      },
+      {
+        icon: FileText,
+        titulo: "Prontuário eletrônico",
+        descricao: "Histórico completo do paciente, evolução clínica e anexos em um só lugar.",
+      },
+      {
+        icon: Bot,
+        titulo: "Copiloto de IA",
+        descricao: "Sugestões clínicas em tempo real e organização automática do prontuário durante a consulta.",
+      },
+      {
+        icon: Video,
+        titulo: "Telemedicina",
+        descricao: "Videochamada integrada ao sistema, sem precisar de outro aplicativo.",
+      },
+    ],
+  },
+  {
+    categoria: "Documentos médicos",
+    itens: [
+      {
+        icon: FileSignature,
+        titulo: "Receitas, atestados e encaminhamentos",
+        descricao: "Emissão rápida, incluindo receita de controle especial, com assinatura digital válida (ICP-Brasil).",
+      },
+      {
+        icon: ClipboardList,
+        titulo: "LME",
+        descricao: "Laudo para medicamentos especiais preenchido com apoio de IA, seguindo os protocolos do SUS.",
+      },
+      {
+        icon: FlaskConical,
+        titulo: "Solicitação de exames",
+        descricao: "Emissão rápida, com sugestão de exames por IA a partir do quadro clínico.",
+      },
+    ],
+  },
+  {
+    categoria: "Relacionamento com o paciente",
+    itens: [
+      {
+        icon: MessageCircle,
+        titulo: "WhatsApp automatizado",
+        descricao: "Confirmação de consulta, lembretes e um assistente de IA que tira dúvidas do paciente direto no WhatsApp.",
+      },
+      {
+        icon: Workflow,
+        titulo: "Protocolos assistenciais",
+        descricao: "Fluxos clínicos padronizados e personalizáveis, pra sua equipe seguir sempre o mesmo processo.",
+      },
+      {
+        icon: ClipboardList,
+        titulo: "Questionários",
+        descricao: "Formulários clínicos (pré-consulta, triagem) enviados e respondidos automaticamente.",
+      },
+      {
+        icon: Network,
+        titulo: "Mapa familiar",
+        descricao: "Genograma visual da família do paciente, montado com apoio de IA.",
+      },
+    ],
+  },
+  {
+    categoria: "Gestão da clínica",
+    itens: [
+      {
+        icon: BookOpen,
+        titulo: "Base de conhecimento própria",
+        descricao: "Você alimenta com seus protocolos e a IA passa a usar esse conteúdo nas respostas.",
+      },
+      {
+        icon: Users,
+        titulo: "Equipe",
+        descricao: "Múltiplos médicos e secretárias, com permissões por perfil.",
+      },
+      {
+        icon: Receipt,
+        titulo: "Faturamento",
+        descricao: "Cobranças, nota fiscal eletrônica e boletos, tudo integrado ao sistema.",
+      },
+    ],
+  },
+];
 
 type Ciclo = "mensal" | "anual";
 
@@ -116,6 +233,7 @@ function PaginaPlanos() {
   const [modal, setModal] = useState<SugestaoPlano | null>(null);
 
   const configuradorRef = useRef<HTMLDivElement>(null);
+  const recursosRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function aoRolar() {
@@ -400,6 +518,16 @@ function PaginaPlanos() {
               );
             })}
           </div>
+
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={() => recursosRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/70 px-5 py-2.5 text-sm font-semibold text-slate-600 backdrop-blur-xl transition-colors hover:bg-white"
+            >
+              Entenda o que o MediCopilot oferece
+              <ChevronDown className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {/* Monte seu plano + resumo */}
@@ -609,6 +737,57 @@ function PaginaPlanos() {
                 ? "Itens personalizados entram em uma cotação com nosso time."
                 : "Pagamento recorrente no cartão de crédito. Você pode alterar seu plano depois."}
             </p>
+          </div>
+        </div>
+
+        {/* Tudo que o MediCopilot oferece */}
+        <div ref={recursosRef} className="mt-20 scroll-mt-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-2xl font-bold tracking-tight text-slate-800 md:text-3xl">
+              O que o MediCopilot oferece
+            </h2>
+            <p className="mt-3 text-slate-500">
+              Um sistema só pra sua clínica: agenda, prontuário, documentos médicos, telemedicina e
+              cobrança — com um Copiloto de IA e automações de WhatsApp cuidando do trabalho repetitivo
+              em cada etapa.
+            </p>
+          </div>
+
+          <div
+            style={{ borderRadius: "32px" }}
+            className="mt-8 overflow-hidden border border-white/80 bg-white/60 shadow-xl shadow-slate-200/40 backdrop-blur-xl"
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px] border-collapse text-left">
+                <tbody>
+                  {RECURSOS.map((grupo) => (
+                    <Fragment key={grupo.categoria}>
+                      <tr>
+                        <td colSpan={2} className="bg-slate-50/80 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-400">
+                          {grupo.categoria}
+                        </td>
+                      </tr>
+                      {grupo.itens.map((item) => (
+                        <tr key={item.titulo} className="border-t border-slate-100">
+                          <td className="w-56 px-6 py-4 align-top">
+                            <div className="flex items-center gap-2.5">
+                              <div
+                                style={{ borderRadius: "10px" }}
+                                className="flex h-8 w-8 shrink-0 items-center justify-center bg-gradient-to-br from-emerald-400 to-emerald-600"
+                              >
+                                <item.icon className="h-4 w-4 text-white" />
+                              </div>
+                              <span className="text-sm font-bold text-slate-800">{item.titulo}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 align-top text-sm text-slate-500">{item.descricao}</td>
+                        </tr>
+                      ))}
+                    </Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

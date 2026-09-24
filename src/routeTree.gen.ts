@@ -16,6 +16,7 @@ import { Route as ApiAssistenteIaRouteImport } from './routes/api/assistente-ia'
 import { Route as ApiAssistenteIaConversasRouteImport } from './routes/api/assistente-ia-conversas'
 import { Route as ApiAssistenteMedicoWebhookRouteImport } from './routes/api/assistente-medico-webhook'
 import { Route as ApiChatIaRouteImport } from './routes/api/chat-ia'
+import { Route as ApiContratacaoRouteImport } from './routes/api/contratacao'
 import { Route as ApiDailyRoomRouteImport } from './routes/api/daily-room'
 import { Route as ApiDeepgramTokenRouteImport } from './routes/api/deepgram-token'
 import { Route as ApiLmeIaRouteImport } from './routes/api/lme-ia'
@@ -108,6 +109,11 @@ const ApiAssistenteMedicoWebhookRoute =
 const ApiChatIaRoute = ApiChatIaRouteImport.update({
   id: '/api/chat-ia',
   path: '/api/chat-ia',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiContratacaoRoute = ApiContratacaoRouteImport.update({
+  id: '/api/contratacao',
+  path: '/api/contratacao',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiDailyRoomRoute = ApiDailyRoomRouteImport.update({
@@ -419,6 +425,7 @@ export interface FileRoutesByFullPath {
   '/api/assistente-ia-conversas': typeof ApiAssistenteIaConversasRoute
   '/api/assistente-medico-webhook': typeof ApiAssistenteMedicoWebhookRoute
   '/api/chat-ia': typeof ApiChatIaRoute
+  '/api/contratacao': typeof ApiContratacaoRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/lme-ia': typeof ApiLmeIaRoute
@@ -484,6 +491,7 @@ export interface FileRoutesByTo {
   '/api/assistente-ia-conversas': typeof ApiAssistenteIaConversasRoute
   '/api/assistente-medico-webhook': typeof ApiAssistenteMedicoWebhookRoute
   '/api/chat-ia': typeof ApiChatIaRoute
+  '/api/contratacao': typeof ApiContratacaoRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/lme-ia': typeof ApiLmeIaRoute
@@ -550,6 +558,7 @@ export interface FileRoutesById {
   '/api/assistente-ia-conversas': typeof ApiAssistenteIaConversasRoute
   '/api/assistente-medico-webhook': typeof ApiAssistenteMedicoWebhookRoute
   '/api/chat-ia': typeof ApiChatIaRoute
+  '/api/contratacao': typeof ApiContratacaoRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/lme-ia': typeof ApiLmeIaRoute
@@ -617,6 +626,7 @@ export interface FileRouteTypes {
     | '/api/assistente-ia-conversas'
     | '/api/assistente-medico-webhook'
     | '/api/chat-ia'
+    | '/api/contratacao'
     | '/api/daily-room'
     | '/api/deepgram-token'
     | '/api/lme-ia'
@@ -682,6 +692,7 @@ export interface FileRouteTypes {
     | '/api/assistente-ia-conversas'
     | '/api/assistente-medico-webhook'
     | '/api/chat-ia'
+    | '/api/contratacao'
     | '/api/daily-room'
     | '/api/deepgram-token'
     | '/api/lme-ia'
@@ -747,6 +758,7 @@ export interface FileRouteTypes {
     | '/api/assistente-ia-conversas'
     | '/api/assistente-medico-webhook'
     | '/api/chat-ia'
+    | '/api/contratacao'
     | '/api/daily-room'
     | '/api/deepgram-token'
     | '/api/lme-ia'
@@ -813,6 +825,7 @@ export interface RootRouteChildren {
   ApiAssistenteIaConversasRoute: typeof ApiAssistenteIaConversasRoute
   ApiAssistenteMedicoWebhookRoute: typeof ApiAssistenteMedicoWebhookRoute
   ApiChatIaRoute: typeof ApiChatIaRoute
+  ApiContratacaoRoute: typeof ApiContratacaoRoute
   ApiDailyRoomRoute: typeof ApiDailyRoomRoute
   ApiDeepgramTokenRoute: typeof ApiDeepgramTokenRoute
   ApiLmeIaRoute: typeof ApiLmeIaRoute
@@ -920,6 +933,13 @@ declare module '@tanstack/react-router' {
       path: '/api/chat-ia'
       fullPath: '/api/chat-ia'
       preLoaderRoute: typeof ApiChatIaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/contratacao': {
+      id: '/api/contratacao'
+      path: '/api/contratacao'
+      fullPath: '/api/contratacao'
+      preLoaderRoute: typeof ApiContratacaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/daily-room': {
@@ -1325,6 +1345,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAssistenteIaConversasRoute: ApiAssistenteIaConversasRoute,
   ApiAssistenteMedicoWebhookRoute: ApiAssistenteMedicoWebhookRoute,
   ApiChatIaRoute: ApiChatIaRoute,
+  ApiContratacaoRoute: ApiContratacaoRoute,
   ApiDailyRoomRoute: ApiDailyRoomRoute,
   ApiDeepgramTokenRoute: ApiDeepgramTokenRoute,
   ApiLmeIaRoute: ApiLmeIaRoute,
