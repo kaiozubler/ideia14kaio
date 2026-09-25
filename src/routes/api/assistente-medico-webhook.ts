@@ -412,31 +412,44 @@ export const Route = createFileRoute("/api/assistente-medico-webhook")({
         // causou a demora/erro já ter sido corrigido, processando uma
         // mensagem BEM antiga como se fosse nova (é exatamente o padrão
         // "sempre os mesmos dados de um teste antigo" relatado). O upsert
-        // abaixo usa o índice único de whatsapp_messages_wa_message_id
-        // (ver migration) como trava: só a PRIMEIRA vez que este
-        // wa_message_id é visto o registro é criado; nas seguintes, essa
-        // linha simplesmente não é inserida, e detectamos isso pelo
-        // "data" vir vazio.
+        // abaixo usa o índice único whatsapp_messages_wa_message_id_uidx
+        // (ver migration — precisa ser um índice completo, não parcial,
+        // para casar com este ON CONFLICT simples) como trava: só a
+        // PRIMEIRA vez que este wa_message_id é visto o registro é criado;
+        // nas seguintes, essa linha simplesmente não é inserida, e
+        // detectamos isso pelo "data" vir vazio.
         if (msg.id) {
-          const { data: logInserido } = await supabaseAdmin
-            .from("whatsapp_messages")
-            .upsert(
-              {
-                wa_from: telefoneRemetente,
-                direction: "inbound",
-                message_type: messageType,
-                content: textoRecebido,
-                wa_message_id: msg.id,
-              } as never,
-              { onConflict: "wa_message_id", ignoreDuplicates: true },
-            )
-            .select("id");
-          if (!logInserido || logInserido.length === 0) {
-            console.warn(
-              "[assistente-medico-webhook] Mensagem duplicada/reentregue pela Meta, ignorando:",
-              msg.id,
+          try {
+            const { data: logInserido, error: logErro } = await supabaseAdmin
+              .from("whatsapp_messages")
+              .upsert(
+                {
+                  wa_from: telefoneRemetente,
+                  direction: "inbound",
+                  message_type: messageType,
+                  content: textoRecebido,
+                  wa_message_id: msg.id,
+                } as never,
+                { onConflict: "wa_message_id", ignoreDuplicates: true },
+              )
+              .select("id");
+            if (logErro) throw logErro;
+            if (!logInserido || logInserido.length === 0) {
+              console.warn(
+                "[assistente-medico-webhook] Mensagem duplicada/reentregue pela Meta, ignorando:",
+                msg.id,
+              );
+              return Response.json({ ok: true });
+            }
+          } catch (e) {
+            // Nunca deixa um problema NESTA checagem travar o webhook inteiro
+            // (foi exatamente isso que aconteceu quando o índice único da
+            // primeira versão desta migration não batia com este upsert) —
+            // loga e segue processando a mensagem normalmente.
+            console.error(
+              "[assistente-medico-webhook] Falha ao checar idempotência, seguindo mesmo assim:",
+              e,
             );
-            return Response.json({ ok: true });
           }
         } else {
           // Sem wa_message_id (não deveria acontecer em mensagens reais) —
