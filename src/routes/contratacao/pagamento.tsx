@@ -25,6 +25,9 @@ export const Route = createFileRoute("/contratacao/pagamento")({
 function PaginaPagamento() {
   const navigate = useNavigate();
   const [pedido, setPedido] = useState<Pedido | null>(null);
+  const [carregando, setCarregando] = useState(false);
+  const [erroAsaas, setErroAsaas] = useState<string | null>(null);
+  const [asaasNaoConfigurado, setAsaasNaoConfigurado] = useState(false);
 
   useEffect(() => {
     const atual = lerPedido();
@@ -33,6 +36,13 @@ function PaginaPagamento() {
       return;
     }
     setPedido(atual);
+
+    // O Checkout Asaas redireciona de volta pra cá em caso de cancelamento/expiração
+    // (ver callback em /api/asaas/checkout) — mostra um aviso amigável nesse caso.
+    const params = new URLSearchParams(window.location.search);
+    const asaas = params.get("asaas");
+    if (asaas === "cancelado") setErroAsaas("Pagamento cancelado. Pode tentar de novo quando quiser.");
+    if (asaas === "expirado") setErroAsaas("O link de pagamento expirou. Gera um novo abaixo.");
   }, [navigate]);
 
   if (!pedido) return null;
@@ -73,7 +83,39 @@ function PaginaPagamento() {
     return `https://wa.me/${WHATSAPP_COMERCIAL}?text=${encodeURIComponent(texto)}`;
   })();
 
-  async function confirmarPedido() {
+  async function pagarComCartao() {
+    if (!pedido!.contratacaoId) {
+      setErroAsaas("Não encontramos sua contratação salva. Volta pra etapa anterior e confirma de novo.");
+      return;
+    }
+    setCarregando(true);
+    setErroAsaas(null);
+    setAsaasNaoConfigurado(false);
+    try {
+      const resp = await fetch("/api/asaas/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contratacaoId: pedido!.contratacaoId }),
+      });
+      const data = (await resp.json()) as { checkoutUrl?: string; error?: string; naoConfigurado?: boolean };
+      if (!resp.ok || !data.checkoutUrl) {
+        setAsaasNaoConfigurado(!!data.naoConfigurado);
+        setErroAsaas(
+          data.naoConfigurado
+            ? "O pagamento online ainda não foi ativado pra essa conta. Fala com a gente pelo WhatsApp que fechamos agora."
+            : data.error || "Não conseguimos abrir o pagamento agora.",
+        );
+        setCarregando(false);
+        return;
+      }
+      window.location.href = data.checkoutUrl;
+    } catch {
+      setErroAsaas("Não conseguimos abrir o pagamento agora. Tenta de novo ou fala com a gente pelo WhatsApp.");
+      setCarregando(false);
+    }
+  }
+
+  async function confirmarPeloWhatsApp() {
     window.open(linkWhatsApp, "_blank", "noreferrer");
     if (pedido!.contratacaoId) {
       await atualizarContratacaoRemota(pedido!.contratacaoId, { status: "aguardando_confirmacao" });
@@ -113,38 +155,51 @@ function PaginaPagamento() {
           </div>
         </div>
 
-        <div className="mt-5 space-y-2.5 opacity-60">
-          <div style={{ borderRadius: "16px" }} className="h-11 border border-slate-200 bg-white/70 px-4 py-2.5 text-sm text-slate-400">
-            Número do cartão
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div style={{ borderRadius: "16px" }} className="h-11 border border-slate-200 bg-white/70 px-4 py-2.5 text-sm text-slate-400">
-              Validade
-            </div>
-            <div style={{ borderRadius: "16px" }} className="h-11 border border-slate-200 bg-white/70 px-4 py-2.5 text-sm text-slate-400">
-              CVV
-            </div>
-          </div>
-        </div>
-
         <div
-          style={{ borderRadius: "18px" }}
-          className="mt-5 flex items-start gap-3 border border-amber-200/70 bg-amber-50/70 p-4"
+          style={{ borderRadius: "16px" }}
+          className="mt-5 flex items-start gap-3 border border-slate-200 bg-white/70 p-4"
         >
-          <Lock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-          <p className="text-sm text-amber-800">
-            O pagamento online ainda está a caminho. Pra não te travar, a gente confirma seu cadastro e
-            processa a primeira cobrança pessoalmente pelo WhatsApp — leva menos de 5 minutos.
+          <Lock className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+          <p className="text-sm text-slate-600">
+            Ao continuar, você vai pra uma página segura do Asaas pra colocar os dados do cartão. A gente
+            nunca vê nem guarda esses dados.
           </p>
         </div>
 
-        <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-xs text-slate-400">
+        {erroAsaas && (
+          <div
+            style={{ borderRadius: "16px" }}
+            className="mt-4 border border-amber-200/70 bg-amber-50/70 p-4 text-sm text-amber-800"
+          >
+            {erroAsaas}
+            {asaasNaoConfigurado && (
+              <button
+                onClick={confirmarPeloWhatsApp}
+                className="mt-2 block font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-950"
+              >
+                Falar no WhatsApp agora →
+              </button>
+            )}
+          </div>
+        )}
+
+        <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-slate-400">
           <ShieldCheck className="h-3.5 w-3.5" />
           Seus dados de pagamento nunca são armazenados por nós diretamente.
         </p>
+        {!asaasNaoConfigurado && (
+          <button
+            onClick={confirmarPeloWhatsApp}
+            className="mt-2 block w-full text-center text-xs font-medium text-slate-400 underline underline-offset-2 hover:text-slate-600"
+          >
+            Prefiro fechar conversando com alguém pelo WhatsApp
+          </button>
+        )}
       </div>
 
-      <BotaoFlutuante onClick={confirmarPedido}>Confirmar e falar no WhatsApp</BotaoFlutuante>
+      <BotaoFlutuante onClick={pagarComCartao} disabled={carregando}>
+        {carregando ? "Abrindo pagamento…" : "Pagar com cartão"}
+      </BotaoFlutuante>
     </LayoutContratacao>
   );
 }

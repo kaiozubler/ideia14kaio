@@ -140,7 +140,7 @@ const RECURSOS: CategoriaRecursos[] = [
       {
         icon: MessageCircle,
         titulo: "WhatsApp automatizado",
-        descricao: "Confirmação de consulta, lembretes e um assistente de IA que tira dúvidas do paciente direto no WhatsApp.",
+        descricao: "Confirmação de consulta, lembretes e um assistente de IA que resolve dúvidas administrativas do paciente pelo WhatsApp — sem dar orientação clínica, que continua sendo só com o médico.",
       },
       {
         icon: Workflow,

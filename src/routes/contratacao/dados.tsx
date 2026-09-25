@@ -27,7 +27,7 @@ const CONTATO_VAZIO: Contato = { nome: "", email: "", telefone: "" };
 const CAMPO_VAZIO: DadosCliente = {
   nomeClinica: "",
   documento: "",
-  endereco: { cep: "", logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", estado: "" },
+  endereco: { cep: "", logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", estado: "", cidadeIbge: "" },
   responsavel: { nome: "", email: "", telefone: "", cargo: "" },
   financeiroMesmoResponsavel: true,
   financeiro: [],
@@ -115,6 +115,7 @@ function PaginaDados() {
         bairro: resultado.bairro || d.endereco.bairro,
         cidade: resultado.localidade || d.endereco.cidade,
         estado: resultado.uf || d.endereco.estado,
+        cidadeIbge: resultado.ibge || d.endereco.cidadeIbge,
       },
     }));
   }

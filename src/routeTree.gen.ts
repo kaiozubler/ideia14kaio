@@ -31,6 +31,8 @@ import { Route as ContratacaoPagamentoRouteImport } from './routes/contratacao/p
 import { Route as ContratacaoTermosRouteImport } from './routes/contratacao/termos'
 import { Route as FFormIdRouteImport } from './routes/f.$formId'
 import { Route as TTermoIdRouteImport } from './routes/t.$termoId'
+import { Route as ApiAsaasCheckoutRouteImport } from './routes/api/asaas/checkout'
+import { Route as ApiAsaasWebhookRouteImport } from './routes/api/asaas/webhook'
 import { Route as ApiBaseConhecimentoAtalhosRouteImport } from './routes/api/base-conhecimento/atalhos'
 import { Route as ApiBaseConhecimentoBasesRouteImport } from './routes/api/base-conhecimento/bases'
 import { Route as ApiBaseConhecimentoGerarMetadadosRouteImport } from './routes/api/base-conhecimento/gerar-metadados'
@@ -184,6 +186,16 @@ const FFormIdRoute = FFormIdRouteImport.update({
 const TTermoIdRoute = TTermoIdRouteImport.update({
   id: '/t/$termoId',
   path: '/t/$termoId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAsaasCheckoutRoute = ApiAsaasCheckoutRouteImport.update({
+  id: '/api/asaas/checkout',
+  path: '/api/asaas/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAsaasWebhookRoute = ApiAsaasWebhookRouteImport.update({
+  id: '/api/asaas/webhook',
+  path: '/api/asaas/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBaseConhecimentoAtalhosRoute =
@@ -440,6 +452,8 @@ export interface FileRoutesByFullPath {
   '/contratacao/termos': typeof ContratacaoTermosRoute
   '/f/$formId': typeof FFormIdRoute
   '/t/$termoId': typeof TTermoIdRoute
+  '/api/asaas/checkout': typeof ApiAsaasCheckoutRoute
+  '/api/asaas/webhook': typeof ApiAsaasWebhookRoute
   '/api/base-conhecimento/atalhos': typeof ApiBaseConhecimentoAtalhosRoute
   '/api/base-conhecimento/bases': typeof ApiBaseConhecimentoBasesRoute
   '/api/base-conhecimento/gerar-metadados': typeof ApiBaseConhecimentoGerarMetadadosRoute
@@ -506,6 +520,8 @@ export interface FileRoutesByTo {
   '/contratacao/termos': typeof ContratacaoTermosRoute
   '/f/$formId': typeof FFormIdRoute
   '/t/$termoId': typeof TTermoIdRoute
+  '/api/asaas/checkout': typeof ApiAsaasCheckoutRoute
+  '/api/asaas/webhook': typeof ApiAsaasWebhookRoute
   '/api/base-conhecimento/atalhos': typeof ApiBaseConhecimentoAtalhosRoute
   '/api/base-conhecimento/bases': typeof ApiBaseConhecimentoBasesRoute
   '/api/base-conhecimento/gerar-metadados': typeof ApiBaseConhecimentoGerarMetadadosRoute
@@ -573,6 +589,8 @@ export interface FileRoutesById {
   '/contratacao/termos': typeof ContratacaoTermosRoute
   '/f/$formId': typeof FFormIdRoute
   '/t/$termoId': typeof TTermoIdRoute
+  '/api/asaas/checkout': typeof ApiAsaasCheckoutRoute
+  '/api/asaas/webhook': typeof ApiAsaasWebhookRoute
   '/api/base-conhecimento/atalhos': typeof ApiBaseConhecimentoAtalhosRoute
   '/api/base-conhecimento/bases': typeof ApiBaseConhecimentoBasesRoute
   '/api/base-conhecimento/gerar-metadados': typeof ApiBaseConhecimentoGerarMetadadosRoute
@@ -641,6 +659,8 @@ export interface FileRouteTypes {
     | '/contratacao/termos'
     | '/f/$formId'
     | '/t/$termoId'
+    | '/api/asaas/checkout'
+    | '/api/asaas/webhook'
     | '/api/base-conhecimento/atalhos'
     | '/api/base-conhecimento/bases'
     | '/api/base-conhecimento/gerar-metadados'
@@ -707,6 +727,8 @@ export interface FileRouteTypes {
     | '/contratacao/termos'
     | '/f/$formId'
     | '/t/$termoId'
+    | '/api/asaas/checkout'
+    | '/api/asaas/webhook'
     | '/api/base-conhecimento/atalhos'
     | '/api/base-conhecimento/bases'
     | '/api/base-conhecimento/gerar-metadados'
@@ -773,6 +795,8 @@ export interface FileRouteTypes {
     | '/contratacao/termos'
     | '/f/$formId'
     | '/t/$termoId'
+    | '/api/asaas/checkout'
+    | '/api/asaas/webhook'
     | '/api/base-conhecimento/atalhos'
     | '/api/base-conhecimento/bases'
     | '/api/base-conhecimento/gerar-metadados'
@@ -840,6 +864,8 @@ export interface RootRouteChildren {
   ContratacaoTermosRoute: typeof ContratacaoTermosRoute
   FFormIdRoute: typeof FFormIdRoute
   TTermoIdRoute: typeof TTermoIdRoute
+  ApiAsaasCheckoutRoute: typeof ApiAsaasCheckoutRoute
+  ApiAsaasWebhookRoute: typeof ApiAsaasWebhookRoute
   ApiBaseConhecimentoAtalhosRoute: typeof ApiBaseConhecimentoAtalhosRoute
   ApiBaseConhecimentoBasesRoute: typeof ApiBaseConhecimentoBasesRoute
   ApiBaseConhecimentoGerarMetadadosRoute: typeof ApiBaseConhecimentoGerarMetadadosRoute
@@ -1038,6 +1064,20 @@ declare module '@tanstack/react-router' {
       path: '/t/$termoId'
       fullPath: '/t/$termoId'
       preLoaderRoute: typeof TTermoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/asaas/checkout': {
+      id: '/api/asaas/checkout'
+      path: '/api/asaas/checkout'
+      fullPath: '/api/asaas/checkout'
+      preLoaderRoute: typeof ApiAsaasCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/asaas/webhook': {
+      id: '/api/asaas/webhook'
+      path: '/api/asaas/webhook'
+      fullPath: '/api/asaas/webhook'
+      preLoaderRoute: typeof ApiAsaasWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/base-conhecimento/atalhos': {
@@ -1360,6 +1400,8 @@ const rootRouteChildren: RootRouteChildren = {
   ContratacaoTermosRoute: ContratacaoTermosRoute,
   FFormIdRoute: FFormIdRoute,
   TTermoIdRoute: TTermoIdRoute,
+  ApiAsaasCheckoutRoute: ApiAsaasCheckoutRoute,
+  ApiAsaasWebhookRoute: ApiAsaasWebhookRoute,
   ApiBaseConhecimentoAtalhosRoute: ApiBaseConhecimentoAtalhosRoute,
   ApiBaseConhecimentoBasesRoute: ApiBaseConhecimentoBasesRoute,
   ApiBaseConhecimentoGerarMetadadosRoute:

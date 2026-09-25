@@ -29,6 +29,7 @@ const EnderecoSchema = z.object({
   bairro: z.string(),
   cidade: z.string(),
   estado: z.string(),
+  cidadeIbge: z.string().optional(),
 });
 
 const CriarSchema = z.object({
@@ -128,6 +129,7 @@ export const Route = createFileRoute("/api/contratacao")({
           updates.bairro = d.endereco.bairro;
           updates.cidade = d.endereco.cidade;
           updates.estado = d.endereco.estado;
+          if (d.endereco.cidadeIbge) updates.cidade_ibge = d.endereco.cidadeIbge;
         }
         if (d.responsavel) {
           updates.responsavel_nome = d.responsavel.nome;

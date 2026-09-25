@@ -14,6 +14,8 @@ export type EnderecoViaCep = {
   bairro: string;
   localidade: string;
   uf: string;
+  /** Código IBGE do município (7 dígitos) — o Asaas usa isso, não o nome da cidade, no campo `city` do customerData. */
+  ibge: string;
   erro?: boolean;
 };
 

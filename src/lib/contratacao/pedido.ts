@@ -24,6 +24,8 @@ export type Endereco = {
   bairro: string;
   cidade: string;
   estado: string; // UF
+  /** Código IBGE do município (7 dígitos), vindo do ViaCEP — necessário pro campo `city` do Asaas Checkout. */
+  cidadeIbge?: string;
 };
 
 export type DadosCliente = {
