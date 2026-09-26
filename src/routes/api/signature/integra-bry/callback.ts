@@ -44,13 +44,12 @@ export const Route = createFileRoute("/api/signature/integra-bry/callback")({
           const userId = await getUserIdFromRequest(request);
           if (!userId) return Response.json({ error: "unauthorized" }, { status: 401 });
 
-          const body = (await request.json()) as { state?: string; apiKey?: string };
+          const body = (await request.json()) as { state?: string };
           if (!body.state) return Response.json({ error: "state_required" }, { status: 400 });
 
           const result = await SignatureService.completeIntegraBryLink({
             doctorId: userId,
             state: body.state,
-            apiKeyFromCallback: body.apiKey ?? null,
           });
           return Response.json({ ok: true, ...result });
         } catch (err) {

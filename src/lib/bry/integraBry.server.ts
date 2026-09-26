@@ -127,7 +127,7 @@ export interface PscLinkResult {
    * Credencial (X-API-KEY) a ser usada em /auth/info, /auth/certificate e na
    * assinatura. A resposta atual do Integra Bry usa o campo `token`.
    */
-  apiKey: string | null;
+  apiKey: string;
   raw: unknown;
 }
 
@@ -171,9 +171,13 @@ export const IntegraBryApi = {
     if (!authorizationUrl) {
       throw new BryError("Integra Bry não retornou link de autenticação.", 502, resp);
     }
+    const apiKey = resp.token ?? resp.apiKey ?? resp.api_key ?? resp.credential ?? "";
+    if (!apiKey) {
+      throw new BryError("Integra Bry não retornou a credencial do vínculo.", 502);
+    }
     return {
       authorizationUrl,
-      apiKey: resp.token ?? resp.apiKey ?? resp.api_key ?? resp.credential ?? null,
+      apiKey,
       raw: resp,
     };
   },

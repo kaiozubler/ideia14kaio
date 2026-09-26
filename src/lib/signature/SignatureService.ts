@@ -108,8 +108,6 @@ export const SignatureService = {
   async completeIntegraBryLink(params: {
     doctorId: string;
     state: string;
-    /** Só necessário se o apiKey não veio na resposta de /psc/link (ver comentário em IntegraBryApi.createLink). */
-    apiKeyFromCallback?: string | null;
   }) {
     const session = await CredentialRepository.getPscLinkSessionByState(params.state);
     if (!session) throw SignatureErrors.NotConfigured("Sessão de link Integra Bry não encontrada.");
@@ -122,7 +120,7 @@ export const SignatureService = {
     // O Integra Bry devolve esta credencial como `token` em /psc/link. O
     // `state` identifica somente a nossa sessão e nunca pode ser usado como
     // X-API-KEY nas consultas ao provedor.
-    const apiKey = session.apiKey ?? params.apiKeyFromCallback;
+    const apiKey = session.apiKey;
     if (!apiKey) {
       throw SignatureErrors.NotConfigured(
         "A sessão foi criada sem a credencial do Integra Bry. Inicie um novo vínculo.",
