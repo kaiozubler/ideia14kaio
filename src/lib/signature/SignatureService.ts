@@ -106,22 +106,28 @@ export const SignatureService = {
    * dados do certificado escolhido (via /auth/info + /auth/certificate).
    */
   async completeIntegraBryLink(params: {
+    doctorId: string;
     state: string;
     /** Só necessário se o apiKey não veio na resposta de /psc/link (ver comentário em IntegraBryApi.createLink). */
     apiKeyFromCallback?: string | null;
   }) {
     const session = await CredentialRepository.getPscLinkSessionByState(params.state);
     if (!session) throw SignatureErrors.NotConfigured("Sessão de link Integra Bry não encontrada.");
+    if (session.doctorId !== params.doctorId) {
+      throw SignatureErrors.Unauthorized("Esta sessão de certificado pertence a outro usuário.");
+    }
     if (new Date(session.expiresAt).getTime() < Date.now()) {
       throw SignatureErrors.Timeout("Sessão de link Integra Bry expirada. Inicie novamente.");
     }
-    // Nenhum apiKey separado veio nem na resposta de /psc/link nem no
-    // redirect (só ?state= volta) — hipótese: o próprio `state` que
-    // geramos e enviamos serve como identificador da sessão pra /auth/info
-    // e /auth/certificate (já que é único por sessão e a Bry não parece
-    // devolver outra coisa). Se isso estiver errado, os dois GETs abaixo
-    // vão falhar com um erro claro da Bry (401/403), não silenciosamente.
-    const apiKey = session.apiKey ?? params.apiKeyFromCallback ?? params.state;
+    // O Integra Bry devolve esta credencial como `token` em /psc/link. O
+    // `state` identifica somente a nossa sessão e nunca pode ser usado como
+    // X-API-KEY nas consultas ao provedor.
+    const apiKey = session.apiKey ?? params.apiKeyFromCallback;
+    if (!apiKey) {
+      throw SignatureErrors.NotConfigured(
+        "A sessão foi criada sem a credencial do Integra Bry. Inicie um novo vínculo.",
+      );
+    }
     const { IntegraBryApi } = await import("@/lib/bry/integraBry.server");
     const [info, certificate] = await Promise.all([
       IntegraBryApi.getAuthInfo(apiKey),

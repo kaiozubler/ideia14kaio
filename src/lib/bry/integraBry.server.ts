@@ -26,14 +26,18 @@ import process from "node:process";
 import { BryError } from "./bry.server";
 import { getBryAccessToken } from "./authToken.server";
 
+function isProductionEnvironment(value: string): boolean {
+  return ["prod", "production", "producao", "produção"].includes(value.trim().toLowerCase());
+}
+
 async function getConfig() {
   // Mesma variável usada pelo endpoint de token (authToken.server.ts) —
   // eram duas antes (INTEGRA_BRY_ENV separado), o que permitia configurar
   // o token num ambiente e a URL base do Integra Bry em outro por engano.
-  const env = (process.env.BRY_ENV || "hom").toLowerCase();
+  const env = process.env.BRY_ENV || "hom";
   const baseUrl =
     process.env.INTEGRA_BRY_BASE_URL ||
-    (env === "prod"
+    (isProductionEnvironment(env)
       ? "https://integra.bry.com.br/api/service"
       : "https://integra.hom.bry.com.br/api/service");
   // Token OAuth2 renovado automaticamente (ver authToken.server.ts) — o
@@ -121,10 +125,7 @@ export interface PscLinkResult {
   authorizationUrl: string;
   /**
    * Credencial (X-API-KEY) a ser usada em /auth/info, /auth/certificate e na
-   * assinatura. A doc pública não deixa 100% explícito se ela vem já nesta
-   * resposta ou anexada ao redirectUri — tratamos ambos os formatos comuns
-   * de resposta (`apiKey`/`api_key`/`credential`) e, se nenhum vier, quem
-   * chamar precisa obtê-la a partir do callback do redirectUri.
+   * assinatura. A resposta atual do Integra Bry usa o campo `token`.
    */
   apiKey: string | null;
   raw: unknown;
@@ -158,6 +159,7 @@ export const IntegraBryApi = {
   /** POST /api/service/psc/link — gera o link de autenticação com o PSC escolhido. */
   async createLink(input: PscLinkRequest): Promise<PscLinkResult> {
     const resp = await integraFetch<{
+      token?: string;
       authorizationUrl?: string;
       authorization_url?: string;
       url?: string;
@@ -165,18 +167,13 @@ export const IntegraBryApi = {
       api_key?: string;
       credential?: string;
     }>("/psc/link", { method: "POST", body: input });
-    // TEMPORÁRIO (remover depois de confirmar o formato real): loga a
-    // resposta crua da Bry pra descobrirmos em qual campo o apiKey/
-    // credencial realmente vem, já que não está em nenhum dos nomes
-    // candidatos nem no redirect (só ?state= volta na query string).
-    console.log("[bry:integra] /psc/link raw response:", JSON.stringify(resp));
     const authorizationUrl = resp.authorizationUrl ?? resp.authorization_url ?? resp.url ?? "";
     if (!authorizationUrl) {
       throw new BryError("Integra Bry não retornou link de autenticação.", 502, resp);
     }
     return {
       authorizationUrl,
-      apiKey: resp.apiKey ?? resp.api_key ?? resp.credential ?? null,
+      apiKey: resp.token ?? resp.apiKey ?? resp.api_key ?? resp.credential ?? null,
       raw: resp,
     };
   },

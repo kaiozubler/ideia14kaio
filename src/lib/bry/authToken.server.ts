@@ -30,11 +30,17 @@ let cached: CachedToken | null = null;
 // token que expira no meio de uma chamada em andamento.
 const SAFETY_MARGIN_MS = 20_000;
 
+function isProductionEnvironment(value: string): boolean {
+  return ["prod", "production", "producao", "produção"].includes(value.trim().toLowerCase());
+}
+
 function getAuthBaseUrl(): string {
   const explicit = process.env.BRY_AUTH_BASE_URL;
   if (explicit) return explicit.replace(/\/+$/, "");
-  const env = (process.env.BRY_ENV || "hom").toLowerCase();
-  return env === "prod" ? "https://cloud.bry.com.br" : "https://cloud-hom.bry.com.br";
+  const env = process.env.BRY_ENV || "hom";
+  return isProductionEnvironment(env)
+    ? "https://cloud.bry.com.br"
+    : "https://cloud-hom.bry.com.br";
 }
 
 async function fetchNewToken(): Promise<CachedToken> {
