@@ -320,11 +320,11 @@ async function carregarHistoricoConversa(db: Db, idMedico: string, conversaId: s
     .eq("id", conversaId)
     .eq("id_medico", idMedico)
     .maybeSingle();
-  const bruto = Array.isArray(data?.mensagens) ? data!.mensagens : [];
+  const bruto: unknown[] = Array.isArray(data?.mensagens) ? data.mensagens : [];
   return bruto
-    .filter((m): m is { role: string; content: string } => !!m && typeof m === "object" && !Array.isArray(m))
-    .map((m) => ({ role: String((m as any).role || "user"), content: String((m as any).content || "") }))
-    .filter((m) => m.role === "user" || m.role === "assistant")
+    .filter((m: unknown): m is Record<string, unknown> => !!m && typeof m === "object" && !Array.isArray(m))
+    .map((m: Record<string, unknown>) => ({ role: String(m.role || "user"), content: String(m.content || "") }))
+    .filter((m: { role: string; content: string }) => m.role === "user" || m.role === "assistant")
     .slice(-MAX_HISTORICO);
 }
 
