@@ -139,7 +139,8 @@ function telefonesEquivalentes(a?: string | null, b?: string | null) {
   return da.slice(-8) === dbNum.slice(-8);
 }
 
-type Db = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
+// As tabelas de sessão foram adicionadas depois da última geração dos tipos.
+type Db = any;
 
 // Confirma que a chamada realmente veio da Meta (HMAC-SHA256 do corpo com o App Secret).
 // Mesma lógica de whatsapp-webhook.ts.
@@ -256,7 +257,7 @@ function esperar(ms: number) {
 /** Garante que a linha da sessão já existe, para a trava ter o que reivindicar mesmo na primeira mensagem. */
 async function garantirSessaoExiste(db: Db, idMedico: string, telefone: string) {
   await db
-    .from("medico_assistente_sessoes_whatsapp" as never)
+    .from("medico_assistente_sessoes_whatsapp")
     .upsert(
       { id_medico: idMedico, telefone, conversa_id: null } as never,
       { onConflict: "id_medico,telefone", ignoreDuplicates: true },
@@ -271,7 +272,7 @@ async function reivindicarTrava(db: Db, idMedico: string, telefone: string): Pro
 
   for (let tentativa = 0; tentativa < TRAVA_TENTATIVAS; tentativa++) {
     const { data } = await db
-      .from("medico_assistente_sessoes_whatsapp" as never)
+      .from("medico_assistente_sessoes_whatsapp")
       .update({ bloqueio_processamento_em: agora.toISOString() } as never)
       .eq("id_medico", idMedico)
       .eq("telefone", telefone)
@@ -289,7 +290,7 @@ async function reivindicarTrava(db: Db, idMedico: string, telefone: string): Pro
 
 async function liberarTrava(db: Db, idMedico: string, telefone: string) {
   await db
-    .from("medico_assistente_sessoes_whatsapp" as never)
+    .from("medico_assistente_sessoes_whatsapp")
     .update({ bloqueio_processamento_em: null } as never)
     .eq("id_medico", idMedico)
     .eq("telefone", telefone);
@@ -297,7 +298,7 @@ async function liberarTrava(db: Db, idMedico: string, telefone: string) {
 
 async function carregarSessao(db: Db, idMedico: string, telefone: string) {
   const { data } = await db
-    .from("medico_assistente_sessoes_whatsapp" as never)
+    .from("medico_assistente_sessoes_whatsapp")
     .select("id,conversa_id,ultima_interacao,paciente_ativo")
     .eq("id_medico", idMedico)
     .eq("telefone", telefone)

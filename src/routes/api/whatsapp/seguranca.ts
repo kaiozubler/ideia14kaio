@@ -33,7 +33,7 @@ export const Route = createFileRoute("/api/whatsapp/seguranca")({
         if (!userId) return Response.json({ error: "unauthorized" }, { status: 401 });
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { data, error } = await supabaseAdmin
+        const { data, error } = await (supabaseAdmin as any)
           .from("medico_seguranca_whatsapp")
           .select(
             "palavra_chave_criada_em,palavra_chave_usos,frequencia_horas,ultima_autenticacao_em,desafio_bloqueado",
@@ -98,7 +98,7 @@ export const Route = createFileRoute("/api/whatsapp/seguranca")({
         }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { error } = await supabaseAdmin.from("medico_seguranca_whatsapp").upsert(
+        const { error } = await (supabaseAdmin as any).from("medico_seguranca_whatsapp").upsert(
           {
             id_medico: userId,
             palavra_chave_cifrada: palavraChaveCifrada,
