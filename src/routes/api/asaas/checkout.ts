@@ -98,15 +98,15 @@ export const Route = createFileRoute("/api/asaas/checkout")({
                 nextDueDate: hoje,
               },
               customerData: {
-                name: contratacao.nome_clinica,
-                cpfCnpj: somenteDigitos(contratacao.documento),
-                email: contratacao.responsavel_email,
-                phone: somenteDigitos(contratacao.responsavel_telefone),
-                address: contratacao.logradouro,
-                addressNumber: contratacao.numero,
+                name: String(contratacao.nome_clinica),
+                cpfCnpj: somenteDigitos(String(contratacao.documento)),
+                email: String(contratacao.responsavel_email),
+                phone: somenteDigitos(String(contratacao.responsavel_telefone)),
+                address: String(contratacao.logradouro),
+                addressNumber: String(contratacao.numero),
                 complement: contratacao.complemento || undefined,
-                postalCode: somenteDigitos(contratacao.cep),
-                province: contratacao.bairro,
+                postalCode: somenteDigitos(String(contratacao.cep)),
+                province: String(contratacao.bairro),
                 // Código IBGE do município (não o nome) — ver cidade_ibge, capturado
                 // via ViaCEP no passo "Meus dados". Sem ele o Asaas pode rejeitar ou
                 // temos que cair para outro identificador de cidade.

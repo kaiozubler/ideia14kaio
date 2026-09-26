@@ -51,7 +51,7 @@ export const Route = createFileRoute("/api/asaas/webhook")({
 
         if (status) {
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-          const updates: Record<string, unknown> = { status };
+          const updates: { status: "confirmada" | "cancelada"; pagamento_confirmado_em?: string } = { status };
           if (status === "confirmada") updates.pagamento_confirmado_em = new Date().toISOString();
 
           const { error } = await supabaseAdmin.from("contratacoes").update(updates).eq("asaas_checkout_id", checkoutId);

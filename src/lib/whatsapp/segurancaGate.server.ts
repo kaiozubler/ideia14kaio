@@ -8,7 +8,9 @@ import {
   type Desafio,
 } from "./segurancaDesafio";
 
-type Db = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
+// Estas tabelas foram adicionadas depois da última geração dos tipos do banco.
+// O cliente continua validando e executando todas as operações no servidor.
+type Db = any;
 
 function requireEncryptionKey(): string {
   const key = process.env.SIGNATURE_ENCRYPTION_KEY;
