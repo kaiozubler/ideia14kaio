@@ -15,6 +15,13 @@ import { createFileRoute } from "@tanstack/react-router";
  *    documentos clínicos.
  * 5) Respondemos ao paciente pela própria Cloud API.
  *
+ * Idempotência e mensagens antigas: a Meta reentrega (retry) um webhook que
+ * não confirma rápido o suficiente, inclusive horas/dias depois. Por isso,
+ * mensagens processadas muito tempo depois de enviadas (msg.timestamp) são
+ * ignoradas, e cada wa_message_id só é processado uma vez (índice único em
+ * whatsapp_messages) — evita responder fora de ordem a uma mensagem antiga
+ * do paciente. Mesma proteção usada em assistente-medico-webhook.ts.
+ *
  * Requer as variáveis de ambiente:
  *   WHATSAPP_PHONE_NUMBER_ID — ID do número remetente no WhatsApp Business
  *   WHATSAPP_ACCESS_TOKEN    — token do WhatsApp Business (Meta Cloud API)
@@ -190,19 +197,64 @@ export const Route = createFileRoute("/api/whatsapp-webhook")({
           return Response.json({ ok: true });
         }
 
+        // Idade da mensagem e idempotência — mesma proteção aplicada em
+        // assistente-medico-webhook.ts (ver comentário lá para o contexto
+        // completo). A API do WhatsApp reentrega mensagens que não
+        // confirmam rápido o suficiente, às vezes horas/dias depois, o que
+        // pode fazer uma mensagem antiga do paciente ser processada fora
+        // de ordem. msg.timestamp é o horário ORIGINAL de envio.
+        const IDADE_MAXIMA_MS = 5 * 60 * 1000; // 5 minutos
+        const timestampMsg = Number(msg.timestamp); // epoch em segundos
+        if (Number.isFinite(timestampMsg) && Date.now() - timestampMsg * 1000 > IDADE_MAXIMA_MS) {
+          console.warn(
+            "[whatsapp-webhook] Mensagem antiga (reentrega tardia da Meta), ignorando sem responder:",
+            "wa_message_id:",
+            msg.id,
+          );
+          return Response.json({ ok: true });
+        }
+
         const apiKey = process.env.LOVABLE_API_KEY;
         if (!apiKey) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-        // Registra a mensagem recebida no log bruto de mensagens.
-        await supabaseAdmin.from("whatsapp_messages").insert({
-          wa_from: telefonePaciente,
-          direction: "inbound",
-          message_type: messageType,
-          content: textoRecebido,
-          wa_message_id: msg.id ?? null,
-        });
+        // Registra a mensagem recebida — o índice único em
+        // whatsapp_messages(wa_message_id) faz esse upsert também servir de
+        // checagem de idempotência: se este wa_message_id já foi visto
+        // antes, "logInserido" vem vazio e paramos aqui, sem reprocessar.
+        if (msg.id) {
+          try {
+            const { data: logInserido, error: logErro } = await supabaseAdmin
+              .from("whatsapp_messages")
+              .upsert(
+                {
+                  wa_from: telefonePaciente,
+                  direction: "inbound",
+                  message_type: messageType,
+                  content: textoRecebido,
+                  wa_message_id: msg.id,
+                } as never,
+                { onConflict: "wa_message_id", ignoreDuplicates: true },
+              )
+              .select("id");
+            if (logErro) throw logErro;
+            if (!logInserido || logInserido.length === 0) {
+              console.warn("[whatsapp-webhook] Mensagem duplicada/reentregue pela Meta, ignorando:", msg.id);
+              return Response.json({ ok: true });
+            }
+          } catch (e) {
+            console.error("[whatsapp-webhook] Falha ao checar idempotência, seguindo mesmo assim:", e);
+          }
+        } else {
+          await supabaseAdmin.from("whatsapp_messages").insert({
+            wa_from: telefonePaciente,
+            direction: "inbound",
+            message_type: messageType,
+            content: textoRecebido,
+            wa_message_id: null,
+          });
+        }
 
         const config = await resolverMedicoPorNumero(supabaseAdmin, phoneNumberId);
         if (!config) {
