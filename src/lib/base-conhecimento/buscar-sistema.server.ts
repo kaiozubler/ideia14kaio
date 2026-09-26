@@ -25,7 +25,9 @@ export async function montarContextoBaseSistema(mensagem: string): Promise<Resul
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  const { data: trechos, error } = await supabaseAdmin.rpc("buscar_base_conhecimento_sistema", {
+  // A função já existe no banco, mas pode ainda não constar no arquivo de
+  // tipos gerado até a próxima sincronização do schema.
+  const { data: trechos, error } = await (supabaseAdmin as any).rpc("buscar_base_conhecimento_sistema", {
     p_mensagem: mensagem,
     p_limit: 4,
   });

@@ -1314,7 +1314,8 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
           data_inicio: m.data_inicio,
           data_fim: m.data_fim,
         }));
-        const { error: usoErr } = await db.from("medicamentos_em_uso").insert(linhasUso);
+        // Tabela já migrada; aguarda apenas a próxima sincronização dos tipos gerados.
+        const { error: usoErr } = await (db as any).from("medicamentos_em_uso").insert(linhasUso);
         if (usoErr) console.warn("[gerar_receita] falha ao registrar medicamentos em uso:", usoErr.message);
       }
       let arquivo: { arquivo_path: string; arquivo_nome: string } | null = null;
