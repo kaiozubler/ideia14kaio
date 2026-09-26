@@ -25,15 +25,20 @@ import { createFileRoute } from "@tanstack/react-router";
  * suficiente. Configurável em Minhas IAs > Copiloto > Copiloto pelo
  * WhatsApp, via a rota /api/whatsapp/seguranca.
  *
- * Idempotência: a Meta reentrega (retry) um webhook que não confirma
- * rápido o suficiente, inclusive horas depois — o que pode fazer uma
- * mensagem BEM antiga (de um teste anterior, já respondida ou nunca
- * processada por causa de um bug já corrigido) ser processada de novo
- * como se fosse atual, produzindo uma resposta sobre um assunto/paciente
- * sem nenhuma relação com a conversa em andamento. Por isso, cada
- * wa_message_id só é processado uma vez (índice único em
- * whatsapp_messages) — reentregas são detectadas e ignoradas antes de
- * qualquer outro processamento.
+ * Idempotência e mensagens antigas: a Meta reentrega (retry) um webhook
+ * que não confirma rápido o suficiente, inclusive horas/dias depois —
+ * cada tentativa com um wa_message_id diferente às vezes, o que a
+ * checagem de duplicata sozinha não pega. Por isso, duas camadas:
+ *  1) Idade da mensagem (msg.timestamp, o horário ORIGINAL de envio):
+ *     mensagens processadas muito tempo depois de enviadas são
+ *     silenciosamente ignoradas — nem respondidas, nem usadas para
+ *     atualizar sessão/paciente. Sem isso, uma mensagem de dias atrás
+ *     ("gere receita de dipirona pro Michael Jackson", um teste antigo)
+ *     finalmente entregue com sucesso "carimbava" o paciente ativo com o
+ *     horário de agora, contaminando a conversa real seguinte.
+ *  2) wa_message_id só é processado uma vez (índice único em
+ *     whatsapp_messages) — cobre reentregas do MESMO id dentro da janela
+ *     de idade aceitável.
  *
  * Para continuar a mesma conversa a cada nova mensagem (em vez de criar uma
  * conversa nova em ia_assist_conversas, com título gerado, toda hora), o
@@ -387,6 +392,35 @@ export const Route = createFileRoute("/api/assistente-medico-webhook")({
         // Eventos que não são mensagem de texto (status de entrega, etc.) — apenas confirma recebimento.
         if (!msg || !telefoneRemetente) {
           return Response.json({ ok: true });
+        }
+
+        // Idade da mensagem: a Meta manda o horário ORIGINAL de envio em
+        // msg.timestamp (epoch, segundos) — não quando estamos processando
+        // agora. Uma mensagem reentregue (retry) várias vezes ao longo de
+        // horas continua com o timestamp de quando o médico realmente
+        // mandou. Se essa mensagem só está sendo processada com sucesso
+        // MUITO depois de enviada, é sinal de reentrega tardia (ex.: de um
+        // bug já corrigido) — responder agora, "carimbando" o paciente/
+        // assunto com o horário atual, é o que estava causando uma
+        // mensagem de dias atrás ("gere receita de dipirona pro Michael
+        // Jackson") contaminar uma conversa nova e sem relação. Mensagens
+        // assim são silenciosamente ignoradas (nem respondidas, nem usadas
+        // para atualizar paciente/sessão) em vez de processadas como se
+        // fossem atuais.
+        const IDADE_MAXIMA_MS = 5 * 60 * 1000; // 5 minutos
+        const timestampMsg = Number(msg.timestamp); // epoch em segundos
+        if (Number.isFinite(timestampMsg)) {
+          const idadeMs = Date.now() - timestampMsg * 1000;
+          if (idadeMs > IDADE_MAXIMA_MS) {
+            console.warn(
+              "[assistente-medico-webhook] Mensagem antiga (reentrega tardia da Meta), ignorando sem responder:",
+              "idade_minutos:",
+              Math.round(idadeMs / 60000),
+              "wa_message_id:",
+              msg.id,
+            );
+            return Response.json({ ok: true });
+          }
         }
 
         // Guarda de segurança: se por engano essa rota receber tráfego de outro
