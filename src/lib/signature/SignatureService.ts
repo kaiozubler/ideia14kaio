@@ -77,6 +77,7 @@ export const SignatureService = {
   }): Promise<{ sessionId: string; authorizationUrl: string; state: string }> {
     const { IntegraBryApi } = await import("@/lib/bry/integraBry.server");
     const state = crypto.randomUUID();
+    const lifetimeSeconds = req.lifetimeSeconds ?? 7 * 24 * 60 * 60;
     const link = await IntegraBryApi.createLink({
       pscName: req.pscName,
       redirectUri: req.redirectUri,
@@ -87,7 +88,7 @@ export const SignatureService = {
       // documento a documento sem manter vínculo, o chamador pode passar
       // scope: "single_signature".
       scope: req.scope ?? "signature_session",
-      lifetime: req.lifetimeSeconds ?? 7 * 24 * 60 * 60,
+      lifetime: lifetimeSeconds,
       cpf: req.cpf,
     });
     const sessionId = await CredentialRepository.createPscLinkSession({
@@ -96,6 +97,7 @@ export const SignatureService = {
       state,
       redirectUri: req.redirectUri,
       apiKey: link.apiKey,
+      expiresAt: new Date(Date.now() + lifetimeSeconds * 1000).toISOString(),
     });
     return { sessionId, authorizationUrl: link.authorizationUrl, state };
   },
@@ -265,6 +267,12 @@ export const SignatureService = {
           contentDescription: req.contentDescription,
           filename: req.filename,
         });
+      }
+      const latestPsc = await CredentialRepository.getLatestPscLinkSession(req.doctorId);
+      if (latestPsc?.status === "linked" && new Date(latestPsc.expiresAt).getTime() <= Date.now()) {
+        throw SignatureErrors.CredentialExpired(
+          "O vínculo do certificado VIDaaS expirou. Vincule o certificado novamente para assinar.",
+        );
       }
       throw SignatureErrors.CredentialExpired("Nenhum certificado ativo.");
     }
