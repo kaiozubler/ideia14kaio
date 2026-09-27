@@ -8,15 +8,9 @@
 // Este fala com integra(.hom).bry.com.br para linkar/usar um certificado
 // que o médico já tem em outra certificadora.
 //
-// Fonte: https://bry-developer.readme.io/reference/integra-bry (confirmado
-// por fetch em 2026-08-24). Endpoints de listagem/link/info do certificado
-// estão documentados publicamente; o endpoint FINAL de assinatura (depois
-// de linkado) reaproveita o mesmo contrato do HUB Signer
-// (fw/v1/pdf/kms/lote/assinaturas, ver kms.server.ts) trocando a URL base —
-// mas o header exato de autenticação nesse passo final não está nas páginas
-// públicas da doc (exemplos de request/response ficam atrás de login em
-// bry-developer.readme.io). Ver signPdf() abaixo: a implementação está
-// pronta mas sinalizada para confirmação antes de uso em produção.
+// Fonte: https://bry-developer.readme.io/reference/integra-bry. A assinatura
+// usa o contrato HUB Signer com `kms_type: PSC` e `kms_data` contendo a URL
+// do Integra Bry e o token retornado por /psc/link.
 //
 // Autenticação da aplicação: usa o mesmo access_token OAuth2 (client
 // credentials) do restante da API BRy — ver authToken.server.ts. Esse
@@ -218,21 +212,7 @@ export const IntegraBryApi = {
     };
   },
 
-  /**
-   * ⚠️ NÃO CONFIRMADO: assina o PDF usando o certificado linkado via PSC.
-   *
-   * A introdução do Integra Bry diz para reaproveitar os mesmos endpoints
-   * de assinatura do HUB Signer (fw/v1/pdf/kms/lote/assinaturas), trocando
-   * a URL base para integra(.hom).bry.com.br/api/service. O que NÃO está
-   * confirmado nas páginas públicas da doc é o header exato de autenticação
-   * nesse passo final. Por segurança mandamos os dois: `Authorization:
-   * Bearer <access_token da aplicação>` (mesmo do restante da API) junto
-   * com `X-API-KEY: <credencial do PSC linkado>` (como em /auth/info e
-   * /auth/certificate). Deve ser validado contra a coleção Postman oficial
-   * (https://integra.bry.com.br/postman.json) ou em homologação antes de
-   * ir para produção — por isso lança um erro explícito se a resposta não
-   * vier no formato esperado, em vez de assumir sucesso silenciosamente.
-   */
+  /** Assina um PDF com o certificado externo já autorizado pelo PSC. */
   async signPdf(input: {
     apiKey: string;
     pdfBuffer: Uint8Array;
@@ -241,6 +221,10 @@ export const IntegraBryApi = {
   }): Promise<{ signedPdf: Uint8Array; signatureTimestamp: string | null }> {
     const { baseUrl, token } = await getConfig();
     const dadosAssinatura = {
+      kms_data: {
+        url: baseUrl,
+        token: input.apiKey,
+      },
       perfil: "ADRB",
       algoritmoHash: "SHA256",
       tipoRetorno: "BASE64",
@@ -260,7 +244,7 @@ export const IntegraBryApi = {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          "X-API-KEY": input.apiKey,
+          kms_type: "PSC",
           Accept: "application/json",
         },
         body: form,
@@ -271,9 +255,20 @@ export const IntegraBryApi = {
 
     const text = await res.text();
     if (!res.ok) {
+      let providerMessage = "";
+      try {
+        const errorPayload = JSON.parse(text) as {
+          message?: string;
+          error_description?: string;
+          error?: string;
+        };
+        providerMessage =
+          errorPayload.message ?? errorPayload.error_description ?? errorPayload.error ?? "";
+      } catch {
+        providerMessage = text.slice(0, 300);
+      }
       throw new BryError(
-        `Integra Bry retornou ${res.status} ao assinar. Contrato do endpoint de assinatura ` +
-          "ainda não confirmado com o time de integração da Bry — ver comentário em signPdf().",
+        providerMessage || `Integra Bry retornou ${res.status} ao assinar.`,
         res.status >= 400 && res.status < 500 ? res.status : 502,
         text.slice(0, 600),
       );
