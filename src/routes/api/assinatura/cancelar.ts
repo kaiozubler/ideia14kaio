@@ -10,7 +10,11 @@ export const Route = createFileRoute("/api/assinatura/cancelar")({
         const userId = await getUserIdFromRequest(request);
         if (!userId) return Response.json({ error: "unauthorized" }, { status: 401 });
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { supabaseAdmin: supabaseAdminTipado } = await import("@/integrations/supabase/client.server");
+        // As tabelas assinaturas/creditos_adicionais/consumo_mensal ainda não constam no types.ts
+        // gerado (só depois de rodar a migration + regenerar tipos) — remover este cast depois.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const supabaseAdmin = supabaseAdminTipado as any;
         const { data: assinatura, error: erroBusca } = await supabaseAdmin
           .from("assinaturas")
           .select("*")

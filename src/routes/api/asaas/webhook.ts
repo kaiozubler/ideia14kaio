@@ -56,7 +56,11 @@ export const Route = createFileRoute("/api/asaas/webhook")({
           return Response.json({ ok: true });
         }
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { supabaseAdmin: supabaseAdminTipado } = await import("@/integrations/supabase/client.server");
+        // As tabelas assinaturas/creditos_adicionais/consumo_mensal ainda não constam no types.ts
+        // gerado (só depois de rodar a migration + regenerar tipos) — remover este cast depois.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const supabaseAdmin = supabaseAdminTipado as any;
 
         // --- Checkout (assinatura nova OU compra avulsa de créditos) ---
         const checkoutId = corpo.checkout?.id;
@@ -73,7 +77,7 @@ export const Route = createFileRoute("/api/asaas/webhook")({
               .maybeSingle();
 
             if (contratacao) {
-              const updates: Record<string, unknown> = { status };
+              const updates: { status: "confirmada" | "cancelada"; pagamento_confirmado_em?: string } = { status };
               if (status === "confirmada") updates.pagamento_confirmado_em = new Date().toISOString();
               const { error } = await supabaseAdmin.from("contratacoes").update(updates).eq("id", contratacao.id);
               if (error) console.error("[asaas:webhook] erro ao atualizar contratação:", error.message);

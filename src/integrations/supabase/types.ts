@@ -413,6 +413,138 @@ export type Database = {
           },
         ]
       }
+      contratacoes: {
+        Row: {
+          asaas_checkout_id: string | null
+          asaas_customer_id: string | null
+          asaas_subscription_id: string | null
+          bairro: string | null
+          cep: string | null
+          ciclo: string
+          cidade: string | null
+          cidade_ibge: string | null
+          como_conheceu: string | null
+          complemento: string | null
+          copiloto: number
+          created_at: string
+          dia_cobranca: number | null
+          documento: string | null
+          especialidade: string | null
+          estado: string | null
+          financeiro: Json
+          financeiro_mesmo_responsavel: boolean
+          id: string
+          juridico: Json
+          juridico_mesmo_responsavel: boolean
+          logradouro: string | null
+          medicos: number
+          nome_clinica: string | null
+          numero: string | null
+          pacientes_mes: string | null
+          pagamento_confirmado_em: string | null
+          plano: string
+          preco_mensal_calculado: number | null
+          responsavel_cargo: string | null
+          responsavel_email: string | null
+          responsavel_nome: string | null
+          responsavel_telefone: string | null
+          secretarias: number
+          status: string
+          termos_aceitos: boolean
+          termos_aceitos_em: string | null
+          updated_at: string
+          user_id: string | null
+          video: number
+          whatsapp: number
+        }
+        Insert: {
+          asaas_checkout_id?: string | null
+          asaas_customer_id?: string | null
+          asaas_subscription_id?: string | null
+          bairro?: string | null
+          cep?: string | null
+          ciclo: string
+          cidade?: string | null
+          cidade_ibge?: string | null
+          como_conheceu?: string | null
+          complemento?: string | null
+          copiloto: number
+          created_at?: string
+          dia_cobranca?: number | null
+          documento?: string | null
+          especialidade?: string | null
+          estado?: string | null
+          financeiro?: Json
+          financeiro_mesmo_responsavel?: boolean
+          id?: string
+          juridico?: Json
+          juridico_mesmo_responsavel?: boolean
+          logradouro?: string | null
+          medicos: number
+          nome_clinica?: string | null
+          numero?: string | null
+          pacientes_mes?: string | null
+          pagamento_confirmado_em?: string | null
+          plano: string
+          preco_mensal_calculado?: number | null
+          responsavel_cargo?: string | null
+          responsavel_email?: string | null
+          responsavel_nome?: string | null
+          responsavel_telefone?: string | null
+          secretarias: number
+          status?: string
+          termos_aceitos?: boolean
+          termos_aceitos_em?: string | null
+          updated_at?: string
+          user_id?: string | null
+          video: number
+          whatsapp: number
+        }
+        Update: {
+          asaas_checkout_id?: string | null
+          asaas_customer_id?: string | null
+          asaas_subscription_id?: string | null
+          bairro?: string | null
+          cep?: string | null
+          ciclo?: string
+          cidade?: string | null
+          cidade_ibge?: string | null
+          como_conheceu?: string | null
+          complemento?: string | null
+          copiloto?: number
+          created_at?: string
+          dia_cobranca?: number | null
+          documento?: string | null
+          especialidade?: string | null
+          estado?: string | null
+          financeiro?: Json
+          financeiro_mesmo_responsavel?: boolean
+          id?: string
+          juridico?: Json
+          juridico_mesmo_responsavel?: boolean
+          logradouro?: string | null
+          medicos?: number
+          nome_clinica?: string | null
+          numero?: string | null
+          pacientes_mes?: string | null
+          pagamento_confirmado_em?: string | null
+          plano?: string
+          preco_mensal_calculado?: number | null
+          responsavel_cargo?: string | null
+          responsavel_email?: string | null
+          responsavel_nome?: string | null
+          responsavel_telefone?: string | null
+          secretarias?: number
+          status?: string
+          termos_aceitos?: boolean
+          termos_aceitos_em?: string | null
+          updated_at?: string
+          user_id?: string | null
+          video?: number
+          whatsapp?: number
+        }
+        Relationships: []
+      }
       doctor_certificates: {
         Row: {
           certificate_fingerprint: string | null

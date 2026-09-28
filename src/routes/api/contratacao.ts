@@ -153,7 +153,7 @@ export const Route = createFileRoute("/api/contratacao")({
         if (Object.keys(updates).length === 0) return Response.json({ ok: true });
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { error } = await supabaseAdmin.from("contratacoes").update(updates).eq("id", d.id);
+        const { error } = await supabaseAdmin.from("contratacoes").update(updates as any).eq("id", d.id);
         if (error) {
           console.error("[contratacao:atualizar]", error.message);
           return Response.json({ error: "não foi possível atualizar" }, { status: 500 });

@@ -39,7 +39,7 @@
       body: JSON.stringify({ state }),
     });
     const j = await res.json().catch(() => ({}));
-    return { ok: res.ok, ...j };
+    return { ...j, ok: res.ok && j.ok === true };
   }
 
   /**

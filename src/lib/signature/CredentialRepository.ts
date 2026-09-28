@@ -245,6 +245,7 @@ export const CredentialRepository = {
     state: string;
     redirectUri: string;
     apiKey: string | null;
+    expiresAt: string;
   }): Promise<string> {
     const sb = await admin();
     const { data, error } = await sb
@@ -256,6 +257,7 @@ export const CredentialRepository = {
         redirect_uri: params.redirectUri,
         api_key: params.apiKey,
         status: "pending",
+        expires_at: params.expiresAt,
       } as never)
       .select("id")
       .single();
@@ -364,6 +366,26 @@ export const CredentialRepository = {
       validUntil: row.valid_until,
       expiresAt: row.expires_at,
     };
+  },
+
+  /** Última sessão do médico, inclusive expirada, para diferenciar ausência de vínculo de expiração. */
+  async getLatestPscLinkSession(doctorId: string): Promise<{
+    id: string;
+    status: string;
+    expiresAt: string;
+  } | null> {
+    const sb = await admin();
+    const { data, error } = await sb
+      .from("signature_psc_link_sessions")
+      .select("id, status, expires_at")
+      .eq("doctor_id", doctorId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const row = data as { id: string; status: string; expires_at: string };
+    return { id: row.id, status: row.status, expiresAt: row.expires_at };
   },
 
   /** Encerra a sessão Integra Bry ativa do médico (equivalente a "excluir certificado" para esse fluxo). */

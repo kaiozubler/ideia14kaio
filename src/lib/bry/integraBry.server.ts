@@ -8,15 +8,9 @@
 // Este fala com integra(.hom).bry.com.br para linkar/usar um certificado
 // que o médico já tem em outra certificadora.
 //
-// Fonte: https://bry-developer.readme.io/reference/integra-bry (confirmado
-// por fetch em 2026-08-24). Endpoints de listagem/link/info do certificado
-// estão documentados publicamente; o endpoint FINAL de assinatura (depois
-// de linkado) reaproveita o mesmo contrato do HUB Signer
-// (fw/v1/pdf/kms/lote/assinaturas, ver kms.server.ts) trocando a URL base —
-// mas o header exato de autenticação nesse passo final não está nas páginas
-// públicas da doc (exemplos de request/response ficam atrás de login em
-// bry-developer.readme.io). Ver signPdf() abaixo: a implementação está
-// pronta mas sinalizada para confirmação antes de uso em produção.
+// Fonte: https://bry-developer.readme.io/reference/integra-bry. A assinatura
+// usa o contrato HUB Signer com `kms_type: PSC` e `kms_data` contendo a URL
+// do Integra Bry e o token retornado por /psc/link.
 //
 // Autenticação da aplicação: usa o mesmo access_token OAuth2 (client
 // credentials) do restante da API BRy — ver authToken.server.ts. Esse
@@ -26,14 +20,18 @@ import process from "node:process";
 import { BryError } from "./bry.server";
 import { getBryAccessToken } from "./authToken.server";
 
+function isProductionEnvironment(value: string): boolean {
+  return ["prod", "production", "producao", "produção"].includes(value.trim().toLowerCase());
+}
+
 async function getConfig() {
   // Mesma variável usada pelo endpoint de token (authToken.server.ts) —
   // eram duas antes (INTEGRA_BRY_ENV separado), o que permitia configurar
   // o token num ambiente e a URL base do Integra Bry em outro por engano.
-  const env = (process.env.BRY_ENV || "hom").toLowerCase();
+  const env = process.env.BRY_ENV || "hom";
   const baseUrl =
     process.env.INTEGRA_BRY_BASE_URL ||
-    (env === "prod"
+    (isProductionEnvironment(env)
       ? "https://integra.bry.com.br/api/service"
       : "https://integra.hom.bry.com.br/api/service");
   // Token OAuth2 renovado automaticamente (ver authToken.server.ts) — o
@@ -121,12 +119,9 @@ export interface PscLinkResult {
   authorizationUrl: string;
   /**
    * Credencial (X-API-KEY) a ser usada em /auth/info, /auth/certificate e na
-   * assinatura. A doc pública não deixa 100% explícito se ela vem já nesta
-   * resposta ou anexada ao redirectUri — tratamos ambos os formatos comuns
-   * de resposta (`apiKey`/`api_key`/`credential`) e, se nenhum vier, quem
-   * chamar precisa obtê-la a partir do callback do redirectUri.
+   * assinatura. A resposta atual do Integra Bry usa o campo `token`.
    */
-  apiKey: string | null;
+  apiKey: string;
   raw: unknown;
 }
 
@@ -158,6 +153,7 @@ export const IntegraBryApi = {
   /** POST /api/service/psc/link — gera o link de autenticação com o PSC escolhido. */
   async createLink(input: PscLinkRequest): Promise<PscLinkResult> {
     const resp = await integraFetch<{
+      token?: string;
       authorizationUrl?: string;
       authorization_url?: string;
       url?: string;
@@ -165,18 +161,17 @@ export const IntegraBryApi = {
       api_key?: string;
       credential?: string;
     }>("/psc/link", { method: "POST", body: input });
-    // TEMPORÁRIO (remover depois de confirmar o formato real): loga a
-    // resposta crua da Bry pra descobrirmos em qual campo o apiKey/
-    // credencial realmente vem, já que não está em nenhum dos nomes
-    // candidatos nem no redirect (só ?state= volta na query string).
-    console.log("[bry:integra] /psc/link raw response:", JSON.stringify(resp));
     const authorizationUrl = resp.authorizationUrl ?? resp.authorization_url ?? resp.url ?? "";
     if (!authorizationUrl) {
       throw new BryError("Integra Bry não retornou link de autenticação.", 502, resp);
     }
+    const apiKey = resp.token ?? resp.apiKey ?? resp.api_key ?? resp.credential ?? "";
+    if (!apiKey) {
+      throw new BryError("Integra Bry não retornou a credencial do vínculo.", 502);
+    }
     return {
       authorizationUrl,
-      apiKey: resp.apiKey ?? resp.api_key ?? resp.credential ?? null,
+      apiKey,
       raw: resp,
     };
   },
@@ -217,21 +212,7 @@ export const IntegraBryApi = {
     };
   },
 
-  /**
-   * ⚠️ NÃO CONFIRMADO: assina o PDF usando o certificado linkado via PSC.
-   *
-   * A introdução do Integra Bry diz para reaproveitar os mesmos endpoints
-   * de assinatura do HUB Signer (fw/v1/pdf/kms/lote/assinaturas), trocando
-   * a URL base para integra(.hom).bry.com.br/api/service. O que NÃO está
-   * confirmado nas páginas públicas da doc é o header exato de autenticação
-   * nesse passo final. Por segurança mandamos os dois: `Authorization:
-   * Bearer <access_token da aplicação>` (mesmo do restante da API) junto
-   * com `X-API-KEY: <credencial do PSC linkado>` (como em /auth/info e
-   * /auth/certificate). Deve ser validado contra a coleção Postman oficial
-   * (https://integra.bry.com.br/postman.json) ou em homologação antes de
-   * ir para produção — por isso lança um erro explícito se a resposta não
-   * vier no formato esperado, em vez de assumir sucesso silenciosamente.
-   */
+  /** Assina um PDF com o certificado externo já autorizado pelo PSC. */
   async signPdf(input: {
     apiKey: string;
     pdfBuffer: Uint8Array;
@@ -240,6 +221,10 @@ export const IntegraBryApi = {
   }): Promise<{ signedPdf: Uint8Array; signatureTimestamp: string | null }> {
     const { baseUrl, token } = await getConfig();
     const dadosAssinatura = {
+      kms_data: {
+        url: baseUrl,
+        token: input.apiKey,
+      },
       perfil: "ADRB",
       algoritmoHash: "SHA256",
       tipoRetorno: "BASE64",
@@ -259,7 +244,7 @@ export const IntegraBryApi = {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          "X-API-KEY": input.apiKey,
+          kms_type: "PSC",
           Accept: "application/json",
         },
         body: form,
@@ -270,9 +255,20 @@ export const IntegraBryApi = {
 
     const text = await res.text();
     if (!res.ok) {
+      let providerMessage = "";
+      try {
+        const errorPayload = JSON.parse(text) as {
+          message?: string;
+          error_description?: string;
+          error?: string;
+        };
+        providerMessage =
+          errorPayload.message ?? errorPayload.error_description ?? errorPayload.error ?? "";
+      } catch {
+        providerMessage = text.slice(0, 300);
+      }
       throw new BryError(
-        `Integra Bry retornou ${res.status} ao assinar. Contrato do endpoint de assinatura ` +
-          "ainda não confirmado com o time de integração da Bry — ver comentário em signPdf().",
+        providerMessage || `Integra Bry retornou ${res.status} ao assinar.`,
         res.status >= 400 && res.status < 500 ? res.status : 502,
         text.slice(0, 600),
       );
