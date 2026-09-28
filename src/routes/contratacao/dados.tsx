@@ -10,6 +10,7 @@ import { atualizarPedido, lerPedido, type Contato, type DadosCliente, type Pedid
 import {
   apenasDigitos,
   documentoValido,
+  nomeCompletoValido,
   emailValido,
   formatarDocumento,
   formatarTelefone,
@@ -68,6 +69,7 @@ type Erros = {
 function validarContato(c: Contato): ErrosContato {
   const e: ErrosContato = {};
   if (!c.nome.trim()) e.nome = "Obrigatório.";
+  else if (!nomeCompletoValido(c.nome)) e.nome = "Informe nome e sobrenome.";
   if (!emailValido(c.email)) e.email = "E-mail inválido.";
   if (!telefoneValido(c.telefone)) e.telefone = "Telefone inválido.";
   return e;
@@ -182,6 +184,7 @@ function PaginaDados() {
 
     const erroResp: NonNullable<Erros["responsavel"]> = {};
     if (!dados.responsavel.nome.trim()) erroResp.nome = "Obrigatório.";
+    else if (!nomeCompletoValido(dados.responsavel.nome)) erroResp.nome = "Informe nome e sobrenome.";
     if (!emailValido(dados.responsavel.email)) erroResp.email = "E-mail inválido.";
     if (!telefoneValido(dados.responsavel.telefone)) erroResp.telefone = "Informe DDD + número.";
     if (!dados.responsavel.cargo.trim()) erroResp.cargo = "Obrigatório.";

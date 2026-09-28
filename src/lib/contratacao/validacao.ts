@@ -84,3 +84,9 @@ export function telefoneValido(valor: string): boolean {
 export function emailValido(valor: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor.trim());
 }
+
+/** Exige nome e sobrenome (2+ palavras) — o Asaas rejeita nome de pessoa com uma palavra só. */
+export function nomeCompletoValido(valor: string): boolean {
+  const partes = valor.trim().split(/\s+/).filter(Boolean);
+  return partes.length >= 2;
+}

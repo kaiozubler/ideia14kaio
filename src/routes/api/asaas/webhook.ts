@@ -1,25 +1,41 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-// Recebe os eventos de Checkout do Asaas (CHECKOUT_PAID/CANCELED/EXPIRED/
-// CREATED) e atualiza a linha correspondente em `contratacoes`.
+// Recebe os eventos do Asaas e atualiza as tabelas correspondentes. É o
+// único lugar que confirma pagamento/cobrança de verdade — nunca o
+// redirecionamento de volta (callback do Checkout), conforme o próprio
+// Asaas recomenda.
 //
-// Isso — e só isso — é quem confirma pagamento de verdade. O
-// `successUrl`/`callback` do Checkout (ver /api/asaas/checkout) só melhora
-// a navegação de quem pagou; conforme o próprio Asaas recomenda, nunca
-// marcamos um pedido como pago só por causa do redirecionamento.
+// Eventos tratados:
+//   CHECKOUT_PAID/CANCELED/EXPIRED   -> contratacoes (funil de assinatura
+//                                       nova) OU creditos_adicionais (compra
+//                                       avulsa de créditos, ver
+//                                       /api/assinatura/comprar-creditos),
+//                                       dependendo de qual tabela tem esse
+//                                       asaas_checkout_id
+//   PAYMENT_OVERDUE                  -> assinaturas.status = 'inadimplente'
+//   PAYMENT_CONFIRMED/RECEIVED       -> assinaturas.status = 'ativa' de novo
+//   SUBSCRIPTION_DELETED/INACTIVATED -> assinaturas.status = 'cancelada'
 //
-// AINDA PRECISA SER CONFIGURADO NO PAINEL DO ASAAS depois que a chave de
-// API estiver ativa: Configurações → Integrações → Webhooks → criar um
-// apontando pra {seu domínio}/api/asaas/webhook, eventos CHECKOUT_CREATED,
-// CHECKOUT_PAID, CHECKOUT_CANCELED, CHECKOUT_EXPIRED. Se você definir um
-// "Token de acesso" na configuração do Webhook, defina a mesma string na
-// variável de ambiente ASAAS_WEBHOOK_TOKEN — com isso ligado, requisições
-// sem o header correto são rejeitadas.
+// LACUNA CONHECIDA: o funil público (/planos -> /contratacao/*) não pede
+// login em nenhum momento, então uma contratação nova não tem
+// automaticamente um auth.users pra virar dona de uma linha em
+// `assinaturas` (que exige medico_id not null, pra RLS funcionar). Por
+// isso este webhook NÃO cria `assinaturas` sozinho a partir de
+// CHECKOUT_PAID — só atualiza `contratacoes`. A linha em `assinaturas`
+// precisa ser criada à parte (hoje, manualmente) quando a conta do médico
+// é criada — ver aviso completo na resposta que acompanha este código.
+//
+// Configuração pendente no painel do Asaas: Webhooks -> eventos
+// CHECKOUT_CREATED/PAID/CANCELED/EXPIRED, PAYMENT_OVERDUE/CONFIRMED/
+// RECEIVED, SUBSCRIPTION_DELETED/INACTIVATED, apontando pra
+// {seu domínio}/api/asaas/webhook. Se definir um token lá, replique em
+// ASAAS_WEBHOOK_TOKEN.
 
-type EventoCheckout = {
-  id: string;
-  event: "CHECKOUT_CREATED" | "CHECKOUT_PAID" | "CHECKOUT_CANCELED" | "CHECKOUT_EXPIRED" | string;
-  checkout?: { id?: string; status?: string };
+type EventoAsaas = {
+  event: string;
+  checkout?: { id?: string };
+  payment?: { subscription?: string | null };
+  subscription?: { id?: string };
 };
 
 export const Route = createFileRoute("/api/asaas/webhook")({
@@ -34,29 +50,69 @@ export const Route = createFileRoute("/api/asaas/webhook")({
           }
         }
 
-        const corpo = (await request.json().catch(() => null)) as EventoCheckout | null;
-        const checkoutId = corpo?.checkout?.id;
-
-        if (!corpo || !corpo.event || !checkoutId) {
-          // Corpo que não reconhecemos — devolve 200 mesmo assim (o Asaas reenvia
-          // em loop se não receber 2xx) mas loga pra investigar depois.
+        const corpo = (await request.json().catch(() => null)) as EventoAsaas | null;
+        if (!corpo?.event) {
           console.error("[asaas:webhook] payload inesperado:", JSON.stringify(corpo));
           return Response.json({ ok: true });
         }
 
-        let status: "confirmada" | "cancelada" | null = null;
-        if (corpo.event === "CHECKOUT_PAID") status = "confirmada";
-        else if (corpo.event === "CHECKOUT_CANCELED" || corpo.event === "CHECKOUT_EXPIRED") status = "cancelada";
-        // CHECKOUT_CREATED e qualquer evento futuro desconhecido: sem ação, só confirma recebimento.
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-        if (status) {
-          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-          const updates: Record<string, unknown> = { status };
-          if (status === "confirmada") updates.pagamento_confirmado_em = new Date().toISOString();
+        // --- Checkout (assinatura nova OU compra avulsa de créditos) ---
+        const checkoutId = corpo.checkout?.id;
+        if (checkoutId && corpo.event.startsWith("CHECKOUT_")) {
+          let status: "confirmada" | "cancelada" | null = null;
+          if (corpo.event === "CHECKOUT_PAID") status = "confirmada";
+          else if (corpo.event === "CHECKOUT_CANCELED" || corpo.event === "CHECKOUT_EXPIRED") status = "cancelada";
 
-          const { error } = await supabaseAdmin.from("contratacoes").update(updates).eq("asaas_checkout_id", checkoutId);
-          if (error) {
-            console.error("[asaas:webhook] erro ao atualizar contratação:", error.message, "checkoutId:", checkoutId);
+          if (status) {
+            const { data: contratacao } = await supabaseAdmin
+              .from("contratacoes")
+              .select("id")
+              .eq("asaas_checkout_id", checkoutId)
+              .maybeSingle();
+
+            if (contratacao) {
+              const updates: Record<string, unknown> = { status };
+              if (status === "confirmada") updates.pagamento_confirmado_em = new Date().toISOString();
+              const { error } = await supabaseAdmin.from("contratacoes").update(updates).eq("id", contratacao.id);
+              if (error) console.error("[asaas:webhook] erro ao atualizar contratação:", error.message);
+            } else {
+              const statusCredito = status === "confirmada" ? "pago" : "cancelado";
+              const { error } = await supabaseAdmin
+                .from("creditos_adicionais")
+                .update({ status: statusCredito })
+                .eq("asaas_checkout_id", checkoutId);
+              if (error) console.error("[asaas:webhook] erro ao atualizar créditos adicionais:", error.message);
+            }
+          }
+        }
+
+        // --- Cobrança da assinatura (pagamentos recorrentes, depois do primeiro) ---
+        const subscriptionId = corpo.payment?.subscription ?? corpo.subscription?.id;
+        if (subscriptionId) {
+          if (corpo.event === "PAYMENT_OVERDUE") {
+            const { error } = await supabaseAdmin
+              .from("assinaturas")
+              .update({
+                status: "inadimplente",
+                ultimo_erro_cobranca: { mensagem: "Cobrança em atraso — verifique a forma de pagamento.", em: new Date().toISOString() },
+              })
+              .eq("asaas_subscription_id", subscriptionId);
+            if (error) console.error("[asaas:webhook] erro ao marcar inadimplência:", error.message);
+          } else if (corpo.event === "PAYMENT_CONFIRMED" || corpo.event === "PAYMENT_RECEIVED") {
+            const { error } = await supabaseAdmin
+              .from("assinaturas")
+              .update({ status: "ativa", ultimo_erro_cobranca: null })
+              .eq("asaas_subscription_id", subscriptionId)
+              .eq("status", "inadimplente");
+            if (error) console.error("[asaas:webhook] erro ao reativar assinatura:", error.message);
+          } else if (corpo.event === "SUBSCRIPTION_DELETED" || corpo.event === "SUBSCRIPTION_INACTIVATED") {
+            const { error } = await supabaseAdmin
+              .from("assinaturas")
+              .update({ status: "cancelada" })
+              .eq("asaas_subscription_id", subscriptionId);
+            if (error) console.error("[asaas:webhook] erro ao cancelar assinatura:", error.message);
           }
         }
 

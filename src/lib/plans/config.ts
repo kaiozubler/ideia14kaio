@@ -239,6 +239,19 @@ export function formatarPreco(valor: number): string {
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+export type PacoteCredito = { quantidade: number; preco: number };
+
+/** Pacotes de crédito avulso pra um recurso, derivados dos degraus já existentes (nunca preço inventado). */
+export function pacotesCredito(recurso: "copiloto" | "whatsapp" | "video"): PacoteCredito[] {
+  const tiers = recurso === "copiloto" ? TIERS_COPILOTO : recurso === "whatsapp" ? TIERS_WHATSAPP : TIERS_VIDEO;
+  const reais = tiers.filter((t) => t.quantidade !== PERSONALIZADO);
+  const pacotes: PacoteCredito[] = [];
+  for (let i = 1; i < reais.length; i++) {
+    pacotes.push({ quantidade: reais[i].quantidade - reais[i - 1].quantidade, preco: reais[i].preco - reais[i - 1].preco });
+  }
+  return pacotes;
+}
+
 // ---------------------------------------------------------------------------
 // Contato comercial (usado enquanto o checkout self-service não está pronto)
 // ---------------------------------------------------------------------------
