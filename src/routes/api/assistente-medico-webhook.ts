@@ -125,18 +125,30 @@ function onlyDigits(v?: string | null) {
   return (v || "").replace(/\D/g, "");
 }
 
-// Compara os últimos 8 dígitos — essa é a parte do número que nunca muda,
-// então evita falso-negativo por causa de:
-//  - DDI (55) presente em um lado e ausente no outro;
-//  - o "9º dígito" dos celulares brasileiros: a Meta às vezes entrega o
-//    "from" da mensagem SEM esse dígito extra, mesmo o número tendo sido
-//    cadastrado com ele (ou vice-versa). Os últimos 8 dígitos (o número em
-//    si, sem DDD/DDI/9º dígito) continuam iguais nos dois formatos.
+// Normaliza um telefone brasileiro para um formato canônico: DDD (2
+// dígitos) + os 8 dígitos do número em si — removendo o DDI (55), quando
+// presente, e o "9º dígito" dos celulares (a Meta às vezes entrega o
+// "from" da mensagem com ou sem esse dígito extra, mesmo o número tendo
+// sido cadastrado do outro jeito). Devolve null se o formato não for
+// reconhecido (não arrisca comparar números fora do padrão esperado).
+//
+// IMPORTANTE: mantém o DDD na comparação — uma versão anterior comparava
+// só os últimos 8 dígitos (sem DDD), o que causou um vazamento real entre
+// contas de médicos diferentes cujos números só coincidiam nesses 8
+// dígitos finais, mas tinham DDD diferente.
+function normalizarTelefoneBR(v?: string | null): string | null {
+  let d = onlyDigits(v);
+  if ((d.length === 12 || d.length === 13) && d.startsWith("55")) d = d.slice(2);
+  if (d.length === 11) d = d.slice(0, 2) + d.slice(3); // remove o 9º dígito, logo após o DDD
+  if (d.length !== 10) return null;
+  return d;
+}
+
 function telefonesEquivalentes(a?: string | null, b?: string | null) {
-  const da = onlyDigits(a);
-  const dbNum = onlyDigits(b);
-  if (da.length < 8 || dbNum.length < 8) return false;
-  return da.slice(-8) === dbNum.slice(-8);
+  const na = normalizarTelefoneBR(a);
+  const nb = normalizarTelefoneBR(b);
+  if (!na || !nb) return false;
+  return na === nb;
 }
 
 // As tabelas de sessão foram adicionadas depois da última geração dos tipos.
@@ -214,12 +226,20 @@ function isMedico(tipoUser: unknown) {
 // receita, exame, atestado, mexer na agenda), então só libera para quem tem
 // tipo_user "medico" — mesmo que o telefone bata com um usuário cadastrado
 // de outro cargo (ex.: secretária, quando esse tipo de conta existir).
+//
+// FALHA SEGURA EM CASO DE AMBIGUIDADE: se MAIS DE UM usuário bater com o
+// mesmo telefone (ex.: dois médicos cadastraram o mesmo número por engano),
+// NÃO escolhe um deles às cegas — devolve { ambiguo: true } e o chamador
+// recusa atender. Num sistema com dados médicos, "o primeiro que bater"
+// nunca é um critério aceitável: foi exatamente isso que fez os pacientes
+// de uma médica aparecerem numa conversa iniciada por outro número.
 async function resolverMedicoPorTelefone(
   db: Db,
   telefoneRemetente: string,
-): Promise<{ id: string; isMedico: boolean } | null> {
+): Promise<{ id: string; isMedico: boolean } | { ambiguo: true } | null> {
   const PER_PAGE = 200;
   const MAX_PAGINAS = 25; // cobre até 5.000 usuários
+  const encontrados: { id: string; isMedico: boolean }[] = [];
   for (let page = 1; page <= MAX_PAGINAS; page++) {
     const { data, error } = await db.auth.admin.listUsers({ page, perPage: PER_PAGE });
     if (error || !data?.users?.length) break;
@@ -227,12 +247,14 @@ async function resolverMedicoPorTelefone(
       const meta = (user.user_metadata || {}) as Record<string, unknown>;
       const telefoneCadastrado = (meta.telefone as string) || (meta.phone as string) || "";
       if (telefonesEquivalentes(telefoneCadastrado, telefoneRemetente)) {
-        return { id: user.id, isMedico: isMedico(meta.tipo_user) };
+        encontrados.push({ id: user.id, isMedico: isMedico(meta.tipo_user) });
       }
     }
     if (data.users.length < PER_PAGE) break; // última página
   }
-  return null;
+  if (encontrados.length === 0) return null;
+  if (encontrados.length > 1) return { ambiguo: true };
+  return encontrados[0];
 }
 
 // Trava leve para serializar mensagens da mesma conversa que chegam quase ao
@@ -499,6 +521,19 @@ export const Route = createFileRoute("/api/assistente-medico-webhook")({
         }
 
         const medico = await resolverMedicoPorTelefone(supabaseAdmin, telefoneRemetente);
+        if (medico && "ambiguo" in medico) {
+          const aviso =
+            "Olá! Este número está associado a mais de um cadastro no sistema, então não consigo " +
+            "identificar com segurança de quem é. Por precaução, não vou acessar nenhum dado. " +
+            "Ajuste o telefone em Configurações > Minha equipe > Meu usuário para que cada número " +
+            "pertença a um único cadastro.";
+          await enviarWhatsApp(telefoneRemetente, aviso);
+          console.error(
+            "[assistente-medico-webhook] Telefone AMBÍGUO — corresponde a mais de um usuário, acesso recusado por segurança:",
+            telefoneRemetente,
+          );
+          return Response.json({ ok: true });
+        }
         if (!medico) {
           const aviso =
             "Olá! Não encontrei nenhum médico cadastrado com este número. " +
