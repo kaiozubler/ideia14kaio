@@ -79,8 +79,9 @@
         .eq("medico_id", uid)
         .neq("status", "cancelada")
         .maybeSingle();
-      if (assinaturaRes.error) throw assinaturaRes.error;
-      S.assinatura = assinaturaRes.data;
+      // Qualquer problema aqui (tabela ainda não migrada, nenhuma linha, etc.)
+      // é tratado como "sem assinatura paga" = Free, não como erro bloqueante.
+      S.assinatura = assinaturaRes.error ? null : assinaturaRes.data;
 
       if (S.assinatura) {
         var inicioMes = new Date();
@@ -151,6 +152,20 @@
     );
   }
 
+  function cardPlanoGratis(p) {
+    return (
+      '<div class="mp-plano-card">' +
+      "<h4>" + p.nome + "</h4>" +
+      '<div class="preco">' + fmtPreco(p.precoMensal) + '<span style="font-size:11px;color:#9ca3af;font-weight:400"> /mês</span></div>' +
+      "<ul><li>" + p.medicos + " médico(s) · " + p.secretarias + " usuário(s) de gestão</li>" +
+      "<li>" + p.copiloto + " consultas de Copiloto</li>" +
+      "<li>" + p.whatsapp.toLocaleString("pt-BR") + " conversas de WhatsApp</li>" +
+      "<li>" + (p.video ? p.video.toLocaleString("pt-BR") + " min de vídeo" : "Vídeo não incluído") + "</li></ul>" +
+      '<a class="mp-btn primary" href="/planos" style="text-decoration:none;text-align:center">Assinar ' + p.nome + "</a>" +
+      "</div>"
+    );
+  }
+
   function pacotesRecurso(recurso) {
     return PACOTES_CREDITO[recurso]
       .map(function (pac) {
@@ -204,8 +219,19 @@
     if (!S.assinatura) {
       el.innerHTML =
         '<div style="margin-bottom:14px"><button class="btn ghost sm" onclick="goScreen(\'configuracoes\')"><i class="ti ti-arrow-left"></i> Voltar</button></div>' +
-      '<div class="mp-head"><div><h1>Meu plano</h1><p>Gerencie sua assinatura do MediCopilot</p></div></div>' +
-        '<div class="mp-panel">Não encontramos uma assinatura vinculada a esta conta. Fale com o suporte se acha que isso é um engano.</div>';
+        '<div class="mp-head"><div><h1>Meu plano</h1><p>Gerencie sua assinatura do MediCopilot</p></div></div>' +
+
+        '<div class="mp-panel"><div class="mp-plano-row"><div>' +
+        '<div class="mp-plano-nome">Free <span class="mp-badge ativa">Gratuito</span></div>' +
+        '<div style="color:#9ca3af;font-size:12px;margin-top:4px">Sem cobrança recorrente</div>' +
+        "</div><div class=\"mp-plano-preco\">" + fmtPreco(0) + "<span> /mês</span></div></div>" +
+        '<div style="margin-top:14px;font-size:12.5px;color:#6b7280;line-height:1.6">' +
+        "Acesso liberado: <strong>emissão e consulta de receitas</strong>.<br>" +
+        "Agenda, prontuário, Copiloto de IA, WhatsApp automatizado, telemedicina e os demais recursos ficam disponíveis a partir do plano Basic." +
+        "</div></div>" +
+
+        '<div class="mp-panel"><p class="mp-secao-titulo">Fazer upgrade</p><div class="mp-planos-grid">' +
+        PLANOS.map(cardPlanoGratis).join("") + "</div></div>";
       return;
     }
 
