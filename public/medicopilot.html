@@ -2264,6 +2264,11 @@
       .cop-wa-stat small{display:block;font-size:10px;color:var(--n400);margin-bottom:3px}
       .cop-wa-stat strong{display:block;font-size:12px;color:var(--n700);overflow-wrap:anywhere}
       .cop-wa-muted{font-size:11.5px;color:var(--n400)}
+      .cop-wa-suggestions{margin-top:9px}
+      .cop-wa-suggestions small{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--n400);margin-bottom:5px}
+      .cop-wa-suggestions-list{display:flex;flex-wrap:wrap;gap:6px}
+      .cop-wa-suggestion-chip{border:0.5px solid #6ee7b7;background:#ecfdf5;color:#047857;font-size:11px;font-weight:600;border-radius:999px;padding:5px 12px;cursor:pointer;transition:background .15s}
+      .cop-wa-suggestion-chip:hover{background:#d1fae5}
       @media (max-width:760px){.cop-wa-form{grid-template-columns:1fr}.cop-wa-status{grid-template-columns:repeat(2,minmax(0,1fr))}}
       /* ===== COPILOTO — AUTOMAÇÃO POR COMANDO DE VOZ ===== */
       .cv-info{display:flex;align-items:flex-start;gap:8px}
@@ -4174,14 +4179,18 @@
                     <div class="fld cop-wa-password" style="margin:0">
                       <label for="cop-wa-key" style="text-transform:uppercase;font-size:10.5px;letter-spacing:.5px">Nova palavra-chave</label>
                       <input id="cop-wa-key" type="password" autocomplete="new-password" spellcheck="false"
-                             placeholder="Digite no mínimo 12 letras" oninput="validateCopWhatsappKey()" />
+                             placeholder="Digite no mínimo 8 letras" oninput="validateCopWhatsappKey()" />
                       <button type="button" class="btn ghost cop-wa-eye" onclick="toggleCopWhatsappKey()" title="Mostrar ou ocultar palavra-chave" aria-label="Mostrar palavra-chave">
                         <i id="cop-wa-eye-icon" class="ti ti-eye"></i>
                       </button>
                       <div class="cop-wa-validation" aria-live="polite">
-                        <span id="cop-wa-rule-length" class="cop-wa-rule"><i class="ti ti-circle"></i> 12 letras ou mais</span>
+                        <span id="cop-wa-rule-length" class="cop-wa-rule"><i class="ti ti-circle"></i> 8 letras ou mais</span>
                         <span id="cop-wa-rule-letters" class="cop-wa-rule"><i class="ti ti-circle"></i> somente letras</span>
-                        <span id="cop-wa-rule-repeat" class="cop-wa-rule"><i class="ti ti-circle"></i> até 2 repetições por letra</span>
+                        <span id="cop-wa-rule-repeat" class="cop-wa-rule"><i class="ti ti-circle"></i> até 3 repetições por letra</span>
+                      </div>
+                      <div id="cop-wa-suggestions" class="cop-wa-suggestions" style="display:none">
+                        <small>Sugestões:</small>
+                        <div id="cop-wa-suggestions-list" class="cop-wa-suggestions-list"></div>
                       </div>
                     </div>
                     <div class="fld" style="margin:0">
@@ -6926,9 +6935,9 @@
                                                               Array.from(value).forEach(letter=>{const normalized=normalizeCopWhatsappLetter(letter);counts[normalized]=(counts[normalized]||0)+1;});
                                                               return {
                                                                 value,
-                                                                length:value.length>=12,
+                                                                length:value.length>=8,
                                                                 letters:/^[A-Za-zÀ-ÿ]+$/.test(value),
-                                                                repeat:Object.values(counts).every(count=>count<=2),
+                                                                repeat:Object.values(counts).every(count=>count<=3),
                                                               };
                                                             }
                                                             function validateCopWhatsappKey(){
@@ -6952,6 +6961,26 @@
                                                               const button=input.parentElement?.querySelector('.cop-wa-eye');
                                                               if(button)button.setAttribute('aria-label',showing?'Mostrar palavra-chave':'Ocultar palavra-chave');
                                                             }
+                                                            function renderCopWhatsappSuggestions(sugestoes){
+                                                              const wrap=document.getElementById('cop-wa-suggestions');const list=document.getElementById('cop-wa-suggestions-list');
+                                                              if(!wrap||!list)return;
+                                                              list.innerHTML='';
+                                                              if(!Array.isArray(sugestoes)||!sugestoes.length){wrap.style.display='none';return;}
+                                                              sugestoes.forEach(palavra=>{
+                                                                const chip=document.createElement('button');
+                                                                chip.type='button';chip.className='cop-wa-suggestion-chip';chip.textContent=palavra;
+                                                                chip.title='Usar esta sugestão';
+                                                                chip.onclick=()=>{
+                                                                  const input=document.getElementById('cop-wa-key');
+                                                                  if(!input)return;
+                                                                  input.type='text';input.value=palavra;input.focus();
+                                                                  const icon=document.getElementById('cop-wa-eye-icon');if(icon)icon.className='ti ti-eye-off';
+                                                                  validateCopWhatsappKey();
+                                                                };
+                                                                list.appendChild(chip);
+                                                              });
+                                                              wrap.style.display='block';
+                                                            }
                                                             function copWhatsappDaysSince(dateValue){
                                                               const time=new Date(dateValue).getTime();
                                                               if(!Number.isFinite(time))return null;
@@ -6961,6 +6990,7 @@
                                                               const status=document.getElementById('cop-wa-status');const alert=document.getElementById('cop-wa-alert');
                                                               if(!status||!alert)return;
                                                               alert.style.display='none';alert.className='cop-note';alert.textContent='';
+                                                              renderCopWhatsappSuggestions(data?.sugestoes);
                                                               if(!data?.configurado){
                                                                 status.className='cop-wa-muted';status.textContent='Nenhuma palavra-chave configurada.';
                                                                 return;

@@ -12,8 +12,8 @@
 export const FREQUENCIAS_VALIDAS = [6, 12, 24, 36] as const;
 export type FrequenciaHoras = (typeof FREQUENCIAS_VALIDAS)[number];
 
-export const PALAVRA_CHAVE_MIN_LENGTH = 12;
-export const PALAVRA_CHAVE_MAX_REPETICAO = 2;
+export const PALAVRA_CHAVE_MIN_LENGTH = 8;
+export const PALAVRA_CHAVE_MAX_REPETICAO = 3;
 
 // Rotação obrigatória e aviso prévio.
 export const ROTACAO_DIAS_OBRIGATORIA = 90;
@@ -53,6 +53,44 @@ export function validarPalavraChave(palavra: string): { valido: boolean; erro?: 
     }
   }
   return { valido: true };
+}
+
+// Palavras (PT-BR, só letras, sem repetição excessiva) usadas como ponto de
+// partida para sugestões de palavra-chave na tela de configuração. Mantidas
+// aqui (em vez de geradas por sorteio de letras aleatórias) para que a
+// sugestão seja fácil de memorizar e digitar no WhatsApp.
+const BANCO_SUGESTOES = [
+  "ESTETOSCOPIO",
+  "DIAGNOSTICO",
+  "CONSULTORIO",
+  "TERMOMETRO",
+  "PRONTUARIO",
+  "RECEITUARIO",
+  "CARDIOLOGIA",
+  "PEDIATRIA",
+  "ORTOPEDIA",
+  "ANESTESIA",
+  "FISIOTERAPIA",
+  "ENFERMARIA",
+  "AMBULATORIO",
+  "VACINACAO",
+  "HOSPITALAR",
+  "MEDICINA",
+  "CIRURGIAO",
+  "PACIENTE",
+  "TRATAMENTO",
+  "INTERNACAO",
+];
+
+/**
+ * Sugestões prontas de palavra-chave para exibir na tela de configuração.
+ * Só entram no resultado palavras que já passam em validarPalavraChave (ou
+ * seja, se as regras mudarem, o banco é filtrado automaticamente). Retorna
+ * uma amostra embaralhada para não repetir sempre a mesma ordem.
+ */
+export function gerarSugestoesPalavraChave(quantidade = 4): string[] {
+  const validas = BANCO_SUGESTOES.filter((p) => validarPalavraChave(p).valido);
+  return embaralhar(validas).slice(0, quantidade);
 }
 
 function embaralhar<T>(arr: T[]): T[] {

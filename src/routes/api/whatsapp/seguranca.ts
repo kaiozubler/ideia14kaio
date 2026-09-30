@@ -5,6 +5,7 @@ import {
   FREQUENCIAS_VALIDAS,
   validarPalavraChave,
   calcularStatusRotacao,
+  gerarSugestoesPalavraChave,
   type FrequenciaHoras,
 } from "@/lib/whatsapp/segurancaDesafio";
 
@@ -48,6 +49,7 @@ export const Route = createFileRoute("/api/whatsapp/seguranca")({
             frequencia_horas: 24,
             desafio_bloqueado: false,
             status_rotacao: null,
+            sugestoes: gerarSugestoesPalavraChave(),
           });
         }
 
@@ -61,6 +63,7 @@ export const Route = createFileRoute("/api/whatsapp/seguranca")({
           ultima_autenticacao_em: data.ultima_autenticacao_em,
           desafio_bloqueado: data.desafio_bloqueado,
           status_rotacao: statusRotacao,
+          sugestoes: gerarSugestoesPalavraChave(),
         });
       },
 
