@@ -1395,37 +1395,13 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         const { getDoctorInfo, attachPdfToDocumento } = await import("@/lib/documentos/attach.server");
         try {
           const doctor = await getDoctorInfo(db, medicoId);
-          // Tenta primeiro o MESMO modelo visual que o app usa (cabeçalho da
-          // clínica, cores, numeração dos itens) — se por qualquer motivo
-          // isso falhar (ambiente sem suporte a navegador headless, template
-          // não encontrado, etc.), cai pro PDF simples de sempre, pra nunca
-          // deixar o médico sem receita nenhuma.
-          let bytes: Uint8Array | null = null;
-          try {
-            const { buildReceitaPdfFromTemplate, getClinicaConfig } = await import(
-              "@/lib/documentos/htmlPdfBuilder.server"
-            );
-            const clinica = await getClinicaConfig(db, medicoId);
-            bytes = await buildReceitaPdfFromTemplate({
-              doctor,
-              clinica,
-              pacienteNome: args.paciente_nome,
-              pacienteCpf: args.paciente_cpf,
-              pacienteIdade: args.paciente_idade,
-              medicamentos,
-            });
-          } catch (e) {
-            console.error("[gerar_receita] falha ao usar o modelo visual do app, caindo para o PDF simples:", e);
-          }
-          if (!bytes) {
-            bytes = await buildReceitaPdf({
-              doctor,
-              pacienteNome: args.paciente_nome,
-              pacienteCpf: args.paciente_cpf,
-              pacienteIdade: args.paciente_idade,
-              medicamentos,
-            });
-          }
+          let bytes = await buildReceitaPdf({
+            doctor,
+            pacienteNome: args.paciente_nome,
+            pacienteCpf: args.paciente_cpf,
+            pacienteIdade: args.paciente_idade,
+            medicamentos,
+          });
           // Assina digitalmente ANTES de anexar, se houver certificado
           // configurado — o arquivo salvo/enviado ao médico já sai assinado,
           // em vez de precisar de um passo manual separado depois.
