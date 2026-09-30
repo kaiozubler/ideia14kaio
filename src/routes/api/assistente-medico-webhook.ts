@@ -278,12 +278,18 @@ function esperar(ms: number) {
 
 /** Garante que a linha da sessão já existe, para a trava ter o que reivindicar mesmo na primeira mensagem. */
 async function garantirSessaoExiste(db: Db, idMedico: string, telefone: string) {
-  await db
+  const { error } = await db
     .from("medico_assistente_sessoes_whatsapp")
     .upsert(
       { id_medico: idMedico, telefone, conversa_id: null } as never,
       { onConflict: "id_medico,telefone", ignoreDuplicates: true },
     );
+  if (error) {
+    console.error(
+      "[assistente-medico-webhook] falha ao garantir linha de sessão (provável problema de schema):",
+      error.message,
+    );
+  }
 }
 
 /** Tenta reivindicar a trava; espera e tenta de novo por alguns ciclos antes de desistir (segue liberado, best-effort). */
@@ -318,14 +324,41 @@ async function liberarTrava(db: Db, idMedico: string, telefone: string) {
     .eq("telefone", telefone);
 }
 
-async function carregarSessao(db: Db, idMedico: string, telefone: string) {
-  const { data } = await db
+/**
+ * IMPORTANTE: distingue "sem sessão ainda" (data null, error null — primeira
+ * mensagem deste médico, segue normalmente com contexto vazio) de "não deu
+ * pra saber se existe sessão" (error preenchido — problema de infra, ex.:
+ * tabela ausente por uma migration que não rodou em produção). Essas duas
+ * situações já foram tratadas como a mesma coisa aqui (erro silenciado,
+ * "sessao = null"), e isso fez TODA mensagem virar uma conversa nova sem
+ * nenhum histórico, sempre — inclusive respostas de confirmação ("Sim") que
+ * chegavam pra IA sem absolutamente nenhum contexto do que estava sendo
+ * confirmado, e ela então tomava uma ação desconexa em vez de recusar.
+ * Por isso o chamador precisa saber quando é erro de verdade, pra recusar
+ * em vez de seguir com um contexto que parece vazio mas na verdade é
+ * desconhecido.
+ */
+async function carregarSessao(
+  db: Db,
+  idMedico: string,
+  telefone: string,
+): Promise<{ ok: true; sessao: Record<string, unknown> | null } | { ok: false; erro: string }> {
+  const { data, error } = await db
     .from("medico_assistente_sessoes_whatsapp")
     .select("id,conversa_id,ultima_interacao,paciente_ativo")
     .eq("id_medico", idMedico)
     .eq("telefone", telefone)
     .maybeSingle();
-  return data ?? null;
+  if (error) {
+    console.error(
+      "[assistente-medico-webhook] FALHA AO CARREGAR SESSÃO — provável problema de schema " +
+        "(ex.: migration de medico_assistente_sessoes_whatsapp não aplicada em produção). " +
+        "Recusando a mensagem em vez de seguir sem contexto:",
+      error.message,
+    );
+    return { ok: false, erro: error.message };
+  }
+  return { ok: true, sessao: data ?? null };
 }
 
 async function carregarHistoricoConversa(db: Db, idMedico: string, conversaId: string | null) {
@@ -363,15 +396,29 @@ async function salvarSessao(
   if (sessaoId) {
     const update: Record<string, unknown> = { conversa_id: conversaId, ultima_interacao: new Date().toISOString() };
     if (pacienteAtivo !== undefined) update.paciente_ativo = pacienteAtivo;
-    await db.from("medico_assistente_sessoes_whatsapp").update(update as never).eq("id", sessaoId);
+    const { error } = await db.from("medico_assistente_sessoes_whatsapp").update(update as never).eq("id", sessaoId);
+    if (error) {
+      console.error(
+        "[assistente-medico-webhook] falha ao salvar sessão (provável problema de schema) — a próxima " +
+          "mensagem pode não continuar este assunto/paciente corretamente:",
+        error.message,
+      );
+    }
     return;
   }
-  await db.from("medico_assistente_sessoes_whatsapp").insert({
+  const { error } = await db.from("medico_assistente_sessoes_whatsapp").insert({
     id_medico: idMedico,
     telefone,
     conversa_id: conversaId,
     paciente_ativo: pacienteAtivo ?? null,
   } as never);
+  if (error) {
+    console.error(
+      "[assistente-medico-webhook] falha ao criar sessão (provável problema de schema) — a próxima " +
+        "mensagem pode não continuar este assunto/paciente corretamente:",
+      error.message,
+    );
+  }
 }
 
 export const Route = createFileRoute("/api/assistente-medico-webhook")({
@@ -585,7 +632,22 @@ export const Route = createFileRoute("/api/assistente-medico-webhook")({
         // seguinte por causa de uma corrida entre as duas requisições.
         await reivindicarTrava(supabaseAdmin, medico.id, telefoneRemetente);
         try {
-          const sessao = await carregarSessao(supabaseAdmin, medico.id, telefoneRemetente);
+          const sessaoResult = await carregarSessao(supabaseAdmin, medico.id, telefoneRemetente);
+          if (!sessaoResult.ok) {
+            // Não segue: sem saber se há sessão/conversa em andamento, mandar
+            // a mensagem pro assistente equivale a fingir "conversa nova",
+            // o que já causou a IA tomar uma ação desconexa (ex.: criar um
+            // cadastro do zero) ao responder uma simples confirmação ("Sim")
+            // sem nenhum contexto real por trás. Melhor recusar e avisar.
+            await enviarWhatsApp(
+              telefoneRemetente,
+              "Desculpe, estou com um problema técnico para acessar sua conversa agora. Tente novamente em instantes.",
+            );
+            return Response.json({ ok: true });
+          }
+          const sessao = sessaoResult.sessao as
+            | { id?: string; conversa_id?: string | null; ultima_interacao?: string; paciente_ativo?: unknown }
+            | null;
 
           // Comando explícito para encerrar o assunto atual — não gasta chamada
           // de IA, só zera o vínculo com a conversa anterior e confirma.
