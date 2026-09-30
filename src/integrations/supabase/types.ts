@@ -151,6 +151,80 @@ export type Database = {
         }
         Relationships: []
       }
+      assinaturas: {
+        Row: {
+          asaas_customer_id: string | null
+          asaas_subscription_id: string | null
+          ciclo: string
+          contratacao_id: string | null
+          copiloto: number
+          created_at: string
+          dia_cobranca: number | null
+          id: string
+          medico_id: string
+          medicos: number
+          plano: string
+          preco_mensal: number
+          proxima_cobranca: string | null
+          secretarias: number
+          status: string
+          ultimo_erro_cobranca: Json | null
+          updated_at: string
+          video: number
+          whatsapp: number
+        }
+        Insert: {
+          asaas_customer_id?: string | null
+          asaas_subscription_id?: string | null
+          ciclo: string
+          contratacao_id?: string | null
+          copiloto: number
+          created_at?: string
+          dia_cobranca?: number | null
+          id?: string
+          medico_id: string
+          medicos: number
+          plano: string
+          preco_mensal: number
+          proxima_cobranca?: string | null
+          secretarias: number
+          status?: string
+          ultimo_erro_cobranca?: Json | null
+          updated_at?: string
+          video: number
+          whatsapp: number
+        }
+        Update: {
+          asaas_customer_id?: string | null
+          asaas_subscription_id?: string | null
+          ciclo?: string
+          contratacao_id?: string | null
+          copiloto?: number
+          created_at?: string
+          dia_cobranca?: number | null
+          id?: string
+          medico_id?: string
+          medicos?: number
+          plano?: string
+          preco_mensal?: number
+          proxima_cobranca?: string | null
+          secretarias?: number
+          status?: string
+          ultimo_erro_cobranca?: Json | null
+          updated_at?: string
+          video?: number
+          whatsapp?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assinaturas_contratacao_id_fkey"
+            columns: ["contratacao_id"]
+            isOneToOne: false
+            referencedRelation: "contratacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assinaturas_digitais: {
         Row: {
           arquivo_assinado: string | null
@@ -413,6 +487,41 @@ export type Database = {
           },
         ]
       }
+      consumo_mensal: {
+        Row: {
+          assinatura_id: string
+          id: string
+          mes: string
+          recurso: string
+          usado_adicional: number
+          usado_plano: number
+        }
+        Insert: {
+          assinatura_id: string
+          id?: string
+          mes: string
+          recurso: string
+          usado_adicional?: number
+          usado_plano?: number
+        }
+        Update: {
+          assinatura_id?: string
+          id?: string
+          mes?: string
+          recurso?: string
+          usado_adicional?: number
+          usado_plano?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consumo_mensal_assinatura_id_fkey"
+            columns: ["assinatura_id"]
+            isOneToOne: false
+            referencedRelation: "assinaturas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contratacoes: {
         Row: {
           asaas_checkout_id: string | null
@@ -544,6 +653,50 @@ export type Database = {
           whatsapp?: number
         }
         Relationships: []
+      }
+      creditos_adicionais: {
+        Row: {
+          asaas_checkout_id: string | null
+          assinatura_id: string
+          consumido: number
+          created_at: string
+          id: string
+          quantidade: number
+          recurso: string
+          status: string
+          valor_pago: number | null
+        }
+        Insert: {
+          asaas_checkout_id?: string | null
+          assinatura_id: string
+          consumido?: number
+          created_at?: string
+          id?: string
+          quantidade: number
+          recurso: string
+          status?: string
+          valor_pago?: number | null
+        }
+        Update: {
+          asaas_checkout_id?: string | null
+          assinatura_id?: string
+          consumido?: number
+          created_at?: string
+          id?: string
+          quantidade?: number
+          recurso?: string
+          status?: string
+          valor_pago?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creditos_adicionais_assinatura_id_fkey"
+            columns: ["assinatura_id"]
+            isOneToOne: false
+            referencedRelation: "assinaturas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       doctor_certificates: {
         Row: {
@@ -1252,6 +1405,89 @@ export type Database = {
             referencedColumns: ["id_substancia"]
           },
         ]
+      }
+      medico_assistente_sessoes_whatsapp: {
+        Row: {
+          bloqueio_processamento_em: string | null
+          conversa_id: string | null
+          created_at: string
+          id: string
+          id_medico: string
+          paciente_ativo: Json | null
+          telefone: string
+          ultima_interacao: string
+        }
+        Insert: {
+          bloqueio_processamento_em?: string | null
+          conversa_id?: string | null
+          created_at?: string
+          id?: string
+          id_medico: string
+          paciente_ativo?: Json | null
+          telefone: string
+          ultima_interacao?: string
+        }
+        Update: {
+          bloqueio_processamento_em?: string | null
+          conversa_id?: string | null
+          created_at?: string
+          id?: string
+          id_medico?: string
+          paciente_ativo?: Json | null
+          telefone?: string
+          ultima_interacao?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medico_assistente_sessoes_whatsapp_conversa_id_fkey"
+            columns: ["conversa_id"]
+            isOneToOne: false
+            referencedRelation: "ia_assist_conversas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medico_seguranca_whatsapp: {
+        Row: {
+          blocos_usados: Json
+          created_at: string
+          desafio_ativo: Json | null
+          desafio_bloqueado: boolean
+          frequencia_horas: number
+          id_medico: string
+          palavra_chave_cifrada: string | null
+          palavra_chave_criada_em: string | null
+          palavra_chave_usos: number
+          ultima_autenticacao_em: string | null
+          updated_at: string
+        }
+        Insert: {
+          blocos_usados?: Json
+          created_at?: string
+          desafio_ativo?: Json | null
+          desafio_bloqueado?: boolean
+          frequencia_horas?: number
+          id_medico: string
+          palavra_chave_cifrada?: string | null
+          palavra_chave_criada_em?: string | null
+          palavra_chave_usos?: number
+          ultima_autenticacao_em?: string | null
+          updated_at?: string
+        }
+        Update: {
+          blocos_usados?: Json
+          created_at?: string
+          desafio_ativo?: Json | null
+          desafio_bloqueado?: boolean
+          frequencia_horas?: number
+          id_medico?: string
+          palavra_chave_cifrada?: string | null
+          palavra_chave_criada_em?: string | null
+          palavra_chave_usos?: number
+          ultima_autenticacao_em?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       medico_whatsapp_config: {
         Row: {
@@ -2794,6 +3030,14 @@ export type Database = {
       parentesco_papel_oposto: { Args: { papel: string }; Returns: string }
       parentesco_reciproco: { Args: { termo: string }; Returns: string }
       parentesco_termo_por_papel: { Args: { papel: string }; Returns: string }
+      registrar_consumo: {
+        Args: {
+          p_assinatura_id: string
+          p_quantidade: number
+          p_recurso: string
+        }
+        Returns: number
+      }
       relatorio_protocolos: {
         Args: never
         Returns: {
