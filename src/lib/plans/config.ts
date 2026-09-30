@@ -212,11 +212,21 @@ export function precoDaConfiguracao(
 ): number {
   const deltaMedicos = (config.medicos - ancora.medicos) * PRECO_MEDICO_ADICIONAL;
   const deltaSecretarias = (config.secretarias - ancora.secretarias) * PRECO_SECRETARIA_ADICIONAL;
-  const deltaCopiloto = precoDoTier(TIERS_COPILOTO, config.copiloto) - precoDoTier(TIERS_COPILOTO, ancora.copiloto);
-  const deltaWhatsapp = precoDoTier(TIERS_WHATSAPP, config.whatsapp) - precoDoTier(TIERS_WHATSAPP, ancora.whatsapp);
-  const deltaVideo = precoDoTier(TIERS_VIDEO, config.video) - precoDoTier(TIERS_VIDEO, ancora.video);
+  const deltaCopiloto =
+    precoDoTier(TIERS_COPILOTO, config.copiloto) - precoDoTier(TIERS_COPILOTO, ancora.copiloto);
+  const deltaWhatsapp =
+    precoDoTier(TIERS_WHATSAPP, config.whatsapp) - precoDoTier(TIERS_WHATSAPP, ancora.whatsapp);
+  const deltaVideo =
+    precoDoTier(TIERS_VIDEO, config.video) - precoDoTier(TIERS_VIDEO, ancora.video);
 
-  return ancora.precoMensal + deltaMedicos + deltaSecretarias + deltaCopiloto + deltaWhatsapp + deltaVideo;
+  return (
+    ancora.precoMensal +
+    deltaMedicos +
+    deltaSecretarias +
+    deltaCopiloto +
+    deltaWhatsapp +
+    deltaVideo
+  );
 }
 
 export function precoAnualEquivalenteMensal(precoMensal: number): number {
@@ -229,7 +239,10 @@ export function precoALaCarteDoPlano(plano: PlanoBase, ancora: PlanoBase = PLANO
 }
 
 /** % de desconto do preço de pacote deste plano em relação a montá-lo à la carte a partir do plano de entrada. 0 para o próprio plano de entrada. */
-export function descontoPercentualDoPlano(plano: PlanoBase, ancora: PlanoBase = PLANO_PADRAO): number {
+export function descontoPercentualDoPlano(
+  plano: PlanoBase,
+  ancora: PlanoBase = PLANO_PADRAO,
+): number {
   const precoCheio = precoALaCarteDoPlano(plano, ancora);
   if (precoCheio <= plano.precoMensal) return 0;
   return (precoCheio - plano.precoMensal) / precoCheio;
@@ -240,16 +253,63 @@ export function formatarPreco(valor: number): string {
 }
 
 export type PacoteCredito = { quantidade: number; preco: number };
+export type RecursoCredito = "copiloto" | "whatsapp" | "video";
 
-/** Pacotes de crédito avulso pra um recurso, derivados dos degraus já existentes (nunca preço inventado). */
-export function pacotesCredito(recurso: "copiloto" | "whatsapp" | "video"): PacoteCredito[] {
-  const tiers = recurso === "copiloto" ? TIERS_COPILOTO : recurso === "whatsapp" ? TIERS_WHATSAPP : TIERS_VIDEO;
-  const reais = tiers.filter((t) => t.quantidade !== PERSONALIZADO);
-  const pacotes: PacoteCredito[] = [];
-  for (let i = 1; i < reais.length; i++) {
-    pacotes.push({ quantidade: reais[i].quantidade - reais[i - 1].quantidade, preco: reais[i].preco - reais[i - 1].preco });
-  }
-  return pacotes;
+/** Créditos avulsos custam 15% a mais, por unidade, que a mesma quantidade contratada no plano Basic. */
+export const ACRESCIMO_CREDITO_AVULSO = 0.15;
+
+function tiersDoRecurso(recurso: RecursoCredito): TierOption[] {
+  return recurso === "copiloto"
+    ? TIERS_COPILOTO
+    : recurso === "whatsapp"
+      ? TIERS_WHATSAPP
+      : TIERS_VIDEO;
+}
+
+/** Arredonda PRA CIMA até o próximo valor terminado em ,90 (nunca fica abaixo do mínimo calculado). */
+function arredondarPara90(valor: number): number {
+  return Math.round((Math.ceil(valor - 0.9 - 1e-9) + 0.9) * 100) / 100;
+}
+
+/**
+ * Pacotes de crédito avulso de um recurso — as MESMAS quantidades dos
+ * degraus dos planos (60/200/500/1000 consultas, 500/2000/5000/10000
+ * conversas, 3000/10000/15000 min).
+ *
+ * Preço: quanto custa, por unidade, subir o plano Basic até aquele degrau
+ * (preço do degrau ÷ unidades a mais que ele dá sobre o que o Basic já
+ * inclui), × quantidade do pacote, + 15%, arredondado pra cima em ,90.
+ * Degraus que o Basic já inclui de graça (60 consultas, 500 conversas)
+ * usam o preço por unidade do primeiro degrau pago. Assim o crédito avulso
+ * nunca sai mais barato que contratar a franquia no plano.
+ */
+export function pacotesCredito(recurso: RecursoCredito): PacoteCredito[] {
+  const tiers = tiersDoRecurso(recurso).filter(
+    (t) => t.quantidade > 0 && t.quantidade !== PERSONALIZADO,
+  );
+  const incluidoNoBasic = PLANO_PADRAO[recurso];
+  const pagos = tiers.filter((t) => t.quantidade > incluidoNoBasic && t.preco > 0);
+  if (!pagos.length) return [];
+  const precoUnitario = (t: TierOption) => t.preco / (t.quantidade - incluidoNoBasic);
+  const unitarioDeEntrada = precoUnitario(pagos[0]);
+
+  return tiers.map((t) => {
+    const unitario =
+      t.quantidade > incluidoNoBasic && t.preco > 0 ? precoUnitario(t) : unitarioDeEntrada;
+    return {
+      quantidade: t.quantidade,
+      preco: arredondarPara90(t.quantidade * unitario * (1 + ACRESCIMO_CREDITO_AVULSO)),
+    };
+  });
+}
+
+/** Todos os pacotes, por recurso — é o que a tela Meu plano busca em /api/assinatura/pacotes-credito. */
+export function todosPacotesCredito(): Record<RecursoCredito, PacoteCredito[]> {
+  return {
+    copiloto: pacotesCredito("copiloto"),
+    whatsapp: pacotesCredito("whatsapp"),
+    video: pacotesCredito("video"),
+  };
 }
 
 // ---------------------------------------------------------------------------

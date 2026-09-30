@@ -42,3 +42,28 @@ export function respostaErroAsaas(escopo: string, err: unknown): Response {
 export function hojeISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
+
+/** Token (creditCardToken do Asaas) do cartão cadastrado na assinatura, se houver. Só servidor. */
+export async function tokenCartao(assinaturaId: string): Promise<string | null> {
+  const supabaseAdmin = await clienteAdmin();
+  const { data, error } = await supabaseAdmin
+    .from("assinatura_cartoes")
+    .select("credit_card_token")
+    .eq("assinatura_id", assinaturaId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data.credit_card_token ?? null;
+}
+
+export async function salvarTokenCartao(assinaturaId: string, token: string): Promise<void> {
+  const supabaseAdmin = await clienteAdmin();
+  const { error } = await supabaseAdmin.from("assinatura_cartoes").upsert(
+    {
+      assinatura_id: assinaturaId,
+      credit_card_token: token,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "assinatura_id" },
+  );
+  if (error) console.error("[assinatura] erro ao salvar token do cartão:", error.message);
+}

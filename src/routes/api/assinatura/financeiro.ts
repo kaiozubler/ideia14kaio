@@ -5,6 +5,8 @@ import {
   assinaturaAtiva,
   clienteAdmin,
   respostaErroAsaas,
+  salvarTokenCartao,
+  tokenCartao,
   usuarioDaRequisicao,
 } from "@/lib/assinatura/gestao.server";
 
@@ -28,7 +30,11 @@ type PagamentoAsaas = {
   invoiceUrl?: string | null;
   transactionReceiptUrl?: string | null;
   subscription?: string | null;
-  creditCard?: { creditCardNumber?: string; creditCardBrand?: string } | null;
+  creditCard?: {
+    creditCardNumber?: string;
+    creditCardBrand?: string;
+    creditCardToken?: string;
+  } | null;
 };
 
 type Lista<T> = { data?: T[] };
@@ -82,6 +88,22 @@ export const Route = createFileRoute("/api/assinatura/financeiro")({
           }
         }
 
+        // Token pra compra avulsa com o cartão cadastrado: se ainda não temos,
+        // aproveita o da cobrança mais recente paga com o mesmo cartão (o Asaas
+        // só devolve creditCardToken quando a tokenização está ativa na conta).
+        let token = await tokenCartao(assinatura.id);
+        if (!token && final) {
+          const comToken = pagamentos.find(
+            (p) =>
+              p.creditCard?.creditCardToken &&
+              String(p.creditCard.creditCardNumber ?? "").slice(-4) === final,
+          );
+          if (comToken?.creditCard?.creditCardToken) {
+            token = comToken.creditCard.creditCardToken;
+            await salvarTokenCartao(assinatura.id, token);
+          }
+        }
+
         const updates: Record<string, string | null> = {};
         if (
           proximaCobranca &&
@@ -106,6 +128,7 @@ export const Route = createFileRoute("/api/assinatura/financeiro")({
         return Response.json({
           proximaCobranca,
           cartao: final ? { bandeira, final } : null,
+          cartaoSalvoDisponivel: !!token && !!assinatura.asaas_customer_id,
           pagamentos: pagamentos.map((p) => ({
             id: p.id,
             vencimento: p.dueDate ?? null,

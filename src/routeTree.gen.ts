@@ -37,6 +37,7 @@ import { Route as ApiAssinaturaAtualizarCartaoRouteImport } from './routes/api/a
 import { Route as ApiAssinaturaCancelarRouteImport } from './routes/api/assinatura/cancelar'
 import { Route as ApiAssinaturaComprarCreditosRouteImport } from './routes/api/assinatura/comprar-creditos'
 import { Route as ApiAssinaturaFinanceiroRouteImport } from './routes/api/assinatura/financeiro'
+import { Route as ApiAssinaturaPacotesCreditoRouteImport } from './routes/api/assinatura/pacotes-credito'
 import { Route as ApiAssinaturaTrocarPlanoRouteImport } from './routes/api/assinatura/trocar-plano'
 import { Route as ApiBaseConhecimentoAtalhosRouteImport } from './routes/api/base-conhecimento/atalhos'
 import { Route as ApiBaseConhecimentoBasesRouteImport } from './routes/api/base-conhecimento/bases'
@@ -225,6 +226,12 @@ const ApiAssinaturaFinanceiroRoute = ApiAssinaturaFinanceiroRouteImport.update({
   path: '/api/assinatura/financeiro',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAssinaturaPacotesCreditoRoute =
+  ApiAssinaturaPacotesCreditoRouteImport.update({
+    id: '/api/assinatura/pacotes-credito',
+    path: '/api/assinatura/pacotes-credito',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAssinaturaTrocarPlanoRoute =
   ApiAssinaturaTrocarPlanoRouteImport.update({
     id: '/api/assinatura/trocar-plano',
@@ -491,6 +498,7 @@ export interface FileRoutesByFullPath {
   '/api/assinatura/cancelar': typeof ApiAssinaturaCancelarRoute
   '/api/assinatura/comprar-creditos': typeof ApiAssinaturaComprarCreditosRoute
   '/api/assinatura/financeiro': typeof ApiAssinaturaFinanceiroRoute
+  '/api/assinatura/pacotes-credito': typeof ApiAssinaturaPacotesCreditoRoute
   '/api/assinatura/trocar-plano': typeof ApiAssinaturaTrocarPlanoRoute
   '/api/base-conhecimento/atalhos': typeof ApiBaseConhecimentoAtalhosRoute
   '/api/base-conhecimento/bases': typeof ApiBaseConhecimentoBasesRoute
@@ -564,6 +572,7 @@ export interface FileRoutesByTo {
   '/api/assinatura/cancelar': typeof ApiAssinaturaCancelarRoute
   '/api/assinatura/comprar-creditos': typeof ApiAssinaturaComprarCreditosRoute
   '/api/assinatura/financeiro': typeof ApiAssinaturaFinanceiroRoute
+  '/api/assinatura/pacotes-credito': typeof ApiAssinaturaPacotesCreditoRoute
   '/api/assinatura/trocar-plano': typeof ApiAssinaturaTrocarPlanoRoute
   '/api/base-conhecimento/atalhos': typeof ApiBaseConhecimentoAtalhosRoute
   '/api/base-conhecimento/bases': typeof ApiBaseConhecimentoBasesRoute
@@ -638,6 +647,7 @@ export interface FileRoutesById {
   '/api/assinatura/cancelar': typeof ApiAssinaturaCancelarRoute
   '/api/assinatura/comprar-creditos': typeof ApiAssinaturaComprarCreditosRoute
   '/api/assinatura/financeiro': typeof ApiAssinaturaFinanceiroRoute
+  '/api/assinatura/pacotes-credito': typeof ApiAssinaturaPacotesCreditoRoute
   '/api/assinatura/trocar-plano': typeof ApiAssinaturaTrocarPlanoRoute
   '/api/base-conhecimento/atalhos': typeof ApiBaseConhecimentoAtalhosRoute
   '/api/base-conhecimento/bases': typeof ApiBaseConhecimentoBasesRoute
@@ -713,6 +723,7 @@ export interface FileRouteTypes {
     | '/api/assinatura/cancelar'
     | '/api/assinatura/comprar-creditos'
     | '/api/assinatura/financeiro'
+    | '/api/assinatura/pacotes-credito'
     | '/api/assinatura/trocar-plano'
     | '/api/base-conhecimento/atalhos'
     | '/api/base-conhecimento/bases'
@@ -786,6 +797,7 @@ export interface FileRouteTypes {
     | '/api/assinatura/cancelar'
     | '/api/assinatura/comprar-creditos'
     | '/api/assinatura/financeiro'
+    | '/api/assinatura/pacotes-credito'
     | '/api/assinatura/trocar-plano'
     | '/api/base-conhecimento/atalhos'
     | '/api/base-conhecimento/bases'
@@ -859,6 +871,7 @@ export interface FileRouteTypes {
     | '/api/assinatura/cancelar'
     | '/api/assinatura/comprar-creditos'
     | '/api/assinatura/financeiro'
+    | '/api/assinatura/pacotes-credito'
     | '/api/assinatura/trocar-plano'
     | '/api/base-conhecimento/atalhos'
     | '/api/base-conhecimento/bases'
@@ -933,6 +946,7 @@ export interface RootRouteChildren {
   ApiAssinaturaCancelarRoute: typeof ApiAssinaturaCancelarRoute
   ApiAssinaturaComprarCreditosRoute: typeof ApiAssinaturaComprarCreditosRoute
   ApiAssinaturaFinanceiroRoute: typeof ApiAssinaturaFinanceiroRoute
+  ApiAssinaturaPacotesCreditoRoute: typeof ApiAssinaturaPacotesCreditoRoute
   ApiAssinaturaTrocarPlanoRoute: typeof ApiAssinaturaTrocarPlanoRoute
   ApiBaseConhecimentoAtalhosRoute: typeof ApiBaseConhecimentoAtalhosRoute
   ApiBaseConhecimentoBasesRoute: typeof ApiBaseConhecimentoBasesRoute
@@ -1174,6 +1188,13 @@ declare module '@tanstack/react-router' {
       path: '/api/assinatura/financeiro'
       fullPath: '/api/assinatura/financeiro'
       preLoaderRoute: typeof ApiAssinaturaFinanceiroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/assinatura/pacotes-credito': {
+      id: '/api/assinatura/pacotes-credito'
+      path: '/api/assinatura/pacotes-credito'
+      fullPath: '/api/assinatura/pacotes-credito'
+      preLoaderRoute: typeof ApiAssinaturaPacotesCreditoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/assinatura/trocar-plano': {
@@ -1509,6 +1530,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAssinaturaCancelarRoute: ApiAssinaturaCancelarRoute,
   ApiAssinaturaComprarCreditosRoute: ApiAssinaturaComprarCreditosRoute,
   ApiAssinaturaFinanceiroRoute: ApiAssinaturaFinanceiroRoute,
+  ApiAssinaturaPacotesCreditoRoute: ApiAssinaturaPacotesCreditoRoute,
   ApiAssinaturaTrocarPlanoRoute: ApiAssinaturaTrocarPlanoRoute,
   ApiBaseConhecimentoAtalhosRoute: ApiBaseConhecimentoAtalhosRoute,
   ApiBaseConhecimentoBasesRoute: ApiBaseConhecimentoBasesRoute,

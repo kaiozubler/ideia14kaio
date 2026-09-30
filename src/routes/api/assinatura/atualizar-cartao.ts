@@ -6,6 +6,7 @@ import {
   assinaturaAtiva,
   clienteAdmin,
   respostaErroAsaas,
+  salvarTokenCartao,
   usuarioDaRequisicao,
 } from "@/lib/assinatura/gestao.server";
 
@@ -46,7 +47,9 @@ const BodySchema = z.object({
   }),
 });
 
-type RespostaCartao = { creditCard?: { creditCardNumber?: string; creditCardBrand?: string } };
+type RespostaCartao = {
+  creditCard?: { creditCardNumber?: string; creditCardBrand?: string; creditCardToken?: string };
+};
 
 export const Route = createFileRoute("/api/assinatura/atualizar-cartao")({
   server: {
@@ -120,6 +123,11 @@ export const Route = createFileRoute("/api/assinatura/atualizar-cartao")({
           cartao_bandeira: resposta?.creditCard?.creditCardBrand ?? null,
           cartao_final: (resposta?.creditCard?.creditCardNumber ?? cartao.numero).slice(-4),
         };
+
+        // Token do cartão novo: permite comprar créditos avulsos "com o cartão cadastrado".
+        if (resposta?.creditCard?.creditCardToken) {
+          await salvarTokenCartao(assinatura.id, resposta.creditCard.creditCardToken);
+        }
 
         const supabaseAdmin = await clienteAdmin();
         const { error } = await supabaseAdmin

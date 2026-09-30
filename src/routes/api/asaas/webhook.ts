@@ -12,6 +12,10 @@ import { createFileRoute } from "@tanstack/react-router";
 //                                       /api/assinatura/comprar-creditos),
 //                                       dependendo de qual tabela tem esse
 //                                       asaas_checkout_id
+//   PAYMENT_CONFIRMED/RECEIVED/CAPTURE_REFUSED/REPROVED_BY_RISK_ANALYSIS/DELETED
+//     (cobrança avulsa, sem subscription) -> creditos_adicionais por
+//                                       asaas_payment_id (compra de créditos
+//                                       com o cartão cadastrado)
 //   PAYMENT_OVERDUE                  -> assinaturas.status = 'inadimplente'
 //   PAYMENT_CONFIRMED/RECEIVED       -> assinaturas.status = 'ativa' de novo
 //   SUBSCRIPTION_DELETED/INACTIVATED -> assinaturas.status = 'cancelada'
@@ -37,7 +41,7 @@ import { createFileRoute } from "@tanstack/react-router";
 type EventoAsaas = {
   event: string;
   checkout?: { id?: string };
-  payment?: { subscription?: string | null };
+  payment?: { id?: string; subscription?: string | null };
   subscription?: { id?: string };
 };
 
@@ -92,6 +96,29 @@ export const Route = createFileRoute("/api/asaas/webhook")({
                 .eq("asaas_checkout_id", checkoutId);
               if (error) console.error("[asaas:webhook] erro ao atualizar créditos adicionais:", error.message);
             }
+          }
+        }
+
+        // --- Compra avulsa de créditos com o cartão cadastrado (POST /payments) ---
+        // Normalmente já volta confirmada na hora; isto cobre quando fica em
+        // análise e é confirmada/recusada depois.
+        const paymentId = corpo.payment?.id;
+        if (paymentId && !corpo.payment?.subscription) {
+          let statusCredito: "pago" | "cancelado" | null = null;
+          if (corpo.event === "PAYMENT_CONFIRMED" || corpo.event === "PAYMENT_RECEIVED") statusCredito = "pago";
+          else if (
+            corpo.event === "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED" ||
+            corpo.event === "PAYMENT_REPROVED_BY_RISK_ANALYSIS" ||
+            corpo.event === "PAYMENT_DELETED"
+          )
+            statusCredito = "cancelado";
+          if (statusCredito) {
+            const { error } = await supabaseAdmin
+              .from("creditos_adicionais")
+              .update({ status: statusCredito })
+              .eq("asaas_payment_id", paymentId)
+              .eq("status", "pendente");
+            if (error) console.error("[asaas:webhook] erro ao atualizar crédito avulso:", error.message);
           }
         }
 

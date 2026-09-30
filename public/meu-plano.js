@@ -8,7 +8,7 @@
 // assinatura/consumo/créditos vão direto no Supabase (RLS de dono); tudo
 // que mexe em cobrança passa pelas rotas /api/assinatura/* (Asaas).
 //
-// Os números de planos/pacotes de crédito abaixo são uma cópia manual dos
+// Os números de planos abaixo são uma cópia manual dos
 // mesmos valores em src/lib/plans/config.ts -- os dois arquivos não
 // compartilham módulo (esse aqui é servido cru em /public, o outro passa
 // pelo build do Vite). Se mexer no preço de um lado, replique no outro
@@ -20,23 +20,10 @@
     { id: "enterprise", nome: "Enterprise", precoMensal: 649.9, medicos: 2, secretarias: 2, copiloto: 500, whatsapp: 5000, video: 10000 },
   ];
 
-  var PACOTES_CREDITO = {
-    copiloto: [
-      { quantidade: 140, preco: 79.9 },
-      { quantidade: 300, preco: 90.0 },
-      { quantidade: 500, preco: 120.0 },
-    ],
-    whatsapp: [
-      { quantidade: 1500, preco: 49.9 },
-      { quantidade: 3000, preco: 50.0 },
-      { quantidade: 5000, preco: 80.0 },
-    ],
-    video: [
-      { quantidade: 3000, preco: 59.9 },
-      { quantidade: 7000, preco: 70.0 },
-      { quantidade: 5000, preco: 50.0 },
-    ],
-  };
+  // Pacotes de crédito avulso vêm do servidor (/api/assinatura/pacotes-credito,
+  // calculados por pacotesCredito() em src/lib/plans/config.ts) — assim o
+  // preço exibido é sempre o mesmo que a compra cobra. null = ainda não carregou.
+  var PACOTES_CREDITO = null;
 
   var RECURSOS = ["copiloto", "whatsapp", "video"];
   var NOME_RECURSO = { copiloto: "Copiloto IA", whatsapp: "WhatsApp", video: "Vídeo" };
@@ -145,7 +132,7 @@
     fin: { carregando: false, erro: null, dados: null },
     modal: null,
     aviso: null,
-    sacola: lerSacola(), // { "whatsapp:1500": 2, ... } — chave recurso:quantidade do pacote, valor = quantas vezes
+    sacola: {}, // preenchida por lerSacola() depois que os pacotes carregam. { "whatsapp:1500": 2, ... } — chave recurso:quantidade do pacote, valor = quantas vezes
   };
 
   function sbClient() {
@@ -206,6 +193,7 @@
       // é tratado como "sem assinatura paga" = Free, não como erro bloqueante.
       S.assinatura = assinaturaRes.error ? null : assinaturaRes.data;
 
+      if (!PACOTES_CREDITO) carregarPacotes();
       S.consumoPorMes = {};
       S.excedenteMes = {};
       S.creditos = [];
@@ -235,6 +223,20 @@
       render();
     }
     if (S.assinatura) carregarFinanceiro();
+  }
+
+  async function carregarPacotes() {
+    try {
+      var resp = await fetch("/api/assinatura/pacotes-credito");
+      if (!resp.ok) throw new Error("Erro " + resp.status);
+      PACOTES_CREDITO = await resp.json();
+      S.sacola = lerSacola();
+      S.pacotesErro = false;
+    } catch (err) {
+      PACOTES_CREDITO = null;
+      S.pacotesErro = true;
+    }
+    render();
   }
 
   async function carregarFinanceiro() {
@@ -546,6 +548,7 @@
     try {
       var bruto = JSON.parse(sessionStorage.getItem(CHAVE_SACOLA) || "{}");
       var limpa = {};
+      if (!PACOTES_CREDITO) return limpa;
       Object.keys(bruto).forEach(function (k) {
         if (pacotePorChave(k) && bruto[k] > 0) limpa[k] = Math.min(Number(bruto[k]) || 0, MAX_PACOTES_SACOLA);
       });
@@ -561,7 +564,7 @@
 
   function pacotePorChave(chave) {
     var partes = String(chave).split(":");
-    var lista = PACOTES_CREDITO[partes[0]];
+    var lista = PACOTES_CREDITO && PACOTES_CREDITO[partes[0]];
     if (!lista) return null;
     var pac = lista.filter(function (p) { return p.quantidade === Number(partes[1]); })[0];
     return pac ? { recurso: partes[0], quantidade: pac.quantidade, preco: pac.preco } : null;
@@ -571,7 +574,7 @@
     // Ordem estável: pela ordem dos recursos e dos pacotes na tabela.
     var itens = [];
     RECURSOS.forEach(function (r) {
-      PACOTES_CREDITO[r].forEach(function (pac) {
+      ((PACOTES_CREDITO && PACOTES_CREDITO[r]) || []).forEach(function (pac) {
         var vezes = S.sacola[r + ":" + pac.quantidade] || 0;
         if (vezes) itens.push({ chave: r + ":" + pac.quantidade, recurso: r, quantidade: pac.quantidade, preco: pac.preco, vezes: vezes });
       });
@@ -627,6 +630,44 @@
     );
   }
 
+  function cartaoSalvoDisponivel() {
+    return !!(S.fin.dados && S.fin.dados.cartaoSalvoDisponivel && cartaoAtual());
+  }
+
+  function formaPagamentoEscolhida() {
+    if (S.formaPagamento === "cartao_salvo" && !cartaoSalvoDisponivel()) return "outro_cartao";
+    return S.formaPagamento || (cartaoSalvoDisponivel() ? "cartao_salvo" : "outro_cartao");
+  }
+
+  function opcoesPagamento() {
+    var forma = formaPagamentoEscolhida();
+    var cartao = cartaoAtual();
+    var salvoOk = cartaoSalvoDisponivel();
+    var opcao = function (valor, icone, titulo, detalhe, desabilitada) {
+      return (
+        '<label class="mp-forma' + (forma === valor ? " ativa" : "") + (desabilitada ? " desabilitada" : "") + '" data-forma-pagamento="' + valor + '">' +
+        '<input type="radio" name="mp-forma" value="' + valor + '"' + (forma === valor ? " checked" : "") + (desabilitada ? " disabled" : "") + ">" +
+        '<i class="ti ' + icone + '"></i><div><strong>' + titulo + "</strong><span>" + detalhe + "</span></div></label>"
+      );
+    };
+    return (
+      '<p class="mp-form-label">Forma de pagamento</p><div class="mp-formas">' +
+      opcao(
+        "cartao_salvo",
+        "ti-credit-card",
+        cartao ? "Cartão cadastrado · " + esc(cartao.bandeira || "Cartão") + " •••• " + esc(cartao.final) : "Cartão cadastrado",
+        salvoOk
+          ? "Cobrança na hora, os créditos entram em seguida"
+          : S.fin.carregando
+            ? "Verificando cartão…"
+            : "Indisponível — cadastre o cartão em Pagamentos › Alterar cartão",
+        !salvoOk
+      ) +
+      opcao("outro_cartao", "ti-credit-card-pay", "Usar outro cartão", "Você digita o cartão na página segura do Asaas", false) +
+      "</div>"
+    );
+  }
+
   function modalSacola() {
     var itens = itensSacola();
     var r = resumoSacola();
@@ -650,8 +691,10 @@
       }).join("") +
       "</div>" +
       '<div class="mp-sacola-total"><span>Total</span><strong>' + fmtPreco(r.total) + "</strong></div>" +
-      '<p class="mp-nota" style="margin:0 0 14px">Pagamento único no cartão de crédito. Os créditos entram no saldo assim que o pagamento é confirmado e não expiram.</p>' +
-      '<div class="mp-modal-actions"><button class="mp-btn primary" data-pagar-sacola><i class="ti ti-lock"></i> Pagar ' + fmtPreco(r.total) + "</button>" +
+      opcoesPagamento() +
+      '<p class="mp-erro-form">' + esc(S.erroSacola || "") + "</p>" +
+      '<div class="mp-modal-actions"><button class="mp-btn primary" data-pagar-sacola><i class="ti ti-lock"></i> ' +
+      (formaPagamentoEscolhida() === "cartao_salvo" ? "Pagar " + fmtPreco(r.total) + " agora" : "Continuar para o pagamento") + "</button>" +
       '<button class="mp-btn" data-fechar-modal>Continuar escolhendo</button>' +
       '<button class="mp-link" style="align-self:center;color:#be123c" data-esvaziar-sacola>Esvaziar sacola</button></div>'
     );
@@ -661,7 +704,12 @@
 
   function pacotesRecurso(recurso) {
     var bloqueado = !!cancelamentoAgendado();
-    return PACOTES_CREDITO[recurso]
+    if (!PACOTES_CREDITO) {
+      return S.pacotesErro
+        ? '<p class="mp-nota">Não foi possível carregar os pacotes. <button class="mp-link" data-recarregar-pacotes>Tentar de novo</button></p>'
+        : '<p class="mp-nota">Carregando pacotes…</p>';
+    }
+    return (PACOTES_CREDITO[recurso] || [])
       .map(function (pac) {
         var chave = recurso + ":" + pac.quantidade;
         var vezes = S.sacola[chave] || 0;
@@ -1168,7 +1216,15 @@
       return;
     }
 
+    if (e.target.closest("[data-recarregar-pacotes]")) {
+      S.pacotesErro = false;
+      render();
+      carregarPacotes();
+      return;
+    }
+
     if (e.target.closest("[data-abrir-sacola]")) {
+      S.erroSacola = null;
       abrirModal({ tipo: "sacola" });
       return;
     }
@@ -1180,24 +1236,47 @@
       return;
     }
 
+    var formaEl = e.target.closest("[data-forma-pagamento]");
+    if (formaEl) {
+      if (!formaEl.classList.contains("desabilitada")) {
+        S.formaPagamento = formaEl.getAttribute("data-forma-pagamento");
+        S.erroSacola = null;
+        render();
+      }
+      return;
+    }
+
     var pagarBtn = e.target.closest("[data-pagar-sacola]");
     if (pagarBtn) {
+      var forma = formaPagamentoEscolhida();
       pagarBtn.disabled = true;
-      pagarBtn.textContent = "Abrindo pagamento…";
+      pagarBtn.textContent = forma === "cartao_salvo" ? "Processando pagamento…" : "Abrindo pagamento…";
+      S.erroSacola = null;
       try {
         var respCompra = await chamarApi("/api/assinatura/comprar-creditos", {
+          formaPagamento: forma,
           itens: itensSacola().map(function (i) { return { recurso: i.recurso, quantidade: i.quantidade, vezes: i.vezes }; }),
         });
+        // A compra já ficou registrada; esvazia a sacola.
+        S.sacola = {};
+        salvarSacola();
         if (respCompra.checkoutUrl) {
-          // A compra já ficou registrada como pendente; esvazia a sacola antes de sair pro Asaas.
-          S.sacola = {};
-          salvarSacola();
           window.location.href = respCompra.checkoutUrl;
+          return;
         }
-      } catch (err) {
         S.modal = null;
+        S.aba = "creditos";
+        await carregar();
+        avisar(
+          respCompra.pago
+            ? "Pagamento de " + fmtPreco(respCompra.total) + " aprovado — os créditos já estão no seu saldo."
+            : "Pagamento de " + fmtPreco(respCompra.total) + " em análise. Os créditos entram assim que for confirmado."
+        );
+      } catch (err) {
+        // Mantém a sacola e o modal abertos, com o erro visível, pra tentar de novo ou trocar de cartão.
+        S.erroSacola = (err.message || "Não foi possível concluir o pagamento.") +
+          (forma === "cartao_salvo" ? " Você pode tentar com outro cartão." : "");
         render();
-        avisar(err.message || "Não foi possível abrir o pagamento.", "erro");
       }
     }
   });

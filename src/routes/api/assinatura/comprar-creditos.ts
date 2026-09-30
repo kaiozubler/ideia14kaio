@@ -5,7 +5,9 @@ import { asaasFetch, ambienteAsaas } from "@/lib/asaas/client.server";
 import {
   assinaturaAtiva,
   clienteAdmin,
+  hojeISO,
   respostaErroAsaas,
+  tokenCartao,
   usuarioDaRequisicao,
 } from "@/lib/assinatura/gestao.server";
 import { pacotesCredito } from "@/lib/plans/config";
@@ -20,6 +22,9 @@ import { pacotesCredito } from "@/lib/plans/config";
 // Cada unidade de pacote vira uma linha própria em creditos_adicionais, todas
 // com o mesmo asaas_checkout_id — o webhook (CHECKOUT_PAID/CANCELED/EXPIRED)
 // já atualiza por checkout, então marca a sacola inteira de uma vez.
+//
+// Pagamento: com o cartão já cadastrado na assinatura (cobrança direta,
+// confirmada na hora) ou com outro cartão (Checkout do Asaas).
 //
 // Preço vem sempre de pacotesCredito() (mesmos degraus já usados em
 // /planos), nunca do navegador.
@@ -37,6 +42,10 @@ const BodySchema = z.object({
     )
     .min(1)
     .max(12),
+  // "cartao_salvo": cobra na hora no cartão da assinatura (POST /payments com
+  // creditCardToken). "outro_cartao": abre o Checkout do Asaas pra digitar
+  // outro cartão lá (os dados do cartão nunca passam por aqui).
+  formaPagamento: z.enum(["cartao_salvo", "outro_cartao"]).default("outro_cartao"),
 });
 
 const NOMES_RECURSO: Record<string, string> = {
@@ -98,6 +107,88 @@ export const Route = createFileRoute("/api/assinatura/comprar-creditos")({
         const origin = new URL(request.url).origin;
         const supabaseAdmin = await clienteAdmin();
 
+        const linhasDaSacola = (extra: Record<string, string>) =>
+          itens.flatMap((i) =>
+            Array.from({ length: i.vezes }, () => ({
+              assinatura_id: assinatura.id,
+              recurso: i.recurso,
+              quantidade: i.quantidade,
+              valor_pago: i.preco,
+              status: "pendente",
+              ...extra,
+            })),
+          );
+
+        // --- cartão cadastrado: cobrança direta ---
+        if (body.data.formaPagamento === "cartao_salvo") {
+          const token = await tokenCartao(assinatura.id);
+          if (!token || !assinatura.asaas_customer_id) {
+            return Response.json(
+              { error: "não há cartão cadastrado disponível para esta compra — use outro cartão" },
+              { status: 409 },
+            );
+          }
+
+          const total = Math.round(itens.reduce((s, i) => s + i.preco * i.vezes, 0) * 100) / 100;
+          const descricao = itens
+            .map((i) => `${i.vezes}x +${i.quantidade} ${NOMES_RECURSO[i.recurso]}`)
+            .join(", ");
+
+          // Registra antes de cobrar: nunca pode existir cobrança sem os créditos
+          // correspondentes gravados. Se a cobrança falhar, as linhas são removidas.
+          const { data: inseridas, error: erroInsert } = await supabaseAdmin
+            .from("creditos_adicionais")
+            .insert(linhasDaSacola({}))
+            .select("id");
+          if (erroInsert || !inseridas?.length) {
+            console.error(
+              "[assinatura:comprar-creditos] erro ao registrar compra:",
+              erroInsert?.message,
+            );
+            return Response.json({ error: "não foi possível registrar a compra" }, { status: 500 });
+          }
+          const ids = inseridas.map((l: { id: string }) => l.id);
+
+          type PagamentoAsaas = { id: string; status?: string };
+          let pagamento: PagamentoAsaas;
+          try {
+            pagamento = await asaasFetch<PagamentoAsaas>("/payments", {
+              method: "POST",
+              body: JSON.stringify({
+                customer: assinatura.asaas_customer_id,
+                billingType: "CREDIT_CARD",
+                value: total,
+                dueDate: hojeISO(),
+                description: `MediCopilot — créditos extras: ${descricao}`.slice(0, 500),
+                creditCardToken: token,
+                remoteIp:
+                  request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+                  request.headers.get("x-real-ip") ||
+                  "0.0.0.0",
+              }),
+            });
+          } catch (err) {
+            await supabaseAdmin.from("creditos_adicionais").delete().in("id", ids);
+            return respostaErroAsaas("comprar-creditos", err);
+          }
+
+          const confirmado = pagamento.status === "CONFIRMED" || pagamento.status === "RECEIVED";
+          const { error: erroUpdate } = await supabaseAdmin
+            .from("creditos_adicionais")
+            .update({ asaas_payment_id: pagamento.id, status: confirmado ? "pago" : "pendente" })
+            .in("id", ids);
+          if (erroUpdate) {
+            // Cobrança feita, mas sem o vínculo local: precisa de conferência manual.
+            console.error(
+              `[assinatura:comprar-creditos] cobrança ${pagamento.id} feita, erro ao vincular créditos ${ids.join(",")}:`,
+              erroUpdate.message,
+            );
+          }
+
+          return Response.json({ ok: true, pago: confirmado, total });
+        }
+
+        // --- outro cartão: Checkout do Asaas ---
         try {
           const checkout = await asaasFetch<{ id: string }>("/checkouts", {
             method: "POST",
@@ -120,19 +211,9 @@ export const Route = createFileRoute("/api/assinatura/comprar-creditos")({
             }),
           });
 
-          const linhas = itens.flatMap((i) =>
-            Array.from({ length: i.vezes }, () => ({
-              assinatura_id: assinatura.id,
-              recurso: i.recurso,
-              quantidade: i.quantidade,
-              valor_pago: i.preco,
-              status: "pendente",
-              asaas_checkout_id: checkout.id,
-            })),
-          );
           const { error: erroInsert } = await supabaseAdmin
             .from("creditos_adicionais")
-            .insert(linhas);
+            .insert(linhasDaSacola({ asaas_checkout_id: checkout.id }));
           if (erroInsert) {
             console.error(
               "[assinatura:comprar-creditos] erro ao registrar compra pendente:",
