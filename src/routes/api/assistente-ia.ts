@@ -839,6 +839,10 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
       if (error) return { erro: error.message };
       const found = (data ?? []).find((p) => onlyDigits(p.cpf) === cpf);
       if (!found) return { confirmado: false, motivo: "CPF não confere com nenhum cadastro." };
+      // Confirmação por CPF é uma identificação verificada tanto quanto
+      // buscar_paciente — também preenche ctx.pacienteAtivo para que
+      // resolverIdentidadePaciente aceite esta identidade nas próximas tools.
+      ctx.pacienteAtivo.value = { paciente_id: found.paciente_id, nome: found.name };
       return {
         confirmado: true,
         paciente_id: found.paciente_id,
@@ -853,6 +857,8 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
 
     case "atualizar_paciente": {
       if (!medicoId) return { erro: "Usuário não identificado na sessão." };
+      const identidadeErroAtualizar = resolverIdentidadePaciente(ctx, args);
+      if (identidadeErroAtualizar) return identidadeErroAtualizar.erro;
       if (!args.confirmado) {
         return { erro: "confirmacao_pendente", instrucao: "Peça a confirmação do médico antes de atualizar o cadastro." };
       }
@@ -903,9 +909,22 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
       if (!args.confirmado) return { erro: "Peça a confirmação explícita antes de agendar." };
       if (!medicoId) return { erro: "Usuário não identificado na sessão." };
       // No canal do paciente, a identidade é sempre a resolvida pelo webhook —
-      // nunca o que vier (ou não vier) no texto da conversa.
-      const pacienteId = ctx.canal === "paciente" ? ctx.pacienteFixoId ?? null : args.paciente_id || null;
-      const pacienteNome = ctx.canal === "paciente" ? ctx.pacienteFixoNome ?? null : args.paciente_nome || null;
+      // nunca o que vier (ou não vier) no texto da conversa. No canal interno
+      // (médico), a identidade só pode vir de uma busca verificada nesta mesma
+      // conversa — nunca do que a IA tenha montado no argumento da tool
+      // (foi exatamente essa confiança que causou o agendamento confirmado
+      // para um paciente inexistente/errado).
+      let pacienteId: string | null;
+      let pacienteNome: string | null;
+      if (ctx.canal === "paciente") {
+        pacienteId = ctx.pacienteFixoId ?? null;
+        pacienteNome = ctx.pacienteFixoNome ?? null;
+      } else {
+        const identidadeErroAgendar = resolverIdentidadePaciente(ctx, args);
+        if (identidadeErroAgendar) return identidadeErroAgendar.erro;
+        pacienteId = args.paciente_id || null;
+        pacienteNome = args.paciente_nome || null;
+      }
       const dt = toIsoFromLocal(String(args.data), String(args.horario));
       if (!dt) return { erro: "Data ou horário inválido." };
       const janelaIni = new Date(dt.getTime() - 29 * 60000).toISOString();
@@ -1042,6 +1061,8 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
 
     case "criar_atendimento": {
       if (!medicoId) return { erro: "Usuário não identificado na sessão." };
+      const identidadeErroAtendimento = resolverIdentidadePaciente(ctx, args);
+      if (identidadeErroAtendimento) return identidadeErroAtendimento.erro;
       const pacienteId = String(args.paciente_id || "").trim();
       if (!pacienteId) return { erro: "Paciente não identificado." };
       const { data: paciente, error: pErro } = await db
@@ -1128,6 +1149,8 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
 
     case "salvar_anamnese_atendimento": {
       if (!medicoId) return { erro: "Usuário não identificado na sessão." };
+      const identidadeErroAnamnese = resolverIdentidadePaciente(ctx, args);
+      if (identidadeErroAnamnese) return identidadeErroAnamnese.erro;
       const pacienteId = String(args.paciente_id || "").trim();
       const texto = String(args.anamnese_texto || "").trim();
       if (!pacienteId) return { erro: "Paciente não identificado." };
@@ -1681,6 +1704,9 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
 
     case "enviar_mensagem": {
       if (!args.confirmado) return { erro: "Peça a confirmação explícita antes de enviar." };
+      if (!medicoId) return { erro: "Usuário não identificado na sessão." };
+      const identidadeErroEnviar = resolverIdentidadePaciente(ctx, args);
+      if (identidadeErroEnviar) return identidadeErroEnviar.erro;
       let telefone: string | null = null;
       let nome: string | null = args.paciente_nome || null;
       if (args.paciente_id) {
@@ -1688,6 +1714,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
           .from("pacientes")
           .select("name,telefone")
           .eq("paciente_id", args.paciente_id)
+          .eq("user_id", medicoId)
           .maybeSingle();
         telefone = data?.telefone ?? null;
         nome = data?.name ?? nome;
@@ -1721,6 +1748,8 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
     case "convidar_agendamento_whatsapp": {
       if (!args.confirmado) return { erro: "Peça a confirmação explícita antes de enviar o convite." };
       if (!medicoId) return { erro: "Usuário não identificado na sessão." };
+      const identidadeErroConvite = resolverIdentidadePaciente(ctx, args);
+      if (identidadeErroConvite) return identidadeErroConvite.erro;
       const { data: paciente } = await db
         .from("pacientes")
         .select("name,telefone")
@@ -1766,6 +1795,8 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
     case "salvar_exame_paciente": {
       if (!medicoId) return { erro: "Usuário não identificado na sessão." };
       if (!args.confirmado) return { erro: "Peça a confirmação explícita do médico antes de salvar o exame." };
+      const identidadeErroExame = resolverIdentidadePaciente(ctx, args);
+      if (identidadeErroExame) return identidadeErroExame.erro;
       const pacienteId = String(args.paciente_id || "").trim();
       if (!pacienteId) return { erro: "Informe o paciente (paciente_id) do cadastro." };
       const nome = String(args.nome || "").trim();
