@@ -15,6 +15,9 @@ import { createFileRoute } from "@tanstack/react-router";
 //   PAYMENT_OVERDUE                  -> assinaturas.status = 'inadimplente'
 //   PAYMENT_CONFIRMED/RECEIVED       -> assinaturas.status = 'ativa' de novo
 //   SUBSCRIPTION_DELETED/INACTIVATED -> assinaturas.status = 'cancelada'
+//                                       (exceto cancelamento agendado pela
+//                                       tela Meu plano, que mantém o acesso
+//                                       até o fim do período pago)
 //
 // LACUNA CONHECIDA: o funil público (/planos -> /contratacao/*) não pede
 // login em nenhum momento, então uma contratação nova não tem
@@ -112,10 +115,14 @@ export const Route = createFileRoute("/api/asaas/webhook")({
               .eq("status", "inadimplente");
             if (error) console.error("[asaas:webhook] erro ao reativar assinatura:", error.message);
           } else if (corpo.event === "SUBSCRIPTION_DELETED" || corpo.event === "SUBSCRIPTION_INACTIVATED") {
+            // Cancelamento pedido pela tela Meu plano já agenda o fim do acesso
+            // (cancelamento_agendado_para) — não antecipa aqui; só cancela na hora
+            // o que foi removido por fora (painel do Asaas, etc.).
             const { error } = await supabaseAdmin
               .from("assinaturas")
               .update({ status: "cancelada" })
-              .eq("asaas_subscription_id", subscriptionId);
+              .eq("asaas_subscription_id", subscriptionId)
+              .is("cancelamento_agendado_para", null);
             if (error) console.error("[asaas:webhook] erro ao cancelar assinatura:", error.message);
           }
         }

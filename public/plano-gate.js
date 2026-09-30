@@ -26,6 +26,10 @@
       var uid = userRes.data && userRes.data.user ? userRes.data.user.id : null;
       if (!uid) return;
 
+      // Aplica downgrade/cancelamento agendados que já venceram (ver migration
+      // meu_plano_gestao). Falha aqui (função ainda não migrada) não bloqueia.
+      try { await sb.rpc("aplicar_agendamentos_assinatura"); } catch (e) {}
+
       var res = await sb.from("assinaturas").select("status").eq("medico_id", uid).neq("status", "cancelada").maybeSingle();
       // Só assume Free quando a consulta funcionou E não achou nenhuma linha.
       // Qualquer erro (tabela ausente, rede, etc.) mantém ehFree=false (fail-open).

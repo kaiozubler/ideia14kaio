@@ -33,8 +33,10 @@ import { Route as FFormIdRouteImport } from './routes/f.$formId'
 import { Route as TTermoIdRouteImport } from './routes/t.$termoId'
 import { Route as ApiAsaasCheckoutRouteImport } from './routes/api/asaas/checkout'
 import { Route as ApiAsaasWebhookRouteImport } from './routes/api/asaas/webhook'
+import { Route as ApiAssinaturaAtualizarCartaoRouteImport } from './routes/api/assinatura/atualizar-cartao'
 import { Route as ApiAssinaturaCancelarRouteImport } from './routes/api/assinatura/cancelar'
 import { Route as ApiAssinaturaComprarCreditosRouteImport } from './routes/api/assinatura/comprar-creditos'
+import { Route as ApiAssinaturaFinanceiroRouteImport } from './routes/api/assinatura/financeiro'
 import { Route as ApiAssinaturaTrocarPlanoRouteImport } from './routes/api/assinatura/trocar-plano'
 import { Route as ApiBaseConhecimentoAtalhosRouteImport } from './routes/api/base-conhecimento/atalhos'
 import { Route as ApiBaseConhecimentoBasesRouteImport } from './routes/api/base-conhecimento/bases'
@@ -201,6 +203,12 @@ const ApiAsaasWebhookRoute = ApiAsaasWebhookRouteImport.update({
   path: '/api/asaas/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAssinaturaAtualizarCartaoRoute =
+  ApiAssinaturaAtualizarCartaoRouteImport.update({
+    id: '/api/assinatura/atualizar-cartao',
+    path: '/api/assinatura/atualizar-cartao',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAssinaturaCancelarRoute = ApiAssinaturaCancelarRouteImport.update({
   id: '/api/assinatura/cancelar',
   path: '/api/assinatura/cancelar',
@@ -212,6 +220,11 @@ const ApiAssinaturaComprarCreditosRoute =
     path: '/api/assinatura/comprar-creditos',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAssinaturaFinanceiroRoute = ApiAssinaturaFinanceiroRouteImport.update({
+  id: '/api/assinatura/financeiro',
+  path: '/api/assinatura/financeiro',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAssinaturaTrocarPlanoRoute =
   ApiAssinaturaTrocarPlanoRouteImport.update({
     id: '/api/assinatura/trocar-plano',
@@ -474,8 +487,10 @@ export interface FileRoutesByFullPath {
   '/t/$termoId': typeof TTermoIdRoute
   '/api/asaas/checkout': typeof ApiAsaasCheckoutRoute
   '/api/asaas/webhook': typeof ApiAsaasWebhookRoute
+  '/api/assinatura/atualizar-cartao': typeof ApiAssinaturaAtualizarCartaoRoute
   '/api/assinatura/cancelar': typeof ApiAssinaturaCancelarRoute
   '/api/assinatura/comprar-creditos': typeof ApiAssinaturaComprarCreditosRoute
+  '/api/assinatura/financeiro': typeof ApiAssinaturaFinanceiroRoute
   '/api/assinatura/trocar-plano': typeof ApiAssinaturaTrocarPlanoRoute
   '/api/base-conhecimento/atalhos': typeof ApiBaseConhecimentoAtalhosRoute
   '/api/base-conhecimento/bases': typeof ApiBaseConhecimentoBasesRoute
@@ -545,8 +560,10 @@ export interface FileRoutesByTo {
   '/t/$termoId': typeof TTermoIdRoute
   '/api/asaas/checkout': typeof ApiAsaasCheckoutRoute
   '/api/asaas/webhook': typeof ApiAsaasWebhookRoute
+  '/api/assinatura/atualizar-cartao': typeof ApiAssinaturaAtualizarCartaoRoute
   '/api/assinatura/cancelar': typeof ApiAssinaturaCancelarRoute
   '/api/assinatura/comprar-creditos': typeof ApiAssinaturaComprarCreditosRoute
+  '/api/assinatura/financeiro': typeof ApiAssinaturaFinanceiroRoute
   '/api/assinatura/trocar-plano': typeof ApiAssinaturaTrocarPlanoRoute
   '/api/base-conhecimento/atalhos': typeof ApiBaseConhecimentoAtalhosRoute
   '/api/base-conhecimento/bases': typeof ApiBaseConhecimentoBasesRoute
@@ -617,8 +634,10 @@ export interface FileRoutesById {
   '/t/$termoId': typeof TTermoIdRoute
   '/api/asaas/checkout': typeof ApiAsaasCheckoutRoute
   '/api/asaas/webhook': typeof ApiAsaasWebhookRoute
+  '/api/assinatura/atualizar-cartao': typeof ApiAssinaturaAtualizarCartaoRoute
   '/api/assinatura/cancelar': typeof ApiAssinaturaCancelarRoute
   '/api/assinatura/comprar-creditos': typeof ApiAssinaturaComprarCreditosRoute
+  '/api/assinatura/financeiro': typeof ApiAssinaturaFinanceiroRoute
   '/api/assinatura/trocar-plano': typeof ApiAssinaturaTrocarPlanoRoute
   '/api/base-conhecimento/atalhos': typeof ApiBaseConhecimentoAtalhosRoute
   '/api/base-conhecimento/bases': typeof ApiBaseConhecimentoBasesRoute
@@ -690,8 +709,10 @@ export interface FileRouteTypes {
     | '/t/$termoId'
     | '/api/asaas/checkout'
     | '/api/asaas/webhook'
+    | '/api/assinatura/atualizar-cartao'
     | '/api/assinatura/cancelar'
     | '/api/assinatura/comprar-creditos'
+    | '/api/assinatura/financeiro'
     | '/api/assinatura/trocar-plano'
     | '/api/base-conhecimento/atalhos'
     | '/api/base-conhecimento/bases'
@@ -761,8 +782,10 @@ export interface FileRouteTypes {
     | '/t/$termoId'
     | '/api/asaas/checkout'
     | '/api/asaas/webhook'
+    | '/api/assinatura/atualizar-cartao'
     | '/api/assinatura/cancelar'
     | '/api/assinatura/comprar-creditos'
+    | '/api/assinatura/financeiro'
     | '/api/assinatura/trocar-plano'
     | '/api/base-conhecimento/atalhos'
     | '/api/base-conhecimento/bases'
@@ -832,8 +855,10 @@ export interface FileRouteTypes {
     | '/t/$termoId'
     | '/api/asaas/checkout'
     | '/api/asaas/webhook'
+    | '/api/assinatura/atualizar-cartao'
     | '/api/assinatura/cancelar'
     | '/api/assinatura/comprar-creditos'
+    | '/api/assinatura/financeiro'
     | '/api/assinatura/trocar-plano'
     | '/api/base-conhecimento/atalhos'
     | '/api/base-conhecimento/bases'
@@ -904,8 +929,10 @@ export interface RootRouteChildren {
   TTermoIdRoute: typeof TTermoIdRoute
   ApiAsaasCheckoutRoute: typeof ApiAsaasCheckoutRoute
   ApiAsaasWebhookRoute: typeof ApiAsaasWebhookRoute
+  ApiAssinaturaAtualizarCartaoRoute: typeof ApiAssinaturaAtualizarCartaoRoute
   ApiAssinaturaCancelarRoute: typeof ApiAssinaturaCancelarRoute
   ApiAssinaturaComprarCreditosRoute: typeof ApiAssinaturaComprarCreditosRoute
+  ApiAssinaturaFinanceiroRoute: typeof ApiAssinaturaFinanceiroRoute
   ApiAssinaturaTrocarPlanoRoute: typeof ApiAssinaturaTrocarPlanoRoute
   ApiBaseConhecimentoAtalhosRoute: typeof ApiBaseConhecimentoAtalhosRoute
   ApiBaseConhecimentoBasesRoute: typeof ApiBaseConhecimentoBasesRoute
@@ -1121,6 +1148,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAsaasWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/assinatura/atualizar-cartao': {
+      id: '/api/assinatura/atualizar-cartao'
+      path: '/api/assinatura/atualizar-cartao'
+      fullPath: '/api/assinatura/atualizar-cartao'
+      preLoaderRoute: typeof ApiAssinaturaAtualizarCartaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/assinatura/cancelar': {
       id: '/api/assinatura/cancelar'
       path: '/api/assinatura/cancelar'
@@ -1133,6 +1167,13 @@ declare module '@tanstack/react-router' {
       path: '/api/assinatura/comprar-creditos'
       fullPath: '/api/assinatura/comprar-creditos'
       preLoaderRoute: typeof ApiAssinaturaComprarCreditosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/assinatura/financeiro': {
+      id: '/api/assinatura/financeiro'
+      path: '/api/assinatura/financeiro'
+      fullPath: '/api/assinatura/financeiro'
+      preLoaderRoute: typeof ApiAssinaturaFinanceiroRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/assinatura/trocar-plano': {
@@ -1464,8 +1505,10 @@ const rootRouteChildren: RootRouteChildren = {
   TTermoIdRoute: TTermoIdRoute,
   ApiAsaasCheckoutRoute: ApiAsaasCheckoutRoute,
   ApiAsaasWebhookRoute: ApiAsaasWebhookRoute,
+  ApiAssinaturaAtualizarCartaoRoute: ApiAssinaturaAtualizarCartaoRoute,
   ApiAssinaturaCancelarRoute: ApiAssinaturaCancelarRoute,
   ApiAssinaturaComprarCreditosRoute: ApiAssinaturaComprarCreditosRoute,
+  ApiAssinaturaFinanceiroRoute: ApiAssinaturaFinanceiroRoute,
   ApiAssinaturaTrocarPlanoRoute: ApiAssinaturaTrocarPlanoRoute,
   ApiBaseConhecimentoAtalhosRoute: ApiBaseConhecimentoAtalhosRoute,
   ApiBaseConhecimentoBasesRoute: ApiBaseConhecimentoBasesRoute,
