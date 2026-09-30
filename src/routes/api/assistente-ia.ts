@@ -1364,6 +1364,27 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         // Tabela já migrada; aguarda apenas a próxima sincronização dos tipos gerados.
         const { error: usoErr } = await (db as any).from("medicamentos_em_uso").insert(linhasUso);
         if (usoErr) console.warn("[gerar_receita] falha ao registrar medicamentos em uso:", usoErr.message);
+
+        // Registro no prontuário do paciente ("consulta"), no MESMO formato que
+        // a tela do app usa para uma "receita avulsa" (fora de um atendimento
+        // em andamento) — sem isso, a receita fica salva em documentos_paciente
+        // mas não aparece no histórico/prontuário do cadastro do paciente, que
+        // é lido a partir da tabela consulta, não de documentos_paciente.
+        const agoraIso = new Date().toISOString();
+        const resumoReceita = `RECEITA:\n${textoReceita}`;
+        const { error: consultaErr } = await db.from("consulta").insert({
+          paciente_id: args.paciente_id,
+          id_medico: medicoId,
+          started_at: agoraIso,
+          ended_at: agoraIso,
+          title: `Receita — ${fmtData(hojeISO)}`,
+          acao: "Receita",
+          resumo: resumoReceita.length > 200 ? `${resumoReceita.slice(0, 200)}...` : resumoReceita,
+          notas: textoReceita,
+        });
+        if (consultaErr) {
+          console.warn("[gerar_receita] falha ao registrar receita no prontuário (consulta):", consultaErr.message);
+        }
       }
       let arquivo: { arquivo_path: string; arquivo_nome: string } | null = null;
       let pdfErro: string | null = null;
