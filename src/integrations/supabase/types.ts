@@ -1447,6 +1447,66 @@ export type Database = {
           },
         ]
       }
+      medico_clinica_config: {
+        Row: {
+          bairro: string | null
+          cep: string | null
+          cidade: string | null
+          cnpj_cpf: string | null
+          complemento: string | null
+          cor_primaria: string | null
+          email: string | null
+          fantasia: string | null
+          id_medico: string
+          logo_data_url: string | null
+          logradouro: string | null
+          numero: string | null
+          pais: string | null
+          razao_social: string | null
+          telefone: string | null
+          uf: string | null
+          updated_at: string
+        }
+        Insert: {
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj_cpf?: string | null
+          complemento?: string | null
+          cor_primaria?: string | null
+          email?: string | null
+          fantasia?: string | null
+          id_medico: string
+          logo_data_url?: string | null
+          logradouro?: string | null
+          numero?: string | null
+          pais?: string | null
+          razao_social?: string | null
+          telefone?: string | null
+          uf?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj_cpf?: string | null
+          complemento?: string | null
+          cor_primaria?: string | null
+          email?: string | null
+          fantasia?: string | null
+          id_medico?: string
+          logo_data_url?: string | null
+          logradouro?: string | null
+          numero?: string | null
+          pais?: string | null
+          razao_social?: string | null
+          telefone?: string | null
+          uf?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       medico_seguranca_whatsapp: {
         Row: {
           blocos_usados: Json
