@@ -56,3 +56,110 @@
 .mp-modal h3{margin:0 0 8px;font-size:16px;font-weight:700;color:#111827}
 .mp-modal p{margin:0 0 16px;font-size:13px;color:#6b7280;line-height:1.5}
 .mp-modal-actions{display:flex;flex-direction:column;gap:8px}
+
+/* --- v2: abas, resumo, tabelas, carteira, formulários --- */
+.mp-btn.sm{padding:6px 14px;font-size:12px}
+.mp-btn.xs{padding:5px 12px;font-size:11.5px}
+.mp-btn.danger:hover{background:rgba(225,29,72,.06)}
+.mp-link{background:none;border:none;padding:0;font:inherit;font-size:12px;font-weight:600;color:#059669;cursor:pointer;display:inline-flex;align-items:center;gap:4px;text-decoration:none}
+.mp-link:hover{text-decoration:underline}
+.mp-nota{font-size:12px;color:#9ca3af;margin:10px 0 0;line-height:1.5}
+.mp-nota a{color:#059669;font-weight:600}
+.mp-vazio{font-size:12.5px;color:#9ca3af;margin:4px 0;text-align:center;padding:18px 0}
+.mp-secao-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.mp-secao-head .mp-secao-titulo{margin:0}
+
+.mp-aviso{display:flex;align-items:center;gap:8px;padding:12px 16px;border-radius:16px;margin-bottom:14px;font-size:12.5px;font-weight:600}
+.mp-aviso.ok{background:rgba(220,252,231,.85);color:#15803d;border:1px solid rgba(16,185,129,.25)}
+.mp-aviso.erro{background:rgba(255,228,230,.85);color:#be123c;border:1px solid rgba(225,29,72,.25)}
+
+.mp-infos{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+@media(max-width:820px){.mp-infos{grid-template-columns:1fr}}
+.mp-info{background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.8);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.mp-info span{font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.3px;font-weight:600}
+.mp-info strong{font-size:13px;color:#111827;display:inline-flex;align-items:center;gap:5px}
+
+.mp-alerta i.ti{font-size:18px;flex-shrink:0;margin-top:1px}
+.mp-alerta.info{background:rgba(237,233,254,.7);border-color:rgba(124,58,237,.25);color:#5b21b6}
+.mp-alerta.neutro{background:rgba(241,245,249,.8);border-color:rgba(100,116,139,.25);color:#334155}
+.mp-alerta-acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.mp-alerta-acoes .mp-btn{margin-top:0;text-decoration:none}
+
+.mp-tabs{display:flex;gap:6px;margin:0 0 16px;padding:5px;border-radius:50px;background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.8);overflow-x:auto;scrollbar-width:none}
+.mp-tabs::-webkit-scrollbar{display:none}
+.mp-tab{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;border-radius:50px;border:none;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:#6b7280;cursor:pointer;white-space:nowrap;transition:.15s}
+.mp-tab:hover{color:#111827}
+.mp-tab.ativa{background:#fff;color:#059669;box-shadow:0 2px 10px rgba(80,120,180,.14)}
+
+.mp-consumo-top span{display:inline-flex;align-items:center;gap:5px}
+.mp-barra.alerta .plano{background:linear-gradient(90deg,#fbbf24,#d97706)}
+.mp-barra.fina{height:5px;margin-top:5px}
+
+.mp-atalhos{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+@media(max-width:820px){.mp-atalhos{grid-template-columns:1fr}}
+.mp-atalho{display:flex;gap:12px;align-items:center;padding:16px;border-radius:20px;background:rgba(255,255,255,.62);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.75);box-shadow:0 4px 24px rgba(80,120,180,.08);cursor:pointer;transition:.15s}
+.mp-atalho:hover{transform:translateY(-2px)}
+.mp-atalho>i{font-size:22px;color:#059669;background:rgba(220,252,231,.8);width:40px;height:40px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mp-atalho span{font-size:11px;color:#9ca3af;display:block}
+.mp-atalho strong{font-size:12.5px;color:#111827}
+
+.mp-zona{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+
+.mp-plano-card{position:relative;display:flex;flex-direction:column}
+.mp-plano-card ul{flex:1}
+.mp-plano-card .mp-btn{justify-content:center}
+.mp-selo{position:absolute;top:12px;right:12px;font-size:10px;font-weight:700;color:#059669;background:rgba(220,252,231,.9);padding:3px 9px;border-radius:20px}
+
+.mp-tabela-wrap{overflow-x:auto;margin:0 -4px}
+.mp-tabela{width:100%;border-collapse:collapse;font-size:12.5px;min-width:560px}
+.mp-tabela th{text-align:left;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.3px;padding:8px 10px;border-bottom:1px solid rgba(0,0,0,.06)}
+.mp-tabela th small{text-transform:none;font-weight:400;letter-spacing:0}
+.mp-tabela td{padding:10px;border-bottom:1px solid rgba(0,0,0,.04);color:#374151;vertical-align:middle}
+.mp-tabela td small{color:#9ca3af;font-size:11px}
+.mp-tabela tr:last-child td{border-bottom:none}
+.mp-hist-valor{font-weight:600;color:#111827}
+.mp-tag{font-size:10px;font-weight:700;color:#059669;background:rgba(220,252,231,.9);padding:2px 7px;border-radius:20px;margin-left:4px}
+
+.mp-status{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.mp-status.pago{background:rgba(220,252,231,.9);color:#15803d}
+.mp-status.pendente{background:rgba(254,243,199,.9);color:#92400e}
+.mp-status.vencida{background:rgba(255,228,230,.9);color:#be123c}
+.mp-status.neutro{background:rgba(226,232,240,.9);color:#475569}
+
+.mp-saldos{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:820px){.mp-saldos{grid-template-columns:1fr}}
+.mp-saldo{display:flex;gap:12px;align-items:center;padding:14px;border-radius:16px;background:linear-gradient(135deg,rgba(237,233,254,.75),rgba(255,255,255,.55));border:1px solid rgba(255,255,255,.8)}
+.mp-saldo>i{font-size:20px;color:#7c3aed;background:rgba(255,255,255,.8);width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center}
+.mp-saldo span{font-size:11px;color:#6b7280;display:block}
+.mp-saldo strong{font-size:18px;color:#111827}
+.mp-saldo strong small{font-size:11px;color:#9ca3af;font-weight:500}
+
+.mp-cartao-row{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+.mp-cartao{display:flex;gap:12px;align-items:center}
+.mp-cartao>i{font-size:22px;color:#fff;background:linear-gradient(135deg,#334155,#0f172a);width:52px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.mp-cartao strong{display:block;font-size:13.5px;color:#111827}
+.mp-cartao span{font-size:11.5px;color:#9ca3af}
+
+.mp-modal{max-height:calc(100vh - 32px);overflow-y:auto}
+.mp-modal.largo{max-width:460px}
+.mp-comparacao{width:100%;border-collapse:collapse;font-size:12.5px;margin:6px 0 14px}
+.mp-comparacao th{font-size:11px;color:#9ca3af;font-weight:600;text-align:left;padding:5px 6px}
+.mp-comparacao td{padding:6px;border-top:1px solid rgba(0,0,0,.05);color:#374151}
+.mp-comparacao td.mais{color:#15803d;font-weight:700}
+.mp-comparacao td.menos{color:#be123c;font-weight:700}
+
+.mp-retencao{display:flex;gap:10px;padding:12px 14px;border-radius:14px;background:rgba(220,252,231,.55);border:1px solid rgba(16,185,129,.25);font-size:12.5px;color:#065f46;line-height:1.5;margin-bottom:14px}
+.mp-retencao>i{font-size:18px;margin-top:1px}
+.mp-retencao .mp-link{margin-top:4px}
+
+.mp-form-label{font-size:11px!important;font-weight:700;color:#6b7280!important;text-transform:uppercase;letter-spacing:.3px;margin:4px 0 8px!important}
+.mp-input{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:12px;border:1px solid rgba(200,210,220,.9);background:#fff;font:inherit;font-size:13px;color:#111827;margin-bottom:8px;outline:none;transition:.15s}
+.mp-input:focus{border-color:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+textarea.mp-input{resize:vertical}
+.mp-form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mp-motivos{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.mp-motivos label,.mp-check{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#374151;cursor:pointer}
+.mp-check{margin:4px 0 8px;color:#6b7280}
+.mp-erro-form{color:#be123c!important;font-size:12px!important;font-weight:600;margin:0 0 8px!important;min-height:0}
+.mp-erro-form:empty{display:none}
+.mp-modal-actions .mp-btn{justify-content:center}
