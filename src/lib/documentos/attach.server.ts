@@ -16,7 +16,8 @@ export async function getDoctorInfo(db: Db, medicoId: string | null): Promise<Do
     const name =
       (meta.full_name as string) || (meta.name as string) || data.user.email?.split("@")[0] || "Médico responsável";
     const crm = (meta.crm as string) || (meta.CRM as string) || null;
-    return { name, crm };
+    const especialidade = (meta.especialidade as string) || (meta.specialty as string) || null;
+    return { name, crm, especialidade };
   } catch {
     return { name: "Médico responsável" };
   }

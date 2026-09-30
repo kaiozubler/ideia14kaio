@@ -79,7 +79,7 @@ function writeRule(ctx: Ctx) {
   ctx.y -= 14;
 }
 
-export type DoctorInfo = { name: string; crm?: string | null };
+export type DoctorInfo = { name: string; crm?: string | null; especialidade?: string | null };
 
 async function newCtx(titulo: string, doctor: DoctorInfo): Promise<Ctx> {
   const doc = await PDFDocument.create();

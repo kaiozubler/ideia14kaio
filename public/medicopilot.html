@@ -6746,7 +6746,44 @@
 
                                                             /* ========== MINHA CLÍNICA ========== */
                                                             const CLINICA_KEY='clinicaCfg';
+                                                            // Espelha a config da clínica no banco (medico_clinica_config), além do
+                                                            // localStorage — sem isso, qualquer geração de documento fora do
+                                                            // navegador (ex.: o assistente pelo WhatsApp) não tem como saber o
+                                                            // nome/endereço/logo/cor da clínica pra montar o mesmo cabeçalho.
+                                                            async function _clinicaSincronizarComBanco(){
+                                                              if(!currentUser?.id)return;
+                                                              let local={};try{local=JSON.parse(localStorage.getItem(CLINICA_KEY)||'{}');}catch(e){}
+                                                              const {data,error}=await sb.from('medico_clinica_config').select('*').eq('id_medico',currentUser.id).maybeSingle();
+                                                              if(error){console.error('[minha-clinica] Falha ao consultar config no banco:',error.message);return;}
+                                                              if(data){
+                                                                // Banco é a fonte de verdade a partir de agora — sincroniza pro
+                                                                // cache local (usado pelos outros pontos que montam documentos).
+                                                                const next={
+                                                                  fantasia:data.fantasia||'',razao:data.razao_social||'',fiscal:data.cnpj_cpf||'',
+                                                                  cep:data.cep||'',logradouro:data.logradouro||'',numero:data.numero||'',complemento:data.complemento||'',
+                                                                  bairro:data.bairro||'',cidade:data.cidade||'',uf:data.uf||'',pais:data.pais||'Brasil',
+                                                                  telefone:data.telefone||'',email:data.email||'',cor_primaria:data.cor_primaria||'',
+                                                                  logo:data.logo_data_url||local.logo||null,
+                                                                };
+                                                                localStorage.setItem(CLINICA_KEY,JSON.stringify(next));
+                                                              }else if(Object.keys(local).length){
+                                                                // Ainda não existe linha no banco, mas já há config salva só no
+                                                                // navegador (uso anterior a esta sincronização) — migra pro banco
+                                                                // uma vez, silenciosamente.
+                                                                await sb.from('medico_clinica_config').upsert({
+                                                                  id_medico:currentUser.id,
+                                                                  fantasia:local.fantasia||null,razao_social:local.razao||null,cnpj_cpf:local.fiscal||null,
+                                                                  cep:local.cep||null,logradouro:local.logradouro||null,numero:local.numero||null,complemento:local.complemento||null,
+                                                                  bairro:local.bairro||null,cidade:local.cidade||null,uf:local.uf||null,pais:local.pais||'Brasil',
+                                                                  telefone:local.telefone||null,email:local.email||null,cor_primaria:local.cor_primaria||null,
+                                                                  logo_data_url:local.logo||null,
+                                                                },{onConflict:'id_medico'}).then(({error})=>{
+                                                                  if(error)console.error('[minha-clinica] Falha ao migrar config pro banco:',error.message);
+                                                                });
+                                                              }
+                                                            }
                                                             async function loadClinica(){
+                                                              await _clinicaSincronizarComBanco();
                                                               let c={};try{c=JSON.parse(localStorage.getItem(CLINICA_KEY)||'{}');}catch(e){}
                                                               const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
                                                               set('cli-fantasia',c.fantasia);set('cli-razao',c.razao);set('cli-fiscal',c.fiscal);
@@ -6808,6 +6845,17 @@
                                                                 if(typeof toast==='function')toast('Não foi possível salvar o Phone Number ID');
                                                                 return;
                                                               }
+                                                              // Também salva no banco (medico_clinica_config) — é de lá que o
+                                                              // assistente pelo WhatsApp lê pra montar o cabeçalho dos documentos,
+                                                              // já que ele não tem acesso ao localStorage do navegador.
+                                                              const {error:errClinica}=await sb.from('medico_clinica_config').upsert({
+                                                                id_medico:currentUser.id,
+                                                                fantasia:next.fantasia||null,razao_social:next.razao||null,cnpj_cpf:next.fiscal||null,
+                                                                cep:next.cep||null,logradouro:next.logradouro||null,numero:next.numero||null,complemento:next.complemento||null,
+                                                                bairro:next.bairro||null,cidade:next.cidade||null,uf:next.uf||null,pais:next.pais||'Brasil',
+                                                                logo_data_url:next.logo||null,
+                                                              },{onConflict:'id_medico'});
+                                                              if(errClinica)console.error('[minha-clinica] Falha ao salvar config no banco:',errClinica.message);
                                                               if(typeof toast==='function')toast('Dados da clínica salvos');
                                                             }
 
