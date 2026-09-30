@@ -61,6 +61,8 @@
   ];
 
   var MESES_HISTORICO = 6;
+  var MAX_PACOTES_SACOLA = 20; // mesmo limite de /api/assinatura/comprar-creditos
+  var CHAVE_SACOLA = "mp-sacola-creditos";
 
   var STATUS_PAGAMENTO = {
     PENDING: { rotulo: "Aguardando", classe: "pendente" },
@@ -142,6 +144,7 @@
     fin: { carregando: false, erro: null, dados: null },
     modal: null,
     aviso: null,
+    sacola: lerSacola(), // { "whatsapp:1500": 2, ... } — chave recurso:quantidade do pacote, valor = quantas vezes
   };
 
   function sbClient() {
@@ -520,16 +523,142 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
+  // --- Sacola de créditos ---
+  // O usuário junta pacotes (o mesmo mais de uma vez e/ou recursos diferentes)
+  // e paga tudo num único checkout. Guardada em sessionStorage só pra
+  // sobreviver a um recarregar da página; o preço é sempre recalculado no
+  // servidor a partir de pacotesCredito().
+
+  function lerSacola() {
+    try {
+      var bruto = JSON.parse(sessionStorage.getItem(CHAVE_SACOLA) || "{}");
+      var limpa = {};
+      Object.keys(bruto).forEach(function (k) {
+        if (pacotePorChave(k) && bruto[k] > 0) limpa[k] = Math.min(Number(bruto[k]) || 0, MAX_PACOTES_SACOLA);
+      });
+      return limpa;
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function salvarSacola() {
+    try { sessionStorage.setItem(CHAVE_SACOLA, JSON.stringify(S.sacola)); } catch (e) {}
+  }
+
+  function pacotePorChave(chave) {
+    var partes = String(chave).split(":");
+    var lista = PACOTES_CREDITO[partes[0]];
+    if (!lista) return null;
+    var pac = lista.filter(function (p) { return p.quantidade === Number(partes[1]); })[0];
+    return pac ? { recurso: partes[0], quantidade: pac.quantidade, preco: pac.preco } : null;
+  }
+
+  function itensSacola() {
+    // Ordem estável: pela ordem dos recursos e dos pacotes na tabela.
+    var itens = [];
+    RECURSOS.forEach(function (r) {
+      PACOTES_CREDITO[r].forEach(function (pac) {
+        var vezes = S.sacola[r + ":" + pac.quantidade] || 0;
+        if (vezes) itens.push({ chave: r + ":" + pac.quantidade, recurso: r, quantidade: pac.quantidade, preco: pac.preco, vezes: vezes });
+      });
+    });
+    return itens;
+  }
+
+  function resumoSacola() {
+    return itensSacola().reduce(
+      function (acc, i) { acc.pacotes += i.vezes; acc.total += i.preco * i.vezes; return acc; },
+      { pacotes: 0, total: 0 }
+    );
+  }
+
+  function alterarSacola(chave, delta) {
+    if (!pacotePorChave(chave)) return;
+    var atual = S.sacola[chave] || 0;
+    var novo = Math.max(0, atual + delta);
+    if (delta > 0 && resumoSacola().pacotes >= MAX_PACOTES_SACOLA) {
+      avisar("Limite de " + MAX_PACOTES_SACOLA + " pacotes por compra.", "erro");
+      return;
+    }
+    if (novo) S.sacola[chave] = novo;
+    else delete S.sacola[chave];
+    salvarSacola();
+    if (S.modal && S.modal.tipo === "sacola" && !resumoSacola().pacotes) S.modal = null;
+    render();
+  }
+
+  function stepper(chave, vezes) {
+    return (
+      '<div class="mp-stepper"><button type="button" data-sacola-menos="' + chave + '" aria-label="Remover um">−</button>' +
+      "<span>" + vezes + "</span>" +
+      '<button type="button" data-sacola-mais="' + chave + '" aria-label="Adicionar mais um">+</button></div>'
+    );
+  }
+
+  var sacolaFlutuanteVisivel = false; // anima só na primeira aparição, não a cada +/-
+
+  function botaoSacolaFlutuante() {
+    var r = resumoSacola();
+    if (!r.pacotes || cancelamentoAgendado() || (S.modal && S.modal.tipo === "sacola")) {
+      sacolaFlutuanteVisivel = false;
+      return "";
+    }
+    var entra = !sacolaFlutuanteVisivel;
+    sacolaFlutuanteVisivel = true;
+    return (
+      '<div class="mp-sacola-espaco"></div><div class="mp-sacola-float' + (entra ? " entra" : "") + '"><button class="mp-sacola-btn" data-abrir-sacola>' +
+      '<span class="mp-sacola-ico"><i class="ti ti-shopping-bag"></i><b>' + r.pacotes + "</b></span>" +
+      '<span class="mp-sacola-txt">' + r.pacotes + (r.pacotes === 1 ? " pacote" : " pacotes") + " · <strong>" + fmtPreco(r.total) + "</strong></span>" +
+      '<span class="mp-sacola-cta">Ir para pagamento <i class="ti ti-arrow-right"></i></span></button></div>'
+    );
+  }
+
+  function modalSacola() {
+    var itens = itensSacola();
+    var r = resumoSacola();
+    return (
+      '<h3><i class="ti ti-shopping-bag"></i> Sua sacola de créditos</h3>' +
+      '<div class="mp-sacola-lista">' +
+      itens.map(function (i) {
+        return (
+          '<div class="mp-sacola-item"><div class="info"><i class="ti ' + ICONE_RECURSO[i.recurso] + '"></i><div>' +
+          "<strong>+" + fmtNum(i.quantidade) + " " + UNIDADE_RECURSO[i.recurso] + "</strong>" +
+          "<span>" + NOME_RECURSO[i.recurso] + " · " + fmtPreco(i.preco) + " cada</span></div></div>" +
+          stepper(i.chave, i.vezes) +
+          '<div class="subtotal">' + fmtPreco(i.preco * i.vezes) + "</div></div>"
+        );
+      }).join("") +
+      "</div>" +
+      '<div class="mp-sacola-totais">' +
+      RECURSOS.map(function (rec) {
+        var soma = itens.filter(function (i) { return i.recurso === rec; }).reduce(function (s, i) { return s + i.quantidade * i.vezes; }, 0);
+        return soma ? "<span>+" + fmtNum(soma) + " " + UNIDADE_RECURSO[rec] + " de " + NOME_RECURSO[rec] + "</span>" : "";
+      }).join("") +
+      "</div>" +
+      '<div class="mp-sacola-total"><span>Total</span><strong>' + fmtPreco(r.total) + "</strong></div>" +
+      '<p class="mp-nota" style="margin:0 0 14px">Pagamento único no cartão de crédito. Os créditos entram no saldo assim que o pagamento é confirmado e não expiram.</p>' +
+      '<div class="mp-modal-actions"><button class="mp-btn primary" data-pagar-sacola><i class="ti ti-lock"></i> Pagar ' + fmtPreco(r.total) + "</button>" +
+      '<button class="mp-btn" data-fechar-modal>Continuar escolhendo</button>' +
+      '<button class="mp-link" style="align-self:center;color:#be123c" data-esvaziar-sacola>Esvaziar sacola</button></div>'
+    );
+  }
+
   // --- Carteira de créditos ---
 
   function pacotesRecurso(recurso) {
     var bloqueado = !!cancelamentoAgendado();
     return PACOTES_CREDITO[recurso]
       .map(function (pac) {
+        var chave = recurso + ":" + pac.quantidade;
+        var vezes = S.sacola[chave] || 0;
         return (
-          '<div class="mp-pacote"><span class="qtd">+' + fmtNum(pac.quantidade) + " " + UNIDADE_RECURSO[recurso] + "</span>" +
+          '<div class="mp-pacote' + (vezes ? " na-sacola" : "") + '"><span class="qtd">+' + fmtNum(pac.quantidade) + " " + UNIDADE_RECURSO[recurso] + "</span>" +
           '<span class="preco">' + fmtPreco(pac.preco) + " · não expira</span>" +
-          '<button class="mp-btn primary xs" data-comprar-credito="' + recurso + ":" + pac.quantidade + '"' + (bloqueado ? " disabled" : "") + ">Comprar</button></div>"
+          (vezes && !bloqueado
+            ? stepper(chave, vezes)
+            : '<button class="mp-btn primary xs" data-sacola-mais="' + chave + '"' + (bloqueado ? " disabled" : "") + '><i class="ti ti-shopping-bag-plus"></i> Adicionar</button>') +
+          "</div>"
         );
       })
       .join("");
@@ -565,6 +694,7 @@
       '<p class="mp-nota">Créditos extras não expiram e só são consumidos depois que a franquia mensal do plano acaba.</p></div>' +
 
       '<div class="mp-panel"><p class="mp-secao-titulo">Comprar créditos extras</p>' +
+      '<p class="mp-nota" style="margin:-6px 0 14px">Adicione à sacola quantos pacotes quiser — inclusive o mesmo pacote mais de uma vez — e pague tudo de uma vez.</p>' +
       '<div style="display:flex;flex-direction:column;gap:16px">' +
       RECURSOS.map(function (r) {
         return '<div><strong style="font-size:12.5px">' + NOME_RECURSO[r] + '</strong><div class="mp-creditos-grid" style="margin-top:8px">' + pacotesRecurso(r) + "</div></div>";
@@ -745,9 +875,10 @@
     var conteudo =
       S.modal.tipo === "cancelar" ? modalCancelar() :
       S.modal.tipo === "trocar-plano" ? modalTrocarPlano() :
-      S.modal.tipo === "cartao" ? modalCartao() : "";
+      S.modal.tipo === "cartao" ? modalCartao() :
+      S.modal.tipo === "sacola" ? modalSacola() : "";
     if (!conteudo) return "";
-    return '<div class="mp-modal-bg"><div class="mp-modal' + (S.modal.tipo === "cartao" || S.modal.tipo === "cancelar" ? " largo" : "") + '">' + conteudo + "</div></div>";
+    return '<div class="mp-modal-bg"><div class="mp-modal' + (S.modal.tipo === "cartao" || S.modal.tipo === "cancelar" || S.modal.tipo === "sacola" ? " largo" : "") + '">' + conteudo + "</div></div>";
   }
 
   // ---------------------------------------------------------------------------
@@ -802,7 +933,7 @@
     el.innerHTML =
       VOLTAR + CABECALHO +
       (S.aviso ? '<div class="mp-aviso ' + S.aviso.tipo + '"><i class="ti ' + (S.aviso.tipo === "erro" ? "ti-alert-circle" : "ti-circle-check") + '"></i> ' + esc(S.aviso.texto) + "</div>" : "") +
-      resumoAssinatura() + abas() + conteudoAba + modalHtml();
+      resumoAssinatura() + abas() + conteudoAba + botaoSacolaFlutuante() + modalHtml();
   }
 
   function fecharModal() {
@@ -1012,18 +1143,48 @@
       return;
     }
 
-    var comprarBtn = e.target.closest("[data-comprar-credito]");
-    if (comprarBtn) {
-      var partes = comprarBtn.getAttribute("data-comprar-credito").split(":");
-      comprarBtn.disabled = true;
-      comprarBtn.textContent = "Abrindo…";
+    var maisBtn = e.target.closest("[data-sacola-mais]");
+    if (maisBtn) {
+      alterarSacola(maisBtn.getAttribute("data-sacola-mais"), 1);
+      return;
+    }
+
+    var menosBtn = e.target.closest("[data-sacola-menos]");
+    if (menosBtn) {
+      alterarSacola(menosBtn.getAttribute("data-sacola-menos"), -1);
+      return;
+    }
+
+    if (e.target.closest("[data-abrir-sacola]")) {
+      abrirModal({ tipo: "sacola" });
+      return;
+    }
+
+    if (e.target.closest("[data-esvaziar-sacola]")) {
+      S.sacola = {};
+      salvarSacola();
+      fecharModal();
+      return;
+    }
+
+    var pagarBtn = e.target.closest("[data-pagar-sacola]");
+    if (pagarBtn) {
+      pagarBtn.disabled = true;
+      pagarBtn.textContent = "Abrindo pagamento…";
       try {
-        var respCompra = await chamarApi("/api/assinatura/comprar-creditos", { recurso: partes[0], quantidade: Number(partes[1]) });
-        if (respCompra.checkoutUrl) window.location.href = respCompra.checkoutUrl;
+        var respCompra = await chamarApi("/api/assinatura/comprar-creditos", {
+          itens: itensSacola().map(function (i) { return { recurso: i.recurso, quantidade: i.quantidade, vezes: i.vezes }; }),
+        });
+        if (respCompra.checkoutUrl) {
+          // A compra já ficou registrada como pendente; esvazia a sacola antes de sair pro Asaas.
+          S.sacola = {};
+          salvarSacola();
+          window.location.href = respCompra.checkoutUrl;
+        }
       } catch (err) {
+        S.modal = null;
+        render();
         avisar(err.message || "Não foi possível abrir o pagamento.", "erro");
-        comprarBtn.disabled = false;
-        comprarBtn.textContent = "Comprar";
       }
     }
   });
