@@ -1395,7 +1395,7 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         const { getDoctorInfo, attachPdfToDocumento } = await import("@/lib/documentos/attach.server");
         try {
           const doctor = await getDoctorInfo(db, medicoId);
-          const bytes = await buildReceitaPdf({
+          let bytes = await buildReceitaPdf({
             doctor,
             pacienteNome: args.paciente_nome,
             pacienteCpf: args.paciente_cpf,
