@@ -2252,9 +2252,9 @@
       .cop-note.blue{background:#eff6ff;border:0.5px solid #bfdbfe;color:#1e40af}
       .cop-note.red{background:#fff1f2;border:0.5px solid #fda4af;color:#9f1239}
       .cop-wa-form{display:grid;grid-template-columns:minmax(0,1fr) 180px auto;align-items:end;gap:12px}
-      .cop-wa-password{position:relative}
-      .cop-wa-password input{padding-right:42px}
-      .cop-wa-eye{position:absolute;right:5px;bottom:4px;width:34px;height:34px;padding:0!important;display:flex!important;align-items:center;justify-content:center}
+      .cop-wa-input-wrap{position:relative}
+      .cop-wa-input-wrap input{padding-right:42px}
+      .cop-wa-eye{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:34px;height:34px;padding:0!important;display:flex!important;align-items:center;justify-content:center}
       .cop-wa-validation{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
       .cop-wa-rule{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--n400)}
       .cop-wa-rule.ok{color:#047857}
@@ -4178,11 +4178,13 @@
                   <div class="cop-wa-form">
                     <div class="fld cop-wa-password" style="margin:0">
                       <label for="cop-wa-key" style="text-transform:uppercase;font-size:10.5px;letter-spacing:.5px">Nova palavra-chave</label>
-                      <input id="cop-wa-key" type="password" autocomplete="new-password" spellcheck="false"
-                             placeholder="Digite no mínimo 8 letras" oninput="validateCopWhatsappKey()" />
-                      <button type="button" class="btn ghost cop-wa-eye" onclick="toggleCopWhatsappKey()" title="Mostrar ou ocultar palavra-chave" aria-label="Mostrar palavra-chave">
-                        <i id="cop-wa-eye-icon" class="ti ti-eye"></i>
-                      </button>
+                      <div class="cop-wa-input-wrap">
+                        <input id="cop-wa-key" type="password" autocomplete="new-password" spellcheck="false"
+                               placeholder="Digite no mínimo 8 letras" oninput="validateCopWhatsappKey()" />
+                        <button type="button" class="btn ghost cop-wa-eye" onclick="toggleCopWhatsappKey()" title="Mostrar ou ocultar palavra-chave" aria-label="Mostrar palavra-chave">
+                          <i id="cop-wa-eye-icon" class="ti ti-eye"></i>
+                        </button>
+                      </div>
                       <div class="cop-wa-validation" aria-live="polite">
                         <span id="cop-wa-rule-length" class="cop-wa-rule"><i class="ti ti-circle"></i> 8 letras ou mais</span>
                         <span id="cop-wa-rule-letters" class="cop-wa-rule"><i class="ti ti-circle"></i> somente letras</span>

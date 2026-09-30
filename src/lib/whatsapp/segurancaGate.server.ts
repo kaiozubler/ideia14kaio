@@ -35,13 +35,19 @@ export type ResultadoGate =
   | { liberado: true }
   | { liberado: false; resposta: string };
 
+const ROTA_CONFIGURACAO = "Minhas IAs > Copiloto > Copiloto pelo WhatsApp";
+
+const MSG_NAO_CONFIGURADO =
+  "🔒 Este canal exige verificação por palavra-chave antes de qualquer solicitação. " +
+  `Configure a sua em ${ROTA_CONFIGURACAO} no app para liberar o acesso pelo WhatsApp.`;
+
 const MSG_BLOQUEADO =
   "🔒 Sua verificação de segurança foi bloqueada após 2 tentativas incorretas. " +
-  "Configure uma nova palavra-chave em Minhas IAs > Copiloto > Copiloto pelo WhatsApp no app para voltar a usar este canal.";
+  `Configure uma nova palavra-chave em ${ROTA_CONFIGURACAO} no app para voltar a usar este canal.`;
 
 const MSG_ROTACAO_OBRIGATORIA =
   "🔒 Sua palavra-chave de segurança expirou (90 dias ou 30 usos, o que vier primeiro). " +
-  "Configure uma nova em Minhas IAs > Copiloto > Copiloto pelo WhatsApp no app para continuar usando este canal.";
+  `Configure uma nova em ${ROTA_CONFIGURACAO} no app para continuar usando este canal.`;
 
 /**
  * Confere/gerencia a segunda camada de segurança (palavra-chave + desafio de
@@ -73,8 +79,10 @@ export async function conferirSegurancaWhatsapp(
 
   const linha = data as LinhaSeguranca | null;
   if (!linha || !linha.palavra_chave_cifrada || !linha.palavra_chave_criada_em) {
-    // Recurso opcional: médico ainda não configurou uma palavra-chave.
-    return { liberado: true };
+    // A palavra-chave é obrigatória: sem ela configurada, nenhuma mensagem
+    // é encaminhada ao assistente — fica travado com instrução de onde
+    // configurar, em vez de liberar o canal sem essa camada de segurança.
+    return { liberado: false, resposta: MSG_NAO_CONFIGURADO };
   }
 
   if (linha.desafio_bloqueado) {
