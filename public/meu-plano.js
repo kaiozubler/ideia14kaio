@@ -136,6 +136,7 @@
   var S = {
     aba: "geral",
     assinatura: null,
+    excedenteMes: {}, // { copiloto: 3 } — uso do mês que não coube na franquia nem nos créditos
     consumoPorMes: {}, // { "2026-09-01": { copiloto: {usado_plano, usado_adicional}, ... } }
     creditos: [],
     email: "",
@@ -206,13 +207,20 @@
       S.assinatura = assinaturaRes.error ? null : assinaturaRes.data;
 
       S.consumoPorMes = {};
+      S.excedenteMes = {};
       S.creditos = [];
       if (S.assinatura) {
         var meses = ultimosMeses(MESES_HISTORICO);
         var resultados = await Promise.all([
           sb.from("consumo_mensal").select("*").eq("assinatura_id", S.assinatura.id).gte("mes", meses[meses.length - 1]),
           sb.from("creditos_adicionais").select("*").eq("assinatura_id", S.assinatura.id).order("created_at", { ascending: false }),
+          // Tabela da migration consumo_copiloto_atendimento; se ainda não existir, só não mostra o excedente.
+          sb.from("consumo_registros").select("recurso, excedente").eq("assinatura_id", S.assinatura.id).gt("excedente", 0)
+            .gte("created_at", new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
         ]);
+        (resultados[2].data || []).forEach(function (r) {
+          S.excedenteMes[r.recurso] = (S.excedenteMes[r.recurso] || 0) + r.excedente;
+        });
         (resultados[0].data || []).forEach(function (c) {
           var mes = String(c.mes).slice(0, 10);
           S.consumoPorMes[mes] = S.consumoPorMes[mes] || {};
@@ -308,7 +316,12 @@
       barraConsumo(c.plano, c.adicional, franquia, saldoExtra) +
       '<div class="mp-consumo-legenda"><span><i class="mp-dot" style="background:#059669"></i>Franquia: restam ' + fmtNum(restante) + "</span>" +
       (saldoExtra || c.adicional ? '<span><i class="mp-dot" style="background:#7c3aed"></i>Créditos: ' + fmtNum(saldoExtra) + "</span>" : "") +
-      "</div></div>"
+      "</div>" +
+      (S.excedenteMes[recurso]
+        ? '<div class="mp-excedente"><i class="ti ti-alert-triangle"></i> ' + fmtNum(S.excedenteMes[recurso]) + " " + UNIDADE_RECURSO[recurso] +
+          ' além do limite este mês. <button class="mp-link" data-aba="creditos">Comprar créditos</button></div>'
+        : "") +
+      "</div>"
     );
   }
 

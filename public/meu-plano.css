@@ -196,3 +196,5 @@ textarea.mp-input{resize:vertical}
 .mp-sacola-total{display:flex;justify-content:space-between;align-items:baseline;padding:12px 2px;border-top:1px solid rgba(0,0,0,.07);margin-bottom:6px}
 .mp-sacola-total span{font-size:13px;color:#6b7280;font-weight:600}
 .mp-sacola-total strong{font-size:20px;color:#111827}
+.mp-excedente{margin-top:8px;font-size:11.5px;color:#b45309;background:rgba(254,243,199,.7);border-radius:10px;padding:6px 9px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.mp-excedente .mp-link{font-size:11.5px;color:#b45309}
