@@ -206,6 +206,77 @@ async function enviarWhatsApp(para: string, texto: string) {
   }
 }
 
+/**
+ * Envia um arquivo (PDF de receita/atestado/exame) como mensagem de
+ * documento no WhatsApp. A Cloud API não aceita bytes direto na mensagem —
+ * é preciso primeiro subir o arquivo pro endpoint de mídia (que devolve um
+ * media id) e só depois mandar a mensagem referenciando esse id. Diferente
+ * de mandar um `link` público, isso funciona mesmo com o bucket de
+ * armazenamento sendo privado (não depende de nada além do access token).
+ */
+async function enviarDocumentoWhatsApp(
+  para: string,
+  bytes: Uint8Array,
+  filename: string,
+  caption?: string,
+): Promise<boolean> {
+  const token = process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  if (!token || !phoneNumberId) {
+    console.error(
+      "[assistente-medico-webhook] WHATSAPP_ACCESS_TOKEN ou WHATSAPP_PHONE_NUMBER_ID ausente — arquivo não enviado.",
+    );
+    return false;
+  }
+  try {
+    const form = new FormData();
+    form.append("messaging_product", "whatsapp");
+    form.append("type", "application/pdf");
+    const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    form.append("file", new Blob([arrayBuffer], { type: "application/pdf" }), filename);
+    const uploadRes = await fetch(`${GRAPH_BASE}/${phoneNumberId}/media`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+    if (!uploadRes.ok) {
+      console.error(
+        "[assistente-medico-webhook] Falha ao subir mídia pro WhatsApp:",
+        uploadRes.status,
+        await uploadRes.text(),
+      );
+      return false;
+    }
+    const { id: mediaId } = (await uploadRes.json()) as { id?: string };
+    if (!mediaId) {
+      console.error("[assistente-medico-webhook] Upload de mídia não devolveu id.");
+      return false;
+    }
+    const sendRes = await fetch(`${GRAPH_BASE}/${phoneNumberId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: para,
+        type: "document",
+        document: { id: mediaId, filename, ...(caption ? { caption } : {}) },
+      }),
+    });
+    if (!sendRes.ok) {
+      console.error(
+        "[assistente-medico-webhook] Falha ao enviar mensagem de documento:",
+        sendRes.status,
+        await sendRes.text(),
+      );
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("[assistente-medico-webhook] Erro de rede ao enviar documento:", e);
+    return false;
+  }
+}
+
 // Mesmo critério usado na tela "Minha equipe" (public/equipe.js: isDoctor) —
 // mantém consistência com o resto do app sobre o que conta como "médico".
 function isMedico(tipoUser: unknown) {
@@ -715,6 +786,11 @@ export const Route = createFileRoute("/api/assistente-medico-webhook")({
               reply?: string;
               conversa_id?: string | null;
               paciente_ativo?: PacienteAtivo;
+              action?: {
+                type?: string;
+                arquivo_path?: string | null;
+                arquivo_nome?: string | null;
+              } | null;
             };
             const reply = (data.reply || "Desculpe, não consegui responder agora. Tente novamente em instantes.").trim();
 
@@ -733,6 +809,37 @@ export const Route = createFileRoute("/api/assistente-medico-webhook")({
               message_type: "text",
               content: reply,
             });
+
+            // Se a ação gerou um PDF (receita/atestado/solicitação de exame),
+            // manda o arquivo de verdade em seguida — não basta dizer no texto
+            // que "foi gerado", o médico precisa poder abrir o documento aqui
+            // mesmo, sem precisar entrar no app.
+            const tiposComArquivo = new Set(["gerar_receita", "gerar_atestado", "gerar_solicitacao_exame"]);
+            const acao = data.action;
+            if (acao?.type && tiposComArquivo.has(acao.type) && acao.arquivo_path) {
+              const { data: arquivoBaixado, error: erroDownload } = await supabaseAdmin.storage
+                .from("documentos-arquivos")
+                .download(acao.arquivo_path);
+              if (erroDownload || !arquivoBaixado) {
+                console.error(
+                  "[assistente-medico-webhook] falha ao baixar PDF para anexar no WhatsApp:",
+                  erroDownload?.message,
+                );
+              } else {
+                const bytes = new Uint8Array(await arquivoBaixado.arrayBuffer());
+                const enviado = await enviarDocumentoWhatsApp(
+                  telefoneRemetente,
+                  bytes,
+                  acao.arquivo_nome || "documento.pdf",
+                );
+                if (!enviado) {
+                  await enviarWhatsApp(
+                    telefoneRemetente,
+                    "Não consegui anexar o arquivo aqui no WhatsApp agora, mas ele já está salvo no seu histórico de documentos no MediCopilot.",
+                  );
+                }
+              }
+            }
           } catch (e) {
             console.error("[assistente-medico-webhook] Falha ao processar mensagem:", e);
             await enviarWhatsApp(

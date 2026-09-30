@@ -326,6 +326,11 @@ const tools: ToolDef[] = [
             description:
               "true somente depois que o médico confirmar que quer seguir mesmo havendo interação apontada anteriormente",
           },
+          emitir_sem_assinatura: {
+            type: "boolean",
+            description:
+              "true somente depois que o médico confirmar explicitamente que quer emitir a receita mesmo sem certificado digital configurado (a tool avisa quando isso é necessário — nunca marque true por conta própria).",
+          },
           medicamentos: {
             type: "array",
             items: {
@@ -1272,6 +1277,33 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         }
       }
 
+      // Assinatura digital: uma receita sem certificado ICP-Brasil configurado
+      // não tem validade de documento assinado — não dá pra simplesmente gerar
+      // e anexar como se estivesse tudo certo. Verifica ANTES de criar
+      // qualquer registro, e só segue sem assinar se o médico confirmar
+      // explicitamente (emitir_sem_assinatura=true) depois de avisado.
+      let credencialAssinatura: Awaited<ReturnType<(typeof import("@/lib/signature/SignatureService"))["SignatureService"]["getCredential"]>> | null =
+        null;
+      if (medicoId) {
+        try {
+          const { SignatureService } = await import("@/lib/signature/SignatureService");
+          credencialAssinatura = await SignatureService.getCredential(medicoId);
+        } catch (e) {
+          console.error("[gerar_receita] falha ao consultar certificado digital:", e);
+        }
+      }
+      if (!credencialAssinatura && !args.emitir_sem_assinatura) {
+        return {
+          assinatura_nao_configurada: true,
+          instrucao:
+            "Este médico não tem certificado digital configurado (nenhum certificado local, BRy Cloud ou vínculo Integra Bry ativo). " +
+            "A receita gerada agora NÃO poderia ser assinada digitalmente e não teria a mesma validade de uma receita assinada. " +
+            "Avise isso claramente ao médico e pergunte se ele quer emitir mesmo assim, sem assinatura digital (deixando explícito que fica sem validade de documento assinado). " +
+            "Só chame gerar_receita de novo, com os MESMOS dados e emitir_sem_assinatura=true, se ele confirmar que quer seguir sem assinar. " +
+            "Se ele preferir assinar, oriente a configurar um certificado digital nas configurações do MediCopilot antes de tentar de novo.",
+        };
+      }
+
       // Texto em linguagem natural que vai para o prontuário e é lido pelas automações de IA.
       const fmtData = (iso: string | null) => (iso ? iso.split("-").reverse().join("/") : "");
       const textoReceita =
@@ -1335,18 +1367,42 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
       }
       let arquivo: { arquivo_path: string; arquivo_nome: string } | null = null;
       let pdfErro: string | null = null;
+      let assinaturaErro: string | null = null;
+      let assinadoDigitalmente = false;
       if (medicoId && documentoId) {
         const { buildReceitaPdf } = await import("@/lib/documentos/pdfBuilder.server");
         const { getDoctorInfo, attachPdfToDocumento } = await import("@/lib/documentos/attach.server");
         try {
           const doctor = await getDoctorInfo(db, medicoId);
-          const bytes = await buildReceitaPdf({
+          let bytes = await buildReceitaPdf({
             doctor,
             pacienteNome: args.paciente_nome,
             pacienteCpf: args.paciente_cpf,
             pacienteIdade: args.paciente_idade,
             medicamentos,
           });
+          // Assina digitalmente ANTES de anexar, se houver certificado
+          // configurado — o arquivo salvo/enviado ao médico já sai assinado,
+          // em vez de precisar de um passo manual separado depois.
+          if (credencialAssinatura) {
+            try {
+              const { SignatureService } = await import("@/lib/signature/SignatureService");
+              const assinado = await SignatureService.signDocument({
+                doctorId: medicoId,
+                documentId: documentoId,
+                pdfBuffer: bytes,
+                contentDescription: "Receita médica",
+                filename: `receita-${documentoId}.pdf`,
+              });
+              const respAssinado = await fetch(assinado.signedPdfUrl);
+              if (!respAssinado.ok) throw new Error(`falha ao baixar PDF assinado (${respAssinado.status})`);
+              bytes = new Uint8Array(await respAssinado.arrayBuffer());
+              assinadoDigitalmente = true;
+            } catch (e) {
+              assinaturaErro = e instanceof Error ? e.message : "Erro desconhecido ao assinar digitalmente.";
+              console.error("[gerar_receita] falha ao assinar digitalmente, seguindo com PDF não assinado:", e);
+            }
+          }
           arquivo = await attachPdfToDocumento(db, {
             medicoId,
             documentoId,
@@ -1369,15 +1425,28 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         medicamentos,
         arquivo_path: arquivo?.arquivo_path || null,
         arquivo_nome: arquivo?.arquivo_nome || null,
+        assinado_digitalmente: assinadoDigitalmente,
       };
       return {
         gerado: true,
         documento_id: documentoId,
         medicamentos: medicamentos.length,
         arquivo_anexado: !!arquivo,
+        assinado_digitalmente: assinadoDigitalmente,
         ...(pdfErro
           ? {
               aviso: `O texto da receita foi salvo, mas o arquivo PDF NÃO pôde ser gerado/anexado (${pdfErro}). Informe isso claramente ao médico — não diga que o arquivo está pronto — e sugira tentar novamente.`,
+            }
+          : {}),
+        ...(!pdfErro && credencialAssinatura && !assinadoDigitalmente
+          ? {
+              aviso: `A receita foi gerada e anexada, mas a assinatura digital FALHOU (${assinaturaErro}) — o arquivo está SEM assinatura. Informe isso claramente ao médico.`,
+            }
+          : {}),
+        ...(!pdfErro && !credencialAssinatura
+          ? {
+              aviso:
+                "A receita foi emitida SEM assinatura digital, conforme confirmado pelo médico. Deixe claro na sua resposta que este documento não tem validade de receita assinada digitalmente.",
             }
           : {}),
       };
