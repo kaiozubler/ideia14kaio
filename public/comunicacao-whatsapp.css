@@ -67,7 +67,6 @@
 .wp-passo b{color:#111827;font-size:12.5px}
 .wp-passo p{margin:2px 0 0;font-size:12px;color:#6b7280;line-height:1.55}
 .wp-passo a{color:#059669;font-weight:600}
-.wp-guia-toggle{background:none;border:none;font:inherit;color:#059669;font-weight:600;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:0}
 
 /* Formulários */
 .wp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}

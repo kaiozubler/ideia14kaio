@@ -3,7 +3,7 @@ import { getUserIdFromRequest } from "@/lib/signature/requestAuth.server";
 
 /**
  * Conexão da CLÍNICA com a WhatsApp Cloud API (canal clínica ↔ paciente).
- * Tela: Configurações > WhatsApp dos pacientes > Conexão.
+ * Tela: Configurações > Meu WhatsApp > Conexão.
  *
  * GET:    configuração atual (segredos só mascarados) + URL do webhook e
  *         verify token para colar no painel da Meta.

@@ -1,5 +1,5 @@
 // WHATSAPP DOS PACIENTES — configuração do canal CLÍNICA ↔ PACIENTE
-// (Configurações -> WhatsApp dos pacientes).
+// (Configurações -> Organização -> Meu WhatsApp).
 //
 // NÃO é a conexão do WhatsApp do usuário com o assistente do app (essa usa o
 // número único do MediCopilot e fica em Minhas IAs > Copiloto). Aqui cada
@@ -11,7 +11,7 @@
 // #s-whatsapp-pacientes. Também expõe window.CPWhatsApp com utilitários
 // usados por conversas-pacientes.js (prévia de modelo, chamadas de API).
 //
-// Abas: Conexão (guia + credenciais + webhook) · Modelos de mensagem
+// Abas: Instruções (passo a passo na Meta) · Conexão (credenciais + webhook) · Modelos de mensagem
 // (construtor com prévia, envio para aprovação, sincronização) · Automações
 // (confirmação/lembrete de consulta, envio de documentos fora da janela 24h).
 (function () {
@@ -131,7 +131,7 @@
   ];
 
   var S = {
-    aba: "conexao",
+    aba: null, // definida na carga: Instruções até conectar, depois Conexão
     carregando: true,
     erro: null,
     conexao: null,
@@ -139,7 +139,6 @@
     automacoes: null,
     aviso: null,
     filtro: "todos",
-    guiaAberto: null,
     ocupado: null,
     userId: null,
   };
@@ -302,7 +301,7 @@
       if (res[1].error) throw new Error(res[1].error.message);
       S.modelos = res[1].data || [];
       S.automacoes = res[2].data || null;
-      if (S.guiaAberto === null) S.guiaAberto = !(S.conexao && S.conexao.status === "conectado");
+      if (!S.aba) S.aba = S.conexao && S.conexao.status === "conectado" ? "conexao" : "instrucoes";
     } catch (e) {
       S.erro = e.message || String(e);
     }
@@ -325,7 +324,7 @@
   function cabecalho() {
     return (
       '<div class="wp-head"><div>' +
-      '<h1><i class="ti ti-brand-whatsapp"></i> WhatsApp dos pacientes</h1>' +
+      '<h1><i class="ti ti-brand-whatsapp"></i> Meu WhatsApp</h1>' +
       "<p>Conecte a conta do WhatsApp Business da sua clínica (API oficial da Meta) para conversar com os pacientes na tela Conversas, " +
       "avisar sobre consultas e enviar receitas e documentos. Esta conexão é diferente do WhatsApp do assistente do MediCopilot.</p>" +
       "</div></div>"
@@ -335,6 +334,7 @@
   function abas() {
     var aprov = S.modelos.filter(function (m) { return m.status === "APPROVED"; }).length;
     var lista = [
+      { id: "instrucoes", nome: "Instruções", icone: "ti-list-check" },
       { id: "conexao", nome: "Conexão", icone: "ti-plug-connected" },
       { id: "modelos", nome: "Modelos de mensagem", icone: "ti-template", cnt: S.modelos.length ? aprov + "/" + S.modelos.length : "" },
       { id: "automacoes", nome: "Automações", icone: "ti-robot" },
@@ -368,7 +368,10 @@
     var aviso = S.aviso
       ? '<div class="wp-aviso ' + S.aviso.tipo + '"><i class="ti ' + (S.aviso.tipo === "erro" ? "ti-alert-circle" : "ti-circle-check") + '"></i><div>' + esc(S.aviso.texto) + "</div></div>"
       : "";
-    var corpo = S.aba === "modelos" ? abaModelos() : S.aba === "automacoes" ? abaAutomacoes() : abaConexao();
+    var corpo =
+      S.aba === "instrucoes" ? abaInstrucoes() :
+      S.aba === "modelos" ? abaModelos() :
+      S.aba === "automacoes" ? abaAutomacoes() : abaConexao();
     el.innerHTML = VOLTAR + cabecalho() + aviso + abas() + corpo;
   }
 
@@ -377,6 +380,20 @@
     render();
     var el = document.getElementById("s-whatsapp-pacientes");
     if (el && el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // ---------------------------------------------------------------------------
+  // aba Instruções
+  // ---------------------------------------------------------------------------
+
+  function abaInstrucoes() {
+    var c = S.conexao || {};
+    return (
+      guia() +
+      '<div class="wp-acoes" style="justify-content:flex-end;margin-bottom:16px">' +
+      '<button class="wp-btn primary" onclick="WPA.aba(\'conexao\')"><i class="ti ti-arrow-right"></i> ' +
+      (c.configurado ? "Ver dados da conexão" : "Preencher dados da conexão") + "</button></div>"
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -425,21 +442,18 @@
       ["Adicione e verifique o número da clínica", "Em WhatsApp → Configuração da API, adicione o número (ele não pode estar em uso no app WhatsApp comum ou no WhatsApp Business do celular), confirme por SMS/ligação e defina o PIN de verificação em duas etapas."],
       ["Copie os identificadores", "Em WhatsApp → Configuração da API: <b>ID do número de telefone</b> e <b>ID da conta do WhatsApp Business</b>. Em Configurações do app → Básico: <b>ID do aplicativo</b> e <b>Chave secreta do aplicativo</b>."],
       ["Gere um token permanente", "Em Configurações do negócio → Usuários → <b>Usuários do sistema</b>: crie um usuário Admin, atribua o App e a conta do WhatsApp (controle total) e gere um token <b>sem expiração</b> com as permissões <code>whatsapp_business_messaging</code> e <code>whatsapp_business_management</code>. O token temporário de 24h do painel não serve para produção."],
-      ["Preencha e salve os campos abaixo, depois clique em “Testar conexão”", "O MediCopilot valida o número e a conta direto na Meta."],
-      ["Configure o webhook no App da Meta", "Em WhatsApp → Configuração → Webhook: cole a <b>URL de callback</b> e o <b>Token de verificação</b> mostrados abaixo, clique em Verificar e salvar e assine os campos <code>messages</code> e <code>message_template_status_update</code>. Depois clique em “Assinar webhook na conta” aqui."],
+      ["Preencha e salve os dados na aba “Conexão”, depois clique em “Testar conexão”", "O MediCopilot valida o número e a conta direto na Meta."],
+      ["Configure o webhook no App da Meta", "Em WhatsApp → Configuração → Webhook: cole a <b>URL de callback</b> e o <b>Token de verificação</b> mostrados na aba “Conexão”, clique em Verificar e salvar e assine os campos <code>messages</code> e <code>message_template_status_update</code>. Depois clique em “Assinar webhook na conta”, também na aba “Conexão”."],
       ["Adicione uma forma de pagamento e publique o App", "Na conta do WhatsApp (Gerenciador do WhatsApp → Faturamento) cadastre o cartão: a Meta cobra as mensagens de modelo direto da clínica. Mude o App para o modo <b>Ativo/Live</b>."],
       ["Crie seus modelos de mensagem", "Na aba “Modelos de mensagem”, crie e envie para aprovação os modelos de lembrete, confirmação e envio de documentos."],
     ];
     return (
-      '<div class="wp-panel"><div class="wp-secao-head"><p class="wp-secao-titulo"><i class="ti ti-list-check"></i> Passo a passo na Meta</p>' +
-      '<button class="wp-guia-toggle" onclick="WPA.guia()">' + (S.guiaAberto ? "Recolher" : "Mostrar") + ' <i class="ti ti-chevron-' + (S.guiaAberto ? "up" : "down") + '"></i></button></div>' +
-      (S.guiaAberto
-        ? '<div class="wp-guia">' + passos.map(function (p) {
-            return '<div class="wp-passo"><div class="wp-passo-n"></div><div><b>' + p[0] + "</b><p>" + p[1] + "</p></div></div>";
-          }).join("") + "</div>" +
-          '<div class="wp-aviso info" style="margin:12px 0 0"><i class="ti ti-info-circle"></i><div><b>Janela de 24 horas:</b> depois que o paciente manda uma mensagem, a clínica pode responder livremente (texto, PDF, fotos) por 24h. ' +
-          "Fora dessa janela — inclusive para iniciar uma conversa — a Meta só permite <b>modelos de mensagem aprovados</b>. Por isso os avisos de consulta e o envio de documentos usam modelos.</div></div>"
-        : "") +
+      '<div class="wp-panel"><div class="wp-secao-head"><p class="wp-secao-titulo"><i class="ti ti-list-check"></i> Passo a passo na Meta</p></div>' +
+      '<div class="wp-guia">' + passos.map(function (p) {
+        return '<div class="wp-passo"><div class="wp-passo-n"></div><div><b>' + p[0] + "</b><p>" + p[1] + "</p></div></div>";
+      }).join("") + "</div>" +
+      '<div class="wp-aviso info" style="margin:12px 0 0"><i class="ti ti-info-circle"></i><div><b>Janela de 24 horas:</b> depois que o paciente manda uma mensagem, a clínica pode responder livremente (texto, PDF, fotos) por 24h. ' +
+      "Fora dessa janela — inclusive para iniciar uma conversa — a Meta só permite <b>modelos de mensagem aprovados</b>. Por isso os avisos de consulta e o envio de documentos usam modelos.</div></div>" +
       "</div>"
     );
   }
@@ -509,7 +523,7 @@
         (c.status !== "conectado" ? '<span class="wp-nota" style="margin:0">Teste a conexão antes de assinar.</span>' : "") +
         "</div></div>";
 
-    return statusConexao() + guia() + credenciais + webhook;
+    return statusConexao() + credenciais + webhook;
   }
 
   function lerCampo(id) {
@@ -562,7 +576,6 @@
       var r = await api("/api/comunicacao/conexao-acao", { acao: "testar" });
       S.conexao = await api("/api/comunicacao/conexao", null, "GET");
       S.ocupado = null;
-      S.guiaAberto = false;
       avisar("Conexão validada: " + (r.nome_verificado || "") + " " + (r.numero_exibicao || "") + ".");
     } catch (e) {
       S.conexao = await api("/api/comunicacao/conexao", null, "GET").catch(function () { return S.conexao; });
@@ -1228,7 +1241,6 @@
   window.WPA = {
     aba: function (a) { S.aba = a; S.aviso = null; render(); },
     recarregar: carregar,
-    guia: function () { S.guiaAberto = !S.guiaAberto; render(); },
     salvarConexao: function () { salvarConexao(); },
     novoVerifyToken: function () {
       if (confirm("Gerar um novo token de verificação? Será preciso atualizar o webhook no App da Meta.")) salvarConexao({ regenerar_verify_token: true });
@@ -1292,6 +1304,7 @@
 
   window.initWhatsappPacientes = function () {
     S.aviso = null;
+    S.aba = null;
     carregar();
   };
 })();

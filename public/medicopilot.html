@@ -29,9 +29,9 @@
     <script src="faturamento.js?v=2" defer></script>
     <link rel="stylesheet" href="meu-plano.css?v=4" />
     <script src="meu-plano.js?v=4" defer></script>
-    <link rel="stylesheet" href="comunicacao-whatsapp.css?v=1" />
-    <script src="comunicacao-whatsapp.js?v=1" defer></script>
-    <script src="conversas-pacientes.js?v=1" defer></script>
+    <link rel="stylesheet" href="comunicacao-whatsapp.css?v=2" />
+    <script src="comunicacao-whatsapp.js?v=2" defer></script>
+    <script src="conversas-pacientes.js?v=2" defer></script>
     <script src="plano-gate.js?v=2" defer></script>
     <script>
       window.addEventListener("DOMContentLoaded", async () => {
@@ -4286,15 +4286,10 @@
                   <div class="cfg-card-title">Minha clínica</div>
                   <div class="cfg-card-desc">Dados cadastrais, endereço e logo.</div>
                 </div>
-              </div>
-            </div>
-            <div class="cfg-group">
-              <div class="cfg-group-title">Comunicação com pacientes</div>
-              <div class="cfg-cards">
                 <div class="cfg-card" onclick="goScreen('whatsapp-pacientes')">
                   <div class="cfg-ico"><i class="ti ti-brand-whatsapp"></i></div>
-                  <div class="cfg-card-title">WhatsApp dos pacientes</div>
-                  <div class="cfg-card-desc">Conecte a API oficial da Meta, crie modelos de mensagem e configure avisos de consulta e envio de documentos.</div>
+                  <div class="cfg-card-title">Meu WhatsApp</div>
+                  <div class="cfg-card-desc">WhatsApp da clínica com os pacientes: conexão com a Meta, modelos de mensagem e avisos automáticos.</div>
                 </div>
               </div>
             </div>
@@ -6727,7 +6722,7 @@
                                                               document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
                                                               const nav=document.getElementById('nav-'+name);
                                                               if(nav)nav.classList.add('active');
-                                                              const titles={atendimentos:'Atendimentos',patients:'Pacientes',conversas:'Conversas',agenda:'Agenda',receitas:'Receitas e Atestados',protocolos:'Protocolos',questionarios:'Questionário',faturamento:'Faturamento',indicadores:'Indicadores',secretaria:'Secretária digital',anamnese:'Gerador de Anamnese',copiloto:'Copiloto de consulta','base-conhecimento':'Base de conhecimento',configuracoes:'Configurações',equipe:'Minha equipe',clinica:'Minha clínica','meu-plano':'Meu plano','whatsapp-pacientes':'WhatsApp dos pacientes','mapa-familiar':'Mapa Familiar'};
+                                                              const titles={atendimentos:'Atendimentos',patients:'Pacientes',conversas:'Conversas',agenda:'Agenda',receitas:'Receitas e Atestados',protocolos:'Protocolos',questionarios:'Questionário',faturamento:'Faturamento',indicadores:'Indicadores',secretaria:'Secretária digital',anamnese:'Gerador de Anamnese',copiloto:'Copiloto de consulta','base-conhecimento':'Base de conhecimento',configuracoes:'Configurações',equipe:'Minha equipe',clinica:'Minha clínica','meu-plano':'Meu plano','whatsapp-pacientes':'Meu WhatsApp','mapa-familiar':'Mapa Familiar'};
                                                               const pt=document.getElementById('page-title');
                                                               pt.textContent=titles[name]||'Paciente';
                                                               pt.style.cursor='';
@@ -18211,7 +18206,7 @@ let rxSelected = [];
                                                   );
                                                 }
                                                 /* Envia o PDF de verdade pelo WhatsApp da clínica (canal clínica ↔ paciente,
-                                                   Configurações > WhatsApp dos pacientes). Fora da janela de 24h o servidor
+                                                   Configurações > Meu WhatsApp). Fora da janela de 24h o servidor
                                                    usa o modelo de "envio de documento" escolhido nas automações. O próprio
                                                    servidor marca o documento como enviado. */
                                                 async function executarForcarEnvio(id) {

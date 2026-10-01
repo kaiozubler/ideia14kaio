@@ -2,7 +2,7 @@
 //
 // Lê as conversas/mensagens direto do Supabase (RLS de dono) e envia tudo
 // pela rota /api/comunicacao/enviar, que fala com a Cloud API da Meta usando
-// as credenciais de Configurações > WhatsApp dos pacientes. Não tem relação
+// as credenciais de Configurações > Meu WhatsApp. Não tem relação
 // com o WhatsApp do assistente do app (número único do MediCopilot).
 //
 // Regras da Meta refletidas na tela:
@@ -324,7 +324,7 @@
         (CV.conexao && CV.conexao.configurado && conectado()
           ? "Selecione uma conversa à esquerda ou clique em <b>+</b> para chamar um paciente com um modelo aprovado."
           : "Conecte o WhatsApp Business da clínica (API oficial da Meta) para conversar com os pacientes, avisar sobre consultas e enviar receitas.<br><br>" +
-            '<button class="cv-assume" onclick="goScreen(\'whatsapp-pacientes\')">Configurar WhatsApp dos pacientes</button>') +
+            '<button class="cv-assume" onclick="goScreen(\'whatsapp-pacientes\')">Configurar Meu WhatsApp</button>') +
         "</div>";
       renderJanela(null);
       if (input) input.disabled = true;
@@ -740,7 +740,7 @@
     var m = CV.modelos.find(function (x) { return x.finalidade === "lembrete_consulta"; }) ||
       CV.modelos.find(function (x) { return x.finalidade === "confirmacao_agendamento"; });
     if (!m) {
-      toast("Nenhum modelo aprovado de lembrete/confirmação. Crie em Configurações > WhatsApp dos pacientes.", "error");
+      toast("Nenhum modelo aprovado de lembrete/confirmação. Crie em Configurações > Meu WhatsApp.", "error");
       return;
     }
     cvAbrirModelo(m.id, { conversa_id: c.id, paciente_id: c.paciente_id }, agendamentoId);

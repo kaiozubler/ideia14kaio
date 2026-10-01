@@ -390,7 +390,7 @@ export async function enviarParaPaciente(db: Db, p: EnvioPedido): Promise<EnvioR
       if (!modelo || modelo.cabecalho?.tipo !== "DOCUMENT") {
         throw new ConfiguracaoError(
           "janela_fechada",
-          "O paciente não conversa há mais de 24h. Para enviar documentos fora da janela, escolha um modelo aprovado com cabeçalho de DOCUMENTO em Configurações > WhatsApp dos pacientes > Automações.",
+          "O paciente não conversa há mais de 24h. Para enviar documentos fora da janela, escolha um modelo aprovado com cabeçalho de DOCUMENTO em Configurações > Meu WhatsApp > Automações.",
         );
       }
       const valores = await preencherVariaveis(db, p.idMedico, modelo, ctx, p.valores);

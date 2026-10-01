@@ -163,13 +163,13 @@ export async function exigirConexaoAtiva(db: Db, idMedico: string): Promise<Cone
   if (!c || !c.phone_number_id || !c.accessToken) {
     throw new ConfiguracaoError(
       "sem_conexao",
-      "WhatsApp dos pacientes não configurado. Acesse Configurações > WhatsApp dos pacientes.",
+      "Meu WhatsApp não configurado. Acesse Configurações > Meu WhatsApp.",
     );
   }
   if (c.status !== "conectado") {
     throw new ConfiguracaoError(
       "conexao_nao_validada",
-      'A conexão com a Meta ainda não foi validada. Use "Testar conexão" em Configurações > WhatsApp dos pacientes.',
+      'A conexão com a Meta ainda não foi validada. Use "Testar conexão" em Configurações > Meu WhatsApp.',
     );
   }
   return c;

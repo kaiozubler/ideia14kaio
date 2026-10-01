@@ -5,7 +5,7 @@ import { createFileRoute } from "@tanstack/react-router";
  *
  * Cada clínica cadastra no PRÓPRIO App da Meta a URL
  *   /api/public/webhooks/whatsapp-clinica/<webhook_chave>
- * com o verify token mostrado em Configurações > WhatsApp dos pacientes.
+ * com o verify token mostrado em Configurações > Meu WhatsApp.
  * A chave na URL identifica a conexão (a verificação GET da Meta não traz
  * phone_number_id); o POST é validado com o App Secret DAQUELA clínica.
  *
