@@ -29,6 +29,9 @@
     <script src="faturamento.js?v=2" defer></script>
     <link rel="stylesheet" href="meu-plano.css?v=4" />
     <script src="meu-plano.js?v=4" defer></script>
+    <link rel="stylesheet" href="comunicacao-whatsapp.css?v=1" />
+    <script src="comunicacao-whatsapp.js?v=1" defer></script>
+    <script src="conversas-pacientes.js?v=1" defer></script>
     <script src="plano-gate.js?v=2" defer></script>
     <script>
       window.addEventListener("DOMContentLoaded", async () => {
@@ -3671,7 +3674,7 @@
                 <div class="cv-head">
                   <div style="display:flex;justify-content:space-between;align-items:center">
                     <h2>Atendimentos</h2>
-                    <button class="cv-newbtn" title="Novo atendimento"><i class="ti ti-plus"></i></button>
+                    <button class="cv-newbtn" title="Nova conversa com paciente" onclick="cvNovaConversa()"><i class="ti ti-plus"></i></button>
                   </div>
                   <div class="cv-search-row">
                     <input id="cv-search" type="text" placeholder="Buscar paciente..." oninput="renderConversas()" />
@@ -3680,10 +3683,10 @@
                     </button>
                   </div>
                 </div>
-                <div class="cv-tabs">
-                  <button class="active">Meus</button>
-                  <button>Todos</button>
-                  <button>Finalizados</button>
+                <div class="cv-tabs" id="cv-tabs">
+                  <button class="active" data-aba="abertas" onclick="cvTab('abertas')">Abertas</button>
+                  <button data-aba="nao_lidas" onclick="cvTab('nao_lidas')">Não lidas</button>
+                  <button data-aba="finalizadas" onclick="cvTab('finalizadas')">Finalizadas</button>
                 </div>
                 <div class="cv-list" id="cv-list"></div>
                 <div class="cv-foot" id="cv-foot">0 atendimentos</div>
@@ -3699,19 +3702,18 @@
                         id="cv-pdot"
                         style="width:8px;height:8px;background:#22c55e;border-radius:50%;display:inline-block"
                       ></span>
-                      <span id="cv-ponline" style="font-size:11px;color:#16a34a;font-weight:500">Online</span>
+                      <span id="cv-ponline" style="font-size:11px;color:#16a34a;font-weight:500"></span>
                     </div>
-                    <div class="sub">Última mensagem às <span id="cv-phora">10:15</span></div>
+                    <div class="sub"><span id="cv-ptel"></span> · Última mensagem <span id="cv-phora">—</span></div>
                   </div>
                   <div class="cv-actions">
-                    <button class="cv-iconbtn" title="Ligar"><i class="ti ti-phone"></i></button>
-                    <button class="cv-iconbtn" title="Videochamada"><i class="ti ti-video"></i></button>
-                    <button class="cv-assume">Assumir</button>
-                    <button class="cv-iconbtn" title="Acessar cadastro"><i class="ti ti-file-text"></i></button>
+                    <button class="cv-iconbtn" title="Ligar" onclick="cvLigar()"><i class="ti ti-phone"></i></button>
+                    <button class="cv-assume" onclick="cvAssumir()">Assumir</button>
+                    <button class="cv-iconbtn" title="Acessar cadastro" onclick="cvAbrirCadastro()"><i class="ti ti-file-text"></i></button>
                     <button class="cv-iconbtn" title="Transferir" onclick="cvOpenTransfer()">
                       <i class="ti ti-arrows-left-right"></i>
                     </button>
-                    <button class="cv-iconbtn" title="Finalizar"><i class="ti ti-x"></i></button>
+                    <button class="cv-iconbtn" title="Finalizar atendimento" onclick="cvFinalizar()"><i class="ti ti-x"></i></button>
                     <button class="cv-iconbtn" title="Dados do paciente" onclick="cvToggleRight()">
                       <i class="ti ti-menu-2"></i>
                     </button>
@@ -3720,6 +3722,7 @@
                 <div class="cv-msgs" id="cv-msgs">
                   <div class="cv-day">Hoje</div>
                 </div>
+                <div class="cv-janela" id="cv-janela" style="display:none"></div>
                 <div class="cv-bar">
                   <button class="modelos-btn" onclick="cvToggleModelos(event)">
                     <i class="ti ti-bolt" style="color:#eab308"></i> Modelos
@@ -3751,7 +3754,8 @@
                     placeholder="Digite sua mensagem..."
                     onkeydown="if(event.key==='Enter')cvSend()"
                   />
-                  <button class="ic" title="Anexar"><i class="ti ti-paperclip"></i></button>
+                  <button class="ic" title="Enviar arquivo (PDF, foto)" onclick="cvAnexar()"><i class="ti ti-paperclip"></i></button>
+                  <input type="file" id="cv-anexo" accept="application/pdf,image/jpeg,image/png" style="display:none" onchange="cvArquivoEscolhido(this)" />
                   <button class="ic" title="Emoji"><i class="ti ti-mood-smile"></i></button>
                   <button class="send" onclick="cvSend()"><i class="ti ti-send"></i></button>
                 </div>
@@ -3771,14 +3775,14 @@
                     <div>
                       <div class="info"><b id="cv-rnome">Marcio Pereira</b><span id="cv-ridade">42 anos</span></div>
                       <div style="display:flex;align-items:center;gap:4px;margin-top:3px">
-                        <span style="width:7px;height:7px;background:#22c55e;border-radius:50%"></span
-                        ><span style="font-size:11px;color:#16a34a;font-weight:500">Online</span>
+                        <span id="cv-rjanela" style="font-size:11px;color:#6b7280;font-weight:500"></span>
                       </div>
                     </div>
                   </div>
-                  <div class="data"><i class="ti ti-id"></i> <b>CPF:</b>&nbsp;123.456.789-00</div>
-                  <div class="data"><i class="ti ti-phone"></i> <b>Tel:</b>&nbsp;(47) 99999-0000</div>
-                  <div class="data"><i class="ti ti-mail"></i> <b>Email:</b>&nbsp;marcio@email.com</div>
+                  <div class="data"><i class="ti ti-id"></i> <b>CPF:</b>&nbsp;<span id="cv-rcpf">—</span></div>
+                  <div class="data"><i class="ti ti-phone"></i> <b>Tel:</b>&nbsp;<span id="cv-rtel">—</span></div>
+                  <div class="data"><i class="ti ti-mail"></i> <b>Email:</b>&nbsp;<span id="cv-remail">—</span></div>
+                  <div class="data" id="cv-rvinculo" style="display:none"></div>
                 </div>
                 <div class="cv-r-section">
                   <h4>
@@ -3803,31 +3807,12 @@
                   </div>
                 </div>
                 <div class="cv-r-section">
-                  <h4><i class="ti ti-calendar"></i> Agenda</h4>
-                  <div style="text-align:center;font-size:11px;color:#6b7280;margin-bottom:6px">
-                    de 14/05/2025 a 13/06/2025
-                  </div>
-                  <div class="cv-ag">
-                    <div>
-                      <div style="color:#6b7280">20/05 (Ter)</div>
-                      <div style="font-weight:500;color:#111827">09:00 - Consulta</div>
-                    </div>
-                    <span class="pill">Confirmado</span>
-                  </div>
-                  <div class="cv-ag">
-                    <div>
-                      <div style="color:#6b7280">28/05 (Qua)</div>
-                      <div style="font-weight:500;color:#111827">15:30 - Retorno</div>
-                    </div>
-                    <span class="pill">Confirmado</span>
-                  </div>
-                  <div class="cv-btn-row">
-                    <button class="cv-btn-blue">Agendar (IA)</button
-                    ><button class="cv-btn-blue">Confirmar agenda (IA)</button>
-                  </div>
-                  <a href="#" style="display:inline-block;margin-top:8px;font-size:11px;color:#2563eb;font-weight:500"
-                    >Ver agenda completa →</a
-                  >
+                  <h4><i class="ti ti-calendar"></i> Próximas consultas</h4>
+                  <div id="cv-r-agenda" style="font-size:11px;color:#6b7280">—</div>
+                </div>
+                <div class="cv-r-section">
+                  <h4><i class="ti ti-file-certificate"></i> Documentos do paciente</h4>
+                  <div id="cv-r-docs" style="font-size:11px;color:#6b7280">—</div>
                 </div>
                 <div class="cv-ia-box">
                   <h4><i class="ti ti-brain"></i> Apoio da IA</h4>
@@ -3852,7 +3837,7 @@
                   </button>
                 </h3>
                 <div id="cv-equipe"></div>
-                <div class="cv-modal-actions"><button onclick="cvCloseTransfer()">Cancelar</button></div>
+                <div class="cv-modal-actions"><button onclick="cvCloseTransfer()">Cancelar</button><button class="primary" onclick="cvDoTransfer()">Transferir</button></div>
               </div>
             </div>
 
@@ -4304,6 +4289,16 @@
               </div>
             </div>
             <div class="cfg-group">
+              <div class="cfg-group-title">Comunicação com pacientes</div>
+              <div class="cfg-cards">
+                <div class="cfg-card" onclick="goScreen('whatsapp-pacientes')">
+                  <div class="cfg-ico"><i class="ti ti-brand-whatsapp"></i></div>
+                  <div class="cfg-card-title">WhatsApp dos pacientes</div>
+                  <div class="cfg-card-desc">Conecte a API oficial da Meta, crie modelos de mensagem e configure avisos de consulta e envio de documentos.</div>
+                </div>
+              </div>
+            </div>
+            <div class="cfg-group">
               <div class="cfg-group-title">Assinatura</div>
               <div class="cfg-cards">
                 <div class="cfg-card" onclick="goScreen('meu-plano')">
@@ -4321,6 +4316,8 @@
           <div id="s-questionarios" style="display:none"></div>
           <div id="s-faturamento" style="display:none"></div>
           <div id="s-meu-plano" style="display:none"></div>
+          <!-- SCREEN: WHATSAPP DOS PACIENTES (canal clínica ↔ paciente — comunicacao-whatsapp.js) -->
+          <div id="s-whatsapp-pacientes" style="display:none"></div>
 
           <!-- SCREEN: MINHA EQUIPE -->
           <div id="s-equipe" style="display:none"></div>
@@ -6724,13 +6721,13 @@
                                                                 const el=document.getElementById('s-'+s);
                                                                 if(el)el.style.display='none';
                                                               });
-                                                              ['conversas','protocolos','questionarios','faturamento','meu-plano'].forEach(s=>{const el=document.getElementById('s-'+s);if(el)el.style.display='none';});
+                                                              ['conversas','protocolos','questionarios','faturamento','meu-plano','whatsapp-pacientes'].forEach(s=>{const el=document.getElementById('s-'+s);if(el)el.style.display='none';});
                                                               const el=document.getElementById('s-'+name);
                                                               if(el)el.style.display=name==='patient-detail'?'flex':'block';
                                                               document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
                                                               const nav=document.getElementById('nav-'+name);
                                                               if(nav)nav.classList.add('active');
-                                                              const titles={atendimentos:'Atendimentos',patients:'Pacientes',conversas:'Conversas',agenda:'Agenda',receitas:'Receitas e Atestados',protocolos:'Protocolos',questionarios:'Questionário',faturamento:'Faturamento',indicadores:'Indicadores',secretaria:'Secretária digital',anamnese:'Gerador de Anamnese',copiloto:'Copiloto de consulta','base-conhecimento':'Base de conhecimento',configuracoes:'Configurações',equipe:'Minha equipe',clinica:'Minha clínica','meu-plano':'Meu plano','mapa-familiar':'Mapa Familiar'};
+                                                              const titles={atendimentos:'Atendimentos',patients:'Pacientes',conversas:'Conversas',agenda:'Agenda',receitas:'Receitas e Atestados',protocolos:'Protocolos',questionarios:'Questionário',faturamento:'Faturamento',indicadores:'Indicadores',secretaria:'Secretária digital',anamnese:'Gerador de Anamnese',copiloto:'Copiloto de consulta','base-conhecimento':'Base de conhecimento',configuracoes:'Configurações',equipe:'Minha equipe',clinica:'Minha clínica','meu-plano':'Meu plano','whatsapp-pacientes':'WhatsApp dos pacientes','mapa-familiar':'Mapa Familiar'};
                                                               const pt=document.getElementById('page-title');
                                                               pt.textContent=titles[name]||'Paciente';
                                                               pt.style.cursor='';
@@ -6750,6 +6747,8 @@
                                                               if(name==='questionarios'&&typeof initQuestionarios==='function')initQuestionarios();
                                                               if(name==='faturamento'&&typeof initFaturamento==='function')initFaturamento();
                                                               if(name==='meu-plano'&&typeof initMeuPlano==='function')initMeuPlano();
+                                                              if(name==='whatsapp-pacientes'&&typeof initWhatsappPacientes==='function')initWhatsappPacientes();
+                                                              if(name!=='conversas'&&typeof pararConversas==='function')pararConversas();
                                                               if(name==='base-conhecimento'&&typeof initBaseConhecimento==='function')initBaseConhecimento();
                                                               if(['secretaria','anamnese','copiloto','base-conhecimento'].includes(name)){
                                                                 const g=document.getElementById('grp-ia');if(g)g.classList.add('open');
@@ -18211,16 +18210,33 @@ let rxSelected = [];
                                                     () => executarForcarEnvio(id)
                                                   );
                                                 }
+                                                /* Envia o PDF de verdade pelo WhatsApp da clínica (canal clínica ↔ paciente,
+                                                   Configurações > WhatsApp dos pacientes). Fora da janela de 24h o servidor
+                                                   usa o modelo de "envio de documento" escolhido nas automações. O próprio
+                                                   servidor marca o documento como enviado. */
                                                 async function executarForcarEnvio(id) {
                                                   const d = documentosGerados.find(x => x.id === id);
                                                   if (!d) return;
-                                                  const { data: updated, error } = await sb.from('documentos_paciente')
-                                                    .update({ status: 'enviado', canal_envio: 'whatsapp', enviado_em: new Date().toISOString() })
-                                                    .eq('id', id).select('*').single();
-                                                  if (error) { showToast && showToast('Erro ao enviar: ' + error.message, 'error'); return; }
-                                                  Object.assign(d, updated);
-                                                  renderReceitasList();
-                                                  showToast && showToast('Documento enviado via WhatsApp', 'success');
+                                                  if (!d.arquivo_path) { showToast && showToast('Este documento não possui PDF para enviar', 'error'); return; }
+                                                  try {
+                                                    const { data: sess } = await sb.auth.getSession();
+                                                    const token = sess?.session?.access_token;
+                                                    if (!token) throw new Error('Sessão expirada');
+                                                    showToast && showToast('Enviando pelo WhatsApp da clínica…');
+                                                    const resp = await fetch('/api/comunicacao/enviar', {
+                                                      method: 'POST',
+                                                      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                                                      body: JSON.stringify({ tipo: 'documento', documento_id: id }),
+                                                    });
+                                                    const j = await resp.json().catch(() => ({}));
+                                                    if (!resp.ok) throw new Error(j.message || j.error || 'Falha no envio');
+                                                    const { data: atual } = await sb.from('documentos_paciente').select('*').eq('id', id).single();
+                                                    if (atual) Object.assign(d, atual);
+                                                    renderReceitasList();
+                                                    showToast && showToast(j.usou_modelo ? 'Documento enviado via WhatsApp (modelo de documento)' : 'Documento enviado via WhatsApp', 'success');
+                                                  } catch (e) {
+                                                    showToast && showToast('Não foi possível enviar: ' + (e.message || e), 'error');
+                                                  }
                                                 }
 
                                                 /* Salva no histórico (upload do PDF + linha na tabela) qualquer documento
@@ -19368,115 +19384,11 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                             window.addEventListener('beforeunload',saveAtendDraft);
                                                             document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveAtendDraft();});
 
-                                                            /* ========== CONVERSAS (WhatsApp) ========== */
-                                                            const CV_DATA={
-                                                              conversas:[
-                                                                {id:1,paciente:'Marcio Pereira',ultimaMensagem:'Olá, preciso marcar uma consulta',hora:'10:15',responsavel:'Dra. Ana',avatar:'MP',online:true,mensagensNaoLidas:3,idade:42,cpf:'123.456.789-00',tel:'(47) 99999-0000',email:'marcio@email.com'},
-                                                                {id:2,paciente:'João Silva',ultimaMensagem:'Agradeço a consulta de hoje',hora:'09:45',responsavel:'Dr. Carlos',avatar:'JS',online:false,mensagensNaoLidas:0,idade:35,cpf:'987.654.321-00',tel:'(47) 98888-1111',email:'joao@email.com'},
-                                                                {id:3,paciente:'Maria Santos',ultimaMensagem:'Qual é o valor da consulta?',hora:'09:20',responsavel:'Secretária',avatar:'MS',online:true,mensagensNaoLidas:5,idade:28,cpf:'555.666.777-00',tel:'(47) 97777-2222',email:'maria@email.com'}
-                                                              ],
-                                                              modelos:[
-                                                                'Olá! Confirmo sua consulta para amanhã. Até lá! 😊',
-                                                                'Seu agendamento foi confirmado. Aguardamos você!',
-                                                                'Você possui um boleto em aberto. Deseja regularizar?',
-                                                                'Lembrete: sua consulta é amanhã às {{hora}}. Confirma?',
-                                                                'Olá! Como posso ajudar você hoje?',
-                                                                'Seu exame está disponível para retirada.',
-                                                                'Precisa remarcar sua consulta? Estamos à disposição!'
-                                                              ],
-                                                              equipe:[
-                                                                {id:1,nome:'Dra. Ana Silva',esp:'Clínica Geral'},
-                                                                {id:2,nome:'Dr. Carlos Santos',esp:'Cardiologia'},
-                                                                {id:3,nome:'Dra. Maria Costa',esp:'Dermatologia'}
-                                                              ],
-                                                              mensagensPorConversa:{
-                                                                1:[{id:1,autor:'them',texto:'Olá, preciso marcar uma consulta',hora:'10:15'},{id:2,autor:'me',texto:'Olá! Tudo bem? Claro, vamos agendar sua consulta.',hora:'10:16'},{id:3,autor:'them',texto:'Gostaria de agendar para a próxima semana se possível',hora:'10:17'}],
-                                                                2:[{id:1,autor:'them',texto:'Agradeço a consulta de hoje',hora:'09:45'}],
-                                                                3:[{id:1,autor:'them',texto:'Qual é o valor da consulta?',hora:'09:20'}]
-                                                              },
-                                                              selecionada:1,
-                                                              rightOpen:true
-                                                            };
-                                                            let cvInitDone=false;
-                                                            function initConversas(){
-                                                              renderConversas();
-                                                              renderCvChat();
-                                                              if(!cvInitDone){
-                                                                const m=document.getElementById('cv-modelos-list');
-                                                                if(m)m.innerHTML=CV_DATA.modelos.map(t=>`<button class="opt" onclick="cvUseModelo(this)">${t.replace(/</g,'&lt;')}</button>`).join('');
-                                                                const eq=document.getElementById('cv-equipe');
-                                                                if(eq)eq.innerHTML=CV_DATA.equipe.map(p=>`<button class="cv-equipe-item" onclick="cvDoTransfer('${p.nome}')"><b>${p.nome}</b><span>${p.esp}</span></button>`).join('');
-                                                                document.addEventListener('click',cvDocClick);
-                                                                cvInitDone=true;
-                                                              }
-                                                            }
-                                                            function cvDocClick(e){
-                                                              const mp=document.getElementById('cv-modelos-pop'),ip=document.getElementById('cv-ia-pop');
-                                                              if(mp&&mp.style.display!=='none'&&!e.target.closest('#cv-modelos-pop')&&!e.target.closest('.modelos-btn'))mp.style.display='none';
-                                                              if(ip&&ip.style.display!=='none'&&!e.target.closest('#cv-ia-pop')&&!e.target.closest('.ia-btn'))ip.style.display='none';
-                                                            }
-                                                            function renderConversas(){
-                                                              const q=(document.getElementById('cv-search')?.value||'').toLowerCase();
-                                                              const list=CV_DATA.conversas.filter(c=>!q||c.paciente.toLowerCase().includes(q));
-                                                              const el=document.getElementById('cv-list');if(!el)return;
-                                                              el.innerHTML=list.map(c=>`
-                                                                <div class="cv-item ${c.id===CV_DATA.selecionada?'active':''}" onclick="cvSelect(${c.id})">
-                                                                  <div class="cv-avatar">${c.avatar}</div>
-                                                                  <div class="cv-item-body">
-                                                                    <div class="cv-item-top">
-                                                                      <span class="cv-name">${c.paciente}</span>
-                                                                      ${c.mensagensNaoLidas>0?`<span class="cv-badge">${c.mensagensNaoLidas}</span>`:''}
-                                                                    </div>
-                                                                    <div class="cv-last">${c.ultimaMensagem}</div>
-                                                                    <div class="cv-meta"><span>${c.hora}</span><span>${c.responsavel}</span></div>
-                                                                  </div>
-                                                                </div>`).join('');
-                                                              document.getElementById('cv-foot').textContent=`${list.length} atendimento${list.length===1?'':'s'}`;
-                                                            }
-                                                            function cvSelect(id){
-                                                              CV_DATA.selecionada=id;
-                                                              const c=CV_DATA.conversas.find(x=>x.id===id);if(c)c.mensagensNaoLidas=0;
-                                                              renderConversas();renderCvChat();
-                                                            }
-                                                            function renderCvChat(){
-                                                              const c=CV_DATA.conversas.find(x=>x.id===CV_DATA.selecionada);if(!c)return;
-                                                              document.getElementById('cv-pname').textContent=c.paciente;
-                                                              document.getElementById('cv-phora').textContent=c.hora;
-                                                              document.getElementById('cv-pdot').style.display=c.online?'inline-block':'none';
-                                                              document.getElementById('cv-ponline').style.display=c.online?'inline':'none';
-                                                              document.getElementById('cv-rav').textContent=c.avatar;
-                                                              document.getElementById('cv-rnome').textContent=c.paciente;
-                                                              document.getElementById('cv-ridade').textContent=c.idade+' anos';
-                                                              const msgs=CV_DATA.mensagensPorConversa[c.id]||[];
-                                                              const box=document.getElementById('cv-msgs');
-                                                              box.innerHTML=`<div class="cv-day">Hoje</div>`+msgs.map(m=>`
-                                                                <div class="cv-msg ${m.autor==='me'?'me':'them'}">
-                                                                  <div class="cv-bub">
-                                                                    <div>${m.texto.replace(/</g,'&lt;')}</div>
-                                                                    <div class="time">${m.hora}${m.autor==='me'?' <i class="ti ti-checks"></i>':''}</div>
-                                                                  </div>
-                                                                </div>`).join('');
-                                                              box.scrollTop=box.scrollHeight;
-                                                            }
-                                                            function cvSend(){
-                                                              const i=document.getElementById('cv-input');const t=(i.value||'').trim();if(!t)return;
-                                                              const c=CV_DATA.conversas.find(x=>x.id===CV_DATA.selecionada);if(!c)return;
-                                                              const arr=CV_DATA.mensagensPorConversa[c.id]=CV_DATA.mensagensPorConversa[c.id]||[];
-                                                              const h=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-                                                              arr.push({id:arr.length+1,autor:'me',texto:t,hora:h});
-                                                              c.ultimaMensagem=t;c.hora=h;
-                                                              i.value='';renderConversas();renderCvChat();
-                                                            }
-                                                            function cvUseModelo(btn){document.getElementById('cv-input').value=btn.textContent;document.getElementById('cv-modelos-pop').style.display='none';document.getElementById('cv-input').focus();}
-                                                            function cvToggleModelos(e){e&&e.stopPropagation();const p=document.getElementById('cv-modelos-pop');const ip=document.getElementById('cv-ia-pop');p.style.display=p.style.display==='none'?'block':'none';ip.style.display='none';}
-                                                            function cvToggleIa(e){e&&e.stopPropagation();const p=document.getElementById('cv-ia-pop');const m=document.getElementById('cv-modelos-pop');p.style.display=p.style.display==='none'?'flex':'none';m.style.display='none';const ch=document.getElementById('cv-ia-chev');if(ch)ch.style.transform=p.style.display==='none'?'':'rotate(180deg)';}
-                                                            function cvCloseIa(){document.getElementById('cv-ia-pop').style.display='none';const ch=document.getElementById('cv-ia-chev');if(ch)ch.style.transform='';}
-                                                            function cvToggleRight(){const r=document.getElementById('cv-col-right');r.classList.toggle('hidden');}
-                                                            function cvOpenTransfer(){document.getElementById('cv-modal-transfer').classList.add('open');}
-                                                            function cvCloseTransfer(){document.getElementById('cv-modal-transfer').classList.remove('open');}
-                                                            function cvDoTransfer(nome){const c=CV_DATA.conversas.find(x=>x.id===CV_DATA.selecionada);if(c)c.responsavel=nome;cvCloseTransfer();renderConversas();}
-                                                            function cvOpenFiltros(){document.getElementById('cv-modal-filtros').classList.add('open');}
-                                                            function cvCloseFiltros(){document.getElementById('cv-modal-filtros').classList.remove('open');}
+                                                            /* ========== CONVERSAS (WhatsApp clínica ↔ paciente) ==========
+                                                               Lógica em conversas-pacientes.js (dados reais de
+                                                               comunicacao_whatsapp_conversas/mensagens, envio pela API
+                                                               oficial da Meta configurada em Configurações > WhatsApp
+                                                               dos pacientes). Define initConversas/renderConversas/cv*. */
 
                                                             /* ========== AGENDA ========== */
                                                             const AG_DOCTORS=[
