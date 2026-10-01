@@ -1,4 +1,5 @@
 -- Canal de comunicação CLÍNICA ↔ PACIENTE pelo WhatsApp (tela Conversas).
+-- Idempotente: pode ser executado de novo se uma tentativa anterior parou no meio.
 --
 -- NÃO confundir com os canais que já existem:
 --  * assistente-medico-webhook.ts — número ÚNICO do app, usado pelo MÉDICO
@@ -34,8 +35,11 @@ CREATE TABLE IF NOT EXISTS public.comunicacao_whatsapp_conexoes (
   access_token_cifrado text,
   app_secret_cifrado text,
   verify_token text not null default replace(gen_random_uuid()::text, '-', ''),
+  -- As validações por regex deste arquivo evitam o caractere cifrão de
+  -- propósito: executores de SQL que dividem o script no cliente o confundem
+  -- com dollar-quoting e descartam comandos inteiros.
   graph_api_version text not null default 'v23.0'
-    check (graph_api_version ~ '^v\d{2}\.\d$'),
+    check (length(graph_api_version) = 5 and graph_api_version ~ '^v[0-9]{2}[.][0-9]'),
   -- Dados lidos da própria Meta no "Testar conexão"
   numero_exibicao text,
   nome_verificado text,
@@ -55,6 +59,7 @@ CREATE TABLE IF NOT EXISTS public.comunicacao_whatsapp_conexoes (
 
 GRANT ALL ON public.comunicacao_whatsapp_conexoes TO service_role;
 ALTER TABLE public.comunicacao_whatsapp_conexoes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "comunicacao_whatsapp_conexoes server only" ON public.comunicacao_whatsapp_conexoes;
 CREATE POLICY "comunicacao_whatsapp_conexoes server only"
   ON public.comunicacao_whatsapp_conexoes
   FOR ALL TO authenticated
@@ -82,7 +87,7 @@ CREATE TABLE IF NOT EXISTS public.comunicacao_whatsapp_modelos (
   id uuid primary key default gen_random_uuid(),
   id_medico uuid not null references auth.users(id) on delete cascade,
   meta_template_id text,
-  nome text not null check (nome ~ '^[a-z0-9_]{1,512}$'),
+  nome text not null check (length(nome) between 1 and 512 and nome !~ '[^a-z0-9_]'),
   idioma text not null default 'pt_BR',
   categoria text not null default 'UTILITY'
     check (categoria in ('UTILITY', 'MARKETING', 'AUTHENTICATION')),
@@ -111,6 +116,7 @@ CREATE INDEX IF NOT EXISTS comunicacao_whatsapp_modelos_medico_idx
 GRANT SELECT ON public.comunicacao_whatsapp_modelos TO authenticated;
 GRANT ALL ON public.comunicacao_whatsapp_modelos TO service_role;
 ALTER TABLE public.comunicacao_whatsapp_modelos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Medico le seus modelos de WhatsApp" ON public.comunicacao_whatsapp_modelos;
 CREATE POLICY "Medico le seus modelos de WhatsApp"
   ON public.comunicacao_whatsapp_modelos
   FOR SELECT TO authenticated
@@ -129,7 +135,7 @@ CREATE TABLE IF NOT EXISTS public.comunicacao_whatsapp_conversas (
   id uuid primary key default gen_random_uuid(),
   id_medico uuid not null references auth.users(id) on delete cascade,
   paciente_id uuid references public.pacientes(paciente_id) on delete set null,
-  telefone text not null check (telefone ~ '^\d{8,15}$'),
+  telefone text not null check (length(telefone) between 8 and 15 and telefone !~ '[^0-9]'),
   nome_contato text,
   ultima_mensagem text,
   ultima_mensagem_em timestamptz,
@@ -151,10 +157,12 @@ ALTER TABLE public.comunicacao_whatsapp_conversas ENABLE ROW LEVEL SECURITY;
 -- Leitura e ajustes de atendimento (marcar como lida, responsável,
 -- finalizar) direto pelo navegador; criar conversa/mensagem só pelo
 -- servidor, que é quem fala com a Meta.
+DROP POLICY IF EXISTS "Medico le suas conversas de WhatsApp" ON public.comunicacao_whatsapp_conversas;
 CREATE POLICY "Medico le suas conversas de WhatsApp"
   ON public.comunicacao_whatsapp_conversas
   FOR SELECT TO authenticated
   USING (auth.uid() = id_medico);
+DROP POLICY IF EXISTS "Medico atualiza suas conversas de WhatsApp" ON public.comunicacao_whatsapp_conversas;
 CREATE POLICY "Medico atualiza suas conversas de WhatsApp"
   ON public.comunicacao_whatsapp_conversas
   FOR UPDATE TO authenticated
@@ -199,6 +207,7 @@ CREATE INDEX IF NOT EXISTS comunicacao_whatsapp_mensagens_conversa_idx
 GRANT SELECT ON public.comunicacao_whatsapp_mensagens TO authenticated;
 GRANT ALL ON public.comunicacao_whatsapp_mensagens TO service_role;
 ALTER TABLE public.comunicacao_whatsapp_mensagens ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Medico le suas mensagens de WhatsApp" ON public.comunicacao_whatsapp_mensagens;
 CREATE POLICY "Medico le suas mensagens de WhatsApp"
   ON public.comunicacao_whatsapp_mensagens
   FOR SELECT TO authenticated
@@ -225,6 +234,7 @@ CREATE TABLE IF NOT EXISTS public.comunicacao_whatsapp_automacoes (
 GRANT SELECT, INSERT, UPDATE ON public.comunicacao_whatsapp_automacoes TO authenticated;
 GRANT ALL ON public.comunicacao_whatsapp_automacoes TO service_role;
 ALTER TABLE public.comunicacao_whatsapp_automacoes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Medico gerencia suas automacoes de WhatsApp" ON public.comunicacao_whatsapp_automacoes;
 CREATE POLICY "Medico gerencia suas automacoes de WhatsApp"
   ON public.comunicacao_whatsapp_automacoes
   FOR ALL TO authenticated
@@ -253,6 +263,7 @@ CREATE TABLE IF NOT EXISTS public.comunicacao_whatsapp_envios_automaticos (
 
 GRANT ALL ON public.comunicacao_whatsapp_envios_automaticos TO service_role;
 ALTER TABLE public.comunicacao_whatsapp_envios_automaticos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "comunicacao_whatsapp_envios_automaticos server only" ON public.comunicacao_whatsapp_envios_automaticos;
 CREATE POLICY "comunicacao_whatsapp_envios_automaticos server only"
   ON public.comunicacao_whatsapp_envios_automaticos
   FOR ALL TO authenticated
