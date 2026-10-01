@@ -1,0 +1,794 @@
+// IA do Studio de protocolos (public/protocolo-studio.html): transforma um PDF
+// (PCDT, diretriz, artigo) e/ou texto do médico no GRAFO do Studio — nós
+// Admissão/Exame/Medicamento/Consulta/Condição/Evento ligados por arestas com
+// lapso em dias.
+//
+// Antes o prompt ficava no navegador e a resposta da IA ia direto para o
+// canvas: nós sem vínculo com o catálogo, referências quebradas (cláusula
+// apontando para nó inexistente, aresta para ramo que não existe) e limite de
+// ~40 nós. Aqui o prompt é do servidor, voltado a PCDT, e tudo que volta passa
+// por normalização/validação e pelo cruzamento com TUSS/substâncias. O que não
+// dá para corrigir sozinho vira pendência de revisão.
+
+import {
+  ErroGeracaoProtocolo,
+  GATEWAY_URL,
+  MAX_TOKENS,
+  MODEL,
+  emLotes,
+  normCid,
+  normKey,
+  num,
+  parseJsonStrict,
+  similaridade,
+  str,
+  strList,
+} from "./gerar.server";
+
+export type TipoNo = "Admissao" | "Exame" | "Medicamento" | "Consulta" | "Condicao" | "Evento";
+
+export type Clausula = {
+  sourceKind: "exame" | "medicamento" | "paciente";
+  sourceLocalId?: string | null;
+  conector: "E" | "OU" | null;
+  campo?: "numero" | "texto" | "achado";
+  operador?: string;
+  numero?: string;
+  numero_min?: string;
+  numero_max?: string;
+  texto?: string;
+  conceito?: string;
+  presente?: boolean;
+  estado?: "em_uso" | "suspenso";
+  variavel?: string;
+  valor?: string;
+};
+
+export type Esquema = {
+  populacao: string;
+  dose: string;
+  via: string;
+  posologia: string;
+  duracao: string;
+  dose_maxima: string;
+};
+
+export type NoEstudio = {
+  localId: string;
+  type: TipoNo;
+  name: string;
+  // Exame
+  tussId?: string | null;
+  codigoTuss?: string | null;
+  // Medicamento
+  substanciaId?: string | null;
+  linha_tratamento?: number | null;
+  grupo_alternativa?: string;
+  ceaf?: boolean;
+  esquemas?: Esquema[];
+  criterios_inclusao?: string[];
+  criterios_exclusao?: string[];
+  contraindicacoes?: string[];
+  ajuste_renal_hepatico?: string;
+  monitorizacao?: string;
+  // Exame / Medicamento / Consulta
+  repetir_a_cada?: number;
+  nome_documento?: string;
+  // Consulta
+  especialidade?: string;
+  // Admissao
+  clauses?: Clausula[];
+  // Condicao
+  branches?: {
+    localId: string;
+    isDefault: boolean;
+    descricao: string;
+    clauses: Clausula[];
+    repetir_gatilho_dias?: number | null;
+  }[];
+  // Evento
+  acao?: string;
+  alvoLocalId?: string | null;
+  motivo?: string;
+  conteudo?: string;
+  destinatario?: string;
+  fator?: string;
+  nivel?: "info" | "atencao" | "critico";
+};
+
+export type ArestaEstudio = {
+  fromLocalId: string;
+  fromHandle: string | null;
+  toLocalId: string;
+  lapso: number;
+};
+
+export type FluxoGerado = {
+  name: string;
+  cids: string[];
+  fonte: { tipo_documento: string; orgao: string; portaria: string; ano: string; arquivo: string };
+  nodes: NoEstudio[];
+  edges: ArestaEstudio[];
+  pendencias: string[];
+};
+
+const SYSTEM = `Você transforma PCDTs (Protocolos Clínicos e Diretrizes Terapêuticas do Ministério da Saúde),
+diretrizes de sociedades médicas e artigos em um GRAFO de protocolo assistencial para um editor visual.
+O grafo depois é publicado num motor que agenda tarefas, avalia resultados de exames e dispara alertas,
+então ele precisa ser COMPLETO e EXECUTÁVEL.
+
+COMO LER UM PCDT
+Percorra TODAS as seções — CID-10 contemplados, critérios de inclusão/exclusão, casos especiais
+(gestantes, crianças, idosos, insuficiência renal/hepática), tratamento (fármacos, esquemas, tempo de
+tratamento, critérios de interrupção), monitorização (exames, periodicidade, valores que exigem
+ajuste/suspensão), acompanhamento — inclusive tabelas, quadros, fluxogramas e anexos.
+
+Responda APENAS com um objeto JSON válido:
+{
+  "name": "Nome curto do protocolo",
+  "cids": ["E10.0", "E10.1"],
+  "fonte": { "tipo_documento": "PCDT"|"Diretriz"|"Artigo"|"Instrução", "orgao": "", "portaria": "", "ano": "" },
+  "nodes": [
+    { "localId": "n1", "type": "Admissao", "name": "...", "clauses": [ {"sourceKind":"paciente","variavel":"cid","operador":"contem","valor":"E10","conector":null} ] },
+    { "localId": "n2", "type": "Exame", "name": "Hemoglobina glicada", "sinonimos": ["HbA1c"], "repetir_a_cada": 90 },
+    { "localId": "n3", "type": "Medicamento", "name": "Metformina", "sinonimos": [],
+      "linha_tratamento": 1, "grupo_alternativa": "Biguanida", "ceaf": false,
+      "esquemas": [ { "populacao": "Adulto", "dose": "500 mg", "via": "oral", "posologia": "2x/dia", "duracao": "contínuo", "dose_maxima": "2.550 mg/dia" } ],
+      "criterios_inclusao": [], "criterios_exclusao": [], "contraindicacoes": ["TFG < 30"],
+      "ajuste_renal_hepatico": "", "monitorizacao": "", "repetir_a_cada": 30 },
+    { "localId": "n4", "type": "Consulta", "name": "...", "especialidade": "...", "repetir_a_cada": 180 },
+    { "localId": "n5", "type": "Condicao", "name": "...", "branches": [
+        { "localId": "b1", "isDefault": false, "descricao": "...", "repetir_gatilho_dias": 30, "clauses": [
+            {"sourceKind":"exame","sourceLocalId":"n2","campo":"numero","operador":"maior_ou_igual","numero":"7","conector":null},
+            {"sourceKind":"paciente","variavel":"idade","operador":"maior_ou_igual","valor":"18","conector":"E"}
+        ] },
+        { "localId": "b2", "isDefault": true, "descricao": "Meta atingida" }
+    ] },
+    { "localId": "n6", "type": "Evento", "name": "...", "acao": "suspender", "alvoLocalId": "n3", "nivel": "critico", "repetir_a_cada": 0,
+      "motivo": "...", "conteudo": "...", "destinatario": "Médico responsável" }
+  ],
+  "edges": [
+    { "fromLocalId": "n1", "fromHandle": "admitido", "toLocalId": "n2", "lapso": 0 },
+    { "fromLocalId": "n2", "fromHandle": null, "toLocalId": "n5", "lapso": 0 },
+    { "fromLocalId": "n5", "fromHandle": "b1", "toLocalId": "n6", "lapso": 0 }
+  ],
+  "observacoes_revisao": ["..."]
+}
+
+TIPOS DE NÓ
+- Admissao: portão de entrada (critérios do paciente). Saídas "admitido" / "nao_admitido". Use no máximo uma.
+- Exame: exame/procedimento. "repetir_a_cada" = periodicidade de monitorização em dias (0 = única vez).
+- Medicamento: UM princípio ativo por nó. "repetir_a_cada" = renovação da receita em dias (30 se uso
+  contínuo e o documento não disser; 0 se dose única/curso fechado).
+- Consulta: consulta/avaliação. "repetir_a_cada" = periodicidade em dias.
+- Condicao: decisão. Cada ramo tem cadeia de cláusulas (E/OU) ou isDefault = true. Exatamente UM ramo
+  isDefault por condição, sempre o último. O handle da aresta de saída é o localId do ramo.
+- Evento: automação/alerta. "acao": suspender | ajustar | mensagem_paciente | notificar_usuario |
+  gerar_receita | enviar_receita | solicitar_exame. "alvoLocalId" aponta o nó afetado. "nivel":
+  info | atencao | critico. "repetir_a_cada" (dias) para alertas periódicos (ex.: renovar LME a cada 90).
+
+TRATAMENTO MEDICAMENTOSO — TODAS AS VARIAÇÕES
+- Um nó Medicamento por fármaco citado no tratamento, incluindo TODAS as alternativas de cada linha.
+- Variações de dose do MESMO fármaco (adulto x pediátrico, por kg/m², ataque x manutenção, titulação,
+  ajuste renal) vão em "esquemas", um item por variação, com "populacao" dizendo a quem se aplica.
+- "linha_tratamento": 1 para primeira linha, 2 para segunda... Fármacos intercambiáveis (o médico escolhe
+  um) compartilham "grupo_alternativa".
+- Troca de linha condicionada a exame (ex.: "HbA1c ≥ 7% após 3 meses") = Exame → Condicao → ramo →
+  Medicamento da linha seguinte. Troca por critério clínico não mensurável (intolerância, falha avaliada
+  em consulta) = Evento "notificar_usuario" de reavaliação no prazo do documento, apontando o fármaco.
+- Fármaco restrito a uma população = Condicao com cláusula de paciente (idade/sexo) antes dele.
+- "ceaf": true quando dispensado pelo Componente Especializado (exige LME).
+
+MONITORIZAÇÃO, RAMIFICAÇÕES E ALERTAS
+- Cada exame de monitorização é um nó Exame com "repetir_a_cada". Quando o documento disser o que fazer
+  conforme o resultado: Exame → Condicao (aresta com fromHandle null) e um ramo por faixa.
+- Cláusulas de exame SEMPRE apontam (sourceLocalId) para um Exame que tem aresta chegando na Condicao.
+- Repetir o exame em N dias dentro de um ramo = "repetir_gatilho_dias" no ramo (não crie outro nó igual).
+- Operadores numéricos: maior_que, menor_que, maior_ou_igual, menor_ou_igual, entre, fora_de, igual.
+  Use exatamente o limite do texto ("≥ 7%" → maior_ou_igual "7"). "> 3x LSN" sem valor absoluto →
+  campo "achado", conceito em MAIÚSCULAS (ex.: "TGO_ACIMA_3X_LSN"). Qualitativo ("reagente") → campo
+  "texto" com operador "contem".
+- Toxicidade/resultado crítico → Evento "suspender" ou "ajustar" (nivel "critico") no ramo do exame.
+- Prazos (reavaliar resposta em 12 semanas, renovar LME a cada 3 meses, tempo máximo de tratamento,
+  critérios de interrupção, notificação compulsória, encaminhamento) → Evento "notificar_usuario" com
+  "conteudo" objetivo, ligado ao nó de onde o prazo conta, com "lapso" em dias na aresta.
+- "lapso" da aresta = dias entre o nó de origem e o de destino.
+
+PACIENTE
+- Variáveis de paciente: sexo (M/F), idade (anos), peso (kg), altura (cm), gestante (Sim/Não), cid.
+
+NOMES (CRÍTICO PARA O VÍNCULO COM O CATÁLOGO)
+- Exame: nome clínico oficial, curto e pesquisável ("Creatinina sérica", "TGO (AST)"); um exame por nó.
+  Até 3 "sinonimos".
+- Medicamento: princípio ativo em português, sem dose e sem nome comercial. Até 3 "sinonimos".
+- CIDs: todos os códigos contemplados, formato "E10.0" ou "E10".
+
+LIMITES
+- Até 80 nós. Se o documento for maior, priorize: tratamento completo (todas as linhas e variações),
+  monitorização com condutas, alertas de segurança; depois o restante. Nomes curtos.
+- Nunca invente fármacos, doses, exames ou limites. Ambiguidades vão em "observacoes_revisao".
+- Instruções do médico têm prioridade sobre o documento.
+- Nenhum texto fora do JSON.`;
+
+const TIPOS: TipoNo[] = ["Admissao", "Exame", "Medicamento", "Consulta", "Condicao", "Evento"];
+const ACOES_EVENTO = [
+  "suspender",
+  "ajustar",
+  "mensagem_paciente",
+  "notificar_usuario",
+  "gerar_receita",
+  "enviar_receita",
+  "solicitar_exame",
+];
+const ALVO_EVENTO: Record<string, TipoNo[]> = {
+  suspender: ["Medicamento", "Exame", "Consulta"],
+  ajustar: ["Medicamento"],
+  gerar_receita: ["Medicamento"],
+  enviar_receita: ["Medicamento"],
+  solicitar_exame: ["Exame"],
+};
+const OPS_NUMERO = [
+  "maior_que",
+  "menor_que",
+  "maior_ou_igual",
+  "menor_ou_igual",
+  "entre",
+  "fora_de",
+  "igual",
+];
+const OPS_TEXTO = ["igual", "contem"];
+const VARS_PACIENTE = ["sexo", "idade", "peso", "altura", "gestante", "cid"];
+
+function normTipo(v: unknown): TipoNo | null {
+  const t = normKey(str(v));
+  if (/receita|farmac|medicament/.test(t)) return "Medicamento";
+  if (/condic|decis/.test(t)) return "Condicao";
+  if (/admiss|inclus/.test(t)) return "Admissao";
+  if (/alerta|evento|automac|notific/.test(t)) return "Evento";
+  return TIPOS.find((x) => x.toLowerCase() === t) || null;
+}
+
+function diasNaoNeg(v: unknown): number {
+  const n = num(v);
+  return n === undefined ? 0 : Math.max(0, Math.round(n));
+}
+
+function numStr(v: unknown): string | undefined {
+  const n = num(v);
+  return n === undefined ? undefined : String(n);
+}
+
+function conceitoMaiusculo(v: unknown): string {
+  return str(v)
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+}
+
+/** Normaliza uma cláusula; null quando não dá para avaliar. */
+function normClausula(c: any, tipoDe: (id: string) => TipoNo | undefined): Clausula | null {
+  if (!c || typeof c !== "object") return null;
+  const conector = str(c.conector).toUpperCase() === "OU" ? "OU" : "E";
+  const kind = str(c.sourceKind);
+  if (kind === "paciente") {
+    const variavel = str(c.variavel).toLowerCase();
+    if (!VARS_PACIENTE.includes(variavel)) return null;
+    const valor = str(c.valor);
+    if (!valor) return null;
+    let operador = str(c.operador) || "igual";
+    if (variavel === "sexo") {
+      operador = "igual";
+      const sx = valor.toUpperCase().charAt(0);
+      if (sx !== "M" && sx !== "F") return null;
+      return {
+        sourceKind: "paciente",
+        sourceLocalId: null,
+        variavel,
+        operador,
+        valor: sx,
+        conector,
+      };
+    }
+    if (variavel === "gestante") {
+      const sim = /^s/i.test(valor) || /^true|1$/i.test(valor);
+      return {
+        sourceKind: "paciente",
+        sourceLocalId: null,
+        variavel,
+        operador: "igual",
+        valor: sim ? "Sim" : "Não",
+        conector,
+      };
+    }
+    if (variavel === "cid") {
+      return {
+        sourceKind: "paciente",
+        sourceLocalId: null,
+        variavel,
+        operador: operador === "igual" ? "igual" : "contem",
+        valor: valor.toUpperCase(),
+        conector,
+      };
+    }
+    if (!OPS_NUMERO.includes(operador) || num(valor) === undefined) return null;
+    return {
+      sourceKind: "paciente",
+      sourceLocalId: null,
+      variavel,
+      operador,
+      valor: String(num(valor)),
+      conector,
+    };
+  }
+  const src = str(c.sourceLocalId);
+  if (kind === "medicamento") {
+    if (tipoDe(src) !== "Medicamento") return null;
+    return {
+      sourceKind: "medicamento",
+      sourceLocalId: src,
+      estado: str(c.estado) === "suspenso" ? "suspenso" : "em_uso",
+      conector,
+    };
+  }
+  if (tipoDe(src) !== "Exame") return null;
+  const campo = str(c.campo);
+  if (campo === "achado") {
+    const conceito = conceitoMaiusculo(c.conceito);
+    if (!conceito) return null;
+    return {
+      sourceKind: "exame",
+      sourceLocalId: src,
+      campo,
+      conceito,
+      presente: c.presente !== false,
+      conector,
+    };
+  }
+  const operador = str(c.operador);
+  if (campo === "texto") {
+    const texto = str(c.texto);
+    if (!texto || !OPS_TEXTO.includes(operador)) return null;
+    return { sourceKind: "exame", sourceLocalId: src, campo, operador, texto, conector };
+  }
+  if (!OPS_NUMERO.includes(operador)) return null;
+  if (operador === "entre" || operador === "fora_de") {
+    const a = num(c.numero_min);
+    const b = num(c.numero_max);
+    if (a === undefined || b === undefined) return null;
+    return {
+      sourceKind: "exame",
+      sourceLocalId: src,
+      campo: "numero",
+      operador,
+      numero_min: String(Math.min(a, b)),
+      numero_max: String(Math.max(a, b)),
+      conector,
+    };
+  }
+  const n = numStr(c.numero);
+  if (n === undefined) return null;
+  return {
+    sourceKind: "exame",
+    sourceLocalId: src,
+    campo: "numero",
+    operador,
+    numero: n,
+    conector,
+  };
+}
+
+function normEsquemas(v: unknown): Esquema[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .map((e: any) => ({
+      populacao: str(e?.populacao),
+      dose: str(e?.dose),
+      via: str(e?.via),
+      posologia: str(e?.posologia),
+      duracao: str(e?.duracao),
+      dose_maxima: str(e?.dose_maxima),
+    }))
+    .filter((e) => e.dose || e.posologia)
+    .slice(0, 12);
+}
+
+type HitTuss = { id: string; codigo_tuss: string; nome: string };
+type HitSubstancia = { id_substancia: string; nome_exibicao: string };
+
+export async function gerarFluxoEstudioIA(opts: {
+  apiKey: string;
+  pdfBase64?: string | null;
+  filename?: string | null;
+  texto?: string | null;
+  /** Fluxo já aberto no canvas, para gerar uma parte complementar sem repetir nós. */
+  contexto?: string | null;
+  buscarTuss: (termo: string) => Promise<HitTuss | null>;
+  buscarSubstancia: (termo: string) => Promise<HitSubstancia | null>;
+}): Promise<FluxoGerado> {
+  const { apiKey, pdfBase64, filename, buscarTuss, buscarSubstancia } = opts;
+  const texto = str(opts.texto);
+  const contexto = str(opts.contexto);
+  if (!texto && !pdfBase64) throw new ErroGeracaoProtocolo("Envie um PDF ou um texto.", 400);
+
+  const partes = [
+    texto
+      ? `Instruções / texto do protocolo (prioridade sobre o documento):\n"""\n${texto}\n"""`
+      : "Estruture o protocolo completo descrito no documento anexo: tratamento com todas as variações medicamentosas, monitorização com condutas e alertas.",
+  ];
+  if (contexto) {
+    partes.push(
+      `O canvas JÁ contém estes nós (não os repita; gere só o que falta e, se precisar ligar a eles, explique em observacoes_revisao):\n${contexto.slice(0, 6000)}`,
+    );
+  }
+  const content: Array<Record<string, unknown>> = [{ type: "text", text: partes.join("\n\n") }];
+  if (pdfBase64) {
+    content.push({
+      type: "file",
+      file: {
+        filename: filename || "protocolo.pdf",
+        file_data: `data:application/pdf;base64,${pdfBase64}`,
+      },
+    });
+  }
+
+  const res = await fetch(GATEWAY_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: MAX_TOKENS,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: SYSTEM },
+        { role: "user", content },
+      ],
+    }),
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    console.error("[estudio:gerar-ia] gateway", res.status, t.slice(0, 500));
+    if (res.status === 429)
+      throw new ErroGeracaoProtocolo(
+        "Limite de uso da IA atingido. Tente novamente em instantes.",
+        429,
+      );
+    if (res.status === 402) throw new ErroGeracaoProtocolo("Créditos de IA esgotados.", 402);
+    if (res.status === 413)
+      throw new ErroGeracaoProtocolo(
+        "PDF grande demais para a IA. Envie só as seções de tratamento e monitorização.",
+        413,
+      );
+    throw new ErroGeracaoProtocolo("Falha ao consultar a IA. Tente novamente.", 502);
+  }
+  const data = (await res.json()) as {
+    choices?: { message?: { content?: string }; finish_reason?: string }[];
+  };
+  const choice = data.choices?.[0];
+  const spec = parseJsonStrict(choice?.message?.content || "");
+  if (!spec) {
+    if (choice?.finish_reason === "length") {
+      throw new ErroGeracaoProtocolo(
+        'O fluxo ficou grande demais para uma única geração. Gere por partes: escreva o foco (ex.: "somente tratamento pediátrico") e use "Adicionar ao fluxo atual".',
+        422,
+      );
+    }
+    throw new ErroGeracaoProtocolo(
+      "A IA não devolveu um fluxo válido. Tente novamente ou detalhe o texto.",
+      502,
+    );
+  }
+
+  const pendencias: string[] = strList(spec.observacoes_revisao, 40);
+
+  // ---- nós (1ª passada: tipos e ids, para validar referências depois) ------
+  const brutos: any[] = Array.isArray(spec.nodes) ? spec.nodes : [];
+  const usados = new Set<string>();
+  const comTipo = brutos
+    .map((n) => ({ n, type: normTipo(n?.type) }))
+    .filter(({ n, type }) => {
+      if (type) return true;
+      pendencias.push(`Nó "${str(n?.name) || "?"}" com tipo desconhecido foi descartado.`);
+      return false;
+    })
+    .map(({ n, type }) => {
+      let id = str(n?.localId) || Math.random().toString(36).slice(2, 9);
+      while (usados.has(id)) id += "_";
+      usados.add(id);
+      return { n, type: type as TipoNo, id, origId: str(n?.localId) };
+    });
+  // ids originais -> ids finais (só muda em caso de duplicata; a 1ª ocorrência vence)
+  const idFinal = new Map<string, string>();
+  comTipo.forEach((x) => {
+    if (x.origId && !idFinal.has(x.origId)) idFinal.set(x.origId, x.id);
+  });
+  const tipoPorId = new Map(comTipo.map((x) => [x.id, x.type]));
+  const resolve = (v: unknown) => idFinal.get(str(v)) || str(v);
+  const tipoDe = (id: string) => tipoPorId.get(id);
+
+  const nodes: NoEstudio[] = comTipo.map(({ n, type, id }) => {
+    const name = str(n?.name) || type;
+    const base: NoEstudio = { localId: id, type, name };
+    const fixClauses = (arr: unknown, onde: string): Clausula[] => {
+      const out: Clausula[] = [];
+      (Array.isArray(arr) ? arr : []).forEach((c: any) => {
+        const cc = normClausula({ ...c, sourceLocalId: resolve(c?.sourceLocalId) }, tipoDe);
+        if (cc) out.push(cc);
+        else pendencias.push(`Cláusula inválida removida em "${onde}" — revise o critério.`);
+      });
+      if (out.length) out[0] = { ...out[0], conector: null };
+      return out;
+    };
+    if (type === "Admissao") return { ...base, clauses: fixClauses(n?.clauses, name) };
+    if (type === "Exame")
+      return { ...base, tussId: null, repetir_a_cada: diasNaoNeg(n?.repetir_a_cada) };
+    if (type === "Consulta")
+      return {
+        ...base,
+        especialidade: str(n?.especialidade),
+        repetir_a_cada: diasNaoNeg(n?.repetir_a_cada),
+      };
+    if (type === "Medicamento") {
+      const linha = num(n?.linha_tratamento);
+      const esquemas = normEsquemas(n?.esquemas);
+      if (!esquemas.length && (str(n?.dose) || str(n?.posologia))) {
+        esquemas.push({
+          populacao: "",
+          dose: str(n?.dose),
+          via: "",
+          posologia: str(n?.posologia),
+          duracao: "",
+          dose_maxima: "",
+        });
+      }
+      if (!esquemas.length)
+        pendencias.push(`Medicamento "${name}" sem dose/posologia identificada no documento.`);
+      return {
+        ...base,
+        substanciaId: null,
+        linha_tratamento: linha && linha >= 1 ? Math.round(linha) : null,
+        grupo_alternativa: str(n?.grupo_alternativa),
+        ceaf: n?.ceaf === true,
+        esquemas,
+        criterios_inclusao: strList(n?.criterios_inclusao),
+        criterios_exclusao: strList(n?.criterios_exclusao),
+        contraindicacoes: strList(n?.contraindicacoes),
+        ajuste_renal_hepatico: str(n?.ajuste_renal_hepatico),
+        monitorizacao: str(n?.monitorizacao),
+        repetir_a_cada: n?.repetir_a_cada === undefined ? 30 : diasNaoNeg(n?.repetir_a_cada),
+      };
+    }
+    if (type === "Condicao") {
+      const branches: NonNullable<NoEstudio["branches"]> = [];
+      let temDefault = false;
+      (Array.isArray(n?.branches) ? n.branches : []).forEach((b: any, i: number) => {
+        const isDefault = !!b?.isDefault;
+        const bId = str(b?.localId) || `${id}_b${i}`;
+        const repete = num(b?.repetir_gatilho_dias);
+        if (isDefault) {
+          if (temDefault) {
+            pendencias.push(
+              `Condição "${name}" tinha mais de um caso padrão — mantido só o primeiro.`,
+            );
+            return;
+          }
+          temDefault = true;
+          branches.push({
+            localId: bId,
+            isDefault: true,
+            descricao: str(b?.descricao) || "Caso padrão",
+            clauses: [],
+            repetir_gatilho_dias: repete && repete > 0 ? Math.round(repete) : null,
+          });
+          return;
+        }
+        const clauses = fixClauses(b?.clauses, `${name} › ${str(b?.descricao) || "ramo"}`);
+        if (!clauses.length) {
+          pendencias.push(
+            `Ramo "${str(b?.descricao) || i + 1}" da condição "${name}" ficou sem critério válido e foi removido.`,
+          );
+          return;
+        }
+        branches.push({
+          localId: bId,
+          isDefault: false,
+          descricao: str(b?.descricao),
+          clauses,
+          repetir_gatilho_dias: repete && repete > 0 ? Math.round(repete) : null,
+        });
+      });
+      // O Studio espera o caso padrão como último ramo.
+      const ordenados = [
+        ...branches.filter((b) => !b.isDefault),
+        ...branches.filter((b) => b.isDefault),
+      ];
+      if (!temDefault) {
+        ordenados.push({
+          localId: `${id}_padrao`,
+          isDefault: true,
+          descricao: "Caso padrão",
+          clauses: [],
+          repetir_gatilho_dias: null,
+        });
+        pendencias.push(
+          `Condição "${name}" não tinha caso padrão — foi criado um vazio; decida o que fazer quando nenhum critério bater.`,
+        );
+      }
+      return { ...base, branches: ordenados };
+    }
+    // Evento
+    const acao = ACOES_EVENTO.includes(str(n?.acao)) ? str(n.acao) : "notificar_usuario";
+    let alvo: string | null = n?.alvoLocalId ? resolve(n.alvoLocalId) : null;
+    const tiposAlvo = ALVO_EVENTO[acao];
+    if (alvo && (!tiposAlvo || !tiposAlvo.includes(tipoDe(alvo) as TipoNo))) {
+      if (tiposAlvo)
+        pendencias.push(
+          `Evento "${name}" apontava para um alvo inválido — escolha o alvo no inspetor.`,
+        );
+      alvo = null;
+    }
+    if (tiposAlvo && !alvo) pendencias.push(`Evento "${name}" (${acao}) está sem nó alvo.`);
+    const nivelK = normKey(str(n?.nivel)).replace(/\s/g, "");
+    return {
+      ...base,
+      acao,
+      alvoLocalId: alvo,
+      motivo: str(n?.motivo),
+      conteudo: str(n?.conteudo),
+      destinatario:
+        str(n?.destinatario) || (acao === "notificar_usuario" ? "Médico responsável" : ""),
+      fator: str(n?.fator),
+      repetir_a_cada: diasNaoNeg(n?.repetir_a_cada),
+      nivel: (["info", "atencao", "critico"].includes(nivelK)
+        ? nivelK
+        : acao === "suspender"
+          ? "critico"
+          : "atencao") as NoEstudio["nivel"],
+    };
+  });
+
+  // ---- arestas ---------------------------------------------------------------
+  const porId = new Map(nodes.map((n) => [n.localId, n]));
+  const edges: ArestaEstudio[] = [];
+  const chave = (e: ArestaEstudio) => `${e.fromLocalId}|${e.fromHandle}|${e.toLocalId}`;
+  const vistas = new Set<string>();
+  const addEdge = (e: ArestaEstudio) => {
+    if (vistas.has(chave(e))) return;
+    vistas.add(chave(e));
+    edges.push(e);
+  };
+  for (const e of Array.isArray(spec.edges) ? spec.edges : []) {
+    const from = porId.get(resolve(e?.fromLocalId));
+    const to = porId.get(resolve(e?.toLocalId));
+    if (!from || !to || from === to) {
+      pendencias.push("Uma conexão apontava para nó inexistente e foi removida.");
+      continue;
+    }
+    let handle: string | null = null;
+    if (from.type === "Admissao")
+      handle = str(e?.fromHandle) === "nao_admitido" ? "nao_admitido" : "admitido";
+    else if (from.type === "Condicao") {
+      const h = str(e?.fromHandle);
+      const branch = from.branches?.find((b) => b.localId === h);
+      if (!branch) {
+        pendencias.push(
+          `Conexão de "${from.name}" para "${to.name}" não indicava um ramo válido e foi removida.`,
+        );
+        continue;
+      }
+      handle = branch.localId;
+    }
+    addEdge({
+      fromLocalId: from.localId,
+      fromHandle: handle,
+      toLocalId: to.localId,
+      lapso: diasNaoNeg(e?.lapso),
+    });
+  }
+
+  // As cláusulas de uma Condição só podem usar como fonte exames/medicamentos
+  // que chegam nela por aresta (é assim que o inspetor do Studio lista as
+  // fontes). Liga automaticamente o que a IA referenciou sem conectar.
+  for (const n of nodes) {
+    if (n.type !== "Condicao") continue;
+    const fontes = new Set<string>();
+    n.branches?.forEach((b) =>
+      b.clauses.forEach((c) => c.sourceLocalId && fontes.add(c.sourceLocalId)),
+    );
+    fontes.forEach((src) => {
+      if (!edges.some((e) => e.fromLocalId === src && e.toLocalId === n.localId)) {
+        addEdge({ fromLocalId: src, fromHandle: null, toLocalId: n.localId, lapso: 0 });
+      }
+    });
+  }
+
+  // ---- vínculo com o catálogo -----------------------------------------------
+  // Nome + sinônimos; vínculo com pouca sobreposição de palavras fica marcado
+  // para conferência — exame vinculado errado faria a regra disparar com o
+  // resultado de outro exame.
+  const sinonimos = new Map(comTipo.map(({ n, id }) => [id, strList(n?.sinonimos, 3)]));
+  await emLotes(
+    nodes.filter((n) => n.type === "Exame" || n.type === "Medicamento"),
+    6,
+    async (no) => {
+      const termos = [no.name, ...(sinonimos.get(no.localId) || [])];
+      const original = no.name;
+      try {
+        if (no.type === "Exame") {
+          let hit: HitTuss | null = null;
+          for (const t of termos) if ((hit = await buscarTuss(t))) break;
+          if (!hit) {
+            pendencias.push(
+              `Exame "${original}" não encontrado no catálogo TUSS — vincule no inspetor.`,
+            );
+            return;
+          }
+          no.tussId = hit.id;
+          no.codigoTuss = hit.codigo_tuss;
+          if (hit.nome && normKey(hit.nome) !== normKey(original)) {
+            no.name = hit.nome;
+            no.nome_documento = original;
+            if (Math.max(...termos.map((t) => similaridade(t, hit!.nome))) < 0.5) {
+              pendencias.push(
+                `Confira o vínculo: "${original}" foi associado a "${hit.nome}" (TUSS ${hit.codigo_tuss}).`,
+              );
+            }
+          }
+        } else {
+          let hit: HitSubstancia | null = null;
+          for (const t of termos) if ((hit = await buscarSubstancia(t))) break;
+          if (!hit) {
+            pendencias.push(
+              `Medicamento "${original}" não encontrado no catálogo de substâncias — vincule no inspetor.`,
+            );
+            return;
+          }
+          no.substanciaId = hit.id_substancia;
+          if (hit.nome_exibicao && normKey(hit.nome_exibicao) !== normKey(original)) {
+            no.name = hit.nome_exibicao;
+            no.nome_documento = original;
+            if (Math.max(...termos.map((t) => similaridade(t, hit!.nome_exibicao))) < 0.5) {
+              pendencias.push(
+                `Confira o vínculo: "${original}" foi associado a "${hit.nome_exibicao}".`,
+              );
+            }
+          }
+        }
+      } catch {
+        pendencias.push(`Falha ao buscar "${original}" no catálogo — vincule no inspetor.`);
+      }
+    },
+  );
+
+  // ---- CIDs (lista + cláusulas de CID da Admissão) --------------------------
+  const cidsBrutos: unknown[] = Array.isArray(spec.cids) ? spec.cids : [];
+  nodes
+    .filter((n) => n.type === "Admissao")
+    .forEach((n) =>
+      n.clauses?.forEach((c) => {
+        if (c.variavel === "cid") cidsBrutos.push(...str(c.valor).split(/[,;\s]+/));
+      }),
+    );
+  const cids = [...new Set(cidsBrutos.map(normCid).filter((c): c is string => !!c))];
+  if (!cids.length)
+    pendencias.push(
+      "Nenhum CID identificado — sem CID o protocolo publicado não é vinculado a nenhum paciente.",
+    );
+
+  const f = spec.fonte && typeof spec.fonte === "object" ? spec.fonte : {};
+  return {
+    name: str(spec.name) || "Fluxo gerado por IA",
+    cids,
+    fonte: {
+      tipo_documento: str(f.tipo_documento) || (pdfBase64 ? "Documento" : "Instrução"),
+      orgao: str(f.orgao),
+      portaria: str(f.portaria),
+      ano: str(f.ano),
+      arquivo: str(filename),
+    },
+    nodes,
+    edges,
+    pendencias: [...new Set(pendencias)],
+  };
+}

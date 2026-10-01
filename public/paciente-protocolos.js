@@ -5,7 +5,7 @@
    de window diretamente — só os getters, que são function declarations). */
 (function () {
   const ROOT_ID = "pat-protocolos-root";
-  const TIPO_ICON = { Exame: "ti-flask-2", Consulta: "ti-stethoscope", Receita: "ti-pill" };
+  const TIPO_ICON = { Exame: "ti-flask-2", Consulta: "ti-stethoscope", Receita: "ti-pill", Alerta: "ti-bell-ringing" };
 
   function getPatient() { return typeof window.getCurrentPatient === "function" ? window.getCurrentPatient() : window.currentPatient; }
   function getUser() { return typeof window.getCurrentUser === "function" ? window.getCurrentUser() : window.currentUser; }
@@ -265,14 +265,33 @@
         <div class="pp-doc-empty">Nenhuma pendência — todas as etapas em dia.</div>`;
     }
 
+    // Alertas e decisões vêm primeiro: são o que exige ação do médico.
+    const prioridade = (t) => ((acoesById[t.acao_id] || {}).tipo === "Alerta" ? 0 : 1);
+    pendentes.sort((a, b) => prioridade(a) - prioridade(b));
     const linhas = pendentes.slice(0, 12).map((t) => {
       const acao = acoesById[t.acao_id] || {};
+      const det = acao.detalhes || {};
       const late = t.due_date < hoje;
-      const dot = late ? "red" : "blue";
+      const isAlerta = acao.tipo === "Alerta";
+      const dot = isAlerta && det.nivel === "critico" ? "red" : isAlerta ? "amber" : late ? "red" : "blue";
+      const esq = acao.tipo === "Receita" && Array.isArray(det.esquemas) && det.esquemas.length
+        ? det.esquemas.map((e) => [e.populacao, [e.dose, e.via, e.posologia].filter(Boolean).join(" ")].filter(Boolean).join(": ")).join(" · ")
+        : "";
+      let extra = "";
+      if (isAlerta && det.conduta === "decidir" && Array.isArray(det.opcoes)) {
+        // Condição que o motor não avalia sozinho: o médico escolhe o caminho.
+        extra = `<div class="pp-decisao">
+          ${det.opcoes.map((o) => `<button class="pp-btn" data-act="decidir" data-id="${t.id}" data-opcao="${esc(o.valor)}" title="${esc(o.criterio || "")}">${esc(o.rotulo)}</button>`).join("")}
+        </div>`;
+      } else if (isAlerta) {
+        extra = `<div class="pp-alerta-msg">${esc(det.mensagem || acao.descricao || "")}${det.medicamento_alvo ? ` <b>(${esc(det.medicamento_alvo)})</b>` : ""}
+          <button class="pp-btn ghost" data-act="concluir-alerta" data-id="${t.id}"><i class="ti ti-check"></i> Resolvido</button></div>`;
+      }
       return `
-        <div class="pp-pend ${late ? "late" : ""}">
+        <div class="pp-pend ${late ? "late" : ""} ${isAlerta ? "alerta" : ""}">
           <span class="dot ${dot}"></span>
-          <div class="tt"><b>${esc(acao.nome || "Etapa")}</b> <span style="color:#94a3b8">(${esc(acao.tipo || "")})</span></div>
+          <div class="tt"><b>${esc(acao.nome || "Etapa")}</b> <span style="color:#94a3b8">(${esc(acao.tipo || "")})</span>
+            ${esq ? `<div class="pp-esq">${esc(esq)}</div>` : ""}${extra}</div>
           <div class="due">${late ? "Atrasado desde " : "Previsto para "}${fmtDate(t.due_date)}</div>
         </div>`;
     }).join("");
@@ -712,6 +731,35 @@
       case "lme-status":
         await atualizarStatusLme(id, el.value);
         break;
+      case "decidir":
+        await registrarDecisao(id, el.dataset.opcao, el);
+        break;
+      case "concluir-alerta":
+        await registrarDecisao(id, null, el);
+        break;
+    }
+  }
+
+  // Decisão de uma tarefa "Decidir" (opcao = id do ramo) ou conclusão de um
+  // alerta (opcao = null) — ver src/routes/api/protocolos/decidir.ts.
+  async function registrarDecisao(tarefaId, opcao, el) {
+    if (el) el.disabled = true;
+    try {
+      const { data: sess } = await sb.auth.getSession();
+      const token = sess && sess.session && sess.session.access_token;
+      if (!token) throw new Error("Sessão expirada — faça login novamente.");
+      const res = await fetch("/api/protocolos/decidir", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: "Bearer " + token },
+        body: JSON.stringify(opcao ? { tarefaId, opcao } : { tarefaId }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || "Falha ao registrar");
+      showToast && showToast(opcao ? (j.tarefasCriadas ? `Decisão registrada — ${j.tarefasCriadas} etapa(s) gerada(s).` : "Decisão registrada.") : "Alerta resolvido.", "success");
+      await refresh();
+    } catch (e) {
+      if (el) el.disabled = false;
+      showToast && showToast(String((e && e.message) || e), "error");
     }
   }
 

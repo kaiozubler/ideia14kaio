@@ -47,6 +47,11 @@
 .pp-pend .tt{flex:1;min-width:0}
 .pp-pend .tt b{font-weight:600;color:#1e293b}
 .pp-pend .due{font-size:10.5px;color:#94a3b8;flex-shrink:0;white-space:nowrap}
+.pp-pend.alerta{align-items:flex-start;background:rgba(255,251,235,.75);border-color:rgba(253,230,138,.8)}
+.pp-pend.alerta .dot{margin-top:4px}
+.pp-esq{font-size:11px;color:#475569;margin-top:2px}
+.pp-alerta-msg{font-size:11.5px;color:#92400e;margin-top:4px;white-space:pre-line;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.pp-decisao{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .pp-pend.late .due{color:#dc2626;font-weight:700}
 
 /* ---- Resumo compacto do fluxo (recorte do último evento) ---- */

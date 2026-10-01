@@ -52,6 +52,9 @@ import { Route as ApiMedicamentosBuscarRouteImport } from './routes/api/medicame
 import { Route as ApiMedicamentosSimplificarApresentacoesRouteImport } from './routes/api/medicamentos/simplificar-apresentacoes'
 import { Route as ApiPacientesMigrarRouteImport } from './routes/api/pacientes/migrar'
 import { Route as ApiProtocolosAvaliarExameRouteImport } from './routes/api/protocolos/avaliar-exame'
+import { Route as ApiProtocolosDecidirRouteImport } from './routes/api/protocolos/decidir'
+import { Route as ApiProtocolosEstudioGerarIaRouteImport } from './routes/api/protocolos/estudio-gerar-ia'
+import { Route as ApiProtocolosEstudioPublicarRouteImport } from './routes/api/protocolos/estudio-publicar'
 import { Route as ApiProtocolosEstudioRascunhoRouteImport } from './routes/api/protocolos/estudio-rascunho'
 import { Route as ApiProtocolosGerarIaRouteImport } from './routes/api/protocolos/gerar-ia'
 import { Route as ApiProtocolosSincronizarRouteImport } from './routes/api/protocolos/sincronizar'
@@ -307,6 +310,23 @@ const ApiProtocolosAvaliarExameRoute =
     path: '/api/protocolos/avaliar-exame',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiProtocolosDecidirRoute = ApiProtocolosDecidirRouteImport.update({
+  id: '/api/protocolos/decidir',
+  path: '/api/protocolos/decidir',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiProtocolosEstudioGerarIaRoute =
+  ApiProtocolosEstudioGerarIaRouteImport.update({
+    id: '/api/protocolos/estudio-gerar-ia',
+    path: '/api/protocolos/estudio-gerar-ia',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiProtocolosEstudioPublicarRoute =
+  ApiProtocolosEstudioPublicarRouteImport.update({
+    id: '/api/protocolos/estudio-publicar',
+    path: '/api/protocolos/estudio-publicar',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiProtocolosEstudioRascunhoRoute =
   ApiProtocolosEstudioRascunhoRouteImport.update({
     id: '/api/protocolos/estudio-rascunho',
@@ -506,6 +526,9 @@ export interface FileRoutesByFullPath {
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
   '/api/pacientes/migrar': typeof ApiPacientesMigrarRoute
   '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
+  '/api/protocolos/decidir': typeof ApiProtocolosDecidirRoute
+  '/api/protocolos/estudio-gerar-ia': typeof ApiProtocolosEstudioGerarIaRoute
+  '/api/protocolos/estudio-publicar': typeof ApiProtocolosEstudioPublicarRoute
   '/api/protocolos/estudio-rascunho': typeof ApiProtocolosEstudioRascunhoRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
@@ -579,6 +602,9 @@ export interface FileRoutesByTo {
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
   '/api/pacientes/migrar': typeof ApiPacientesMigrarRoute
   '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
+  '/api/protocolos/decidir': typeof ApiProtocolosDecidirRoute
+  '/api/protocolos/estudio-gerar-ia': typeof ApiProtocolosEstudioGerarIaRoute
+  '/api/protocolos/estudio-publicar': typeof ApiProtocolosEstudioPublicarRoute
   '/api/protocolos/estudio-rascunho': typeof ApiProtocolosEstudioRascunhoRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
@@ -653,6 +679,9 @@ export interface FileRoutesById {
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
   '/api/pacientes/migrar': typeof ApiPacientesMigrarRoute
   '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
+  '/api/protocolos/decidir': typeof ApiProtocolosDecidirRoute
+  '/api/protocolos/estudio-gerar-ia': typeof ApiProtocolosEstudioGerarIaRoute
+  '/api/protocolos/estudio-publicar': typeof ApiProtocolosEstudioPublicarRoute
   '/api/protocolos/estudio-rascunho': typeof ApiProtocolosEstudioRascunhoRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
@@ -728,6 +757,9 @@ export interface FileRouteTypes {
     | '/api/medicamentos/simplificar-apresentacoes'
     | '/api/pacientes/migrar'
     | '/api/protocolos/avaliar-exame'
+    | '/api/protocolos/decidir'
+    | '/api/protocolos/estudio-gerar-ia'
+    | '/api/protocolos/estudio-publicar'
     | '/api/protocolos/estudio-rascunho'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
@@ -801,6 +833,9 @@ export interface FileRouteTypes {
     | '/api/medicamentos/simplificar-apresentacoes'
     | '/api/pacientes/migrar'
     | '/api/protocolos/avaliar-exame'
+    | '/api/protocolos/decidir'
+    | '/api/protocolos/estudio-gerar-ia'
+    | '/api/protocolos/estudio-publicar'
     | '/api/protocolos/estudio-rascunho'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
@@ -874,6 +909,9 @@ export interface FileRouteTypes {
     | '/api/medicamentos/simplificar-apresentacoes'
     | '/api/pacientes/migrar'
     | '/api/protocolos/avaliar-exame'
+    | '/api/protocolos/decidir'
+    | '/api/protocolos/estudio-gerar-ia'
+    | '/api/protocolos/estudio-publicar'
     | '/api/protocolos/estudio-rascunho'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
@@ -948,6 +986,9 @@ export interface RootRouteChildren {
   ApiMedicamentosSimplificarApresentacoesRoute: typeof ApiMedicamentosSimplificarApresentacoesRoute
   ApiPacientesMigrarRoute: typeof ApiPacientesMigrarRoute
   ApiProtocolosAvaliarExameRoute: typeof ApiProtocolosAvaliarExameRoute
+  ApiProtocolosDecidirRoute: typeof ApiProtocolosDecidirRoute
+  ApiProtocolosEstudioGerarIaRoute: typeof ApiProtocolosEstudioGerarIaRoute
+  ApiProtocolosEstudioPublicarRoute: typeof ApiProtocolosEstudioPublicarRoute
   ApiProtocolosEstudioRascunhoRoute: typeof ApiProtocolosEstudioRascunhoRoute
   ApiProtocolosGerarIaRoute: typeof ApiProtocolosGerarIaRoute
   ApiProtocolosSincronizarRoute: typeof ApiProtocolosSincronizarRoute
@@ -1281,6 +1322,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiProtocolosAvaliarExameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/protocolos/decidir': {
+      id: '/api/protocolos/decidir'
+      path: '/api/protocolos/decidir'
+      fullPath: '/api/protocolos/decidir'
+      preLoaderRoute: typeof ApiProtocolosDecidirRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/protocolos/estudio-gerar-ia': {
+      id: '/api/protocolos/estudio-gerar-ia'
+      path: '/api/protocolos/estudio-gerar-ia'
+      fullPath: '/api/protocolos/estudio-gerar-ia'
+      preLoaderRoute: typeof ApiProtocolosEstudioGerarIaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/protocolos/estudio-publicar': {
+      id: '/api/protocolos/estudio-publicar'
+      path: '/api/protocolos/estudio-publicar'
+      fullPath: '/api/protocolos/estudio-publicar'
+      preLoaderRoute: typeof ApiProtocolosEstudioPublicarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/protocolos/estudio-rascunho': {
       id: '/api/protocolos/estudio-rascunho'
       path: '/api/protocolos/estudio-rascunho'
@@ -1526,6 +1588,9 @@ const rootRouteChildren: RootRouteChildren = {
     ApiMedicamentosSimplificarApresentacoesRoute,
   ApiPacientesMigrarRoute: ApiPacientesMigrarRoute,
   ApiProtocolosAvaliarExameRoute: ApiProtocolosAvaliarExameRoute,
+  ApiProtocolosDecidirRoute: ApiProtocolosDecidirRoute,
+  ApiProtocolosEstudioGerarIaRoute: ApiProtocolosEstudioGerarIaRoute,
+  ApiProtocolosEstudioPublicarRoute: ApiProtocolosEstudioPublicarRoute,
   ApiProtocolosEstudioRascunhoRoute: ApiProtocolosEstudioRascunhoRoute,
   ApiProtocolosGerarIaRoute: ApiProtocolosGerarIaRoute,
   ApiProtocolosSincronizarRoute: ApiProtocolosSincronizarRoute,

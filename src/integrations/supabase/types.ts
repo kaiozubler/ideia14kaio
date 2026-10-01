@@ -1790,6 +1790,8 @@ export type Database = {
       }
       protocolo_acoes: {
         Row: {
+          criterio_paciente: Json | null
+          detalhes: Json
           auto_restart: boolean
           catalogo_status: string
           created_at: string
@@ -1809,6 +1811,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          criterio_paciente?: Json | null
+          detalhes?: Json
           auto_restart?: boolean
           catalogo_status?: string
           created_at?: string
@@ -1828,6 +1832,8 @@ export type Database = {
           user_id?: string
         }
         Update: {
+          criterio_paciente?: Json | null
+          detalhes?: Json
           auto_restart?: boolean
           catalogo_status?: string
           created_at?: string
@@ -1911,6 +1917,9 @@ export type Database = {
       }
       protocolo_estudio_rascunhos: {
         Row: {
+          protocolo_id: string | null
+          publicacao: Json
+          publicado_em: string | null
           created_at: string
           grafo: Json
           id: string
@@ -1919,6 +1928,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          protocolo_id?: string | null
+          publicacao?: Json
+          publicado_em?: string | null
           created_at?: string
           grafo?: Json
           id?: string
@@ -1927,6 +1939,9 @@ export type Database = {
           user_id?: string
         }
         Update: {
+          protocolo_id?: string | null
+          publicacao?: Json
+          publicado_em?: string | null
           created_at?: string
           grafo?: Json
           id?: string
@@ -2091,6 +2106,7 @@ export type Database = {
       }
       protocolos: {
         Row: {
+          fonte: Json
           ativo: boolean
           created_at: string
           id: string
@@ -2099,6 +2115,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          fonte?: Json
           ativo?: boolean
           created_at?: string
           id?: string
@@ -2107,6 +2124,7 @@ export type Database = {
           user_id?: string
         }
         Update: {
+          fonte?: Json
           ativo?: boolean
           created_at?: string
           id?: string

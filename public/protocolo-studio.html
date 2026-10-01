@@ -17,16 +17,22 @@
 <div id="root"></div>
 
 <!--
-  FERRAMENTA EXPERIMENTAL, EM PARALELO ao fluxo oficial de protocolos.
+  STUDIO DE PROTOCOLOS — onde o protocolo é desenhado como grafo.
   Página estática (sem build/bundler) — arquivo isolado em público, não faz
   parte do app React principal.
 
-  O que já funciona:
-  - "Gerar com IA" chama /api/ia/gerar-fluxo (proxy de backend, chave da
-    Anthropic fica só no servidor).
+  - "Gerar com IA" chama /api/protocolos/estudio-gerar-ia: prompt voltado a
+    PCDT no servidor, grafo validado e vinculado ao catálogo TUSS/substâncias
+    (src/lib/protocolos/estudio-gerar.server.ts). Pode substituir o fluxo ou
+    adicionar uma parte ao fluxo aberto (PDFs grandes, gerados por partes).
   - "Salvar rascunho" e "Meus rascunhos" chamam /api/protocolos/estudio-rascunho
-    (tabela protocolo_estudio_rascunhos, grafo inteiro em jsonb — ver migration
-    20260915140000_protocolo-studio-grafo-rascunhos.sql).
+    (tabela protocolo_estudio_rascunhos, grafo inteiro em jsonb; grafo.meta
+    guarda CIDs, fonte e pendências da IA).
+  - "Publicar" chama /api/protocolos/estudio-publicar: compila o grafo para o
+    motor executável (protocolo_acoes/protocolo_regras — tarefas, avaliação
+    de exames, alertas e decisões) via src/lib/protocolos/estudio-compilar.server.ts
+    e vincula os pacientes pelos CIDs. Republicar atualiza o mesmo protocolo
+    sem perder o histórico dos pacientes.
 
   Configuração pública abaixo usa os mesmos valores do app principal.
   - Em produção (fora do preview do Lovable), a sessão do Supabase é gravada
@@ -190,8 +196,31 @@ const CAMPO_OPTIONS = [
 const OPERADORES_NUMERO = [
   { id: "maior_que", label: "maior que" }, { id: "menor_que", label: "menor que" },
   { id: "maior_ou_igual", label: "maior ou igual a" }, { id: "menor_ou_igual", label: "menor ou igual a" },
-  { id: "entre", label: "entre" }, { id: "igual", label: "igual a" },
+  { id: "entre", label: "entre" }, { id: "fora_de", label: "fora da faixa" }, { id: "igual", label: "igual a" },
 ];
+const NIVEIS_EVENTO = [{ id: "info", label: "Informativo" }, { id: "atencao", label: "Atenção" }, { id: "critico", label: "Crítico" }];
+const META_VAZIA = () => ({ cids: [], fonte: {}, pendencias: [] });
+const comMeta = (g) => ({ nodes: g.nodes || [], edges: g.edges || [], meta: { ...META_VAZIA(), ...(g.meta || {}) } });
+// Mesmo formato aceito pelo motor (public.cid_compativel): "E10" ou "E10.9".
+function normCid(v) {
+  const m = String(v || "").toUpperCase().replace(/\s+/g, "").match(/^([A-Z])(\d{2})\.?(\d{1,2})?$/);
+  return m ? (m[3] ? `${m[1]}${m[2]}.${m[3]}` : `${m[1]}${m[2]}`) : null;
+}
+const ESQUEMA_CAMPOS = [
+  { id: "populacao", label: "População", ph: "Ex: Adulto" }, { id: "dose", label: "Dose", ph: "Ex: 500 mg" },
+  { id: "via", label: "Via", ph: "oral" }, { id: "posologia", label: "Posologia", ph: "2x/dia" },
+  { id: "duracao", label: "Duração", ph: "contínuo" }, { id: "dose_maxima", label: "Dose máx.", ph: "2.550 mg/dia" },
+];
+// Grafos antigos guardavam dose/posologia soltos no nó de Medicamento.
+function esquemasDoNo(node) {
+  if (Array.isArray(node.esquemas) && node.esquemas.length) return node.esquemas;
+  if (node.dose || node.posologia) return [{ populacao: "", dose: node.dose || "", via: "", posologia: node.posologia || "", duracao: "", dose_maxima: "" }];
+  return [];
+}
+function repeticaoTexto(node) {
+  const r = node.type === "Medicamento" && (node.repetir_a_cada === undefined || node.repetir_a_cada === null) ? 30 : Number(node.repetir_a_cada) || 0;
+  return r > 0 ? `↻ a cada ${r}d` : "única vez";
+}
 const OPERADORES_TEXTO = [{ id: "igual", label: "igual a" }, { id: "contem", label: "contém" }];
 const OPERADORES_ENUM = [{ id: "igual", label: "é" }];
 const PATIENT_VARS = [
@@ -563,70 +592,32 @@ const PROTOCOLS = {
 };
 
 // ---------------------------------------------------------------------------
-// Botão de IA — converte um texto de protocolo colado num grafo, usando o
-// mesmo contrato de dados dos nós/arestas manuais. O modelo devolve ids
-// "locais" (n1, n2, b1...) que a gente remapeia pra uid()s reais aqui,
-// então a ordem/nomeação que a IA escolher não importa.
+// Botão de IA — o prompt, a validação do grafo e o vínculo com o catálogo
+// ficam no servidor (src/lib/protocolos/estudio-gerar.server.ts). A resposta
+// usa ids "locais" (n1, n2, b1...) que buildGraphFromAiSpec remapeia pra uid()s.
 // ---------------------------------------------------------------------------
-const AI_SCHEMA_PROMPT = `Você converte um protocolo clínico em texto para um grafo JSON usado por um editor visual de protocolos.
-
-Responda APENAS com um objeto JSON válido, sem markdown, sem \`\`\`, sem texto antes ou depois.
-
-Formato exato esperado:
-{
-  "name": "Nome curto do protocolo",
-  "nodes": [
-    { "localId": "n1", "type": "Admissao", "name": "...", "clauses": [ {"sourceKind":"paciente","variavel":"cid","operador":"contem","valor":"E10","conector":null} ] },
-    { "localId": "n2", "type": "Exame", "name": "...", },
-    { "localId": "n3", "type": "Medicamento", "name": "...", "dose": "...", "posologia": "..." },
-    { "localId": "n4", "type": "Consulta", "name": "...", "especialidade": "..." },
-    { "localId": "n5", "type": "Condicao", "name": "...", "branches": [
-        { "localId": "b1", "isDefault": false, "descricao": "...", "clauses": [
-            {"sourceKind":"exame","sourceLocalId":"n2","campo":"numero","operador":"maior_ou_igual","numero":"126","conector":null},
-            {"sourceKind":"medicamento","sourceLocalId":"n3","estado":"em_uso","conector":"E"},
-            {"sourceKind":"paciente","variavel":"idade","operador":"maior_que","valor":"18","conector":"OU"}
-        ] },
-        { "localId": "b2", "isDefault": true }
-    ] },
-    { "localId": "n6", "type": "Evento", "name": "...", "acao": "notificar_usuario", "alvoLocalId": "n3", "motivo": "...", "conteudo": "...", "destinatario": "..." }
-  ],
-  "edges": [
-    { "fromLocalId": "n1", "fromHandle": "admitido", "toLocalId": "n2", "lapso": 0 },
-    { "fromLocalId": "n5", "fromHandle": "b1", "toLocalId": "n6", "lapso": 0 }
-  ]
+async function generateFlowFromAI(protocolText, pdf, contexto) {
+  return studioFetch("/api/protocolos/estudio-gerar-ia", {
+    method: "POST",
+    body: JSON.stringify({
+      texto: protocolText || null,
+      pdfBase64: pdf?.base64 || null,
+      filename: pdf?.filename || null,
+      contexto: contexto || null,
+    }),
+  });
 }
 
-Regras do schema:
-- "type" só pode ser: Admissao, Exame, Medicamento, Consulta, Condicao, Evento.
-- Admissao: só clauses (nunca branches), sourceKind quase sempre "paciente". Saídas fixas ao conectar: "admitido" / "nao_admitido".
-- Condicao: só branches (nunca clauses direto); cada branch tem seu próprio "clauses" (cadeia E/OU) OU "isDefault": true (fallback, sem clauses). Handle da aresta = o "localId" do branch.
-- clause.sourceKind: "exame" | "medicamento" | "paciente". "exame" e "medicamento" exigem "sourceLocalId" apontando pra um nó Exame/Medicamento já listado. "paciente" usa "variavel" (sexo/idade/peso/altura/gestante/cid) em vez de sourceLocalId.
-- clause de exame: "campo" é "numero"|"texto"|"achado". Se numero: "operador" é maior_que/menor_que/maior_ou_igual/menor_ou_igual/entre/igual, com "numero" (ou numero_min/numero_max se entre). Se achado: "conceito" (texto) + "presente" (bool).
-- clause de medicamento: só "estado": "em_uso" | "suspenso".
-- clause de paciente: "operador" (maior_que/menor_que/maior_ou_igual/menor_ou_igual/entre/igual/contem) + "valor" (string).
-- A 1ª clause de uma cadeia tem "conector": null; as seguintes têm "E" ou "OU".
-- Evento.acao: suspender | ajustar | mensagem_paciente | notificar_usuario | gerar_receita | enviar_receita | solicitar_exame. "alvoLocalId" referencia outro nó do fluxo (opcional).
-- edges: "fromHandle" é null pra Exame/Medicamento/Consulta/Evento (saída única), "admitido"/"nao_admitido" pra Admissao, e o localId do branch pra Condicao.
-- IMPORTANTE — cubra o protocolo completo: modele todos os ramos e exceções relevantes descritos no texto/PDF (não só o caminho principal), até um limite de 40 nós no total. Se o protocolo for maior que isso, priorize completude clínica (todas as condições/exames/medicamentos citados) sobre detalhamento de cada um — nomes e textos curtos e diretos.`;
+// Resumo do fluxo aberto, mandado à IA no modo "adicionar" para ela não repetir nós.
+function contextoDoGrafo(graph) {
+  return graph.nodes.map((n) => `- ${n.type}: ${n.name}`).join("\n");
+}
 
-async function generateFlowFromAI(protocolText, pdf) {
-  // Via proxy de backend (/api/ia/gerar-fluxo) — chave fica só no servidor,
-  // nunca no navegador. Ver src/routes/api/ia/gerar-fluxo.ts. Usa o AI
-  // Gateway do Lovable (mesmo do resto do app), resposta no formato
-  // OpenAI-compatible: choices[0].message.content.
-  // pdf (opcional): { base64, filename } — a IA lê o PDF anexado direto,
-  // igual o fluxo oficial de gerar protocolo já faz.
-  const prompt = `${AI_SCHEMA_PROMPT}\n\nPROTOCOLO:\n"""\n${protocolText || "(ver documento PDF anexo)"}\n"""`;
-  const data = await studioFetch("/api/ia/gerar-fluxo", {
+async function publicarRascunho(rascunhoId, simular) {
+  return studioFetch("/api/protocolos/estudio-publicar", {
     method: "POST",
-    body: JSON.stringify({ prompt, pdfBase64: pdf?.base64 || null, filename: pdf?.filename || null }),
+    body: JSON.stringify({ rascunhoId, simular: !!simular }),
   });
-  const text = data?.choices?.[0]?.message?.content || "";
-  const cleaned = text.replace(/```json|```/g, "").trim();
-  let spec;
-  try { spec = JSON.parse(cleaned); }
-  catch { throw new Error("A IA não devolveu um JSON válido. Tente um texto mais curto/direto."); }
-  return spec;
 }
 
 // Lê um File (PDF) como base64 puro (sem o prefixo data:...;base64,).
@@ -671,23 +662,28 @@ function buildGraphFromAiSpec(spec) {
     if (n.type === "Condicao") {
       const branches = (n.branches || []).map((b) => {
         const bId = uid();
-        if (b.localId) handleMap[b.localId] = bId;
-        return { id: bId, isDefault: !!b.isDefault, descricao: b.descricao || "", clauses: (b.clauses || []).map(mapClause) };
+        if (b.localId) handleMap[`${n.localId}|${b.localId}`] = bId;
+        return { id: bId, isDefault: !!b.isDefault, descricao: b.descricao || "", clauses: (b.clauses || []).map(mapClause), repetir_gatilho_dias: b.repetir_gatilho_dias || null };
       });
       return { ...base, branches: branches.length ? branches : [{ id: uid(), isDefault: true, descricao: "Caso padrão" }] };
     }
     if (n.type === "Admissao") return { ...base, clauses: (n.clauses || []).map(mapClause) };
-    if (n.type === "Evento") return { ...base, acao: n.acao || "notificar_usuario", alvoId: ensureId(n.alvoLocalId), motivo: n.motivo || "", conteudo: n.conteudo || "", destinatario: n.destinatario || "", fator: n.fator || "" };
-    if (n.type === "Medicamento") return { ...base, substanciaId: null, dose: n.dose || "", posologia: n.posologia || "" };
-    if (n.type === "Consulta") return { ...base, especialidade: n.especialidade || "" };
-    return { ...base, tussId: null }; // Exame
+    if (n.type === "Evento") return { ...base, acao: n.acao || "notificar_usuario", alvoId: ensureId(n.alvoLocalId), motivo: n.motivo || "", conteudo: n.conteudo || "", destinatario: n.destinatario || "", fator: n.fator || "", nivel: n.nivel || "atencao", repetir_a_cada: n.repetir_a_cada || 0 };
+    if (n.type === "Medicamento") return { ...base, substanciaId: n.substanciaId || null,
+      esquemas: n.esquemas || [], linha_tratamento: n.linha_tratamento ?? null, grupo_alternativa: n.grupo_alternativa || "", ceaf: !!n.ceaf,
+      criterios_inclusao: n.criterios_inclusao || [], criterios_exclusao: n.criterios_exclusao || [], contraindicacoes: n.contraindicacoes || [],
+      ajuste_renal_hepatico: n.ajuste_renal_hepatico || "", monitorizacao: n.monitorizacao || "",
+      repetir_a_cada: n.repetir_a_cada ?? 30, nome_documento: n.nome_documento || "" };
+    if (n.type === "Consulta") return { ...base, especialidade: n.especialidade || "", repetir_a_cada: n.repetir_a_cada || 0 };
+    return { ...base, tussId: n.tussId || null, codigoTuss: n.codigoTuss || null, repetir_a_cada: n.repetir_a_cada || 0, nome_documento: n.nome_documento || "" }; // Exame
   });
   const edges = (spec.edges || []).map((e) => {
     let fromHandle = e.fromHandle ?? null;
-    if (fromHandle && fromHandle !== "admitido" && fromHandle !== "nao_admitido" && handleMap[fromHandle]) fromHandle = handleMap[fromHandle];
+    // ids de ramo só são únicos dentro da própria condição
+    if (fromHandle && fromHandle !== "admitido" && fromHandle !== "nao_admitido" && handleMap[`${e.fromLocalId}|${fromHandle}`]) fromHandle = handleMap[`${e.fromLocalId}|${fromHandle}`];
     return { id: uid(), from: ensureId(e.fromLocalId), to: ensureId(e.toLocalId), fromHandle, lapso: Number(e.lapso) || 0 };
   }).filter((e) => e.from && e.to);
-  return { nodes, edges };
+  return { nodes, edges, meta: { cids: spec.cids || [], fonte: spec.fonte || {}, pendencias: spec.pendencias || [] } };
 }
 
 // Lapso "de verdade" pra exibir no rosto do card: se o nó tem entrada(s), o
@@ -793,6 +789,7 @@ function clauseSummary(c, nodesById) {
   const prefix = n?.name ? `${n.name}: ` : "Exame: ";
   if (c.campo === "achado") return `${prefix}achado "${c.conceito || "?"}" ${c.presente === false ? "ausente" : "presente"}`;
   if (c.operador === "entre") return `${prefix}entre ${c.numero_min ?? "?"} e ${c.numero_max ?? "?"}`;
+  if (c.operador === "fora_de") return `${prefix}fora de ${c.numero_min ?? "?"}–${c.numero_max ?? "?"}`;
   const opLabel = (c.campo === "numero" ? OPERADORES_NUMERO : OPERADORES_TEXTO).find((o) => o.id === c.operador)?.label || c.operador;
   return `${prefix}${opLabel} ${c.campo === "numero" ? (c.numero ?? "?") : `"${c.texto ?? "?"}"`}`;
 }
@@ -854,7 +851,11 @@ const glass = (extra) => ({
 
 function ProtocolCanvas() {
   const [protocolKey, setProtocolKey] = useState("novo");
-  const [graph, setGraph] = useState(() => PROTOCOLS.novo.seed());
+  const [graph, setGraph] = useState(() => comMeta(PROTOCOLS.novo.seed()));
+  const [aiModo, setAiModo] = useState("substituir"); // substituir | adicionar
+  const [protocoloId, setProtocoloId] = useState(null);
+  const [publicadoEm, setPublicadoEm] = useState(null);
+  const [publicacao, setPublicacao] = useState(null); // { fase, dados, erro }
   const [aiOpen, setAiOpen] = useState(false);
   const [aiText, setAiText] = useState("");
   const [aiPdfFile, setAiPdfFile] = useState(null); // { name, base64 } | null
@@ -875,12 +876,42 @@ function ProtocolCanvas() {
     try {
       const result = await salvarRascunho({ id: draftId, titulo: draftTitle, grafo: graph });
       setDraftId(result.id);
+      return result.id;
     } catch (err) {
       setSaveError(err.message || String(err));
+      return null;
     } finally {
       setSaving(false);
     }
   }
+
+  // Publicar = salvar o rascunho, pré-visualizar o que vira executável (e o
+  // que fica como pendência) e, confirmado, gravar no motor de protocolos.
+  async function handleAbrirPublicacao() {
+    setPublicacao({ fase: "carregando" });
+    const id = await handleSalvarRascunho();
+    if (!id) { setPublicacao({ fase: "erro", erro: "Não foi possível salvar o rascunho antes de publicar." }); return; }
+    try {
+      const dados = await publicarRascunho(id, true);
+      setPublicacao({ fase: "previa", dados, rascunhoId: id });
+    } catch (err) {
+      setPublicacao({ fase: "erro", erro: err.message || String(err) });
+    }
+  }
+  async function handleConfirmarPublicacao() {
+    const rascunhoId = publicacao?.rascunhoId;
+    const previa = publicacao?.dados;
+    setPublicacao({ fase: "publicando", dados: previa, rascunhoId });
+    try {
+      const dados = await publicarRascunho(rascunhoId, false);
+      setProtocoloId(dados.protocoloId);
+      setPublicadoEm(new Date().toISOString());
+      setPublicacao({ fase: "ok", dados, rascunhoId });
+    } catch (err) {
+      setPublicacao({ fase: "previa", dados: previa, rascunhoId, erro: err.message || String(err) });
+    }
+  }
+  const updateMeta = useCallback((patch) => setGraph((g) => ({ ...g, meta: { ...(g.meta || META_VAZIA()), ...patch } })), []);
 
   async function handleAbrirRascunhos() {
     setRascunhosOpen(true);
@@ -898,9 +929,11 @@ function ProtocolCanvas() {
     setRascunhosLoading(true);
     try {
       const r = await carregarRascunho(id);
-      setGraph(r.grafo && r.grafo.nodes ? r.grafo : { nodes: [], edges: [] });
+      setGraph(comMeta(r.grafo && r.grafo.nodes ? r.grafo : {}));
       setDraftId(r.id);
       setDraftTitle(r.titulo);
+      setProtocoloId(r.protocolo_id || null);
+      setPublicadoEm(r.publicado_em || null);
       setCustomLabel(null);
       setSelectedId(null);
       setPan({ x: 220, y: 40 });
@@ -916,11 +949,29 @@ function ProtocolCanvas() {
     if ((!aiText.trim() && !aiPdfFile) || aiLoading) return;
     setAiLoading(true); setAiError(null);
     try {
-      const spec = await generateFlowFromAI(aiText, aiPdfFile ? { base64: aiPdfFile.base64, filename: aiPdfFile.name } : null);
+      const adicionar = aiModo === "adicionar" && graph.nodes.length > 0;
+      const spec = await generateFlowFromAI(aiText, aiPdfFile ? { base64: aiPdfFile.base64, filename: aiPdfFile.name } : null,
+        adicionar ? contextoDoGrafo(graph) : null);
       const built = buildGraphFromAiSpec(spec);
       if (!built.nodes.length) throw new Error("A IA não gerou nenhum nó — tenta reformular o texto.");
       const laidOutNodes = autoLayout(built.nodes, built.edges, "proximidade");
-      setGraph({ nodes: laidOutNodes, edges: built.edges });
+      if (adicionar) {
+        // parte nova entra à direita do fluxo atual, sem mexer no que já existe
+        const offsetX = Math.max(0, ...graph.nodes.map((n) => n.x)) + NODE_W + 160;
+        setGraph((g) => ({
+          nodes: [...g.nodes, ...laidOutNodes.map((n) => ({ ...n, x: n.x + offsetX }))],
+          edges: [...g.edges, ...built.edges],
+          meta: {
+            ...g.meta,
+            cids: [...new Set([...(g.meta?.cids || []), ...built.meta.cids])],
+            fonte: g.meta?.fonte?.arquivo || g.meta?.fonte?.portaria ? g.meta.fonte : built.meta.fonte,
+            pendencias: [...new Set([...(g.meta?.pendencias || []), ...built.meta.pendencias])],
+          },
+        }));
+      } else {
+        setGraph({ nodes: laidOutNodes, edges: built.edges, meta: built.meta });
+        if (!draftId && spec.name) setDraftTitle(spec.name);
+      }
       setCustomLabel(spec.name || "Fluxo gerado por IA");
       setSelectedId(null);
       setPan({ x: 220, y: 40 });
@@ -982,7 +1033,7 @@ function ProtocolCanvas() {
 
   const updateNode = useCallback((id, patch) => setGraph((g) => ({ ...g, nodes: g.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)) })), []);
   const updateEdge = useCallback((id, patch) => setGraph((g) => ({ ...g, edges: g.edges.map((e) => (e.id === id ? { ...e, ...patch } : e)) })), []);
-  const removeNode = useCallback((id) => { setGraph((g) => ({ nodes: g.nodes.filter((n) => n.id !== id), edges: g.edges.filter((e) => e.from !== id && e.to !== id) })); setSelectedId(null); }, []);
+  const removeNode = useCallback((id) => { setGraph((g) => ({ ...g, nodes: g.nodes.filter((n) => n.id !== id), edges: g.edges.filter((e) => e.from !== id && e.to !== id) })); setSelectedId(null); }, []);
   const removeEdge = useCallback((id) => setGraph((g) => ({ ...g, edges: g.edges.filter((e) => e.id !== id) })), []);
   const addEdgeIfMissing = useCallback((from, fromHandle, to) => {
     setGraph((g) => {
@@ -999,11 +1050,11 @@ function ProtocolCanvas() {
       { id: uid(), descricao: "", clauses: [] },
       { id: uid(), isDefault: true, descricao: "Caso padrão" },
     ] };
-    if (type === "Evento") return { ...base, name: "Novo evento", acao: "suspender", alvoId: null, motivo: "" };
     if (type === "Admissao") return { ...base, name: "Critério de admissão", clauses: [] };
-    if (type === "Medicamento") return { ...base, name: "Novo medicamento", substanciaId: null, dose: "", posologia: "" };
-    if (type === "Exame") return { ...base, name: "Novo exame", tussId: null };
-    return { ...base, name: "Nova consulta", especialidade: "" };
+    if (type === "Medicamento") return { ...base, name: "Novo medicamento", substanciaId: null, esquemas: [], linha_tratamento: null, grupo_alternativa: "", ceaf: false, repetir_a_cada: 30 };
+    if (type === "Exame") return { ...base, name: "Novo exame", tussId: null, repetir_a_cada: 0 };
+    if (type === "Evento") return { ...base, name: "Novo evento", acao: "notificar_usuario", alvoId: null, motivo: "", nivel: "atencao" };
+    return { ...base, name: "Nova consulta", especialidade: "", repetir_a_cada: 0 };
   }
 
   function addFromRail(type) {
@@ -1153,11 +1204,13 @@ function ProtocolCanvas() {
             onChange={(e) => {
               const key = e.target.value;
               setProtocolKey(key);
-              setGraph(PROTOCOLS[key].seed());
+              setGraph(comMeta(PROTOCOLS[key].seed()));
               setSelectedId(null);
               setPan({ x: 220, y: 40 });
               setCustomLabel(null);
               setDraftId(null);
+              setProtocoloId(null);
+              setPublicadoEm(null);
               setDraftTitle(key === "novo" ? "Rascunho sem título" : PROTOCOLS[key].label + " (cópia)");
             }}
             style={{ fontSize: 13, fontWeight: 700, color: "#1e293b", background: "rgba(255,255,255,0.75)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 10, padding: "6px 10px", cursor: "pointer", outline: "none" }}>
@@ -1184,6 +1237,18 @@ function ProtocolCanvas() {
               cursor: "pointer", background: "rgba(255,255,255,0.75)" }}>
             📂 Meus rascunhos
           </button>
+          <button onClick={handleAbrirPublicacao} disabled={saving || !graph.nodes.length}
+            title="Transforma o fluxo em protocolo ativo: agenda tarefas, avalia exames e gera alertas para os pacientes com os CIDs do protocolo"
+            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 700, color: "#fff", border: "none", borderRadius: 999,
+              padding: "8px 14px", cursor: saving || !graph.nodes.length ? "default" : "pointer",
+              background: "linear-gradient(135deg,#34d399,#059669)", boxShadow: "0 4px 14px rgba(5,150,105,0.3)", opacity: graph.nodes.length ? 1 : 0.5 }}>
+            🚀 {protocoloId ? "Atualizar publicação" : "Publicar"}
+          </button>
+          {protocoloId && publicadoEm && (
+            <div title="Protocolo ativo no app" style={{ fontSize: 11, fontWeight: 600, color: "#047857", background: "rgba(236,253,245,0.9)", border: "1px solid rgba(5,150,105,0.25)", borderRadius: 999, padding: "5px 10px" }}>
+              ● Publicado {new Date(publicadoEm).toLocaleDateString("pt-BR")}
+            </div>
+          )}
           {saveError && (
             <div style={{ fontSize: 11.5, fontWeight: 600, color: "#dc2626", background: "rgba(254,242,242,0.9)", border: "1px solid rgba(220,38,38,0.25)", borderRadius: 999, padding: "5px 10px" }}>
               {saveError}
@@ -1349,6 +1414,17 @@ function ProtocolCanvas() {
                     ) : (
                       <div style={{ padding: "8px 10px", fontSize: 10.5, color: "#64748b" }}>
                         Lapso: <b>{(() => { const l = displayLapso(node, graph.edges); return l === null ? "varia por conexão" : `${l}d`; })()}</b>
+                        {" · "}{repeticaoTexto(node)}
+                        {node.type === "Medicamento" && (() => {
+                          const esq = esquemasDoNo(node);
+                          return (
+                            <div style={{ marginTop: 3, color: "#047857", fontWeight: 600 }}>
+                              {node.linha_tratamento ? `${node.linha_tratamento}ª linha · ` : ""}
+                              {esq.length ? `${esq.length} ${esq.length === 1 ? "esquema" : "variações de dose"}` : "⚠ sem dose"}
+                              {node.ceaf ? " · CEAF" : ""}
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
 
@@ -1382,11 +1458,16 @@ function ProtocolCanvas() {
             )}
           </div>
 
-          {selected && (
-            <div style={{ width: 300, padding: 16, overflowY: "auto", zIndex: 25, ...glass({ borderRadius: 0, borderTop: "none", borderRight: "none", borderBottom: "none" }) }}>
-              <NodeInspector key={selected.id} node={selected} graph={graph} fontes={fontesDoNo(selected.id)} onChange={(patch) => updateNode(selected.id, patch)} />
-            </div>
-          )}
+          <div style={{ width: 300, padding: 16, overflowY: "auto", zIndex: 25, ...glass({ borderRadius: 0, borderTop: "none", borderRight: "none", borderBottom: "none" }) }}>
+            {selected ? (
+              <>
+                <button onClick={() => setSelectedId(null)} style={{ fontSize: 11, fontWeight: 600, color: "#7c3aed", background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: 10 }}>← Dados do protocolo</button>
+                <NodeInspector key={selected.id} node={selected} graph={graph} fontes={fontesDoNo(selected.id)} onChange={(patch) => updateNode(selected.id, patch)} />
+              </>
+            ) : (
+              <ProtocolPanel graph={graph} onMeta={updateMeta} onSelect={setSelectedId} protocoloId={protocoloId} publicadoEm={publicadoEm} />
+            )}
+          </div>
         </div>
       </div>
 
@@ -1399,9 +1480,19 @@ function ProtocolCanvas() {
               <div style={{ fontSize: 15, fontWeight: 700, color: "#1e293b" }}>Gerar fluxo com IA</div>
             </div>
             <div style={{ fontSize: 11.5, color: "#64748b", marginBottom: 14, lineHeight: 1.5 }}>
-              Cole o texto de um protocolo (ou um trecho dele), anexe um PDF, ou os dois. A IA monta o fluxo completo — exames, condições, medicamentos, ramificações e exceções — pra você refinar depois.
-              <br /><b>Até ~40 nós</b>: protocolos maiores que isso podem sair truncados ou pedir uma segunda passada de ajuste.
+              Anexe o PDF do PCDT/diretriz e/ou escreva instruções. A IA monta o fluxo completo — monitorização com condutas por resultado, cada medicamento com todas as variações de dose e linhas de tratamento, e os alertas — já vinculado ao catálogo TUSS/substâncias. O que precisar de revisão aparece no painel do protocolo.
+              <br />PCDT muito extenso? Gere por partes: escreva o foco (ex.: <i>"somente tratamento pediátrico"</i>) e use <b>Adicionar ao fluxo atual</b>.
             </div>
+            {graph.nodes.length > 0 && (
+              <div style={{ display: "flex", gap: 4, marginBottom: 10, background: "#f1f5f9", borderRadius: 10, padding: 3 }}>
+                {[{ id: "substituir", label: "Substituir o fluxo" }, { id: "adicionar", label: "Adicionar ao fluxo atual" }].map((m) => (
+                  <button key={m.id} onClick={() => setAiModo(m.id)} disabled={aiLoading}
+                    style={{ flex: 1, padding: "6px 8px", borderRadius: 8, border: "none", fontSize: 11.5, fontWeight: 700, cursor: "pointer",
+                      background: aiModo === m.id ? "#fff" : "transparent", color: aiModo === m.id ? "#7c3aed" : "#64748b",
+                      boxShadow: aiModo === m.id ? "0 1px 4px rgba(0,0,0,.08)" : "none" }}>{m.label}</button>
+                ))}
+              </div>
+            )}
             <textarea value={aiText} onChange={(e) => setAiText(e.target.value)} disabled={aiLoading}
               placeholder="Cole aqui o texto do protocolo (opcional se anexar PDF)..."
               style={{ width: "100%", minHeight: 130, fontSize: 12.5, padding: 12, borderRadius: 12, border: "1px solid #dbe1ea", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit", outline: "none", marginBottom: 10 }} />
@@ -1431,12 +1522,189 @@ function ProtocolCanvas() {
               <button onClick={handleAiGenerate} disabled={aiLoading || (!aiText.trim() && !aiPdfFile)}
                 style={{ padding: "9px 18px", borderRadius: 10, border: "none", fontSize: 12.5, fontWeight: 700, color: "#fff", cursor: aiLoading || (!aiText.trim() && !aiPdfFile) ? "default" : "pointer",
                   background: aiLoading || (!aiText.trim() && !aiPdfFile) ? "#c4b5fd" : "linear-gradient(135deg,#c084fc,#7c3aed)" }}>
-                {aiLoading ? "Gerando…" : "Gerar fluxo"}
+                {aiLoading ? "Lendo o documento… (pode levar 1–2 min)" : "Gerar fluxo"}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {publicacao && (
+        <PublishModal estado={publicacao} protocoloId={protocoloId}
+          onClose={() => publicacao.fase !== "publicando" && publicacao.fase !== "carregando" && setPublicacao(null)}
+          onConfirm={handleConfirmarPublicacao} />
+      )}
+    </div>
+  );
+}
+
+// Painel lateral quando nenhum nó está selecionado: dados do protocolo que não
+// pertencem a um nó (CIDs, fonte), pendências deixadas pela IA e o que ainda
+// impede a publicação de funcionar bem (nós sem vínculo com o catálogo etc.).
+function ProtocolPanel({ graph, onMeta, onSelect, protocoloId, publicadoEm }) {
+  const meta = graph.meta || META_VAZIA();
+  const [cidInput, setCidInput] = useState("");
+  const [cidErro, setCidErro] = useState(null);
+  const label = { fontSize: 10.5, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6, display: "block" };
+
+  function addCids() {
+    const partes = cidInput.split(/[,;\s]+/).filter(Boolean);
+    const validos = partes.map(normCid).filter(Boolean);
+    const invalidos = partes.filter((x) => !normCid(x));
+    if (validos.length) onMeta({ cids: [...new Set([...(meta.cids || []), ...validos])] });
+    setCidErro(invalidos.length ? `Formato não reconhecido: ${invalidos.join(", ")} (use E10 ou E10.9)` : null);
+    setCidInput(invalidos.join(" "));
+  }
+
+  const semVinculo = graph.nodes.filter((n) => (n.type === "Exame" && !n.tussId) || (n.type === "Medicamento" && !n.substanciaId));
+  const semDose = graph.nodes.filter((n) => n.type === "Medicamento" && !esquemasDoNo(n).length);
+  const eventosSemAlvo = graph.nodes.filter((n) => n.type === "Evento" && EVENTO_ACOES.find((a) => a.id === n.acao)?.alvoTipo && !n.alvoId);
+  const contagem = Object.keys(TYPE_STYLE).map((t) => [t, graph.nodes.filter((n) => n.type === t).length]).filter(([, c]) => c);
+  const f = meta.fonte || {};
+  const chip = (n, txt) => (
+    <button key={n.id} onClick={() => onSelect(n.id)} style={{ display: "block", width: "100%", textAlign: "left", fontSize: 11, color: "#334155", background: "rgba(255,255,255,0.7)", border: "1px solid #e2e8f0", borderRadius: 8, padding: "5px 8px", marginBottom: 4, cursor: "pointer" }}>
+      {txt || n.name}
+    </button>
+  );
+
+  return (
+    <div>
+      <div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b", marginBottom: 4 }}>Dados do protocolo</div>
+      <div style={{ fontSize: 10.5, color: "#94a3b8", marginBottom: 14 }}>Clique num nó do canvas para editá-lo.</div>
+
+      {protocoloId && (
+        <div style={{ fontSize: 11, color: "#047857", background: "rgba(236,253,245,0.9)", borderRadius: 10, padding: "8px 10px", marginBottom: 14 }}>
+          Publicado{publicadoEm ? ` em ${new Date(publicadoEm).toLocaleString("pt-BR")}` : ""}. Alterações aqui só valem para os pacientes depois de <b>Atualizar publicação</b>.
+        </div>
+      )}
+
+      <label style={label}>CIDs contemplados</label>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 6 }}>
+        {(meta.cids || []).map((c) => (
+          <span key={c} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700, color: "#0f766e", background: "rgba(240,253,250,0.9)", border: "1px solid rgba(15,118,110,0.25)", borderRadius: 999, padding: "3px 8px" }}>
+            {c}
+            <button onClick={() => onMeta({ cids: meta.cids.filter((x) => x !== c) })} style={{ border: "none", background: "none", color: "#5eead4", cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
+          </span>
+        ))}
+        {!(meta.cids || []).length && <span style={{ fontSize: 11, color: "#d97706" }}>⚠ Sem CID, nenhum paciente entra no protocolo publicado.</span>}
+      </div>
+      <div style={{ display: "flex", gap: 6, marginBottom: cidErro ? 4 : 14 }}>
+        <input value={cidInput} onChange={(e) => setCidInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addCids()}
+          placeholder="Ex: E10, E10.9" style={{ flex: 1, fontSize: 12, padding: "7px 9px", borderRadius: 9, border: "1px solid #dbe1ea", outline: "none" }} />
+        <button onClick={addCids} style={{ fontSize: 11.5, fontWeight: 700, color: "#0f766e", background: "rgba(240,253,250,0.9)", border: "1px solid rgba(15,118,110,0.25)", borderRadius: 9, padding: "6px 10px", cursor: "pointer" }}>+ CID</button>
+      </div>
+      {cidErro && <div style={{ fontSize: 10.5, color: "#dc2626", marginBottom: 12 }}>{cidErro}</div>}
+      <div style={{ fontSize: 10, color: "#94a3b8", marginTop: -8, marginBottom: 14 }}>Categoria (E10) também cobre as subcategorias (E10.0–E10.9) do cadastro do paciente.</div>
+
+      {(f.portaria || f.orgao || f.arquivo) && (
+        <>
+          <label style={label}>Fonte</label>
+          <div style={{ fontSize: 11.5, color: "#475569", marginBottom: 14 }}>{[f.tipo_documento, f.orgao, f.portaria, f.ano].filter(Boolean).join(" · ")}{f.arquivo ? <div style={{ color: "#94a3b8" }}>📄 {f.arquivo}</div> : null}</div>
+        </>
+      )}
+
+      {contagem.length > 0 && (
+        <>
+          <label style={label}>Fluxo</label>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 14 }}>
+            {contagem.map(([t, c]) => (
+              <span key={t} style={{ fontSize: 10.5, fontWeight: 600, color: TYPE_STYLE[t].accent, background: TYPE_STYLE[t].soft, borderRadius: 999, padding: "3px 8px" }}>{c} {TYPE_STYLE[t].label}</span>
+            ))}
+          </div>
+        </>
+      )}
+
+      {(semVinculo.length > 0 || semDose.length > 0 || eventosSemAlvo.length > 0) && (
+        <>
+          <label style={label}>Para revisar antes de publicar</label>
+          {semVinculo.length > 0 && <div style={{ fontSize: 10.5, color: "#b45309", margin: "2px 0 4px" }}>Sem vínculo com o catálogo — exame sem TUSS não dispara as regras dele:</div>}
+          {semVinculo.map((n) => chip(n, `${n.type === "Exame" ? "🧪" : "💊"} ${n.name}`))}
+          {semDose.length > 0 && <div style={{ fontSize: 10.5, color: "#b45309", margin: "6px 0 4px" }}>Medicamento sem dose/posologia:</div>}
+          {semDose.map((n) => chip(n, `💊 ${n.name}`))}
+          {eventosSemAlvo.length > 0 && <div style={{ fontSize: 10.5, color: "#b45309", margin: "6px 0 4px" }}>Evento sem nó alvo:</div>}
+          {eventosSemAlvo.map((n) => chip(n, `⚠ ${n.name}`))}
+          <div style={{ height: 10 }} />
+        </>
+      )}
+
+      {(meta.pendencias || []).length > 0 && (
+        <>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <label style={label}>Observações da IA ({meta.pendencias.length})</label>
+            <button onClick={() => onMeta({ pendencias: [] })} style={{ fontSize: 10, color: "#94a3b8", background: "none", border: "none", cursor: "pointer", marginBottom: 6 }}>limpar</button>
+          </div>
+          {meta.pendencias.map((p, i) => (
+            <div key={i} style={{ display: "flex", gap: 6, fontSize: 11, color: "#7c2d12", background: "rgba(255,247,237,0.85)", border: "1px solid rgba(251,146,60,0.25)", borderRadius: 8, padding: "6px 8px", marginBottom: 4 }}>
+              <span style={{ flex: 1 }}>{p}</span>
+              <button title="Marcar como revisado" onClick={() => onMeta({ pendencias: meta.pendencias.filter((_, j) => j !== i) })}
+                style={{ border: "none", background: "none", color: "#fdba74", cursor: "pointer", padding: 0, alignSelf: "flex-start" }}>✓</button>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+// Pré-visualização e resultado da publicação (ver handleAbrirPublicacao).
+function PublishModal({ estado, protocoloId, onClose, onConfirm }) {
+  const d = estado.dados || {};
+  const r = d.resumo || {};
+  const ocupado = estado.fase === "carregando" || estado.fase === "publicando";
+  const semCid = estado.fase === "previa" && !(d.cids || []).length;
+  const stat = (n, t, cor) => (
+    <div style={{ flex: 1, minWidth: 70, textAlign: "center", background: "rgba(255,255,255,0.7)", borderRadius: 12, padding: "8px 4px" }}>
+      <div style={{ fontSize: 18, fontWeight: 800, color: cor }}>{n ?? 0}</div>
+      <div style={{ fontSize: 10, color: "#64748b", fontWeight: 600 }}>{t}</div>
+    </div>
+  );
+  return (
+    <div onClick={() => !ocupado && onClose()} style={{ position: "absolute", inset: 0, background: "rgba(15,23,42,0.5)", backdropFilter: "blur(4px)", zIndex: 110, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 560, maxWidth: "100%", maxHeight: "90%", overflowY: "auto", ...glass({ borderRadius: 24, padding: 22, boxShadow: "0 24px 60px rgba(15,23,42,0.35)" }) }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: "#1e293b", marginBottom: 10 }}>
+          {estado.fase === "ok" ? "✅ Protocolo publicado" : estado.fase === "erro" ? "Não foi possível publicar" : protocoloId ? "🚀 Atualizar publicação" : "🚀 Publicar protocolo"}
+        </div>
+        {estado.fase === "carregando" && <div style={{ fontSize: 12.5, color: "#64748b" }}>Salvando o rascunho e verificando o fluxo…</div>}
+        {estado.fase === "erro" && <div style={{ fontSize: 12.5, color: "#dc2626" }}>{estado.erro}</div>}
+        {(estado.fase === "previa" || estado.fase === "publicando" || estado.fase === "ok") && (
+          <>
+            <div style={{ fontSize: 11.5, color: "#64748b", marginBottom: 12, lineHeight: 1.5 }}>
+              {estado.fase === "ok"
+                ? <>Ativo para <b>{d.pacientes ?? 0}</b> paciente(s) com os CIDs {(d.cids || []).join(", ")}. Tarefas, alertas e decisões aparecem na aba de protocolos de cada paciente e no relatório de protocolos.{d.sincronizado === false ? " ⚠ A vinculação dos pacientes falhou — use \"Sincronizar\" na aba do paciente." : ""}</>
+                : <>O fluxo vira protocolo ativo para os pacientes com os CIDs <b>{(d.cids || []).join(", ") || "—"}</b>. {protocoloId ? "O histórico dos pacientes já vinculados é mantido." : ""}</>}
+            </div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+              {stat(r.acoes, "ações", "#4f46e5")}{stat(r.regras, "regras por resultado", "#7c3aed")}{stat(r.alertas, "alertas", "#d97706")}{stat(r.decisoes, "decisões do médico", "#0f766e")}
+            </div>
+            {(d.pendencias || []).length > 0 && (
+              <>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>Pontos de atenção ({d.pendencias.length})</div>
+                <div style={{ maxHeight: 220, overflowY: "auto", marginBottom: 12 }}>
+                  {d.pendencias.map((p, i) => (
+                    <div key={i} style={{ fontSize: 11, color: "#7c2d12", background: "rgba(255,247,237,0.85)", borderRadius: 8, padding: "6px 8px", marginBottom: 4 }}>{p}</div>
+                  ))}
+                </div>
+              </>
+            )}
+            {semCid && <div style={{ fontSize: 11.5, color: "#dc2626", marginBottom: 10 }}>Informe ao menos um CID no painel "Dados do protocolo" antes de publicar.</div>}
+            {estado.erro && <div style={{ fontSize: 11.5, color: "#dc2626", marginBottom: 10 }}>⚠ {estado.erro}</div>}
+          </>
+        )}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 6 }}>
+          {!ocupado && (
+            <button onClick={onClose} style={{ padding: "9px 16px", borderRadius: 10, border: "none", fontSize: 12.5, fontWeight: 600, color: "#64748b", background: "#f1f5f9", cursor: "pointer" }}>
+              {estado.fase === "ok" || estado.fase === "erro" ? "Fechar" : "Cancelar"}
+            </button>
+          )}
+          {(estado.fase === "previa" || estado.fase === "publicando") && (
+            <button onClick={onConfirm} disabled={ocupado || semCid}
+              style={{ padding: "9px 18px", borderRadius: 10, border: "none", fontSize: 12.5, fontWeight: 700, color: "#fff", cursor: ocupado || semCid ? "default" : "pointer",
+                background: ocupado || semCid ? "#a7f3d0" : "linear-gradient(135deg,#34d399,#059669)" }}>
+              {estado.fase === "publicando" ? "Publicando…" : protocoloId ? "Atualizar agora" : "Publicar agora"}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1605,6 +1873,20 @@ function NodeInspector({ node, graph, fontes, onChange }) {
         </>
       )}
       {node.type === "Consulta" && (<><label style={label}>Especialidade (opcional)</label><input style={input} value={node.especialidade || ""} onChange={(e) => onChange({ especialidade: e.target.value })} /></>)}
+      {(node.type === "Exame" || node.type === "Consulta" || node.type === "Medicamento") && (
+        <>
+          <label style={label}>{node.type === "Medicamento" ? "Renovar receita a cada (dias)" : "Repetir a cada (dias)"}</label>
+          <input type="number" min={0} style={input}
+            value={node.type === "Medicamento" && (node.repetir_a_cada === undefined || node.repetir_a_cada === null) ? 30 : (node.repetir_a_cada || 0)}
+            onChange={(e) => onChange({ repetir_a_cada: Math.max(0, Number(e.target.value) || 0) })} />
+          <div style={{ fontSize: 10, color: "#94a3b8", marginTop: -8, marginBottom: 12 }}>
+            0 = uma vez só. {node.type === "Exame" ? "Se um ramo de condição tiver \"Repetir exame em N dias\", a repetição passa a ser controlada pelo ramo." : ""}
+          </div>
+        </>
+      )}
+      {node.nome_documento && node.nome_documento !== node.name && (
+        <div style={{ fontSize: 10, color: "#94a3b8", marginTop: -6, marginBottom: 12 }}>Nome no documento: "{node.nome_documento}"</div>
+      )}
       {node.type === "Medicamento" && (
         <>
           <label style={label}>Substância (catálogo)</label>
@@ -1619,10 +1901,7 @@ function NodeInspector({ node, graph, fontes, onChange }) {
           {subSearch.loading && <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: -8, marginBottom: 12 }}>Buscando…</div>}
           {node.substanciaId && <div style={{ fontSize: 10.5, color: "#059669", marginTop: -8, marginBottom: 12 }}>Vinculado ao catálogo</div>}
           {!node.substanciaId && subQuery.trim().length >= 2 && !subSearch.loading && <div style={{ fontSize: 10.5, color: "#d97706", marginTop: -8, marginBottom: 12 }}>Não vinculado ao catálogo — escolha uma opção da lista</div>}
-          <label style={label}>Dose</label>
-          <input style={input} value={node.dose || ""} onChange={(e) => onChange({ dose: e.target.value })} placeholder="Ex: 75mcg" />
-          <label style={label}>Posologia</label>
-          <input style={input} value={node.posologia || ""} onChange={(e) => onChange({ posologia: e.target.value })} placeholder="Ex: 1x/dia" />
+          <MedicamentoEditor node={node} onChange={onChange} label={label} input={input} />
         </>
       )}
 
@@ -1656,6 +1935,17 @@ function NodeInspector({ node, graph, fontes, onChange }) {
           {node.branches.map((b, i) => (
             <div key={b.id} style={{ borderRadius: 12, padding: 10, marginBottom: 8, border: `1px dashed ${b.isDefault ? "#cbd5e1" : "#fbbf24"}`, background: b.isDefault ? "rgba(248,250,252,0.6)" : "rgba(255,251,235,0.6)" }}>
               <div style={{ fontSize: 9.5, fontWeight: 700, color: "#94a3b8", marginBottom: 6 }}>{i + 1}. {b.isDefault ? "CASO PADRÃO (fallback)" : "REGRA"}</div>
+              <input style={{ ...input, marginBottom: 6, padding: "6px 8px", fontSize: 11.5 }} value={b.descricao || ""}
+                onChange={(e) => updateBranch(b.id, { descricao: e.target.value })} placeholder={b.isDefault ? "Ex: Meta atingida" : "Nome do ramo (ex: HbA1c ≥ 7%)"} />
+              {fontes.some((f) => f.type === "Exame") && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10.5, color: "#64748b", marginBottom: 6 }}>
+                  ↻ Repetir o exame em
+                  <input type="number" min={0} value={b.repetir_gatilho_dias || ""} placeholder="—"
+                    onChange={(e) => updateBranch(b.id, { repetir_gatilho_dias: Number(e.target.value) || null })}
+                    style={{ width: 52, fontSize: 11, padding: "3px 6px", borderRadius: 6, border: "1px solid #dbe1ea" }} />
+                  dias neste ramo
+                </div>
+              )}
               {!b.isDefault && (
                 <>
                   {b.clauses.map((c) => (
@@ -1687,7 +1977,7 @@ function NodeInspector({ node, graph, fontes, onChange }) {
             <Plus size={13} /> Regra
           </button>
           <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 12 }}>
-            ⚠ Compor cláusulas de mais de uma fonte (ex: exame E medicamento) ainda não é avaliado pelo motor real — precisa da migração que discutimos (condição com contexto completo do paciente).
+            Ao publicar: ramos com um exame (ou exames ligados por OU) e idade/sexo viram regras automáticas. Ramos que usam estado de medicamento, gestação/peso ou E entre exames diferentes viram uma tarefa <b>Decidir</b> para o médico, que escolhe o caminho na aba do paciente.
           </div>
         </>
       )}
@@ -1783,10 +2073,23 @@ function NodeInspector({ node, graph, fontes, onChange }) {
               </>
             )}
 
+            <label style={label}>Nível do alerta</label>
+            <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+              {NIVEIS_EVENTO.map((nv) => (
+                <button key={nv.id} onClick={() => onChange({ nivel: nv.id })}
+                  style={{ flex: 1, padding: "6px 4px", borderRadius: 9, border: "none", fontSize: 10.5, fontWeight: 700, cursor: "pointer",
+                    background: (node.nivel || (node.acao === "suspender" ? "critico" : "atencao")) === nv.id ? s.grad : "#f1f5f9",
+                    color: (node.nivel || (node.acao === "suspender" ? "critico" : "atencao")) === nv.id ? "#fff" : "#64748b" }}>{nv.label}</button>
+              ))}
+            </div>
+            <label style={label}>Repetir a cada (dias)</label>
+            <input type="number" min={0} style={input} value={node.repetir_a_cada || 0}
+              onChange={(e) => onChange({ repetir_a_cada: Math.max(0, Number(e.target.value) || 0) })} />
+            <div style={{ fontSize: 10, color: "#94a3b8", marginTop: -8, marginBottom: 12 }}>Para alertas periódicos (ex.: renovar LME a cada 90 dias). 0 = uma vez.</div>
             <label style={label}>Motivo (aparece na auditoria)</label>
             <input style={input} value={node.motivo || ""} onChange={(e) => onChange({ motivo: e.target.value })} placeholder="Ex: Gestação em curso" />
             <div style={{ fontSize: 10, color: "#e11d48", background: "rgba(255,241,242,0.7)", borderRadius: 10, padding: "8px 10px" }}>
-              ⚠ Nenhum desses efeitos existe no schema ainda — hoje uma regra só cria tarefas novas. Essas opções descrevem a intenção; a execução real (suspender, mandar mensagem, gerar receita etc.) precisa ser construída na Fase 2.
+              Ao publicar: "Gerar/Enviar receita" vira uma receita do medicamento alvo e "Solicitar exame" vira o pedido do exame alvo. Os demais efeitos (suspender, ajustar, notificar, mensagem) viram um <b>alerta</b> com esta mensagem na aba do paciente, para a equipe executar. O envio ao paciente e a suspensão automática ainda não são feitos pelo sistema.
             </div>
           </>
         );
@@ -1817,6 +2120,66 @@ function NodeInspector({ node, graph, fontes, onChange }) {
         );
       })()}
     </div>
+  );
+}
+
+// Variações de dose (adulto/pediátrico, ataque/manutenção, ajuste renal…),
+// linha de tratamento e restrições de um medicamento do protocolo.
+function MedicamentoEditor({ node, onChange, label, input }) {
+  const esquemas = esquemasDoNo(node);
+  const small = { ...input, marginBottom: 0, padding: "5px 7px", fontSize: 11 };
+  const setEsquemas = (lista) => onChange({ esquemas: lista, dose: undefined, posologia: undefined });
+  const linhas = (v) => (Array.isArray(v) ? v.join("\n") : "");
+  const deLinhas = (t) => t.split("\n").map((x) => x.trim()).filter(Boolean);
+  return (
+    <>
+      <div style={{ display: "flex", gap: 6 }}>
+        <div style={{ flex: 1 }}>
+          <label style={label}>Linha</label>
+          <select style={input} value={node.linha_tratamento || ""} onChange={(e) => onChange({ linha_tratamento: e.target.value ? Number(e.target.value) : null })}>
+            <option value="">—</option>{[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n}ª linha</option>)}
+          </select>
+        </div>
+        <div style={{ flex: 1.4 }}>
+          <label style={label}>Grupo de alternativas</label>
+          <input style={input} value={node.grupo_alternativa || ""} onChange={(e) => onChange({ grupo_alternativa: e.target.value })} placeholder="Ex: IECA" />
+        </div>
+      </div>
+      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "#475569", marginTop: -4, marginBottom: 12 }}>
+        <input type="checkbox" checked={!!node.ceaf} onChange={(e) => onChange({ ceaf: e.target.checked })} /> Componente Especializado (CEAF) — exige LME
+      </label>
+
+      <label style={label}>Variações de dose / esquemas</label>
+      {esquemas.map((e, i) => (
+        <div key={i} style={{ borderRadius: 10, padding: 8, marginBottom: 6, background: "rgba(236,253,245,0.6)", border: "1px solid rgba(5,150,105,0.18)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
+            {ESQUEMA_CAMPOS.map((c) => (
+              <input key={c.id} style={small} value={e[c.id] || ""} placeholder={c.label + " — " + c.ph}
+                onChange={(ev) => setEsquemas(esquemas.map((x, j) => (j === i ? { ...x, [c.id]: ev.target.value } : x)))} />
+            ))}
+          </div>
+          <button onClick={() => setEsquemas(esquemas.filter((_, j) => j !== i))} style={{ fontSize: 10, color: "#e11d48", background: "none", border: "none", cursor: "pointer", padding: 0, marginTop: 4 }}>Remover variação</button>
+        </div>
+      ))}
+      <button onClick={() => setEsquemas([...esquemas, { populacao: "", dose: "", via: "", posologia: "", duracao: "", dose_maxima: "" }])}
+        style={{ width: "100%", fontSize: 11, fontWeight: 600, color: "#059669", background: "rgba(236,253,245,0.9)", border: "none", borderRadius: 9, padding: "7px 8px", cursor: "pointer", marginBottom: 12 }}>
+        + Variação de dose
+      </button>
+
+      <label style={label}>Contraindicações (1 por linha)</label>
+      <textarea style={{ ...input, minHeight: 44, resize: "vertical", fontFamily: "inherit" }} value={linhas(node.contraindicacoes)}
+        onChange={(e) => onChange({ contraindicacoes: deLinhas(e.target.value) })} />
+      <label style={label}>Critérios de inclusão (1 por linha)</label>
+      <textarea style={{ ...input, minHeight: 44, resize: "vertical", fontFamily: "inherit" }} value={linhas(node.criterios_inclusao)}
+        onChange={(e) => onChange({ criterios_inclusao: deLinhas(e.target.value) })} />
+      <label style={label}>Critérios de exclusão (1 por linha)</label>
+      <textarea style={{ ...input, minHeight: 44, resize: "vertical", fontFamily: "inherit" }} value={linhas(node.criterios_exclusao)}
+        onChange={(e) => onChange({ criterios_exclusao: deLinhas(e.target.value) })} />
+      <label style={label}>Ajuste renal/hepático</label>
+      <input style={input} value={node.ajuste_renal_hepatico || ""} onChange={(e) => onChange({ ajuste_renal_hepatico: e.target.value })} />
+      <label style={label}>Monitorização</label>
+      <input style={input} value={node.monitorizacao || ""} onChange={(e) => onChange({ monitorizacao: e.target.value })} />
+    </>
   );
 }
 
@@ -1875,7 +2238,7 @@ function ClauseEditor({ clause, nodesById, onChange, onRemove, inputStyle }) {
               <select style={{ ...smallInput, flex: 1 }} value={clause.operador} onChange={(e) => onChange({ operador: e.target.value })}>
                 {(clause.campo === "numero" ? OPERADORES_NUMERO : OPERADORES_TEXTO).map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
               </select>
-              {clause.operador === "entre" ? (
+              {clause.operador === "entre" || clause.operador === "fora_de" ? (
                 <>
                   <input style={{ ...smallInput, width: 56 }} value={clause.numero_min || ""} onChange={(e) => onChange({ numero_min: e.target.value })} placeholder="min" />
                   <input style={{ ...smallInput, width: 56 }} value={clause.numero_max || ""} onChange={(e) => onChange({ numero_max: e.target.value })} placeholder="max" />
