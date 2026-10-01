@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { ErroGeracaoProtocolo } from "@/lib/protocolos/gerar.server";
 import { gerarFluxoEstudioIA } from "@/lib/protocolos/estudio-gerar.server";
+import { buscarSubstanciasCatalogo } from "@/lib/catalogo/substancias.server";
 
 // "Gerar com IA" do Studio de protocolos. Substitui o uso de /api/ia/gerar-fluxo
 // pelo Studio: lá o prompt vinha do navegador e a resposta ia crua para o
@@ -71,41 +72,7 @@ export const Route = createFileRoute("/api/protocolos/estudio-gerar-ia")({
                 (data as { id: string; codigo_tuss: string; nome: string }[] | null) || []
               ).map((h) => ({ id: h.id, codigo_tuss: h.codigo_tuss, nome: h.nome }));
             },
-            buscarSubstancia: async (termo) => {
-              // buscar_genericos só devolve substâncias com genérico cadastrado;
-              // biológicos e oncológicos (trastuzumabe, pertuzumabe, gosserrelina)
-              // só existem como referência, então a tabela também é consultada.
-              // nome_dcb fica em maiúsculas e sem acento (normaliza_substancia).
-              const dcb = termo
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .toUpperCase()
-                .replace(/[%_,()]/g, " ")
-                .replace(/\s+/g, " ")
-                .trim();
-              const [gen, todas] = await Promise.all([
-                supabaseAdmin.rpc("buscar_genericos", { termo }),
-                dcb
-                  ? supabaseAdmin
-                      .from("substancias")
-                      .select("id_substancia, nome_exibicao")
-                      .ilike("nome_dcb", `%${dcb}%`)
-                      .limit(30)
-                  : Promise.resolve({ data: [] }),
-              ]);
-              const hits = new Map<string, { id_substancia: string; nome_exibicao: string }>();
-              for (const h of [
-                ...((gen.data as { id_substancia: string; nome_exibicao: string }[] | null) || []),
-                ...((todas.data as { id_substancia: string; nome_exibicao: string }[] | null) ||
-                  []),
-              ])
-                if (!hits.has(h.id_substancia))
-                  hits.set(h.id_substancia, {
-                    id_substancia: h.id_substancia,
-                    nome_exibicao: h.nome_exibicao,
-                  });
-              return [...hits.values()];
-            },
+            buscarSubstancia: (termo) => buscarSubstanciasCatalogo(supabaseAdmin, termo),
           });
           return Response.json(fluxo);
         } catch (err) {

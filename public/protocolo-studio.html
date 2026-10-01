@@ -168,7 +168,7 @@ async function buscarTussApi(termo) {
 }
 async function buscarSubstanciaApi(termo) {
   if (!termo || termo.trim().length < 2) return [];
-  const data = await studioFetch("/api/medicamentos/buscar?q=" + encodeURIComponent(termo), { method: "GET" });
+  const data = await studioFetch("/api/medicamentos/buscar?todas=1&q=" + encodeURIComponent(termo), { method: "GET" });
   return (data.items || []).map((it) => ({ id: it.id_substancia, nome: it.nome_exibicao }));
 }
 // Debounce simples e genérico pra ligar num useEffect de busca.
@@ -1013,6 +1013,36 @@ function ProtocolCanvas() {
     }
   }
   const [layoutMode, setLayoutMode] = useState("proximidade");
+  const [pendenciasOpen, setPendenciasOpen] = useState(false);
+  const pendenciasVinculo = contarPendenciasVinculo(graph);
+  const temCatalogo = graph.nodes.some((n) => n.type === "Exame" || n.type === "Medicamento");
+  // Vincula todos os nós do grupo e tira das observações da IA as que
+  // falavam da falta desse vínculo.
+  const vincularGrupo = useCallback((grupo, hit) => {
+    const ids = new Set(grupo.nodes.map((n) => n.id));
+    setGraph((g) => ({
+      ...g,
+      nodes: g.nodes.map((n) => {
+        if (!ids.has(n.id)) return n;
+        const original = n.nome_documento || n.name;
+        const doc = normTxt(original) !== normTxt(hit.nome) ? original : "";
+        return n.type === "Exame"
+          ? { ...n, tussId: hit.id, codigoTuss: hit.codigo || null, name: hit.nome, nome_documento: doc }
+          : { ...n, substanciaId: hit.id, name: hit.nome, nome_documento: doc };
+      }),
+      meta: g.meta && {
+        ...g.meta,
+        pendencias: (g.meta.pendencias || []).filter((p) => !(p.includes(`"${grupo.original}"`) && /cat[aá]logo|v[ií]nculo|TUSS/i.test(p))),
+      },
+    }));
+  }, []);
+  const desvincularGrupo = useCallback((grupo) => {
+    const ids = new Set(grupo.nodes.map((n) => n.id));
+    setGraph((g) => ({
+      ...g,
+      nodes: g.nodes.map((n) => (!ids.has(n.id) ? n : n.type === "Exame" ? { ...n, tussId: null, codigoTuss: null } : { ...n, substanciaId: null })),
+    }));
+  }, []);
   const [selectedId, setSelectedId] = useState(null);
   const [connecting, setConnecting] = useState(null);
   const [cursorPos, setCursorPos] = useState(null);
@@ -1252,6 +1282,18 @@ function ProtocolCanvas() {
               cursor: "pointer", background: "rgba(255,255,255,0.75)" }}>
             📂 Meus rascunhos
           </button>
+          <button onClick={() => setPendenciasOpen(true)} disabled={!temCatalogo}
+            title="Exames sem TUSS e medicamentos sem substância — vincule tudo num lugar só"
+            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 700, borderRadius: 999, padding: "8px 14px", whiteSpace: "nowrap",
+              cursor: temCatalogo ? "pointer" : "default", opacity: temCatalogo ? 1 : 0.5,
+              color: pendenciasVinculo ? "#92400e" : "#047857",
+              border: `1px solid ${pendenciasVinculo ? "rgba(217,119,6,0.35)" : "rgba(5,150,105,0.25)"}`,
+              background: pendenciasVinculo ? "rgba(255,251,235,0.95)" : "rgba(236,253,245,0.9)" }}>
+            {pendenciasVinculo ? "⚠" : "✓"} Pendências
+            {pendenciasVinculo > 0 && (
+              <span style={{ fontSize: 10.5, fontWeight: 800, color: "#fff", background: "#d97706", borderRadius: 999, padding: "1px 7px" }}>{pendenciasVinculo}</span>
+            )}
+          </button>
           <button onClick={handleAbrirPublicacao} disabled={saving || !graph.nodes.length}
             title="Transforma o fluxo em protocolo ativo: agenda tarefas, avalia exames e gera alertas para os pacientes com os CIDs do protocolo"
             style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 700, color: "#fff", border: "none", borderRadius: 999,
@@ -1480,12 +1522,17 @@ function ProtocolCanvas() {
                 <NodeInspector key={selected.id} node={selected} graph={graph} fontes={fontesDoNo(selected.id)} onChange={(patch) => updateNode(selected.id, patch)} />
               </>
             ) : (
-              <ProtocolPanel graph={graph} onMeta={updateMeta} onSelect={setSelectedId} protocoloId={protocoloId} publicadoEm={publicadoEm} />
+              <ProtocolPanel graph={graph} onMeta={updateMeta} onSelect={setSelectedId} protocoloId={protocoloId} publicadoEm={publicadoEm} onAbrirPendencias={() => setPendenciasOpen(true)} />
             )}
           </div>
         </div>
       </div>
 
+      {pendenciasOpen && (
+        <PendenciasModal graph={graph} onLink={vincularGrupo} onUnlink={desvincularGrupo}
+          onVer={(id) => { setSelectedId(id); setPendenciasOpen(false); }}
+          onClose={() => setPendenciasOpen(false)} />
+      )}
       {aiOpen && (
         <div onClick={() => !aiLoading && setAiOpen(false)}
           style={{ position: "absolute", inset: 0, background: "rgba(15,23,42,0.5)", backdropFilter: "blur(4px)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
@@ -1553,10 +1600,167 @@ function ProtocolCanvas() {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Pendências de vínculo — lista central de exames sem TUSS e medicamentos sem
+// substância, para vincular tudo num lugar só (sem caçar nó a nó no canvas).
+// Nós com o mesmo nome no documento são vinculados juntos.
+// ---------------------------------------------------------------------------
+const PALAVRAS_VAZIAS_BUSCA = new Set(["de", "da", "do", "das", "dos", "e", "em", "com", "para", "exame", "estudo", "dosagem", "pesquisa", "avaliacao", "serica", "serico", "acetato", "cloridrato", "acido"]);
+function normTxt(s) {
+  return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/(\p{L})-(\p{L})/gu, "$1$2").replace(/[^a-z0-9]+/g, " ").trim();
+}
+// O catálogo busca por trecho contínuo: "Mamografia bilateral" não acha
+// "Mamografia convencional bilateral". Sem resultado, tenta a palavra principal
+// (encurtada quando longa, para tolerar grafias como "imunoistoquímica").
+async function buscarComFallback(fn, termo) {
+  const r = await fn(termo);
+  if (r.length) return r;
+  const palavra = normTxt(termo).split(" ").find((w) => w.length >= 4 && !PALAVRAS_VAZIAS_BUSCA.has(w));
+  if (!palavra) return [];
+  const chave = palavra.length > 8 ? palavra.slice(0, 5) : palavra;
+  return chave === normTxt(termo) ? [] : fn(chave);
+}
+const buscarTussFlex = (t) => buscarComFallback(buscarTussApi, t);
+const buscarSubstanciaFlex = (t) => buscarComFallback(buscarSubstanciaApi, t);
+
+function gruposDeVinculo(graph) {
+  const grupos = new Map();
+  graph.nodes.forEach((n) => {
+    if (n.type !== "Exame" && n.type !== "Medicamento") return;
+    const original = n.nome_documento || n.name;
+    const k = `${n.type}|${normTxt(original)}`;
+    if (!grupos.has(k)) grupos.set(k, { key: k, type: n.type, original, nodes: [] });
+    grupos.get(k).nodes.push(n);
+  });
+  return [...grupos.values()].map((g) => ({
+    ...g,
+    vinculado: g.nodes.every((n) => (g.type === "Exame" ? n.tussId : n.substanciaId)),
+  }));
+}
+function contarPendenciasVinculo(graph) {
+  return graph.nodes.filter((n) => (n.type === "Exame" && !n.tussId) || (n.type === "Medicamento" && !n.substanciaId)).length;
+}
+
+function PendenciaVinculoItem({ grupo, onLink, onUnlink, onVer }) {
+  const exame = grupo.type === "Exame";
+  const [query, setQuery] = useState(grupo.original);
+  const busca = useDebouncedSearch(query, exame ? buscarTussFlex : buscarSubstanciaFlex, 350);
+  const atual = grupo.nodes[0];
+  const idAtual = exame ? atual.tussId : atual.substanciaId;
+  const s = TYPE_STYLE[grupo.type];
+  return (
+    <div style={{ background: "rgba(255,255,255,0.8)", border: `1px solid ${grupo.vinculado ? "rgba(5,150,105,0.25)" : "rgba(217,119,6,0.3)"}`, borderRadius: 14, padding: "10px 12px", marginBottom: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+        <div style={{ width: 22, height: 22, borderRadius: "50%", background: s.grad, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <s.Icon size={11} color="#fff" strokeWidth={2.4} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{grupo.original}</div>
+          <div style={{ fontSize: 10.5, color: grupo.vinculado ? "#059669" : "#b45309" }}>
+            {grupo.vinculado
+              ? `✓ ${exame ? `TUSS ${atual.codigoTuss || ""} · ` : ""}${atual.name}`
+              : `⚠ sem vínculo com o catálogo ${exame ? "TUSS" : "de substâncias"}`}
+            {grupo.nodes.length > 1 ? ` · ${grupo.nodes.length} nós` : ""}
+          </div>
+        </div>
+        <button onClick={() => onVer(atual.id)} title="Selecionar no canvas"
+          style={{ fontSize: 10.5, fontWeight: 700, color: "#475569", background: "rgba(241,245,249,0.9)", border: "1px solid #e2e8f0", borderRadius: 999, padding: "4px 9px", cursor: "pointer", flexShrink: 0 }}>
+          Ver no fluxo
+        </button>
+        {grupo.vinculado && (
+          <button onClick={() => onUnlink(grupo)} title="Desfazer vínculo"
+            style={{ fontSize: 10.5, fontWeight: 700, color: "#be123c", background: "rgba(255,241,242,0.9)", border: "1px solid rgba(225,29,72,0.2)", borderRadius: 999, padding: "4px 9px", cursor: "pointer", flexShrink: 0 }}>
+            Desvincular
+          </button>
+        )}
+      </div>
+      <input value={query} onChange={(e) => setQuery(e.target.value)}
+        placeholder={exame ? "Buscar no catálogo TUSS (nome ou código)…" : "Buscar substância…"}
+        style={{ width: "100%", boxSizing: "border-box", fontSize: 12, padding: "7px 9px", borderRadius: 9, border: "1px solid #dbe1ea", outline: "none", marginBottom: 6 }} />
+      {busca.loading && <div style={{ fontSize: 10.5, color: "#94a3b8" }}>Buscando…</div>}
+      {!busca.loading && query.trim().length >= 2 && !busca.results.length && (
+        <div style={{ fontSize: 10.5, color: "#94a3b8" }}>Nada encontrado — tente outro termo{exame ? " ou o código TUSS" : " (princípio ativo, sem dose)"}.</div>
+      )}
+      <div style={{ maxHeight: 150, overflowY: "auto" }}>
+        {busca.results.slice(0, 12).map((h) => {
+          const escolhido = h.id === idAtual;
+          return (
+            <button key={h.id} onClick={() => onLink(grupo, h)}
+              style={{ display: "flex", gap: 6, width: "100%", textAlign: "left", fontSize: 11.5, color: escolhido ? "#047857" : "#334155", fontWeight: escolhido ? 700 : 500,
+                background: escolhido ? "rgba(236,253,245,0.9)" : "transparent", border: "none", borderRadius: 8, padding: "5px 7px", cursor: "pointer" }}
+              onMouseEnter={(e) => { if (!escolhido) e.currentTarget.style.background = "#f1f5f9"; }}
+              onMouseLeave={(e) => { if (!escolhido) e.currentTarget.style.background = "transparent"; }}>
+              {exame && <span style={{ color: "#94a3b8", fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>{h.codigo}</span>}
+              <span style={{ flex: 1 }}>{h.nome}</span>
+              {escolhido && <span>✓</span>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PendenciasModal({ graph, onLink, onUnlink, onVer, onClose }) {
+  const [mostrarVinculados, setMostrarVinculados] = useState(false);
+  const [filtro, setFiltro] = useState("todos"); // todos | Exame | Medicamento
+  // vinculados nesta sessão do modal continuam visíveis, para conferir/trocar
+  const [resolvidos, setResolvidos] = useState(() => new Set());
+  const vincular = (grupo, hit) => { setResolvidos((r) => new Set(r).add(grupo.key)); onLink(grupo, hit); };
+  const grupos = gruposDeVinculo(graph);
+  const pendentes = grupos.filter((g) => !g.vinculado);
+  const visiveis = grupos
+    .filter((g) => mostrarVinculados || !g.vinculado || resolvidos.has(g.key))
+    .filter((g) => filtro === "todos" || g.type === filtro)
+    .sort((a, b) => (a.vinculado - b.vinculado) || a.type.localeCompare(b.type) || a.original.localeCompare(b.original));
+  const nEx = pendentes.filter((g) => g.type === "Exame").length;
+  const nMed = pendentes.filter((g) => g.type === "Medicamento").length;
+  const aba = (id, txt) => (
+    <button onClick={() => setFiltro(id)}
+      style={{ fontSize: 11.5, fontWeight: 700, color: filtro === id ? "#fff" : "#475569", background: filtro === id ? "#475569" : "rgba(255,255,255,0.75)",
+        border: "1px solid rgba(148,163,184,0.35)", borderRadius: 999, padding: "5px 11px", cursor: "pointer" }}>{txt}</button>
+  );
+  return (
+    <div onClick={onClose}
+      style={{ position: "absolute", inset: 0, background: "rgba(15,23,42,0.5)", backdropFilter: "blur(4px)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()}
+        style={{ width: 620, maxWidth: "100%", maxHeight: "88vh", display: "flex", flexDirection: "column", ...glass({ borderRadius: 24, padding: 22, boxShadow: "0 24px 60px rgba(15,23,42,0.35)" }) }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+          <div style={{ width: 34, height: 34, borderRadius: "50%", background: "linear-gradient(135deg,#fbbf24,#d97706)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>⚠</div>
+          <div style={{ flex: 1, fontSize: 15, fontWeight: 700, color: "#1e293b" }}>Pendências de vínculo</div>
+          <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "#94a3b8" }}><X size={16} /></button>
+        </div>
+        <div style={{ fontSize: 11.5, color: "#64748b", marginBottom: 12, lineHeight: 1.5 }}>
+          Exame sem TUSS não dispara as regras dele e medicamento sem substância não gera receita nem checa critérios do CEAF.
+          Escolha o item do catálogo em cada linha — nós com o mesmo nome são vinculados juntos.
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, marginBottom: 12 }}>
+          {aba("todos", `Todos (${nEx + nMed})`)}
+          {aba("Exame", `🧪 Exames sem TUSS (${nEx})`)}
+          {aba("Medicamento", `💊 Medicamentos (${nMed})`)}
+          <div style={{ flex: 1 }} />
+          <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#64748b", cursor: "pointer" }}>
+            <input type="checkbox" checked={mostrarVinculados} onChange={(e) => setMostrarVinculados(e.target.checked)} />
+            mostrar vinculados (conferir/ajustar)
+          </label>
+        </div>
+        <div style={{ overflowY: "auto", flex: 1, minHeight: 0, paddingRight: 2 }}>
+          {!visiveis.length && (
+            <div style={{ fontSize: 12.5, color: "#047857", background: "rgba(236,253,245,0.9)", borderRadius: 12, padding: "14px 12px", textAlign: "center" }}>
+              {pendentes.length ? "Nenhuma pendência neste filtro." : "✓ Todos os exames e medicamentos estão vinculados ao catálogo."}
+            </div>
+          )}
+          {visiveis.map((g) => <PendenciaVinculoItem key={g.key} grupo={g} onLink={vincular} onUnlink={onUnlink} onVer={onVer} />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Painel lateral quando nenhum nó está selecionado: dados do protocolo que não
 // pertencem a um nó (CIDs, fonte), pendências deixadas pela IA e o que ainda
 // impede a publicação de funcionar bem (nós sem vínculo com o catálogo etc.).
-function ProtocolPanel({ graph, onMeta, onSelect, protocoloId, publicadoEm }) {
+function ProtocolPanel({ graph, onMeta, onSelect, protocoloId, publicadoEm, onAbrirPendencias }) {
   const meta = graph.meta || META_VAZIA();
   const [cidInput, setCidInput] = useState("");
   const [cidErro, setCidErro] = useState(null);
@@ -1651,6 +1855,12 @@ function ProtocolPanel({ graph, onMeta, onSelect, protocoloId, publicadoEm }) {
           {foraDoFluxo.length > 0 && <div style={{ fontSize: 10.5, color: "#b45309", margin: "2px 0 4px" }}>Fora do caminho da Admissão (isolados — ligue a uma condição ou ao nó anterior):</div>}
           {foraDoFluxo.map((n) => chip(n, `⛓ ${n.name}`))}
           {semVinculo.length > 0 && <div style={{ fontSize: 10.5, color: "#b45309", margin: "2px 0 4px" }}>Sem vínculo com o catálogo — exame sem TUSS não dispara as regras dele:</div>}
+          {semVinculo.length > 0 && onAbrirPendencias && (
+            <button onClick={onAbrirPendencias}
+              style={{ width: "100%", fontSize: 11, fontWeight: 700, color: "#92400e", background: "rgba(255,251,235,0.95)", border: "1px solid rgba(217,119,6,0.35)", borderRadius: 8, padding: "6px 8px", marginBottom: 6, cursor: "pointer" }}>
+              Vincular todos em Pendências ({semVinculo.length})
+            </button>
+          )}
           {semVinculo.map((n) => chip(n, `${n.type === "Exame" ? "🧪" : "💊"} ${n.name}`))}
           {semDose.length > 0 && <div style={{ fontSize: 10.5, color: "#b45309", margin: "6px 0 4px" }}>Medicamento sem dose/posologia:</div>}
           {semDose.map((n) => chip(n, `💊 ${n.name}`))}

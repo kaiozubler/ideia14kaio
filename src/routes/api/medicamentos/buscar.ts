@@ -1,9 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { buscarSubstanciasCatalogo } from "@/lib/catalogo/substancias.server";
 
 const QuerySchema = z.object({
   q: z.string().max(200).optional(),
+  // "1": inclui substâncias sem genérico (biológicos/oncológicos) — usado
+  // pelo Studio de protocolos para vincular medicamentos de PCDT
+  todas: z.enum(["0", "1"]).optional(),
 });
 
 /** Pesquisa de substâncias (genéricos) para vincular ações de protocolo tipo Receita. */
@@ -25,6 +29,16 @@ async function handle(request: Request) {
       global: { headers: { Authorization: `Bearer ${token}` } },
     },
   );
+
+  if (parsed.data.todas === "1") {
+    try {
+      const items = await buscarSubstanciasCatalogo(supabase, parsed.data.q ?? "");
+      return Response.json({ items });
+    } catch (err) {
+      console.error("[medicamentos/buscar] erro:", err instanceof Error ? err.message : err);
+      return Response.json({ error: "query_failed" }, { status: 500 });
+    }
+  }
 
   const { data, error } = await supabase.rpc("buscar_genericos", {
     termo: parsed.data.q ?? "",
