@@ -1,10 +1,13 @@
 -- Canal de comunicação CLÍNICA ↔ PACIENTE pelo WhatsApp (tela Conversas).
 -- Idempotente: pode ser executado de novo se uma tentativa anterior parou no meio.
+-- Comentários sem ponto e vírgula, aspas ou cifrão de propósito: alguns
+-- executores de SQL dividem o script nesses caracteres mesmo dentro de
+-- comentários e descartam comandos inteiros.
 --
 -- NÃO confundir com os canais que já existem:
 --  * assistente-medico-webhook.ts — número ÚNICO do app, usado pelo MÉDICO
 --    para conversar com o assistente (medico_assistente_sessoes_whatsapp,
---    medico_seguranca_whatsapp);
+--    medico_seguranca_whatsapp),
 --  * whatsapp-webhook.ts — autoatendimento de agendamento com o token global
 --    do app (medico_whatsapp_config / whatsapp_conversas).
 --
@@ -40,7 +43,7 @@ CREATE TABLE IF NOT EXISTS public.comunicacao_whatsapp_conexoes (
   -- com dollar-quoting e descartam comandos inteiros.
   graph_api_version text not null default 'v23.0'
     check (length(graph_api_version) = 5 and graph_api_version ~ '^v[0-9]{2}[.][0-9]'),
-  -- Dados lidos da própria Meta no "Testar conexão"
+  -- Dados lidos da própria Meta no Testar conexão
   numero_exibicao text,
   nome_verificado text,
   nome_waba text,
@@ -72,16 +75,16 @@ CREATE TRIGGER trg_comunicacao_whatsapp_conexoes_updated
 
 -- 2) Modelos de mensagem (message templates da Meta) ----------------------
 -- Fora da janela de 24h desde a última mensagem do paciente, a Meta só
--- aceita mensagens de MODELO aprovado — é assim que a clínica "chama" o
+-- aceita mensagens de MODELO aprovado — é assim que a clínica chama o
 -- paciente, lembra de consulta ou avisa que há um documento. O modelo nasce
 -- como RASCUNHO aqui, é submetido para a Meta (status PENDING) e o status
 -- final chega pelo webhook message_template_status_update ou pelo botão
--- "Sincronizar". Gravação só pelo servidor, porque o status espelha a Meta.
+-- Sincronizar. Gravação só pelo servidor, porque o status espelha a Meta.
 --
 -- finalidade: etiqueta interna para as automações escolherem o modelo
 -- (lembrete de consulta, confirmação, envio de documento, chamada...).
 -- variaveis: mapeamento de cada variável do corpo/cabeçalho para um campo
--- do app (ex.: {"1": "paciente.primeiro_nome", "2": "consulta.data"}), usado
+-- do app (ex.: (1: paciente.primeiro_nome, 2: consulta.data)), usado
 -- para preencher automaticamente na hora do envio.
 CREATE TABLE IF NOT EXISTS public.comunicacao_whatsapp_modelos (
   id uuid primary key default gen_random_uuid(),
@@ -130,7 +133,7 @@ CREATE TRIGGER trg_comunicacao_whatsapp_modelos_updated
 -- 3) Conversas (uma por telefone de paciente, por clínica) ----------------
 -- ultima_entrada_em: horário da última mensagem RECEBIDA do paciente — é
 -- dela que se calcula a janela de 24h de atendimento da Meta (dentro dela,
--- texto livre/documento; fora dela, só modelo aprovado).
+-- texto livre/documento, fora dela, só modelo aprovado).
 CREATE TABLE IF NOT EXISTS public.comunicacao_whatsapp_conversas (
   id uuid primary key default gen_random_uuid(),
   id_medico uuid not null references auth.users(id) on delete cascade,
@@ -155,7 +158,7 @@ GRANT SELECT, UPDATE ON public.comunicacao_whatsapp_conversas TO authenticated;
 GRANT ALL ON public.comunicacao_whatsapp_conversas TO service_role;
 ALTER TABLE public.comunicacao_whatsapp_conversas ENABLE ROW LEVEL SECURITY;
 -- Leitura e ajustes de atendimento (marcar como lida, responsável,
--- finalizar) direto pelo navegador; criar conversa/mensagem só pelo
+-- finalizar) direto pelo navegador, criar conversa/mensagem só pelo
 -- servidor, que é quem fala com a Meta.
 DROP POLICY IF EXISTS "Medico le suas conversas de WhatsApp" ON public.comunicacao_whatsapp_conversas;
 CREATE POLICY "Medico le suas conversas de WhatsApp"
