@@ -844,7 +844,11 @@ export function compilarEstudio(
   /** Condição que o motor não avalia sozinho: vira uma tarefa de decisão para o médico. */
   function compilarDecisao(cond: NoGrafo, ctx: Contexto, start: number) {
     decisoesManuais++;
-    const ramos = (cond.branches || []).filter((r) => r.isDefault || (r.clauses || []).length);
+    // ramo sem cláusula mas descrito (subtipo, estádio, falha da linha
+    // anterior…) é uma opção legítima da decisão, não um ramo vazio
+    const ramos = (cond.branches || []).filter(
+      (r) => r.isDefault || (r.clauses || []).length || (r.descricao || "").trim(),
+    );
     const opcoes = ramos.map((r) => ({
       valor: r.id,
       rotulo: r.isDefault

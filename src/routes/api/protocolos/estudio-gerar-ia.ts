@@ -59,23 +59,52 @@ export const Route = createFileRoute("/api/protocolos/estudio-gerar-ia")({
             pdfBase64: body.data.pdfBase64 || null,
             filename: body.data.filename || null,
             contexto: body.data.contexto || null,
-            buscarTuss: async (termo) => {
+            buscarTuss: async (termo, limite) => {
               // apelidos já corrigidos pelo próprio médico (exame_alias) primeiro
               const { data } = await supabaseAdmin.rpc("buscar_tuss", {
                 termo,
-                p_limit: 1,
+                p_limit: limite,
                 p_usar_alias: true,
                 p_user_id: userId,
               });
-              const hit = (data as { id: string; codigo_tuss: string; nome: string }[] | null)?.[0];
-              return hit ? { id: hit.id, codigo_tuss: hit.codigo_tuss, nome: hit.nome } : null;
+              return (
+                (data as { id: string; codigo_tuss: string; nome: string }[] | null) || []
+              ).map((h) => ({ id: h.id, codigo_tuss: h.codigo_tuss, nome: h.nome }));
             },
             buscarSubstancia: async (termo) => {
-              const { data } = await supabaseAdmin.rpc("buscar_genericos", { termo });
-              const hit = (data as { id_substancia: string; nome_exibicao: string }[] | null)?.[0];
-              return hit
-                ? { id_substancia: hit.id_substancia, nome_exibicao: hit.nome_exibicao }
-                : null;
+              // buscar_genericos só devolve substâncias com genérico cadastrado;
+              // biológicos e oncológicos (trastuzumabe, pertuzumabe, gosserrelina)
+              // só existem como referência, então a tabela também é consultada.
+              // nome_dcb fica em maiúsculas e sem acento (normaliza_substancia).
+              const dcb = termo
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toUpperCase()
+                .replace(/[%_,()]/g, " ")
+                .replace(/\s+/g, " ")
+                .trim();
+              const [gen, todas] = await Promise.all([
+                supabaseAdmin.rpc("buscar_genericos", { termo }),
+                dcb
+                  ? supabaseAdmin
+                      .from("substancias")
+                      .select("id_substancia, nome_exibicao")
+                      .ilike("nome_dcb", `%${dcb}%`)
+                      .limit(30)
+                  : Promise.resolve({ data: [] }),
+              ]);
+              const hits = new Map<string, { id_substancia: string; nome_exibicao: string }>();
+              for (const h of [
+                ...((gen.data as { id_substancia: string; nome_exibicao: string }[] | null) || []),
+                ...((todas.data as { id_substancia: string; nome_exibicao: string }[] | null) ||
+                  []),
+              ])
+                if (!hits.has(h.id_substancia))
+                  hits.set(h.id_substancia, {
+                    id_substancia: h.id_substancia,
+                    nome_exibicao: h.nome_exibicao,
+                  });
+              return [...hits.values()];
             },
           });
           return Response.json(fluxo);

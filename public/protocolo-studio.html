@@ -795,7 +795,7 @@ function clauseSummary(c, nodesById) {
 }
 function branchSummary(b, nodesById) {
   if (b.isDefault) return "Nenhuma regra anterior bateu";
-  if (!b.clauses || !b.clauses.length) return "(sem cláusulas)";
+  if (!b.clauses || !b.clauses.length) return b.descricao ? "Decisão do médico" : "(sem cláusulas)";
   return b.clauses.map((c, i) => (i === 0 ? "" : `${c.conector === "OU" ? "OU " : "E "}`) + clauseSummary(c, nodesById)).join(" ");
 }
 function clauseChainSummary(clauses, nodesById) {
@@ -958,9 +958,24 @@ function ProtocolCanvas() {
       if (adicionar) {
         // parte nova entra à direita do fluxo atual, sem mexer no que já existe
         const offsetX = Math.max(0, ...graph.nodes.map((n) => n.x)) + NODE_W + 160;
+        // ...e pendurada na Admissão que já está no canvas: o fluxo inteiro
+        // começa nela (uma Admissão que a IA tenha repetido é absorvida)
+        const admCanvas = graph.nodes.find((n) => n.type === "Admissao");
+        let novosNos = laidOutNodes;
+        let novasArestas = built.edges;
+        if (admCanvas) {
+          const admsNovas = new Set(novosNos.filter((n) => n.type === "Admissao").map((n) => n.id));
+          novosNos = novosNos.filter((n) => !admsNovas.has(n.id));
+          novasArestas = novasArestas
+            .filter((e) => !admsNovas.has(e.to))
+            .map((e) => (admsNovas.has(e.from) ? { ...e, from: admCanvas.id } : e));
+          novosNos.filter((n) => !novasArestas.some((e) => e.to === n.id)).forEach((n) => {
+            novasArestas.push({ id: uid(), from: admCanvas.id, to: n.id, fromHandle: "admitido", lapso: 0 });
+          });
+        }
         setGraph((g) => ({
-          nodes: [...g.nodes, ...laidOutNodes.map((n) => ({ ...n, x: n.x + offsetX }))],
-          edges: [...g.edges, ...built.edges],
+          nodes: [...g.nodes, ...novosNos.map((n) => ({ ...n, x: n.x + offsetX }))],
+          edges: [...g.edges, ...novasArestas],
           meta: {
             ...g.meta,
             cids: [...new Set([...(g.meta?.cids || []), ...built.meta.cids])],
@@ -1559,6 +1574,21 @@ function ProtocolPanel({ graph, onMeta, onSelect, protocoloId, publicadoEm }) {
   const semVinculo = graph.nodes.filter((n) => (n.type === "Exame" && !n.tussId) || (n.type === "Medicamento" && !n.substanciaId));
   const semDose = graph.nodes.filter((n) => n.type === "Medicamento" && !esquemasDoNo(n).length);
   const eventosSemAlvo = graph.nodes.filter((n) => n.type === "Evento" && EVENTO_ACOES.find((a) => a.id === n.acao)?.alvoTipo && !n.alvoId);
+  // o fluxo publicado começa na Admissão: o que não é alcançável a partir dela fica isolado
+  const foraDoFluxo = (() => {
+    const adm = graph.nodes.find((n) => n.type === "Admissao");
+    if (!adm) return [];
+    const alcance = new Set();
+    const fila = [adm.id];
+    while (fila.length) {
+      const id = fila.shift();
+      if (alcance.has(id)) continue;
+      alcance.add(id);
+      graph.edges.forEach((e) => e.from === id && fila.push(e.to));
+    }
+    return graph.nodes.filter((n) => !alcance.has(n.id));
+  })();
+  const semAdmissao = graph.nodes.length > 0 && !graph.nodes.some((n) => n.type === "Admissao");
   const contagem = Object.keys(TYPE_STYLE).map((t) => [t, graph.nodes.filter((n) => n.type === t).length]).filter(([, c]) => c);
   const f = meta.fonte || {};
   const chip = (n, txt) => (
@@ -1614,9 +1644,12 @@ function ProtocolPanel({ graph, onMeta, onSelect, protocoloId, publicadoEm }) {
         </>
       )}
 
-      {(semVinculo.length > 0 || semDose.length > 0 || eventosSemAlvo.length > 0) && (
+      {(semVinculo.length > 0 || semDose.length > 0 || eventosSemAlvo.length > 0 || foraDoFluxo.length > 0 || semAdmissao) && (
         <>
           <label style={label}>Para revisar antes de publicar</label>
+          {semAdmissao && <div style={{ fontSize: 10.5, color: "#b45309", margin: "2px 0 4px" }}>Sem nó de Admissão — o fluxo deve começar na admissão no protocolo.</div>}
+          {foraDoFluxo.length > 0 && <div style={{ fontSize: 10.5, color: "#b45309", margin: "2px 0 4px" }}>Fora do caminho da Admissão (isolados — ligue a uma condição ou ao nó anterior):</div>}
+          {foraDoFluxo.map((n) => chip(n, `⛓ ${n.name}`))}
           {semVinculo.length > 0 && <div style={{ fontSize: 10.5, color: "#b45309", margin: "2px 0 4px" }}>Sem vínculo com o catálogo — exame sem TUSS não dispara as regras dele:</div>}
           {semVinculo.map((n) => chip(n, `${n.type === "Exame" ? "🧪" : "💊"} ${n.name}`))}
           {semDose.length > 0 && <div style={{ fontSize: 10.5, color: "#b45309", margin: "6px 0 4px" }}>Medicamento sem dose/posologia:</div>}
