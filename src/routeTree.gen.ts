@@ -47,6 +47,11 @@ import { Route as ApiBryCreateEnvelopeRouteImport } from './routes/api/bry/creat
 import { Route as ApiBryDownloadDocumentRouteImport } from './routes/api/bry/download-document'
 import { Route as ApiBryGetEnvelopeRouteImport } from './routes/api/bry/get-envelope'
 import { Route as ApiCidBuscarRouteImport } from './routes/api/cid/buscar'
+import { Route as ApiComunicacaoConexaoRouteImport } from './routes/api/comunicacao/conexao'
+import { Route as ApiComunicacaoConexaoAcaoRouteImport } from './routes/api/comunicacao/conexao-acao'
+import { Route as ApiComunicacaoEnviarRouteImport } from './routes/api/comunicacao/enviar'
+import { Route as ApiComunicacaoMidiaRouteImport } from './routes/api/comunicacao/midia'
+import { Route as ApiComunicacaoModelosRouteImport } from './routes/api/comunicacao/modelos'
 import { Route as ApiIaGerarFluxoRouteImport } from './routes/api/ia/gerar-fluxo'
 import { Route as ApiMedicamentosBuscarRouteImport } from './routes/api/medicamentos/buscar'
 import { Route as ApiMedicamentosSimplificarApresentacoesRouteImport } from './routes/api/medicamentos/simplificar-apresentacoes'
@@ -72,6 +77,7 @@ import { Route as ApiPublicExtensaoDeepgramTokenRouteImport } from './routes/api
 import { Route as ApiPublicFormulariosCodigoRouteImport } from './routes/api/public/formularios/codigo'
 import { Route as ApiPublicFormulariosPublicoRouteImport } from './routes/api/public/formularios/publico'
 import { Route as ApiPublicFormulariosResponderRouteImport } from './routes/api/public/formularios/responder'
+import { Route as ApiPublicHooksComunicacaoLembretesRouteImport } from './routes/api/public/hooks/comunicacao-lembretes'
 import { Route as ApiPublicHooksSyncInteracoesRouteImport } from './routes/api/public/hooks/sync-interacoes'
 import { Route as ApiPublicHooksSyncTussRouteImport } from './routes/api/public/hooks/sync-tuss'
 import { Route as ApiPublicSignatureCallbackRouteImport } from './routes/api/public/signature/callback'
@@ -83,6 +89,7 @@ import { Route as ApiSignatureIntegraBryCallbackRouteImport } from './routes/api
 import { Route as ApiSignatureIntegraBryLinkRouteImport } from './routes/api/signature/integra-bry/link'
 import { Route as ApiSignatureIntegraBryPscsRouteImport } from './routes/api/signature/integra-bry/pscs'
 import { Route as ApiSignatureIntegraBrySignRouteImport } from './routes/api/signature/integra-bry/sign'
+import { Route as ApiPublicWebhooksWhatsappClinicaChaveRouteImport } from './routes/api/public/webhooks/whatsapp-clinica/$chave'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -283,6 +290,32 @@ const ApiCidBuscarRoute = ApiCidBuscarRouteImport.update({
   path: '/api/cid/buscar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiComunicacaoConexaoRoute = ApiComunicacaoConexaoRouteImport.update({
+  id: '/api/comunicacao/conexao',
+  path: '/api/comunicacao/conexao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiComunicacaoConexaoAcaoRoute =
+  ApiComunicacaoConexaoAcaoRouteImport.update({
+    id: '/api/comunicacao/conexao-acao',
+    path: '/api/comunicacao/conexao-acao',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiComunicacaoEnviarRoute = ApiComunicacaoEnviarRouteImport.update({
+  id: '/api/comunicacao/enviar',
+  path: '/api/comunicacao/enviar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiComunicacaoMidiaRoute = ApiComunicacaoMidiaRouteImport.update({
+  id: '/api/comunicacao/midia',
+  path: '/api/comunicacao/midia',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiComunicacaoModelosRoute = ApiComunicacaoModelosRouteImport.update({
+  id: '/api/comunicacao/modelos',
+  path: '/api/comunicacao/modelos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiIaGerarFluxoRoute = ApiIaGerarFluxoRouteImport.update({
   id: '/api/ia/gerar-fluxo',
   path: '/api/ia/gerar-fluxo',
@@ -420,6 +453,12 @@ const ApiPublicFormulariosResponderRoute =
     path: '/api/public/formularios/responder',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksComunicacaoLembretesRoute =
+  ApiPublicHooksComunicacaoLembretesRouteImport.update({
+    id: '/api/public/hooks/comunicacao-lembretes',
+    path: '/api/public/hooks/comunicacao-lembretes',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSyncInteracoesRoute =
   ApiPublicHooksSyncInteracoesRouteImport.update({
     id: '/api/public/hooks/sync-interacoes',
@@ -481,6 +520,12 @@ const ApiSignatureIntegraBrySignRoute =
     path: '/api/signature/integra-bry/sign',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicWebhooksWhatsappClinicaChaveRoute =
+  ApiPublicWebhooksWhatsappClinicaChaveRouteImport.update({
+    id: '/api/public/webhooks/whatsapp-clinica/$chave',
+    path: '/api/public/webhooks/whatsapp-clinica/$chave',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -521,6 +566,11 @@ export interface FileRoutesByFullPath {
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/cid/buscar': typeof ApiCidBuscarRoute
+  '/api/comunicacao/conexao': typeof ApiComunicacaoConexaoRoute
+  '/api/comunicacao/conexao-acao': typeof ApiComunicacaoConexaoAcaoRoute
+  '/api/comunicacao/enviar': typeof ApiComunicacaoEnviarRoute
+  '/api/comunicacao/midia': typeof ApiComunicacaoMidiaRoute
+  '/api/comunicacao/modelos': typeof ApiComunicacaoModelosRoute
   '/api/ia/gerar-fluxo': typeof ApiIaGerarFluxoRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
@@ -546,6 +596,7 @@ export interface FileRoutesByFullPath {
   '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
   '/api/public/formularios/publico': typeof ApiPublicFormulariosPublicoRoute
   '/api/public/formularios/responder': typeof ApiPublicFormulariosResponderRoute
+  '/api/public/hooks/comunicacao-lembretes': typeof ApiPublicHooksComunicacaoLembretesRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
@@ -557,6 +608,7 @@ export interface FileRoutesByFullPath {
   '/api/signature/integra-bry/link': typeof ApiSignatureIntegraBryLinkRoute
   '/api/signature/integra-bry/pscs': typeof ApiSignatureIntegraBryPscsRoute
   '/api/signature/integra-bry/sign': typeof ApiSignatureIntegraBrySignRoute
+  '/api/public/webhooks/whatsapp-clinica/$chave': typeof ApiPublicWebhooksWhatsappClinicaChaveRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -597,6 +649,11 @@ export interface FileRoutesByTo {
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/cid/buscar': typeof ApiCidBuscarRoute
+  '/api/comunicacao/conexao': typeof ApiComunicacaoConexaoRoute
+  '/api/comunicacao/conexao-acao': typeof ApiComunicacaoConexaoAcaoRoute
+  '/api/comunicacao/enviar': typeof ApiComunicacaoEnviarRoute
+  '/api/comunicacao/midia': typeof ApiComunicacaoMidiaRoute
+  '/api/comunicacao/modelos': typeof ApiComunicacaoModelosRoute
   '/api/ia/gerar-fluxo': typeof ApiIaGerarFluxoRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
@@ -622,6 +679,7 @@ export interface FileRoutesByTo {
   '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
   '/api/public/formularios/publico': typeof ApiPublicFormulariosPublicoRoute
   '/api/public/formularios/responder': typeof ApiPublicFormulariosResponderRoute
+  '/api/public/hooks/comunicacao-lembretes': typeof ApiPublicHooksComunicacaoLembretesRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
@@ -633,6 +691,7 @@ export interface FileRoutesByTo {
   '/api/signature/integra-bry/link': typeof ApiSignatureIntegraBryLinkRoute
   '/api/signature/integra-bry/pscs': typeof ApiSignatureIntegraBryPscsRoute
   '/api/signature/integra-bry/sign': typeof ApiSignatureIntegraBrySignRoute
+  '/api/public/webhooks/whatsapp-clinica/$chave': typeof ApiPublicWebhooksWhatsappClinicaChaveRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -674,6 +733,11 @@ export interface FileRoutesById {
   '/api/bry/download-document': typeof ApiBryDownloadDocumentRoute
   '/api/bry/get-envelope': typeof ApiBryGetEnvelopeRoute
   '/api/cid/buscar': typeof ApiCidBuscarRoute
+  '/api/comunicacao/conexao': typeof ApiComunicacaoConexaoRoute
+  '/api/comunicacao/conexao-acao': typeof ApiComunicacaoConexaoAcaoRoute
+  '/api/comunicacao/enviar': typeof ApiComunicacaoEnviarRoute
+  '/api/comunicacao/midia': typeof ApiComunicacaoMidiaRoute
+  '/api/comunicacao/modelos': typeof ApiComunicacaoModelosRoute
   '/api/ia/gerar-fluxo': typeof ApiIaGerarFluxoRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
@@ -699,6 +763,7 @@ export interface FileRoutesById {
   '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
   '/api/public/formularios/publico': typeof ApiPublicFormulariosPublicoRoute
   '/api/public/formularios/responder': typeof ApiPublicFormulariosResponderRoute
+  '/api/public/hooks/comunicacao-lembretes': typeof ApiPublicHooksComunicacaoLembretesRoute
   '/api/public/hooks/sync-interacoes': typeof ApiPublicHooksSyncInteracoesRoute
   '/api/public/hooks/sync-tuss': typeof ApiPublicHooksSyncTussRoute
   '/api/public/signature/callback': typeof ApiPublicSignatureCallbackRoute
@@ -710,6 +775,7 @@ export interface FileRoutesById {
   '/api/signature/integra-bry/link': typeof ApiSignatureIntegraBryLinkRoute
   '/api/signature/integra-bry/pscs': typeof ApiSignatureIntegraBryPscsRoute
   '/api/signature/integra-bry/sign': typeof ApiSignatureIntegraBrySignRoute
+  '/api/public/webhooks/whatsapp-clinica/$chave': typeof ApiPublicWebhooksWhatsappClinicaChaveRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -752,6 +818,11 @@ export interface FileRouteTypes {
     | '/api/bry/download-document'
     | '/api/bry/get-envelope'
     | '/api/cid/buscar'
+    | '/api/comunicacao/conexao'
+    | '/api/comunicacao/conexao-acao'
+    | '/api/comunicacao/enviar'
+    | '/api/comunicacao/midia'
+    | '/api/comunicacao/modelos'
     | '/api/ia/gerar-fluxo'
     | '/api/medicamentos/buscar'
     | '/api/medicamentos/simplificar-apresentacoes'
@@ -777,6 +848,7 @@ export interface FileRouteTypes {
     | '/api/public/formularios/codigo'
     | '/api/public/formularios/publico'
     | '/api/public/formularios/responder'
+    | '/api/public/hooks/comunicacao-lembretes'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
@@ -788,6 +860,7 @@ export interface FileRouteTypes {
     | '/api/signature/integra-bry/link'
     | '/api/signature/integra-bry/pscs'
     | '/api/signature/integra-bry/sign'
+    | '/api/public/webhooks/whatsapp-clinica/$chave'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -828,6 +901,11 @@ export interface FileRouteTypes {
     | '/api/bry/download-document'
     | '/api/bry/get-envelope'
     | '/api/cid/buscar'
+    | '/api/comunicacao/conexao'
+    | '/api/comunicacao/conexao-acao'
+    | '/api/comunicacao/enviar'
+    | '/api/comunicacao/midia'
+    | '/api/comunicacao/modelos'
     | '/api/ia/gerar-fluxo'
     | '/api/medicamentos/buscar'
     | '/api/medicamentos/simplificar-apresentacoes'
@@ -853,6 +931,7 @@ export interface FileRouteTypes {
     | '/api/public/formularios/codigo'
     | '/api/public/formularios/publico'
     | '/api/public/formularios/responder'
+    | '/api/public/hooks/comunicacao-lembretes'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
@@ -864,6 +943,7 @@ export interface FileRouteTypes {
     | '/api/signature/integra-bry/link'
     | '/api/signature/integra-bry/pscs'
     | '/api/signature/integra-bry/sign'
+    | '/api/public/webhooks/whatsapp-clinica/$chave'
   id:
     | '__root__'
     | '/'
@@ -904,6 +984,11 @@ export interface FileRouteTypes {
     | '/api/bry/download-document'
     | '/api/bry/get-envelope'
     | '/api/cid/buscar'
+    | '/api/comunicacao/conexao'
+    | '/api/comunicacao/conexao-acao'
+    | '/api/comunicacao/enviar'
+    | '/api/comunicacao/midia'
+    | '/api/comunicacao/modelos'
     | '/api/ia/gerar-fluxo'
     | '/api/medicamentos/buscar'
     | '/api/medicamentos/simplificar-apresentacoes'
@@ -929,6 +1014,7 @@ export interface FileRouteTypes {
     | '/api/public/formularios/codigo'
     | '/api/public/formularios/publico'
     | '/api/public/formularios/responder'
+    | '/api/public/hooks/comunicacao-lembretes'
     | '/api/public/hooks/sync-interacoes'
     | '/api/public/hooks/sync-tuss'
     | '/api/public/signature/callback'
@@ -940,6 +1026,7 @@ export interface FileRouteTypes {
     | '/api/signature/integra-bry/link'
     | '/api/signature/integra-bry/pscs'
     | '/api/signature/integra-bry/sign'
+    | '/api/public/webhooks/whatsapp-clinica/$chave'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -981,6 +1068,11 @@ export interface RootRouteChildren {
   ApiBryDownloadDocumentRoute: typeof ApiBryDownloadDocumentRoute
   ApiBryGetEnvelopeRoute: typeof ApiBryGetEnvelopeRoute
   ApiCidBuscarRoute: typeof ApiCidBuscarRoute
+  ApiComunicacaoConexaoRoute: typeof ApiComunicacaoConexaoRoute
+  ApiComunicacaoConexaoAcaoRoute: typeof ApiComunicacaoConexaoAcaoRoute
+  ApiComunicacaoEnviarRoute: typeof ApiComunicacaoEnviarRoute
+  ApiComunicacaoMidiaRoute: typeof ApiComunicacaoMidiaRoute
+  ApiComunicacaoModelosRoute: typeof ApiComunicacaoModelosRoute
   ApiIaGerarFluxoRoute: typeof ApiIaGerarFluxoRoute
   ApiMedicamentosBuscarRoute: typeof ApiMedicamentosBuscarRoute
   ApiMedicamentosSimplificarApresentacoesRoute: typeof ApiMedicamentosSimplificarApresentacoesRoute
@@ -1006,6 +1098,7 @@ export interface RootRouteChildren {
   ApiPublicFormulariosCodigoRoute: typeof ApiPublicFormulariosCodigoRoute
   ApiPublicFormulariosPublicoRoute: typeof ApiPublicFormulariosPublicoRoute
   ApiPublicFormulariosResponderRoute: typeof ApiPublicFormulariosResponderRoute
+  ApiPublicHooksComunicacaoLembretesRoute: typeof ApiPublicHooksComunicacaoLembretesRoute
   ApiPublicHooksSyncInteracoesRoute: typeof ApiPublicHooksSyncInteracoesRoute
   ApiPublicHooksSyncTussRoute: typeof ApiPublicHooksSyncTussRoute
   ApiPublicSignatureCallbackRoute: typeof ApiPublicSignatureCallbackRoute
@@ -1017,6 +1110,7 @@ export interface RootRouteChildren {
   ApiSignatureIntegraBryLinkRoute: typeof ApiSignatureIntegraBryLinkRoute
   ApiSignatureIntegraBryPscsRoute: typeof ApiSignatureIntegraBryPscsRoute
   ApiSignatureIntegraBrySignRoute: typeof ApiSignatureIntegraBrySignRoute
+  ApiPublicWebhooksWhatsappClinicaChaveRoute: typeof ApiPublicWebhooksWhatsappClinicaChaveRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1287,6 +1381,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCidBuscarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/comunicacao/conexao': {
+      id: '/api/comunicacao/conexao'
+      path: '/api/comunicacao/conexao'
+      fullPath: '/api/comunicacao/conexao'
+      preLoaderRoute: typeof ApiComunicacaoConexaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/comunicacao/conexao-acao': {
+      id: '/api/comunicacao/conexao-acao'
+      path: '/api/comunicacao/conexao-acao'
+      fullPath: '/api/comunicacao/conexao-acao'
+      preLoaderRoute: typeof ApiComunicacaoConexaoAcaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/comunicacao/enviar': {
+      id: '/api/comunicacao/enviar'
+      path: '/api/comunicacao/enviar'
+      fullPath: '/api/comunicacao/enviar'
+      preLoaderRoute: typeof ApiComunicacaoEnviarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/comunicacao/midia': {
+      id: '/api/comunicacao/midia'
+      path: '/api/comunicacao/midia'
+      fullPath: '/api/comunicacao/midia'
+      preLoaderRoute: typeof ApiComunicacaoMidiaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/comunicacao/modelos': {
+      id: '/api/comunicacao/modelos'
+      path: '/api/comunicacao/modelos'
+      fullPath: '/api/comunicacao/modelos'
+      preLoaderRoute: typeof ApiComunicacaoModelosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/ia/gerar-fluxo': {
       id: '/api/ia/gerar-fluxo'
       path: '/api/ia/gerar-fluxo'
@@ -1462,6 +1591,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicFormulariosResponderRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/comunicacao-lembretes': {
+      id: '/api/public/hooks/comunicacao-lembretes'
+      path: '/api/public/hooks/comunicacao-lembretes'
+      fullPath: '/api/public/hooks/comunicacao-lembretes'
+      preLoaderRoute: typeof ApiPublicHooksComunicacaoLembretesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/sync-interacoes': {
       id: '/api/public/hooks/sync-interacoes'
       path: '/api/public/hooks/sync-interacoes'
@@ -1539,6 +1675,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSignatureIntegraBrySignRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/webhooks/whatsapp-clinica/$chave': {
+      id: '/api/public/webhooks/whatsapp-clinica/$chave'
+      path: '/api/public/webhooks/whatsapp-clinica/$chave'
+      fullPath: '/api/public/webhooks/whatsapp-clinica/$chave'
+      preLoaderRoute: typeof ApiPublicWebhooksWhatsappClinicaChaveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1582,6 +1725,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBryDownloadDocumentRoute: ApiBryDownloadDocumentRoute,
   ApiBryGetEnvelopeRoute: ApiBryGetEnvelopeRoute,
   ApiCidBuscarRoute: ApiCidBuscarRoute,
+  ApiComunicacaoConexaoRoute: ApiComunicacaoConexaoRoute,
+  ApiComunicacaoConexaoAcaoRoute: ApiComunicacaoConexaoAcaoRoute,
+  ApiComunicacaoEnviarRoute: ApiComunicacaoEnviarRoute,
+  ApiComunicacaoMidiaRoute: ApiComunicacaoMidiaRoute,
+  ApiComunicacaoModelosRoute: ApiComunicacaoModelosRoute,
   ApiIaGerarFluxoRoute: ApiIaGerarFluxoRoute,
   ApiMedicamentosBuscarRoute: ApiMedicamentosBuscarRoute,
   ApiMedicamentosSimplificarApresentacoesRoute:
@@ -1608,6 +1756,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicFormulariosCodigoRoute: ApiPublicFormulariosCodigoRoute,
   ApiPublicFormulariosPublicoRoute: ApiPublicFormulariosPublicoRoute,
   ApiPublicFormulariosResponderRoute: ApiPublicFormulariosResponderRoute,
+  ApiPublicHooksComunicacaoLembretesRoute:
+    ApiPublicHooksComunicacaoLembretesRoute,
   ApiPublicHooksSyncInteracoesRoute: ApiPublicHooksSyncInteracoesRoute,
   ApiPublicHooksSyncTussRoute: ApiPublicHooksSyncTussRoute,
   ApiPublicSignatureCallbackRoute: ApiPublicSignatureCallbackRoute,
@@ -1619,6 +1769,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSignatureIntegraBryLinkRoute: ApiSignatureIntegraBryLinkRoute,
   ApiSignatureIntegraBryPscsRoute: ApiSignatureIntegraBryPscsRoute,
   ApiSignatureIntegraBrySignRoute: ApiSignatureIntegraBrySignRoute,
+  ApiPublicWebhooksWhatsappClinicaChaveRoute:
+    ApiPublicWebhooksWhatsappClinicaChaveRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
