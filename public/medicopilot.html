@@ -9884,7 +9884,7 @@ showAtendList();
                                                               }
                                                               if(e.statusProtocolo==='regra_atingida'){
                                                                 b.push('<span class="ex-badge ex-badge-ok" title="O resultado atendeu a uma regra de protocolo"><i class="ti ti-git-branch"></i> Regra atingida</span>');
-                                                              }else if(e.statusProtocolo==='sugestao_vinculo'){
+                                                              }else if(e.statusProtocolo==='sugestao_vinculo'||e.statusProtocolo==='aguardando_interpretacao'){
                                                                 b.push('<span class="ex-badge ex-badge-info" title="Ha protocolo ativo que utiliza este exame"><i class="ti ti-plug-connected"></i> Vinculo sugerido</span>');
                                                               }else if(e.statusProtocolo==='sem_regra'){
                                                                 b.push('<span class="ex-badge" title="Exame vinculado a protocolo, sem regra correspondente ao resultado"><i class="ti ti-git-branch"></i> Sem regra</span>');
@@ -9921,7 +9921,7 @@ showAtendList();
                                                               const hit=rows.find(r=>r.status_protocolo==='regra_atingida');
                                                               if(hit){
                                                                 showToast('Protocolo "'+(hit.protocolo_titulo||'')+'": o resultado atendeu a uma regra - conduta sugerida gerada.','success');
-                                                              }else if(rows.some(r=>r.status_protocolo==='sugestao_vinculo')){
+                                                              }else if(rows.some(r=>r.status_protocolo==='sugestao_vinculo'||r.status_protocolo==='aguardando_interpretacao')){
                                                                 showToast('Existe protocolo ativo que utiliza este exame - confira o vinculo sugerido.','info');
                                                               }
                                                               return rows;

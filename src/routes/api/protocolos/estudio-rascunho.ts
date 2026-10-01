@@ -16,6 +16,8 @@ const SaveSchema = z.object({
   grafo: z.object({
     nodes: z.array(z.record(z.any())),
     edges: z.array(z.record(z.any())),
+    // dados do protocolo (CIDs, fonte, pendências da IA) — usados ao publicar
+    meta: z.record(z.any()).optional(),
   }),
 });
 
@@ -34,7 +36,7 @@ export const Route = createFileRoute("/api/protocolos/estudio-rascunho")({
         if (id) {
           const { data, error } = await supabaseAdmin
             .from("protocolo_estudio_rascunhos")
-            .select("id,titulo,grafo,created_at,updated_at")
+            .select("id,titulo,grafo,protocolo_id,publicado_em,created_at,updated_at")
             .eq("id", id)
             .eq("user_id", userId)
             .maybeSingle();
@@ -45,7 +47,7 @@ export const Route = createFileRoute("/api/protocolos/estudio-rascunho")({
 
         const { data, error } = await supabaseAdmin
           .from("protocolo_estudio_rascunhos")
-          .select("id,titulo,created_at,updated_at")
+          .select("id,titulo,protocolo_id,publicado_em,created_at,updated_at")
           .eq("user_id", userId)
           .order("updated_at", { ascending: false });
         if (error) return Response.json({ error: "internal_error" }, { status: 500 });

@@ -32,6 +32,9 @@
 .pt-tag.Consulta{background:rgba(219,234,254,.6);color:#1d4ed8;border-color:rgba(191,219,254,.6)}
 .pt-tag.Exame{background:rgba(237,233,254,.6);color:#6d28d9;border-color:rgba(221,214,254,.6)}
 .pt-tag.Receita{background:rgba(209,250,229,.6);color:#047857;border-color:rgba(167,243,208,.6)}
+.pt-tag.Alerta{background:rgba(254,243,199,.7);color:#b45309;border-color:rgba(253,230,138,.7)}
+.pt-tag.Alerta.nivel-critico{background:rgba(254,226,226,.8);color:#b91c1c;border-color:rgba(254,202,202,.8)}
+.pt-tag.Alerta.nivel-info{background:rgba(224,242,254,.7);color:#0369a1;border-color:rgba(186,230,253,.7)}
 .pt-dot{width:11px;height:11px;border-radius:50%;display:inline-block;cursor:help;flex-shrink:0}
 .pt-dot.green{background:#34d399}.pt-dot.blue{background:#60a5fa}.pt-dot.red{background:#f87171}
 .pt-menu-btn{width:28px;height:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:8px;background:none;border:none;cursor:pointer}
@@ -71,6 +74,7 @@
 .pt-icon.Consulta{background:linear-gradient(135deg,#60a5fa,#6366f1)}
 .pt-icon.Exame{background:linear-gradient(135deg,#a78bfa,#7c3aed)}
 .pt-icon.Receita{background:linear-gradient(135deg,#34d399,#0d9488)}
+.pt-icon.Alerta{background:linear-gradient(135deg,#fbbf24,#f97316)}
 .pt-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px 0;color:#94a3b8;font-size:13px;gap:8px}
 .pt-plist-card{padding:18px;margin-bottom:16px}
 .pt-plist-card.inactive{opacity:.55;filter:grayscale(1)}

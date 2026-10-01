@@ -1,8 +1,16 @@
 /* PROTOCOLOS ASSISTENCIAIS — módulo standalone (replica HealthProtocolSystem.jsx) */
 (function () {
   const AT = {
-    Consulta: { icon: "🩺" }, Exame: { icon: "🧪" }, Receita: { icon: "💊" },
+    Consulta: { icon: "🩺" }, Exame: { icon: "🧪" }, Receita: { icon: "💊" }, Alerta: { icon: "🔔" },
   };
+  const TIPOS = ["Consulta", "Exame", "Receita", "Alerta"];
+  const TIPO_GRAD = {
+    Consulta: "linear-gradient(135deg,#60a5fa,#6366f1)", Exame: "linear-gradient(135deg,#a78bfa,#7c3aed)",
+    Receita: "linear-gradient(135deg,#34d399,#0d9488)", Alerta: "linear-gradient(135deg,#fbbf24,#f97316)",
+  };
+  const NIVEL_ALERTA = { info: "Informativo", atencao: "Atenção", critico: "Crítico" };
+  const CONDUTA_ALERTA = { notificar: "Notificar o médico", reavaliar: "Reavaliar", ajustar: "Ajustar dose", suspender: "Suspender medicamento", encaminhar: "Encaminhar" };
+  const OP_LABEL = { maior_que: "maior que", maior_ou_igual: "maior ou igual a", menor_que: "menor que", menor_ou_igual: "menor ou igual a", entre: "entre (inclusive)", fora_de: "fora da faixa", igual: "igual a", contem: "contém" };
   const STATUS_NOTICE = {
     green: { label: "Avisado", cls: "green" },
     blue: { label: "Agendado", cls: "blue" },
@@ -39,16 +47,17 @@
     const sb = sbc(); if (!sb) return;
     S.loading = true; render();
     const [{ data: prot }, { data: rep }] = await Promise.all([
-      sb.from("protocolos").select("id,titulo,ativo,protocolo_cids(cid_code),protocolo_acoes(*,tuss_procedimentos(codigo_tuss)),protocolo_regras(*)").order("created_at"),
+      sb.from("protocolos").select("id,titulo,ativo,fonte,protocolo_cids(cid_code),protocolo_acoes(*,tuss_procedimentos(codigo_tuss)),protocolo_regras(*)").order("created_at"),
       sb.rpc("relatorio_protocolos"),
     ]);
     S.rows = (rep || []).map((r) => ({ ...r, due: brDate(r.due) }));
     S.protocols = (prot || []).map((p) => {
+      const fonte = p.fonte || {};
       const rows = S.rows.filter((r) => r.protocolo_id === p.id);
       const pts = [...new Set(rows.map((r) => r.paciente_id))].length;
       const late = rows.filter((r) => r.late).length;
       return {
-        id: p.id, title: p.titulo, active: p.ativo,
+        id: p.id, title: p.titulo, active: p.ativo, fonte,
         cids: (p.protocolo_cids || []).map((c) => c.cid_code),
         actions: (p.protocolo_acoes || []).map((a) => ({
           id: a.id, type: a.tipo, name: a.nome, startDay: a.start_day, frequency: a.frequency,
@@ -57,6 +66,7 @@
           tussId: a.tuss_procedimento_id || null, codigoTuss: (a.tuss_procedimentos && a.tuss_procedimentos.codigo_tuss) || null,
           idSubstancia: a.id_substancia || null, medicamentoId: null,
           catalogStatus: a.catalogo_status || "nao_aplicavel",
+          detalhes: a.detalhes || {}, criterio: a.criterio_paciente || null,
         })),
         regras: (p.protocolo_regras || []).map((r) => ({
           id: r.id, gatilhoId: r.acao_gatilho_id, descricao: r.descricao || "", condicao: r.condicao,
@@ -106,16 +116,23 @@
     } catch (e) { console.error("sincronizar_protocolo", e); }
   }
 
-  function actionRow(protocoloId, a) {
+  function actionPayload(a) {
     return {
-      protocolo_id: protocoloId, tipo: a.type, nome: a.name, start_day: a.startDay, frequency: a.frequency,
+      id: a.id, tipo: a.type, nome: a.name, start_day: a.startDay, frequency: a.frequency,
       recurrent: !!a.recurrent, auto_restart: !!a.autoRestart, especialidade: a.specialty || null, descricao: a.desc || null,
       tuss_procedimento_id: a.type === "Exame" ? a.tussId || null : null,
       id_substancia: a.type === "Receita" ? a.idSubstancia || null : null,
-      catalogo_status: a.type === "Consulta" ? "nao_aplicavel" : (a.tussId || a.idSubstancia ? "vinculado" : (a.catalogStatus || "pendente_cadastro")),
+      catalogo_status: a.type === "Consulta" || a.type === "Alerta" ? "nao_aplicavel" : (a.tussId || a.idSubstancia ? "vinculado" : (a.catalogStatus || "pendente_cadastro")),
+      detalhes: a.detalhes || {},
+      criterio_paciente: a.criterio && Object.keys(a.criterio).length ? a.criterio : null,
+      regra_pai_id: a.regraPaiId || null,
     };
   }
 
+  // Grava tudo numa transação via public.salvar_protocolo: ids existentes são
+  // atualizados no lugar (o histórico de tarefas/resultados dos pacientes é
+  // preservado), ramos aninhados são resolvidos no banco e uma falha no meio
+  // não deixa o protocolo pela metade.
   async function saveProtocol(form) {
     const sb = sbc(); if (!sb) return;
     S.modal = { ...form, saving: true, saveError: null }; render();
@@ -128,64 +145,31 @@
       render();
     }
 
-    let id = form.id;
-    if (id) {
-      const r1 = await sb.from("protocolos").update({ titulo: form.title }).eq("id", id);
-      if (r1.error) return fail("atualizar protocolo", r1.error);
-      const r2 = await sb.from("protocolo_cids").delete().eq("protocolo_id", id);
-      if (r2.error) return fail("limpar CIDs", r2.error);
-      // ações de ramo referenciam regras via FK; apagar ações antes de regras
-      const r3 = await sb.from("protocolo_acoes").delete().eq("protocolo_id", id);
-      if (r3.error) return fail("limpar ações", r3.error);
-      const r4 = await sb.from("protocolo_regras").delete().eq("protocolo_id", id);
-      if (r4.error) return fail("limpar regras", r4.error);
-    } else {
-      const { data, error } = await sb.from("protocolos").insert({ titulo: form.title }).select("id").single();
-      if (error) return fail("criar protocolo", error);
-      id = data && data.id; if (!id) return fail("criar protocolo", { message: "id não retornado" });
-    }
-    if (form.cids.length) {
-      const { error } = await sb.from("protocolo_cids").insert(form.cids.map((c) => ({ protocolo_id: id, cid_code: c })));
-      if (error) return fail("salvar CIDs", error);
-    }
-
-    const regras = form.regras || [];
-    const rootActions = form.actions.filter((a) => !a.regraPaiId);
-    const branchActions = form.actions.filter((a) => a.regraPaiId);
-    const idMap = {}; // id local (uid()) -> uuid real
-
-    if (rootActions.length) {
-      const { data: inserted, error } = await sb.from("protocolo_acoes")
-        .insert(rootActions.map((a) => actionRow(id, a))).select("id");
-      if (error) return fail("salvar ações", error);
-      (inserted || []).forEach((row, i) => { idMap[rootActions[i].id] = row.id; });
-    }
-
-    const regraIdMap = {}; // id local da regra -> uuid real
-    if (regras.length) {
-      const rows = regras.map((r) => ({
-        protocolo_id: id,
-        acao_gatilho_id: idMap[r.gatilhoId] || r.gatilhoId,
+    const actionIds = new Set(form.actions.map((a) => a.id));
+    const regras = (form.regras || []).filter((r) => actionIds.has(r.gatilhoId));
+    const regraIds = new Set(regras.map((r) => r.id));
+    const payload = {
+      id: form.id || null,
+      titulo: form.title,
+      cids: form.cids,
+      fonte: form.fonte || {},
+      acoes: form.actions
+        .filter((a) => !a.regraPaiId || regraIds.has(a.regraPaiId))
+        .map(actionPayload),
+      regras: regras.map((r, i) => ({
+        id: r.id,
+        acao_gatilho_id: r.gatilhoId,
         descricao: r.descricao || "",
         condicao: r.isDefault ? null : r.condicao,
-        ordem: r.ordem || 0,
+        ordem: r.ordem ?? i,
         is_default: !!r.isDefault,
         repete_gatilho_apos_dias: r.repeteGatilhoApos || null,
-      }));
-      const { data: insertedR, error } = await sb.from("protocolo_regras").insert(rows).select("id");
-      if (error) return fail("salvar regras de ramificação", error);
-      (insertedR || []).forEach((row, i) => { regraIdMap[regras[i].id] = row.id; });
-    }
+      })),
+    };
 
-    if (branchActions.length) {
-      const rows = branchActions
-        .filter((a) => regraIdMap[a.regraPaiId]) // ignora ações órfãs de regra não salva
-        .map((a) => ({ ...actionRow(id, a), regra_pai_id: regraIdMap[a.regraPaiId] }));
-      if (rows.length) {
-        const { error } = await sb.from("protocolo_acoes").insert(rows);
-        if (error) return fail("salvar ações de ramo", error);
-      }
-    }
+    const { data, error } = await sb.rpc("salvar_protocolo", { p_payload: payload });
+    if (error) return fail("gravar protocolo", error);
+    const id = data && data.id;
 
     await sincronizarProtocolo(id);
     S.modal = null;
@@ -391,15 +375,19 @@
   }
 
   /* ---------- MODAL ---------- */
+  const nomeLabel = (t) => ({ Exame: "Nome do exame", Receita: "Medicamento (princípio ativo)", Alerta: "Título do alerta" }[t] || "Tipo de consulta");
+  const nomePlaceholder = (t) => ({ Exame: "Ex: Hemograma completo", Receita: "Ex: Losartana potássica", Alerta: "Ex: Reavaliar resposta ao tratamento" }[t] || "Ex: Acompanhamento cardiológico");
+
   function actionEditorHtml(a) {
     const base = { type: "Exame", name: "", startDay: 0, frequency: 90, recurrent: true, autoRestart: false, specialty: "", desc: "", tussId: null, codigoTuss: null, idSubstancia: null, catalogStatus: "pendente_cadastro" };
     const f = a || { ...base, ...(S._draft || {}), id: "", type: S._atype || (S._draft && S._draft.type) || "Exame" };
     return `<div class="pt-card" style="padding:16px;margin-bottom:12px" id="pt-aeditor" data-editid="${esc(f.id || "")}">
       <div style="margin-bottom:12px"><span class="pt-lbl">Tipo da ação</span>
-        <div style="display:flex;gap:8px">${["Consulta", "Exame", "Receita"].map((t) => `<button class="pt-btn" style="flex:1;${f.type === t ? "color:#fff;border:none;background:" + (t === "Consulta" ? "linear-gradient(135deg,#60a5fa,#6366f1)" : t === "Exame" ? "linear-gradient(135deg,#a78bfa,#7c3aed)" : "linear-gradient(135deg,#34d399,#0d9488)") : ""}" data-atype="${t}">${AT[t].icon} ${t}</button>`).join("")}</div></div>
-      <div style="margin-bottom:12px"><span class="pt-lbl">${f.type === "Exame" ? "Nome do exame" : f.type === "Receita" ? "Medicamento(s)" : "Tipo de consulta"}</span>
-        <input class="pt-in" id="pt-a-name" value="${esc(f.name)}" placeholder="${f.type === "Exame" ? "Ex: Hemograma completo" : f.type === "Receita" ? "Ex: Losartana" : "Ex: Acompanhamento cardiológico"}"></div>
+        <div style="display:flex;gap:8px">${TIPOS.map((t) => `<button class="pt-btn" style="flex:1;${f.type === t ? "color:#fff;border:none;background:" + TIPO_GRAD[t] : ""}" data-atype="${t}">${AT[t].icon} ${t}</button>`).join("")}</div></div>
+      <div style="margin-bottom:12px"><span class="pt-lbl">${nomeLabel(f.type)}</span>
+        <input class="pt-in" id="pt-a-name" value="${esc(f.name)}" placeholder="${nomePlaceholder(f.type)}"></div>
       ${catalogPickerHtml(f, "pt-a")}
+      ${extrasEditorHtml(f, "pt-a")}
       <div style="margin-bottom:12px"><span class="pt-lbl">Especialidade (opcional)</span><input class="pt-in" id="pt-a-spec" value="${esc(f.specialty || "")}" placeholder="Ex: Cardiologia"></div>
       <div style="margin-bottom:12px"><span class="pt-lbl">Início após o protocolo começar</span>
         <input class="pt-in" type="number" min="0" id="pt-a-start" value="${f.startDay}"><span style="font-size:10px;color:#94a3b8">dias a partir do início do protocolo</span></div>
@@ -566,14 +554,147 @@
     </div>`;
   }
 
+  /* ---------- DETALHES POR TIPO (variações de dose, critérios, alerta) ----------
+     Gravados em protocolo_acoes.detalhes / criterio_paciente. Linhas de
+     esquema são adicionadas/removidas direto no DOM (sem render()) para não
+     perder o que já foi digitado no editor. */
+  const linhas = (v) => (Array.isArray(v) ? v.join("\n") : "");
+  const deLinhas = (id) => ((document.getElementById(id) || {}).value || "").split("\n").map((x) => x.trim()).filter(Boolean);
+  const val = (id) => ((document.getElementById(id) || {}).value || "").trim();
+
+  function esquemaRowHtml(e) {
+    e = e || {};
+    return `<div class="pt-esq-row" style="display:grid;grid-template-columns:1.3fr 1fr .7fr 1fr .9fr .9fr auto;gap:4px;margin-bottom:4px">
+      <input class="pt-in" data-esq="populacao" value="${esc(e.populacao || "")}" placeholder="População (ex: Adulto)">
+      <input class="pt-in" data-esq="dose" value="${esc(e.dose || "")}" placeholder="Dose">
+      <input class="pt-in" data-esq="via" value="${esc(e.via || "")}" placeholder="Via">
+      <input class="pt-in" data-esq="posologia" value="${esc(e.posologia || "")}" placeholder="Posologia">
+      <input class="pt-in" data-esq="duracao" value="${esc(e.duracao || "")}" placeholder="Duração">
+      <input class="pt-in" data-esq="dose_maxima" value="${esc(e.dose_maxima || "")}" placeholder="Dose máx.">
+      <button class="pt-btn ghost" style="padding:2px 8px" data-esqdel="1" title="Remover variação">×</button></div>`;
+  }
+
+  function criterioEditorHtml(f, prefix) {
+    const c = f.criterio || {};
+    return `<div style="margin-bottom:12px"><span class="pt-lbl">Aplicar somente a (opcional)</span>
+      <div style="display:flex;gap:8px">
+        <input class="pt-in" type="number" min="0" id="${prefix}-cidmin" value="${c.idade_min ?? ""}" placeholder="Idade mín.">
+        <input class="pt-in" type="number" min="0" id="${prefix}-cidmax" value="${c.idade_max ?? ""}" placeholder="Idade máx.">
+        <select class="pt-in" id="${prefix}-csexo">
+          <option value="" ${!c.sexo ? "selected" : ""}>Ambos os sexos</option>
+          <option value="F" ${c.sexo === "F" ? "selected" : ""}>Feminino</option>
+          <option value="M" ${c.sexo === "M" ? "selected" : ""}>Masculino</option></select></div>
+      <span style="font-size:10px;color:#94a3b8">Pacientes fora deste critério não recebem esta ação. Sem data de nascimento/sexo no cadastro, a ação é mantida.</span></div>`;
+  }
+
+  function extrasEditorHtml(f, prefix) {
+    const d = f.detalhes || {};
+    if (f.type === "Receita") {
+      const esq = d.esquemas && d.esquemas.length ? d.esquemas : [{}];
+      return `<div class="pt-card" style="padding:12px;margin-bottom:12px;background:rgba(209,250,229,.25)">
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <div style="flex:1"><span class="pt-lbl">Linha de tratamento</span>
+            <select class="pt-in" id="${prefix}-linha">
+              <option value="">—</option>${[1, 2, 3, 4].map((n) => `<option value="${n}" ${+d.linha_tratamento === n ? "selected" : ""}>${n}ª linha</option>`).join("")}</select></div>
+          <div style="flex:1"><span class="pt-lbl">Grupo de alternativas</span>
+            <input class="pt-in" id="${prefix}-grupo" value="${esc(d.grupo_alternativa || "")}" placeholder="Ex: IECA"></div>
+          <label style="display:flex;gap:6px;align-items:flex-end;font-size:12px;color:#475569;padding-bottom:8px"><input type="checkbox" class="pt-check" id="${prefix}-ceaf" ${d.ceaf ? "checked" : ""}> CEAF (exige LME)</label></div>
+        <span class="pt-lbl">Variações de dose / esquemas</span>
+        <div id="${prefix}-esqlist">${esq.map(esquemaRowHtml).join("")}</div>
+        <button class="pt-btn ghost" style="padding:2px 8px;font-size:11px;margin-bottom:10px" data-esqadd="${prefix}">+ Variação</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><span class="pt-lbl">Critérios de inclusão (1 por linha)</span><textarea class="pt-in" rows="2" id="${prefix}-incl">${esc(linhas(d.criterios_inclusao))}</textarea></div>
+          <div><span class="pt-lbl">Critérios de exclusão (1 por linha)</span><textarea class="pt-in" rows="2" id="${prefix}-excl">${esc(linhas(d.criterios_exclusao))}</textarea></div>
+          <div><span class="pt-lbl">Contraindicações (1 por linha)</span><textarea class="pt-in" rows="2" id="${prefix}-contra">${esc(linhas(d.contraindicacoes))}</textarea></div>
+          <div><span class="pt-lbl">Ajuste renal/hepático</span><textarea class="pt-in" rows="2" id="${prefix}-ajuste">${esc(d.ajuste_renal_hepatico || "")}</textarea></div></div>
+        <div style="margin-top:8px"><span class="pt-lbl">Monitorização</span><input class="pt-in" id="${prefix}-monit" value="${esc(d.monitorizacao || "")}"></div>
+      </div>${criterioEditorHtml(f, prefix)}`;
+    }
+    if (f.type === "Alerta") {
+      return `<div class="pt-card" style="padding:12px;margin-bottom:12px;background:rgba(254,243,199,.35)">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <div style="flex:1"><span class="pt-lbl">Nível</span><select class="pt-in" id="${prefix}-nivel">
+            ${Object.keys(NIVEL_ALERTA).map((k) => `<option value="${k}" ${(d.nivel || "atencao") === k ? "selected" : ""}>${NIVEL_ALERTA[k]}</option>`).join("")}</select></div>
+          <div style="flex:1"><span class="pt-lbl">Conduta</span><select class="pt-in" id="${prefix}-conduta">
+            ${Object.keys(CONDUTA_ALERTA).map((k) => `<option value="${k}" ${(d.conduta || "notificar") === k ? "selected" : ""}>${CONDUTA_ALERTA[k]}</option>`).join("")}</select></div>
+          <div style="flex:1"><span class="pt-lbl">Medicamento afetado</span><input class="pt-in" id="${prefix}-alvo" value="${esc(d.medicamento_alvo || "")}" placeholder="Opcional"></div></div>
+        <span class="pt-lbl">Mensagem do alerta</span>
+        <textarea class="pt-in" rows="2" id="${prefix}-msg" placeholder="Ex: TGO acima de 3x o limite — suspender metotrexato e reavaliar.">${esc(d.mensagem || "")}</textarea>
+      </div>${criterioEditorHtml(f, prefix)}`;
+    }
+    return criterioEditorHtml(f, prefix);
+  }
+
+  function collectExtras(prefix, type, prev) {
+    const n = (id) => { const v = val(id); return v === "" ? undefined : +v; };
+    const criterio = {};
+    if (n(prefix + "-cidmin") !== undefined) criterio.idade_min = n(prefix + "-cidmin");
+    if (n(prefix + "-cidmax") !== undefined) criterio.idade_max = n(prefix + "-cidmax");
+    if (val(prefix + "-csexo")) criterio.sexo = val(prefix + "-csexo");
+    const base = { ...((prev && prev.detalhes) || {}) };
+    let detalhes = base.nome_documento ? { nome_documento: base.nome_documento } : {};
+    if (type === "Receita") {
+      const rows = Array.from(document.querySelectorAll("#" + prefix + "-esqlist .pt-esq-row")).map((row) => {
+        const e = {}; row.querySelectorAll("[data-esq]").forEach((i) => { e[i.dataset.esq] = i.value.trim(); }); return e;
+      }).filter((e) => e.dose || e.posologia || e.populacao);
+      detalhes = {
+        ...detalhes,
+        linha_tratamento: n(prefix + "-linha") || null,
+        grupo_alternativa: val(prefix + "-grupo"),
+        ceaf: !!(document.getElementById(prefix + "-ceaf") || {}).checked,
+        esquemas: rows,
+        criterios_inclusao: deLinhas(prefix + "-incl"),
+        criterios_exclusao: deLinhas(prefix + "-excl"),
+        contraindicacoes: deLinhas(prefix + "-contra"),
+        ajuste_renal_hepatico: val(prefix + "-ajuste"),
+        monitorizacao: val(prefix + "-monit"),
+      };
+    } else if (type === "Alerta") {
+      detalhes = { ...detalhes, nivel: val(prefix + "-nivel") || "atencao", conduta: val(prefix + "-conduta") || "notificar", medicamento_alvo: val(prefix + "-alvo"), mensagem: val(prefix + "-msg") };
+    }
+    return { detalhes, criterio: Object.keys(criterio).length ? criterio : null };
+  }
+
+  function criterioLabel(c) {
+    if (!c) return "";
+    const p = [];
+    if (c.idade_min != null && c.idade_max != null) p.push(c.idade_min + "–" + c.idade_max + " anos");
+    else if (c.idade_min != null) p.push("≥ " + c.idade_min + " anos");
+    else if (c.idade_max != null) p.push("≤ " + c.idade_max + " anos");
+    if (c.sexo) p.push(c.sexo === "F" ? "feminino" : "masculino");
+    return p.join(", ");
+  }
+
+  function detalhesResumoHtml(a) {
+    const d = a.detalhes || {};
+    const tags = [];
+    if (a.type === "Receita") {
+      if (d.linha_tratamento) tags.push(`<span class="pt-tag Receita">${d.linha_tratamento}ª linha</span>`);
+      if (d.grupo_alternativa) tags.push(`<span class="pt-tag" title="Alternativas intercambiáveis">⇄ ${esc(d.grupo_alternativa)}</span>`);
+      if (d.ceaf) tags.push(`<span class="pt-tag">CEAF · LME</span>`);
+    }
+    if (a.type === "Alerta") tags.push(`<span class="pt-tag Alerta nivel-${esc(d.nivel || "atencao")}">${esc(NIVEL_ALERTA[d.nivel] || "Atenção")} · ${esc(CONDUTA_ALERTA[d.conduta] || "Notificar")}</span>`);
+    if (a.criterio) tags.push(`<span class="pt-tag" title="Só para pacientes neste critério">👤 ${esc(criterioLabel(a.criterio))}</span>`);
+    const esq = (a.type === "Receita" && d.esquemas) || [];
+    const linhasEsq = esq.map((e) => [e.populacao && "<b>" + esc(e.populacao) + "</b>", esc([e.dose, e.via, e.posologia].filter(Boolean).join(" · ")), e.duracao && esc(e.duracao)].filter(Boolean).join(" — "));
+    const msg = a.type === "Alerta" && d.mensagem ? `<div style="font-size:11px;color:#9a3412;margin-top:3px">${esc(d.mensagem)}</div>` : "";
+    if (!tags.length && !linhasEsq.length && !msg) return "";
+    return `<div style="margin-top:4px">${tags.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap">${tags.join("")}</div>` : ""}
+      ${linhasEsq.length ? `<div style="font-size:11px;color:#475569;margin-top:3px">${linhasEsq.map((l) => "• " + l).join("<br>")}</div>` : ""}${msg}</div>`;
+  }
+
   function condicaoLabel(c) {
     if (!c) return "";
-    const campoTxt = c.campo === "texto" ? "resultado" : "resultado";
-    if (c.operador === "maior_que") return `${campoTxt} > ${c.numero}`;
-    if (c.operador === "menor_que") return `${campoTxt} < ${c.numero}`;
-    if (c.operador === "entre") return `${campoTxt} entre ${c.numero_min} e ${c.numero_max}`;
-    if (c.operador === "igual") return `${campoTxt} = ${c.campo === "texto" ? c.texto : c.numero}`;
-    if (c.operador === "contem") return `${campoTxt} contém "${c.texto}"`;
+    if (c.campo === "achado") return `achado "${c.conceito}" ${c.presente === false ? "ausente" : "presente"}`;
+    const v = c.campo === "texto" ? `"${c.texto}"` : c.numero;
+    if (c.operador === "maior_que") return `resultado > ${v}`;
+    if (c.operador === "maior_ou_igual") return `resultado ≥ ${v}`;
+    if (c.operador === "menor_que") return `resultado < ${v}`;
+    if (c.operador === "menor_ou_igual") return `resultado ≤ ${v}`;
+    if (c.operador === "entre") return `resultado entre ${c.numero_min} e ${c.numero_max}`;
+    if (c.operador === "fora_de") return `resultado fora de ${c.numero_min}–${c.numero_max}`;
+    if (c.operador === "igual") return `resultado = ${v}`;
+    if (c.operador === "contem") return `resultado contém "${c.texto}"`;
     return "";
   }
 
@@ -581,9 +702,10 @@
     return `<div style="display:flex;align-items:center;gap:8px;margin-top:6px;padding:6px 8px;background:#f8fafc;border-radius:6px">
       <div class="pt-icon ${a.type}" style="width:24px;height:24px;font-size:12px">${AT[a.type].icon}</div>
       <div style="flex:1;min-width:0;font-size:12px;color:#334155">${esc(a.name)}
-        <span style="color:#94a3b8">— ${a.startDay}d após o resultado${a.specialty ? " · " + esc(a.specialty) : ""}</span></div>
+        <span style="color:#94a3b8">— ${a.startDay}d após o resultado${a.specialty ? " · " + esc(a.specialty) : ""}</span>${detalhesResumoHtml(a)}</div>
       <button class="pt-btn ghost" style="padding:1px 6px;font-size:10px" data-baedit="${a.id}">✏️</button>
-      <button class="pt-btn ghost" style="padding:1px 6px;font-size:10px" data-badel="${a.id}">×</button></div>`;
+      <button class="pt-btn ghost" style="padding:1px 6px;font-size:10px" data-badel="${a.id}">×</button></div>
+      ${a.type === "Exame" ? regrasBlockHtml(a, true) : ""}`;
   }
 
   function regraCardHtml(r) {
@@ -602,9 +724,9 @@
     </div>`;
   }
 
-  function regrasBlockHtml(action) {
+  function regrasBlockHtml(action, nested) {
     const regras = (S.modal.regras || []).filter((r) => r.gatilhoId === action.id);
-    return `<div style="margin:4px 0 12px 48px;padding:10px 12px;border-left:2px solid #c7d2fe;background:rgba(99,102,241,.04);border-radius:0 8px 8px 0">
+    return `<div style="margin:4px 0 12px ${nested ? 20 : 48}px;padding:10px 12px;border-left:2px solid #c7d2fe;background:rgba(99,102,241,.04);border-radius:0 8px 8px 0">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <span style="font-size:11px;font-weight:600;color:#6366f1;text-transform:uppercase;letter-spacing:.05em">Ramificações por resultado</span>
         ${S.newRegraFor === action.id ? "" : `<button class="pt-btn ghost" style="padding:2px 8px;font-size:11px" data-rnew="${action.id}">+ Regra</button>`}</div>
@@ -623,17 +745,23 @@
         <input type="checkbox" class="pt-check" id="pt-r-default" ${f.isDefault ? "checked" : ""}> Caso padrão (quando nenhuma outra condição bater)</label>
       <div style="display:flex;gap:8px;margin-bottom:8px">
         <select class="pt-in" id="pt-r-campo" style="flex:1">
-          <option value="numero" ${c.campo !== "texto" ? "selected" : ""}>Resultado numérico</option>
-          <option value="texto" ${c.campo === "texto" ? "selected" : ""}>Resultado em texto</option></select>
+          <option value="numero" ${c.campo !== "texto" && c.campo !== "achado" ? "selected" : ""}>Resultado numérico</option>
+          <option value="texto" ${c.campo === "texto" ? "selected" : ""}>Resultado em texto</option>
+          <option value="achado" ${c.campo === "achado" ? "selected" : ""}>Achado de laudo</option></select>
         <select class="pt-in" id="pt-r-op" style="flex:1">
-          ${["maior_que", "menor_que", "entre", "igual", "contem"].map((op) => `<option value="${op}" ${c.operador === op ? "selected" : ""}>${{ maior_que: "maior que", menor_que: "menor que", entre: "entre", igual: "igual a", contem: "contém" }[op]}</option>`).join("")}
+          ${Object.keys(OP_LABEL).map((op) => `<option value="${op}" ${c.operador === op ? "selected" : ""}>${OP_LABEL[op]}</option>`).join("")}
         </select></div>
       <div style="font-size:10px;color:#94a3b8;margin-bottom:4px">Preencha só os campos relevantes ao operador escolhido acima:</div>
       <div style="display:flex;gap:8px;margin-bottom:8px">
         <input class="pt-in" id="pt-r-num" type="number" step="any" value="${c.numero ?? ""}" placeholder="Valor (maior/menor/igual)">
-        <input class="pt-in" id="pt-r-nummin" type="number" step="any" value="${c.numero_min ?? ""}" placeholder="Mínimo (entre)">
-        <input class="pt-in" id="pt-r-nummax" type="number" step="any" value="${c.numero_max ?? ""}" placeholder="Máximo (entre)">
+        <input class="pt-in" id="pt-r-nummin" type="number" step="any" value="${c.numero_min ?? ""}" placeholder="Mínimo (entre/fora)">
+        <input class="pt-in" id="pt-r-nummax" type="number" step="any" value="${c.numero_max ?? ""}" placeholder="Máximo (entre/fora)">
         <input class="pt-in" id="pt-r-texto" value="${esc(c.texto || "")}" placeholder="Texto (igual/contém)"></div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input class="pt-in" id="pt-r-conceito" value="${esc(c.conceito || "")}" placeholder="Achado (ex: TGO_ACIMA_3X_LSN)">
+        <select class="pt-in" id="pt-r-presente" style="max-width:140px">
+          <option value="sim" ${c.presente !== false ? "selected" : ""}>presente</option>
+          <option value="nao" ${c.presente === false ? "selected" : ""}>ausente</option></select></div>
       <div style="margin-bottom:12px"><span class="pt-lbl">Repetir este exame a cada quantos dias, dentro deste ramo? (opcional)</span>
         <input class="pt-in" type="number" min="0" id="pt-r-repete" value="${f.repeteGatilhoApos ?? ""}" placeholder="Ex: 30 — deixe vazio se não repete"></div>
       <div style="display:flex;gap:12px"><button class="pt-btn ghost" style="flex:1" data-rcancel="1">Cancelar</button>
@@ -643,13 +771,14 @@
 
   function branchActionEditorHtml(regraId, a) {
     const base = { type: S._batype || "Receita", name: "", startDay: 0, specialty: "", desc: "", tussId: null, codigoTuss: null, idSubstancia: null, catalogStatus: "pendente_cadastro" };
-    const f = a || { ...base, id: "" };
+    const f = a ? { ...a, type: S._batype || a.type } : { ...base, id: "" };
     return `<div class="pt-card" style="padding:12px;margin:6px 0;border:1px dashed #c4b5fd" id="pt-baeditor" data-baid="${esc(f.id)}" data-baregra="${esc(regraId)}">
       <div style="margin-bottom:8px"><span class="pt-lbl">Tipo</span>
-        <div style="display:flex;gap:6px">${["Consulta", "Exame", "Receita"].map((t) => `<button class="pt-btn" style="flex:1;padding:4px;font-size:11px;${(f.type || "Receita") === t ? "color:#fff;border:none;background:#7c3aed" : ""}" data-batype="${t}">${AT[t].icon} ${t}</button>`).join("")}</div></div>
-      <div style="margin-bottom:8px"><span class="pt-lbl">Nome</span>
-        <input class="pt-in" id="pt-ba-name" value="${esc(f.name)}" placeholder="Ex: Ajustar Levotiroxina / TSH (reavaliação)"></div>
+        <div style="display:flex;gap:6px">${TIPOS.map((t) => `<button class="pt-btn" style="flex:1;padding:4px;font-size:11px;${(f.type || "Receita") === t ? "color:#fff;border:none;background:" + TIPO_GRAD[t] : ""}" data-batype="${t}">${AT[t].icon} ${t}</button>`).join("")}</div></div>
+      <div style="margin-bottom:8px"><span class="pt-lbl">${nomeLabel(f.type || "Receita")}</span>
+        <input class="pt-in" id="pt-ba-name" value="${esc(f.name)}" placeholder="${nomePlaceholder(f.type || "Receita")}"></div>
       ${catalogPickerHtml(f, "pt-ba")}
+      ${extrasEditorHtml(f, "pt-ba")}
       <div style="margin-bottom:8px"><span class="pt-lbl">Dias após o resultado</span>
         <input class="pt-in" type="number" min="0" id="pt-ba-start" value="${f.startDay || 0}"></div>
       <div style="margin-bottom:8px"><span class="pt-lbl">Especialidade (opcional)</span>
@@ -677,6 +806,7 @@
           <strong>${m.pendencias.length} ${m.pendencias.length === 1 ? "item precisa" : "itens precisam"} de revisão antes de salvar:</strong>
           <ul>${m.pendencias.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>
         </div>` : ""}
+        ${m.fonte && (m.fonte.portaria || m.fonte.arquivo || m.fonte.orgao) ? `<div style="font-size:11px;color:#64748b;margin-bottom:10px">📄 Fonte: ${esc([m.fonte.tipo_documento, m.fonte.orgao, m.fonte.portaria, m.fonte.ano, m.fonte.arquivo].filter(Boolean).join(" · "))}</div>` : ""}
         <div style="margin-bottom:16px"><span class="pt-lbl">Nome do protocolo</span>
           <input class="pt-in" id="pt-m-title" value="${esc(m.title)}" placeholder="Ex: Hipertensão Arterial"></div>
         <div style="margin-bottom:16px"><span class="pt-lbl">CIDs contemplados</span>
@@ -697,9 +827,9 @@
             <div class="pt-card" style="padding:10px;display:flex;gap:12px;align-items:center;margin-bottom:8px">
               <div class="pt-icon ${a.type}">${AT[a.type].icon}</div>
               <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:#1e293b">${esc(a.name)}</div>
-                <div style="font-size:11px;color:#64748b">Início: dia ${a.startDay} · ${a.frequency}d · ${a.recurrent ? "Recorrente" : "1x"}${a.specialty ? " · " + esc(a.specialty) : ""}</div></div>
+                <div style="font-size:11px;color:#64748b">Início: dia ${a.startDay} · ${a.frequency}d · ${a.recurrent ? "Recorrente" : "1x"}${a.specialty ? " · " + esc(a.specialty) : ""}</div>${detalhesResumoHtml(a)}</div>
               <span class="pt-tag ${a.type}">${a.type}</span>
-              ${a.type !== "Consulta" && a.catalogStatus === "pendente_cadastro" ? `<span class="pt-tag pendente" data-tip="Esta ação foi salva apenas com o nome em texto. Edite-a e vincule ao catálogo para habilitar buscas/relatórios pelo item real." data-tipt="Sem vínculo de catálogo">⚠ pendente</span>` : ""}
+              ${(a.type === "Exame" || a.type === "Receita") && a.catalogStatus === "pendente_cadastro" ? `<span class="pt-tag pendente" data-tip="Esta ação foi salva apenas com o nome em texto. Edite-a e vincule ao catálogo para habilitar buscas/relatórios pelo item real." data-tipt="Sem vínculo de catálogo">⚠ pendente</span>` : ""}
               <button class="pt-btn ghost" style="padding:2px 8px" data-aedit="${a.id}">✏️</button>
               <button class="pt-btn ghost" style="padding:2px 8px" data-adel="${a.id}">×</button></div>
             ${a.type === "Exame" ? regrasBlockHtml(a) : ""}
@@ -717,12 +847,12 @@
       <div class="pt-modal-h"><h2>✨ Criar protocolo com IA</h2>
         <button class="pt-btn ghost" data-aiclose="1" style="padding:2px 10px">×</button></div>
       <div class="pt-modal-b">
-        <p style="font-size:12px;color:#64748b;margin:0 0 14px">Anexe um PDF com o protocolo (diretriz, artigo, fluxograma) e/ou escreva instruções. A IA monta o nome, os CIDs e as ações.</p>
+        <p style="font-size:12px;color:#64748b;margin:0 0 14px">Anexe o PDF do PCDT, diretriz ou artigo e/ou escreva instruções. A IA monta os CIDs, as consultas, os exames de monitorização com ramificações por resultado, cada medicamento com todas as variações de dose e os alertas automáticos. Revise as pendências antes de salvar. Para documentos muito extensos, gere por partes (ex.: “somente tratamento pediátrico”) — as ações são somadas ao protocolo aberto.</p>
         <div style="margin-bottom:14px"><span class="pt-lbl">Arquivo PDF (opcional)</span>
           <input class="pt-in" type="file" accept="application/pdf" id="pt-ai-file">
           ${a.filename ? `<div style="font-size:11px;color:#4f46e5;margin-top:6px">📄 ${esc(a.filename)}</div>` : ""}</div>
         <div><span class="pt-lbl">Observações / instruções para a IA</span>
-          <textarea class="pt-in" rows="5" id="pt-ai-obs" style="resize:vertical" placeholder="Ex: protocolo de hipertensão, consulta a cada 6 meses, exames laboratoriais anuais...">${esc(a.obs || "")}</textarea></div>
+          <textarea class="pt-in" rows="5" id="pt-ai-obs" style="resize:vertical" placeholder="Ex: usar só a população adulta; renovação de receita a cada 90 dias; incluir alerta de renovação da LME...">${esc(a.obs || "")}</textarea></div>
         ${a.error ? `<div style="margin-top:12px;font-size:12px;color:#b91c1c">${esc(a.error)}</div>` : ""}
         ${a.loading ? `<div style="margin-top:12px;font-size:12px;color:#6366f1">Gerando protocolo…</div>` : ""}
       </div>
@@ -737,15 +867,22 @@
     if (!a.pdf && !a.obs.trim()) { a.error = "Anexe um PDF ou escreva instruções."; return render(); }
     a.loading = true; a.error = ""; render();
     try {
+      const sb = sbc();
+      const { data: sess } = sb ? await sb.auth.getSession() : { data: null };
+      const token = sess && sess.session && sess.session.access_token;
+      if (!token) throw new Error("Sessão expirada — faça login novamente.");
       const res = await fetch("/api/protocolos/gerar-ia", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json", authorization: "Bearer " + token },
         body: JSON.stringify({ pdf_base64: a.pdf || null, filename: a.filename || null, observacao: a.obs }),
       });
       if (!res.ok) throw new Error(await res.text());
       const d = await res.json();
-      S.modal = S.modal || { title: "", cids: [], actions: [], regras: [], pendencias: [] };
+      S.modal = S.modal || { title: "", cids: [], actions: [], regras: [], pendencias: [], fonte: {} };
       if (!S.modal.regras) S.modal.regras = [];
-      if (d.titulo) S.modal.title = d.titulo;
+      // Gerações seguintes (ex.: "agora só a parte pediátrica") somam ações ao
+      // protocolo aberto; título e fonte só são definidos se ainda vazios.
+      if (d.titulo && !S.modal.title) S.modal.title = d.titulo;
+      if (d.fonte && !(S.modal.fonte && (S.modal.fonte.portaria || S.modal.fonte.arquivo))) S.modal.fonte = d.fonte;
       if (Array.isArray(d.cids)) S.modal.cids = [...new Set([...S.modal.cids, ...d.cids.map((c) => String(c).toUpperCase())])];
 
       const tempToLocal = {}; // temp_id da IA -> id local (uid())
@@ -764,7 +901,9 @@
           codigoTuss: x.codigo_tuss || null,
           idSubstancia: x.id_substancia || null,
           medicamentoId: null,
-          catalogStatus: x.catalogo_status || "pendente_cadastro",
+          catalogStatus: x.catalogo_status || (x.tipo === "Consulta" || x.tipo === "Alerta" ? "nao_aplicavel" : "pendente_cadastro"),
+          detalhes: x.detalhes || {},
+          criterio: x.criterio_paciente || null,
         });
       });
       const regraTempToLocal = {};
@@ -848,7 +987,7 @@
      não há "seguido/não seguido" aqui, pois não há paciente nenhum ainda.
      Todo o desenho fica em uma única cor de destaque. ---------- */
   const FLOW_SVG_ID = "pt-flow-svg-full";
-  const FLOW_ICON = { Consulta: "🩺", Exame: "🧪", Receita: "💊" };
+  const FLOW_ICON = { Consulta: "🩺", Exame: "🧪", Receita: "💊", Alerta: "🔔" };
 
   function buildTemplateTree(actions, regras) {
     const regrasByGatilho = {};
@@ -1020,7 +1159,9 @@
     const type = S._atype || (S.editingAction ? (S.modal.actions.find((a) => a.id === S.editingAction) || {}).type : null) || "Exame";
     const tussIdEl = document.getElementById("pt-a-tussid"), tussCodeEl = document.getElementById("pt-a-tusscode");
     const substIdEl = document.getElementById("pt-a-substid"), statusEl = document.getElementById("pt-a-catstatus");
+    const prev = S.modal.actions.find((a) => a.id === box.dataset.editid);
     return {
+      ...collectExtras("pt-a", type, prev),
       id: box.dataset.editid || uid(),
       type,
       name: document.getElementById("pt-a-name").value.trim(),
@@ -1034,18 +1175,20 @@
       codigoTuss: type === "Exame" ? ((tussCodeEl && tussCodeEl.value) || null) : null,
       idSubstancia: type === "Receita" ? ((substIdEl && substIdEl.value) || null) : null,
       medicamentoId: null,
-      catalogStatus: type === "Consulta" ? "nao_aplicavel" : ((statusEl && statusEl.value) || "pendente_cadastro"),
+      catalogStatus: type === "Consulta" || type === "Alerta" ? "nao_aplicavel" : ((statusEl && statusEl.value) || "pendente_cadastro"),
     };
   }
 
   document.addEventListener("click", (e) => {
     const root = document.getElementById("s-protocolos");
     if (!root || root.style.display === "none") return;
-    const t = e.target.closest("[data-menu],[data-act],[data-dd],[data-group],[data-bulk],[data-clear],[data-goprot],[data-back],[data-new],[data-edit],[data-toggle],[data-mclose],[data-msave],[data-mbg],[data-cidadd],[data-cidrm],[data-anew],[data-aedit],[data-adel],[data-asave],[data-acancel],[data-atype],[data-afreq],[data-zoom],[data-gact],[data-fclear],[data-fapply],[data-tladd],[data-aiopen],[data-aiclose],[data-aigen],[data-aibg],[data-rnew],[data-redit],[data-rdel],[data-rcancel],[data-rsave],[data-banew],[data-baedit],[data-badel],[data-bacancel],[data-basave],[data-batype],[data-catpick],[data-catcreate],[data-cidpick],[data-flowopen],[data-flowclose],[data-flowbg],[data-studio]");
+    const t = e.target.closest("[data-menu],[data-act],[data-dd],[data-group],[data-bulk],[data-clear],[data-goprot],[data-back],[data-new],[data-edit],[data-toggle],[data-mclose],[data-msave],[data-mbg],[data-cidadd],[data-cidrm],[data-anew],[data-aedit],[data-adel],[data-asave],[data-acancel],[data-atype],[data-afreq],[data-zoom],[data-gact],[data-fclear],[data-fapply],[data-tladd],[data-aiopen],[data-aiclose],[data-aigen],[data-aibg],[data-rnew],[data-redit],[data-rdel],[data-rcancel],[data-rsave],[data-banew],[data-baedit],[data-badel],[data-bacancel],[data-basave],[data-batype],[data-catpick],[data-catcreate],[data-cidpick],[data-flowopen],[data-flowclose],[data-flowbg],[data-studio],[data-esqadd],[data-esqdel]");
     if (!t) { if (S.dd) { S.dd = null; render(); } return; }
     const d = t.dataset;
     if (d.aiopen) { S.aiModal = { obs: "", pdf: null, filename: "", loading: false, error: "" }; return render(); }
     if (d.studio) { return abrirStudioComSessao(); }
+    if (d.esqadd) { const list = document.getElementById(d.esqadd + "-esqlist"); if (list) list.insertAdjacentHTML("beforeend", esquemaRowHtml({})); return; }
+    if (d.esqdel) { const row = t.closest(".pt-esq-row"); if (row) row.remove(); return; }
     if (d.aiclose) { S.aiModal = null; return render(); }
     if (d.aigen) return generateWithAI();
     if (d.aibg && e.target === t) { S.aiModal = null; return render(); }
@@ -1060,8 +1203,8 @@
     if (d.fapply) { S.dd = null; return render(); }
     if (d.goprot) { S.screen = "protocols"; return render(); }
     if (d.back) { S.screen = "report"; return render(); }
-    if (d.new) { S.modal = { title: "", cids: [], actions: [], regras: [], pendencias: [] }; S.showActionEditor = false; S.editingAction = null; S._draft = null; return render(); }
-    if (d.edit) { const p = S.protocols.find((x) => x.id === d.edit); S.modal = { id: p.id, title: p.title, cids: [...p.cids], actions: p.actions.map((a) => ({ ...a })), regras: (p.regras || []).map((r) => ({ ...r })), pendencias: [] }; return render(); }
+    if (d.new) { S.modal = { title: "", cids: [], actions: [], regras: [], pendencias: [], fonte: {} }; S.showActionEditor = false; S.editingAction = null; S._draft = null; return render(); }
+    if (d.edit) { const p = S.protocols.find((x) => x.id === d.edit); S.modal = { id: p.id, title: p.title, cids: [...p.cids], fonte: { ...(p.fonte || {}) }, actions: p.actions.map((a) => ({ ...a, detalhes: JSON.parse(JSON.stringify(a.detalhes || {})) })), regras: (p.regras || []).map((r) => ({ ...r })), pendencias: [] }; return render(); }
     if (d.toggle) return toggleActive(d.toggle);
     if (d.mbg && e.target === t) { S.modal = null; return render(); }
     if (d.mclose) { S.modal = null; S.showActionEditor = false; S.editingAction = null; return render(); }
@@ -1074,12 +1217,7 @@
     if (d.cidrm) { S.modal.cids = S.modal.cids.filter((c) => c !== d.cidrm); return render(); }
     if (d.anew || d.tladd) { S.editingAction = null; S.showActionEditor = true; S._atype = "Exame"; S._draft = null; return render(); }
     if (d.aedit) { S.editingAction = d.aedit; S.showActionEditor = false; S._atype = (S.modal.actions.find((a) => a.id === d.aedit) || {}).type; return render(); }
-    if (d.adel) {
-      const regrasDoGatilho = (S.modal.regras || []).filter((r) => r.gatilhoId === d.adel).map((r) => r.id);
-      S.modal.regras = (S.modal.regras || []).filter((r) => r.gatilhoId !== d.adel);
-      S.modal.actions = S.modal.actions.filter((a) => a.id !== d.adel && !regrasDoGatilho.includes(a.regraPaiId));
-      return render();
-    }
+    if (d.adel) { removerAcaoEmCascata(d.adel); return render(); }
     if (d.acancel) { S.editingAction = null; S.showActionEditor = false; S._draft = null; return render(); }
     if (d.atype) { const cur = collectAction(); S._atype = d.atype; if (cur) { cur.type = d.atype; S._draft = cur; } return renderDraft(cur, d.atype); }
     if (d.afreq) { document.getElementById("pt-a-freq").value = d.afreq; return; }
@@ -1109,14 +1247,10 @@
     if (d.rnew) { S.newRegraFor = d.rnew; S.editingRegra = null; return render(); }
     if (d.redit) { S.editingRegra = d.redit; S.newRegraFor = null; return render(); }
     if (d.rcancel) { S.editingRegra = null; S.newRegraFor = null; return render(); }
-    if (d.rdel) {
-      S.modal.actions = S.modal.actions.filter((a) => a.regraPaiId !== d.rdel);
-      S.modal.regras = (S.modal.regras || []).filter((r) => r.id !== d.rdel);
-      return render();
-    }
+    if (d.rdel) { removerRegraEmCascata(d.rdel); return render(); }
     if (d.rsave) {
       const r = collectRegra(); if (!r) return;
-      if (!r.isDefault && (!r.condicao || !r.condicao.operador)) return alert("Defina a condição ou marque como caso padrão.");
+      if (!r.isDefault && !condicaoValida(r.condicao)) return alert("Preencha a condição (valor, faixa, texto ou achado) ou marque como caso padrão.");
       const i = (S.modal.regras || []).findIndex((x) => x.id === r.id);
       if (i >= 0) S.modal.regras[i] = r; else (S.modal.regras = S.modal.regras || []).push(r);
       S.editingRegra = null; S.newRegraFor = null; return render();
@@ -1129,7 +1263,7 @@
       return render();
     }
     if (d.bacancel) { S.editingBranchAction = null; S.newBranchActionFor = null; return render(); }
-    if (d.badel) { S.modal.actions = S.modal.actions.filter((a) => a.id !== d.badel); return render(); }
+    if (d.badel) { removerAcaoEmCascata(d.badel); return render(); }
     if (d.batype) { S._batype = d.batype; return render(); }
     if (d.basave) {
       const a = collectBranchAction(); if (!a || !a.name) return alert("Informe o nome da ação.");
@@ -1139,25 +1273,50 @@
     }
   });
 
+  // Remove a ação e, recursivamente, as regras que ela dispara e as ações
+  // desses ramos (ramos podem ser aninhados).
+  function removerAcaoEmCascata(acaoId) {
+    (S.modal.regras || []).filter((r) => r.gatilhoId === acaoId).forEach((r) => removerRegraEmCascata(r.id));
+    S.modal.actions = S.modal.actions.filter((a) => a.id !== acaoId);
+  }
+  function removerRegraEmCascata(regraId) {
+    S.modal.actions.filter((a) => a.regraPaiId === regraId).forEach((a) => removerAcaoEmCascata(a.id));
+    S.modal.regras = (S.modal.regras || []).filter((r) => r.id !== regraId);
+  }
+
+  function condicaoValida(c) {
+    if (!c) return false;
+    if (c.campo === "achado") return !!c.conceito;
+    if (c.campo === "texto") return !!c.texto && (c.operador === "igual" || c.operador === "contem");
+    if (c.operador === "entre" || c.operador === "fora_de") return Number.isFinite(c.numero_min) && Number.isFinite(c.numero_max);
+    return c.operador !== "contem" && Number.isFinite(c.numero);
+  }
+
   function collectRegra() {
     const box = document.getElementById("pt-reditor"); if (!box) return null;
     const isDefault = document.getElementById("pt-r-default").checked;
     const campo = document.getElementById("pt-r-campo").value;
     const operador = document.getElementById("pt-r-op").value;
-    const condicao = isDefault ? null : {
-      campo, operador,
-      numero: document.getElementById("pt-r-num").value !== "" ? +document.getElementById("pt-r-num").value : undefined,
-      numero_min: document.getElementById("pt-r-nummin").value !== "" ? +document.getElementById("pt-r-nummin").value : undefined,
-      numero_max: document.getElementById("pt-r-nummax").value !== "" ? +document.getElementById("pt-r-nummax").value : undefined,
-      texto: document.getElementById("pt-r-texto").value || undefined,
-    };
+    const numv = (id) => (document.getElementById(id).value !== "" ? +document.getElementById(id).value : undefined);
+    let condicao = null;
+    if (!isDefault && campo === "achado") {
+      const conceito = document.getElementById("pt-r-conceito").value.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "");
+      condicao = { campo, conceito, presente: document.getElementById("pt-r-presente").value !== "nao" };
+    } else if (!isDefault && campo === "texto") {
+      condicao = { campo, operador, texto: document.getElementById("pt-r-texto").value.trim() || undefined };
+    } else if (!isDefault) {
+      condicao = (operador === "entre" || operador === "fora_de")
+        ? { campo, operador, numero_min: numv("pt-r-nummin"), numero_max: numv("pt-r-nummax") }
+        : { campo, operador, numero: numv("pt-r-num") };
+    }
     const repeteVal = document.getElementById("pt-r-repete").value;
+    const existente = (S.modal.regras || []).find((x) => x.id === box.dataset.redid);
     return {
       id: box.dataset.redid || uid(),
       gatilhoId: box.dataset.rgat,
       descricao: document.getElementById("pt-r-desc").value.trim(),
       condicao, isDefault,
-      ordem: (S.modal.regras || []).length,
+      ordem: existente ? existente.ordem : (S.modal.regras || []).filter((x) => x.gatilhoId === box.dataset.rgat).length,
       repeteGatilhoApos: repeteVal !== "" ? +repeteVal : null,
     };
   }
@@ -1167,7 +1326,9 @@
     const type = S._batype || "Receita";
     const tussIdEl = document.getElementById("pt-ba-tussid"), tussCodeEl = document.getElementById("pt-ba-tusscode");
     const substIdEl = document.getElementById("pt-ba-substid"), statusEl = document.getElementById("pt-ba-catstatus");
+    const prev = S.modal.actions.find((a) => a.id === box.dataset.baid);
     return {
+      ...collectExtras("pt-ba", type, prev),
       id: box.dataset.baid || uid(),
       regraPaiId: box.dataset.baregra,
       type,
@@ -1180,7 +1341,7 @@
       codigoTuss: type === "Exame" ? ((tussCodeEl && tussCodeEl.value) || null) : null,
       idSubstancia: type === "Receita" ? ((substIdEl && substIdEl.value) || null) : null,
       medicamentoId: null,
-      catalogStatus: type === "Consulta" ? "nao_aplicavel" : ((statusEl && statusEl.value) || "pendente_cadastro"),
+      catalogStatus: type === "Consulta" || type === "Alerta" ? "nao_aplicavel" : ((statusEl && statusEl.value) || "pendente_cadastro"),
     };
   }
 
