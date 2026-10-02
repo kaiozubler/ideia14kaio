@@ -48,3 +48,64 @@
 .fa-drow span:first-child{color:#6b7280}
 .fa-drow span:last-child{color:#111827;font-weight:500;text-align:right}
 .fa-empty{text-align:center;color:#cbd5e1;padding:48px 0;font-size:14px}
+
+/* Faturamento v3 — perspectivas, lançamento de entrada e clientes */
+#s-faturamento .fa-muted{color:#cbd5e1}
+#s-faturamento .fa-sub{font-size:11px;color:#9ca3af;font-weight:400}
+#s-faturamento .fa-dim{font-size:12px;color:#6b7280}
+#s-faturamento .fa-strong{font-size:13px;color:#111827;font-weight:600}
+.fa-label-up{font-size:11px;font-weight:600;color:#6b7280;letter-spacing:.05em;text-transform:uppercase}
+.fa-badge{background:rgba(220,252,231,.9);color:#16a34a;font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;border:1px solid rgba(22,163,74,.3)}
+.fa-btn.violet{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;box-shadow:0 2px 12px rgba(124,58,237,.3)}
+.fa-views{display:flex;gap:4px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.fa-views button{padding:8px 18px;border-radius:50px;border:1px solid rgba(255,255,255,.85);background:rgba(255,255,255,.5);backdrop-filter:blur(10px);font-size:13px;font-weight:500;color:#6b7280;cursor:pointer;font-family:inherit}
+.fa-views button.on{background:rgba(255,255,255,.95);color:#16a34a;font-weight:600;box-shadow:0 2px 10px rgba(22,163,74,.15);border-color:rgba(22,163,74,.35)}
+.fa-aviso{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 16px;margin-bottom:14px;border-radius:18px;background:rgba(237,233,254,.72);border:1px solid rgba(124,58,237,.2);color:#4c1d95;font-size:13px}
+.fa-foot{padding:10px 16px;font-size:12px;color:#6b7280;border-top:1px solid rgba(0,0,0,.05);background:rgba(255,255,255,.35)}
+.fa-foot a{color:#16a34a}
+.fa-table tfoot td{padding:10px 12px;border-top:1px solid rgba(0,0,0,.08)}
+.fa-section-h{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.fa-section-h h3{font-size:15px;font-weight:600;color:#111827;margin:0}
+.fa-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.fa-tile{background:rgba(255,255,255,.62);backdrop-filter:blur(18px) saturate(1.6);border:1px solid rgba(255,255,255,.75);border-radius:22px;box-shadow:0 4px 24px rgba(80,120,180,.1);padding:16px 18px}
+.fa-kv{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.04)}
+.fa-kv span:first-child{color:#9ca3af}
+.fa-kv span:last-child{color:#374151;text-align:right}
+.fa-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.fa-kpis div{background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.85);border-radius:14px;padding:8px 10px;display:flex;flex-direction:column;gap:2px}
+.fa-kpis span{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.04em}
+.fa-kpis b{font-size:13px;color:#111827}
+.fa-prox{display:flex;flex-direction:column;gap:4px}
+.fa-prox-i{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:12px;border:1px solid rgba(200,210,220,.5);background:rgba(255,255,255,.6);cursor:pointer;font-family:inherit;font-size:12px;color:#374151;text-align:left;min-width:0}
+.fa-prox-i:hover{border-color:rgba(22,163,74,.45);background:rgba(220,252,231,.5)}
+.fa-modal.wide{width:680px}
+.fa-modal-bg.lvl2{z-index:2300}
+.fa-mfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(0,0,0,.05)}
+.fa-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fa-row3{display:grid;grid-template-columns:1fr 2fr 70px;gap:10px}
+@media(max-width:560px){.fa-row2,.fa-row3{grid-template-columns:1fr!important}.fa-kpis{grid-template-columns:1fr}}
+.fa-field textarea.fa-in{resize:vertical;font-family:inherit}
+.fa-seg{display:flex;gap:2px;background:rgba(0,0,0,.05);border-radius:14px;padding:3px;flex-wrap:wrap}
+.fa-seg button{flex:1;padding:7px 12px;border:none;border-radius:11px;background:transparent;cursor:pointer;font-size:12.5px;color:#6b7280;font-family:inherit;white-space:nowrap}
+.fa-seg button.on{background:rgba(255,255,255,.95);box-shadow:0 1px 4px rgba(0,0,0,.1);color:#16a34a;font-weight:600}
+.fa-box{background:rgba(255,255,255,.45);border:1px solid rgba(200,210,220,.5);border-radius:18px;padding:12px 14px;margin-bottom:12px}
+.fa-days{display:flex;gap:6px;flex-wrap:wrap}
+.fa-days button{min-width:42px;padding:7px 0;border-radius:12px;border:1px solid rgba(200,210,220,.7);background:rgba(255,255,255,.7);cursor:pointer;font-size:12px;color:#374151;font-family:inherit}
+.fa-days.mes{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.fa-days.mes button{min-width:0;padding:6px 0}
+.fa-days button.on{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border-color:transparent;font-weight:600}
+.fa-search{display:flex;gap:6px}
+.fa-iconbtn{flex-shrink:0;width:36px;border-radius:12px;border:1px solid rgba(22,163,74,.4);background:rgba(220,252,231,.7);color:#16a34a;font-size:16px;font-weight:700;cursor:pointer}
+.fa-results{display:flex;flex-direction:column;margin-top:6px;border:1px solid rgba(200,210,220,.6);border-radius:14px;overflow:hidden;background:rgba(255,255,255,.85)}
+.fa-results button{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;border:none;border-bottom:1px solid rgba(0,0,0,.04);background:transparent;cursor:pointer;font-family:inherit;font-size:13px;color:#111827;text-align:left}
+.fa-results button:hover{background:rgba(220,252,231,.6)}
+.fa-picked{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:14px;border:1.5px solid rgba(22,163,74,.4);background:rgba(220,252,231,.55)}
+.fa-picked>div,.fa-picked>b{flex:1;font-size:13px;color:#065f46}
+.fa-check{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#374151;margin:4px 0 10px;cursor:pointer}
+.fa-err{background:rgba(254,226,226,.85);color:#991b1b;border:1px solid rgba(220,38,38,.25);border-radius:12px;padding:8px 12px;font-size:12.5px;margin-top:4px}
+.fa-prev{width:100%;border-collapse:collapse;font-size:12px}
+.fa-prev th{text-align:left;font-weight:500;font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.04em;padding:4px}
+.fa-prev td{padding:3px 4px;border-top:1px solid rgba(0,0,0,.04);white-space:nowrap}
+.fa-prev tr.ov td{background:rgba(237,233,254,.45)}
+.fa-in.sm{padding:5px 7px;font-size:12px;border-radius:9px;min-width:84px}
+.fa-in[disabled],.fa-sel[disabled]{opacity:.55}
