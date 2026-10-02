@@ -2557,6 +2557,7 @@ export type Database = {
           lista_portaria344: string | null
           nome_dcb: string
           nome_exibicao: string
+          retencao_receita: string | null
           tipo_receita: string | null
         }
         Insert: {
@@ -2567,6 +2568,7 @@ export type Database = {
           lista_portaria344?: string | null
           nome_dcb: string
           nome_exibicao: string
+          retencao_receita: string | null
           tipo_receita?: string | null
         }
         Update: {
@@ -2577,6 +2579,7 @@ export type Database = {
           lista_portaria344?: string | null
           nome_dcb?: string
           nome_exibicao?: string
+          retencao_receita?: string | null
           tipo_receita?: string | null
         }
         Relationships: []
@@ -2994,6 +2997,18 @@ export type Database = {
           fabricante: string
           nome_comercial: string
           qtd_apresentacoes: number
+        }[]
+      }
+      classificar_receita_por_texto: {
+        Args: { p_texto: string }
+        Returns: {
+          grupo_busca: string
+          id_substancia: string
+          lista_portaria344: string
+          nome_dcb: string
+          nome_exibicao: string
+          retencao_receita: string
+          tipo_receita: string
         }[]
       }
       buscar_genericos: {
