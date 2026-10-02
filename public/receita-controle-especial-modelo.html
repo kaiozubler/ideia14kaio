@@ -445,6 +445,13 @@
       }
 
       /* Campos de identificação do comprador / fornecedor (Portaria 344/98) */
+      .legal-note {
+        margin-top: 12px;
+        font-size: 9.5px;
+        line-height: 1.5;
+        color: #5b6660;
+      }
+
       .ce-block {
         margin-top: 16px;
         border: 1px solid #e1e4e1;
@@ -485,7 +492,7 @@
   <body>
 
     <div class="sheet">
-      <div class="via-label">1ª via — Retenção da farmácia</div>
+      <div class="via-label">{{VIA1_LABEL}}</div>
 
       <!-- CABEÇALHO -->
       <div class="letterhead">
@@ -530,6 +537,10 @@
           <div class="patient-field">
             <span class="eyebrow">Endereço do paciente</span>
             <span class="val">{{PATIENT_ADDRESS}}</span>
+          </div>
+          <div class="patient-field patient-sex" style="flex:0 0 22%">
+            <span class="eyebrow">Sexo</span>
+            <span class="val">{{PATIENT_SEX}}</span>
           </div>
         </div>
 
@@ -584,6 +595,8 @@
         </div>
       </div>
 
+
+      <p class="legal-note">{{LEGAL_NOTE}}</p>
 
       <!-- IDENTIFICAÇÃO DO COMPRADOR / FORNECEDOR (Portaria SVS/MS 344/98) -->
       <div class="ce-block">
@@ -610,7 +623,7 @@
       </div>
     </div>
     <div class="sheet page-break">
-      <div class="via-label">2ª via — Orientação ao paciente</div>
+      <div class="via-label">{{VIA2_LABEL}}</div>
 
       <!-- CABEÇALHO -->
       <div class="letterhead">
@@ -655,6 +668,10 @@
           <div class="patient-field">
             <span class="eyebrow">Endereço do paciente</span>
             <span class="val">{{PATIENT_ADDRESS}}</span>
+          </div>
+          <div class="patient-field patient-sex" style="flex:0 0 22%">
+            <span class="eyebrow">Sexo</span>
+            <span class="val">{{PATIENT_SEX}}</span>
           </div>
         </div>
 
@@ -709,6 +726,8 @@
         </div>
       </div>
 
+
+      <p class="legal-note">{{LEGAL_NOTE}}</p>
 
       <!-- IDENTIFICAÇÃO DO COMPRADOR / FORNECEDOR (Portaria SVS/MS 344/98) -->
       <div class="ce-block">
