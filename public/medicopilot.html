@@ -16198,7 +16198,10 @@ let rxSelected = [];
                                                     '{{PRESCRIPTION_HTML}}': bodyHtml || '',
                                                     // Assinatura (placeholders ficam vazios se não configurados)
                                                     '{{SIGNATURE_DATETIME}}': _rxEsc(new Date().toLocaleString('pt-BR')),
-                                                    '{{SIGNATURE_CERT_ID}}' : _rxEsc(clinic.cert_id || ''),
+                                                    '{{SIGNATURE_CERT_ID}}' : _rxEsc(clinic.cert_id || 'ICP-Brasil'),
+                                                    '{{SIGNATURE_IMAGE_URL}}': sigDataUrl,
+                                                    '{{QR_CODE_URL}}'  : qrDataUrl,
+                                                    '{{VERIFICATION_URL}}': _rxEsc(clinic.verificacao_url || 'validar.iti.gov.br'),
                                                     // Modelo de 2 vias (controle especial / retenção)
                                                     '{{PATIENT_SEX}}'   : _rxEsc(patientSex || '—'),
                                                     '{{VIA1_LABEL}}'    : _rxEsc(via1Label || '1ª via — Retenção da farmácia'),
@@ -16258,9 +16261,7 @@ let rxSelected = [];
                                                   try {
                                                     // Remove elementos que não devem ir para o PDF
                                                     holder.querySelectorAll('.builder-note').forEach(n => n.remove());
-                                                    if (!sigDataUrl) {
-                                                      holder.querySelectorAll('.signature-area').forEach(n => n.remove());
-                                                    }
+                                                    _rxPrepararSelo(holder, { sigDataUrl, qrDataUrl });
                                                     if (!logoDataUrl) {
                                                       holder.querySelectorAll('.logo-slot').forEach(n => n.remove());
                                                     }
@@ -16315,19 +16316,7 @@ let rxSelected = [];
                                                     // da assinatura) por uma linha para assinatura manual e gera de novo.
                                                     if (!signedUrl) {
                                                       try {
-                                                        holder.querySelectorAll('.sheet').forEach(sheet => {
-                                                          sheet.querySelectorAll('.signature-area').forEach(n => n.remove());
-                                                          const area = document.createElement('div');
-                                                          area.className = 'signature-area';
-                                                          area.innerHTML = `<div class="signature-card" style="justify-content:flex-end">
-                                                              <div class="sig-graphic">
-                                                                <div class="sig-graphic-slot"></div>
-                                                                <div class="sig-name-line">${_rxEsc(doctorName)} — CRM ${_rxEsc(doctorCrm)}</div>
-                                                              </div>
-                                                            </div>`;
-                                                          const anchor = sheet.querySelector('.legal-note') || sheet.querySelector('.ce-block') || sheet.querySelector('.doc-footer');
-                                                          if (anchor) anchor.parentNode.insertBefore(area, anchor); else sheet.appendChild(area);
-                                                        });
+                                                        _rxTrocarSeloPorAssinaturaManual(holder, doctorName, doctorCrm);
                                                         finalBlob = await gerarPdf();
                                                       } catch (e) { console.warn('Falha ao gerar versão para assinatura manual:', e); }
                                                     }
@@ -16341,6 +16330,34 @@ let rxSelected = [];
                                                     setTimeout(cleanup, 300);
                                                   }
                                                 }
+                                                /* Selo "Documento assinado digitalmente" (nome, CRM, data, onde verificar):
+                                                   vai para o PDF a ser assinado mesmo sem imagem de assinatura, porque a
+                                                   assinatura ICP-Brasil da BRy é invisível — sem o selo nada na página
+                                                   indica que o documento foi assinado. Só a imagem/QR ausentes saem. */
+                                                function _rxPrepararSelo(holder, { sigDataUrl, qrDataUrl }) {
+                                                  if (!sigDataUrl) holder.querySelectorAll('.signature-area .sig-graphic').forEach(n => n.remove());
+                                                  if (!qrDataUrl) holder.querySelectorAll('.signature-area .qr-field').forEach(n => n.remove());
+                                                }
+
+                                                /* Sem assinatura ICP-Brasil o documento só vale assinado de próprio punho:
+                                                   troca o selo digital por uma linha para assinatura manual. */
+                                                function _rxTrocarSeloPorAssinaturaManual(holder, doctorName, doctorCrm) {
+                                                  const sheets = holder.querySelectorAll('.sheet');
+                                                  (sheets.length ? Array.from(sheets) : [holder]).forEach(sheet => {
+                                                    sheet.querySelectorAll('.signature-area').forEach(n => n.remove());
+                                                    const area = document.createElement('div');
+                                                    area.className = 'signature-area';
+                                                    area.innerHTML = `<div class="signature-card" style="justify-content:flex-end">
+                                                        <div class="sig-graphic">
+                                                          <div class="sig-graphic-slot"></div>
+                                                          <div class="sig-name-line">${_rxEsc(doctorName)} — CRM ${_rxEsc(doctorCrm)}</div>
+                                                        </div>
+                                                      </div>`;
+                                                    const anchor = sheet.querySelector('.legal-note') || sheet.querySelector('.ce-block') || sheet.querySelector('.doc-footer');
+                                                    if (anchor) anchor.parentNode.insertBefore(area, anchor); else sheet.appendChild(area);
+                                                  });
+                                                }
+
                                                 /* Envia o PDF para assinatura ICP-Brasil; se o certificado exigir PIN, solicita ao usuário e repete. */
                                                 async function _assinarPdfBase64(token, payload) {
                                                   const post = (pin) => fetch('/api/signature/sign', {
@@ -17824,10 +17841,10 @@ let rxSelected = [];
                                                     '{{PREPARATION_NOTES}}': _rxEsc(preparationNotes || '—'),
                                                     '{{ADDITIONAL_NOTES}}': _rxEsc(additionalNotes || '—'),
                                                     '{{SIGNATURE_DATETIME}}': _rxEsc(new Date().toLocaleString('pt-BR')),
-                                                    '{{SIGNATURE_CERT_ID}}' : _rxEsc(clinic.cert_id || ''),
+                                                    '{{SIGNATURE_CERT_ID}}' : _rxEsc(clinic.cert_id || 'ICP-Brasil'),
                                                     '{{SIGNATURE_IMAGE_URL}}': sigDataUrl,
                                                     '{{QR_CODE_URL}}'  : qrDataUrl,
-                                                    '{{VERIFICATION_URL}}': _rxEsc(clinic.verificacao_url || ''),
+                                                    '{{VERIFICATION_URL}}': _rxEsc(clinic.verificacao_url || 'validar.iti.gov.br'),
                                                   };
                                                   for (const [k, v] of Object.entries(repl)) {
                                                     html = html.split(k).join(v);
@@ -17881,9 +17898,7 @@ let rxSelected = [];
 
                                                   try {
                                                     holder.querySelectorAll('.builder-note').forEach(n => n.remove());
-                                                    if (!sigDataUrl) {
-                                                      holder.querySelectorAll('.signature-area').forEach(n => n.remove());
-                                                    }
+                                                    _rxPrepararSelo(holder, { sigDataUrl, qrDataUrl });
                                                     if (!logoDataUrl) {
                                                       const ls = holder.querySelector('.logo-slot');
                                                       if (ls) ls.remove();
@@ -17901,7 +17916,7 @@ let rxSelected = [];
                                                     const safeName = (patientName || 'paciente').replace(/[^\w\-]+/g, '_').toLowerCase();
                                                     const filename = `solicitacao_exame_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
-                                                    const pdfBlob = await window.html2pdf().set({
+                                                    const gerarPdf = () => window.html2pdf().set({
                                                       margin: 0,
                                                       filename,
                                                       image: { type: 'jpeg', quality: 0.98 },
@@ -17909,6 +17924,7 @@ let rxSelected = [];
                                                       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                                                       pagebreak: { mode: ['css', 'legacy'] }
                                                     }).from(holder.querySelector('.sheet') || holder).outputPdf('blob');
+                                                    const pdfBlob = await gerarPdf();
 
                                                     let finalBlob = pdfBlob;
                                                     let signedUrl = null;
@@ -17930,6 +17946,13 @@ let rxSelected = [];
                                                         }
                                                       }
                                                     } catch (e) { console.warn('Assinatura opcional falhou, seguindo sem assinatura:', e); }
+
+                                                    if (!signedUrl) {
+                                                      try {
+                                                        _rxTrocarSeloPorAssinaturaManual(holder, doctorName, doctorCrm);
+                                                        finalBlob = await gerarPdf();
+                                                      } catch (e) { console.warn('Falha ao gerar versão para assinatura manual:', e); }
+                                                    }
 
                                                     return { finalBlob, filename, signedUrl };
                                                   } catch (e) {
