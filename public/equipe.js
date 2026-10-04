@@ -379,7 +379,11 @@
             ? "Certificado local (.pfx/.p12)"
             : id === "bry_cloud"
               ? "BRy Cloud (Certificado em Nuvem)"
-              : "Certificado em nuvem (ICP)";
+              : id === "integra_bry"
+                ? "Outra certificadora (Integra BRy)"
+                : "Certificado em nuvem (ICP)";
+        const fmtDateTime = (d) =>
+          d ? new Date(d).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—";
         const typeLabel = (t) => (t === "pfx" ? "Arquivo A1 (.pfx/.p12)" : "Nuvem");
 
         function renderCert(c) {
@@ -406,6 +410,7 @@
               ${row("Número de série", info.serial || c.certificate_serial)}
               ${row("Emissor", info.issuer || c.provider_name)}
               ${row("Validade", `${fmtDate(info.validFrom)} até ${fmtDate(info.validUntil || info.expiresAt)}`)}
+              ${info.provider === "integra_bry" ? row("Ativo no app até", fmtDateTime(info.expiresAt)) : ""}
               ${row("Fingerprint", info.fingerprint || c.certificate_fingerprint)}
               <div style="display:flex;gap:8px;margin-top:6px">
                 <button type="button" class="eq-btn eq-btn-ghost" id="eq-p-cert-swap"><i class="ti ti-refresh"></i> Trocar certificado</button>
@@ -589,6 +594,7 @@
             "Certificado de outra certificadora",
             `<div style="display:grid;gap:10px">
                <div style="font-size:12px;color:#64748b">Escolha a certificadora onde seu certificado A1 ou A3 está hospedado. Você vai autenticar diretamente lá — nenhum dado do certificado é digitado aqui.</div>
+               <div><label class="eq-label">Manter o certificado ativo por</label>${window.IntegraBryConnect.lifetimeSelectHtml("eq-psc-lifetime", "", "eq-input")}</div>
                <div id="eq-psc-list" style="display:grid;gap:8px">Carregando certificadoras…</div>
              </div>`,
           );
@@ -607,14 +613,18 @@
               )
               .join("");
             listEl.querySelectorAll(".eq-psc-opt").forEach((btn) => {
-              btn.onclick = () => startPscLink(btn.dataset.psc);
+              btn.onclick = () =>
+                startPscLink(
+                  btn.dataset.psc,
+                  window.IntegraBryConnect.readLifetime(document.getElementById("eq-psc-lifetime")),
+                );
             });
           } catch (err) {
             listEl.innerHTML = `<div style="color:#dc2626;font-size:12px">${esc(String(err))}</div>`;
           }
         }
 
-        async function startPscLink(pscName) {
+        async function startPscLink(pscName, lifetimeSeconds) {
           modalShell(
             `Conectar com ${esc(pscName)}`,
             `<div style="display:grid;gap:10px">
@@ -627,6 +637,7 @@
             const result = await window.IntegraBryConnect.connect(token, {
               pscName,
               cpf: p.cpf || undefined,
+              lifetimeSeconds,
               onStatus: (text) => {
                 msg.textContent = text;
               },

@@ -46,7 +46,36 @@ async function getConfig() {
     if (!fallback) throw err;
     token = fallback;
   }
-  return { baseUrl: baseUrl.replace(/\/+$/, ""), token };
+  // A assinatura em si não acontece no Integra Bry: o HUB Signer recebe o
+  // PDF com `kms_type: PSC` e é ele quem chama o Integra Bry em
+  // `kms_data.url` com o token do vínculo.
+  const hubUrl =
+    process.env.BRY_HUB_BASE_URL ||
+    (isProductionEnvironment(env) ? "https://hub2.bry.com.br" : "https://hub2.hom.bry.com.br");
+  return {
+    baseUrl: baseUrl.replace(/\/+$/, ""),
+    hubUrl: hubUrl.replace(/\/+$/, ""),
+    token,
+  };
+}
+
+/** Lê uma data de expiração em qualquer um dos formatos usuais (ISO, epoch s/ms, segundos restantes). */
+function parseExpiry(raw: unknown): string | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const absolute = r.expiresAt ?? r.expires_at ?? r.expiration ?? r.expirationDate ?? r.exp;
+  if (typeof absolute === "string" && absolute) {
+    const t = Date.parse(absolute);
+    if (!Number.isNaN(t)) return new Date(t).toISOString();
+  }
+  if (typeof absolute === "number" && absolute > 0) {
+    return new Date(absolute < 1e12 ? absolute * 1000 : absolute).toISOString();
+  }
+  const relative = r.expiresIn ?? r.expires_in ?? r.lifetime;
+  if (typeof relative === "number" && relative > 0) {
+    return new Date(Date.now() + relative * 1000).toISOString();
+  }
+  return null;
 }
 
 async function integraFetch<T>(
@@ -128,6 +157,8 @@ export interface PscLinkResult {
 export interface PscCredentialInfo {
   status: string | null;
   pscName: string | null;
+  /** Fim da autorização concedida no PSC, quando o Integra Bry informa. */
+  expiresAt: string | null;
   raw: unknown;
 }
 
@@ -185,6 +216,7 @@ export const IntegraBryApi = {
     return {
       status: resp.status ?? null,
       pscName: resp.pscName ?? resp.psc_name ?? null,
+      expiresAt: parseExpiry(resp),
       raw: resp,
     };
   },
@@ -219,7 +251,7 @@ export const IntegraBryApi = {
     filename: string;
     reason?: string;
   }): Promise<{ signedPdf: Uint8Array; signatureTimestamp: string | null }> {
-    const { baseUrl, token } = await getConfig();
+    const { baseUrl, hubUrl, token } = await getConfig();
     const dadosAssinatura = {
       kms_data: {
         url: baseUrl,
@@ -240,7 +272,7 @@ export const IntegraBryApi = {
 
     let res: Response;
     try {
-      res = await fetch(`${baseUrl}/fw/v1/pdf/kms/lote/assinaturas`, {
+      res = await fetch(`${hubUrl}/fw/v1/pdf/kms/lote/assinaturas`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -250,11 +282,16 @@ export const IntegraBryApi = {
         body: form,
       });
     } catch (e) {
-      throw new BryError("Não foi possível contatar o Integra Bry para assinar.", 502, String(e));
+      throw new BryError(
+        "Não foi possível contatar o HUB Signer da BRy para assinar.",
+        502,
+        String(e),
+      );
     }
 
     const text = await res.text();
     if (!res.ok) {
+      console.error("[bry:integra] sign_error", res.status, text.slice(0, 600));
       let providerMessage = "";
       try {
         const errorPayload = JSON.parse(text) as {

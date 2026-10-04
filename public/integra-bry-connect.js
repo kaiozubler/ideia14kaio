@@ -5,7 +5,9 @@
  * reconecte na hora, sem perder o que o médico já preencheu.
  *
  * window.IntegraBryConnect.listPscs(token)
- * window.IntegraBryConnect.connect(token, { pscName, cpf, onStatus }) -> Promise<{ok, ...}>
+ * window.IntegraBryConnect.connect(token, { pscName, cpf, lifetimeSeconds, onStatus }) -> Promise<{ok, ...}>
+ * window.IntegraBryConnect.lifetimeSelectHtml(id, style, className) / readLifetime(selectEl)
+ * window.IntegraBryConnect.needsCertificate(responseJson) -> boolean
  *
  * connect() abre a autenticação numa nova aba e resolve sozinho assim que o
  * médico concluir por lá — não é preciso nenhum clique de confirmação manual
@@ -20,6 +22,63 @@
   // que montamos essa URL, só lemos o que voltar.
   const STATE_PARAM = "state";
   const MESSAGE_TYPE = "integra_bry_linked";
+  const LIFETIME_KEY = "integraBry.lifetimeSeconds";
+  const DEFAULT_LIFETIME = 12 * 3600;
+
+  // Prazo de vigência do vínculo, escolhido pelo médico a cada conexão. É o
+  // `lifetime` enviado ao /psc/link; o vínculo fica ativo até esse prazo
+  // (ou até o fim da autorização dada no app da certificadora, se menor).
+  const LIFETIME_OPTIONS = [
+    [3600, "1 hora"],
+    [4 * 3600, "4 horas"],
+    [8 * 3600, "8 horas"],
+    [12 * 3600, "12 horas"],
+    [24 * 3600, "24 horas"],
+    [7 * 24 * 3600, "7 dias"],
+  ];
+
+  function rememberedLifetime() {
+    try {
+      const v = Number(localStorage.getItem(LIFETIME_KEY));
+      if (LIFETIME_OPTIONS.some(([s]) => s === v)) return v;
+    } catch (e) {
+      /* storage indisponível: usa o padrão */
+    }
+    return DEFAULT_LIFETIME;
+  }
+
+  function lifetimeSelectHtml(id, style, className) {
+    const current = rememberedLifetime();
+    return (
+      '<select id="' +
+      id +
+      '"' +
+      (className ? ' class="' + className + '"' : "") +
+      (style ? ' style="' + style + '"' : "") +
+      ">" +
+      LIFETIME_OPTIONS.map(
+        ([secs, label]) =>
+          '<option value="' + secs + '"' + (secs === current ? " selected" : "") + ">" + label + "</option>",
+      ).join("") +
+      "</select>"
+    );
+  }
+
+  function readLifetime(selectEl) {
+    const v = Number(selectEl && selectEl.value) || DEFAULT_LIFETIME;
+    try {
+      localStorage.setItem(LIFETIME_KEY, String(v));
+    } catch (e) {
+      /* storage indisponível: só não lembra a escolha */
+    }
+    return v;
+  }
+
+  /** Erros de /api/signature/sign que significam "não há certificado válido para assinar". */
+  function needsCertificate(j) {
+    const code = j && j.error;
+    return code === "credential_expired" || code === "not_configured" || code === "cloud_certificate_not_found";
+  }
 
   async function listPscs(token) {
     const res = await fetch("/api/signature/integra-bry/pscs", {
@@ -51,9 +110,14 @@
     const params = new URLSearchParams(location.search);
     const state = params.get(STATE_PARAM);
     if (!state) return;
+    // Recusa/cancelamento no PSC volta no padrão OAuth (?error=...&state=...).
+    const providerError = params.get("error");
+    const providerErrorText = params.get("error_description") || providerError;
 
     // Limpa a URL imediatamente, pra um F5 não tentar confirmar de novo.
     params.delete(STATE_PARAM);
+    params.delete("error");
+    params.delete("error_description");
     const cleanUrl = location.pathname + (params.toString() ? "?" + params.toString() : "") + location.hash;
     history.replaceState(null, "", cleanUrl);
 
@@ -62,6 +126,21 @@
         '<div style="font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;text-align:center;color:#0f172a">' +
         '<div>' + html + '</div></div>';
     };
+
+    if (providerError) {
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage(
+          { type: MESSAGE_TYPE, state, result: { ok: false, error: providerError, message: providerErrorText } },
+          location.origin,
+        );
+      }
+      showMessage(
+        "<p>A certificadora não autorizou o vínculo (" +
+          String(providerErrorText).replace(/[<>&"]/g, "") +
+          ").</p><p>Feche esta aba e tente novamente.</p>",
+      );
+      return;
+    }
 
     try {
       const { data } = await window.sb.auth.getSession();
@@ -94,7 +173,7 @@
    * médico concluir a autenticação — sem precisar de clique de confirmação.
    * onStatus(text) é chamado com mensagens de progresso pra exibir na UI.
    */
-  function connect(token, { pscName, cpf, onStatus }) {
+  function connect(token, { pscName, cpf, lifetimeSeconds, onStatus }) {
     const notify = (msg) => {
       if (onStatus) onStatus(msg);
     };
@@ -107,7 +186,12 @@
           const res = await fetch("/api/signature/integra-bry/link", {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-            body: JSON.stringify({ pscName, redirectUri, cpf: cpf || undefined }),
+            body: JSON.stringify({
+              pscName,
+              redirectUri,
+              cpf: cpf || undefined,
+              lifetimeSeconds: lifetimeSeconds || rememberedLifetime(),
+            }),
           });
           const j = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(j.message || j.error || "Falha ao gerar o link.");
@@ -238,8 +322,16 @@
       const body = wrap.querySelector("#ibc-body");
       let pscsCache = null;
 
+      let lifetimeSeconds = rememberedLifetime();
+
       function renderPscList() {
         body.innerHTML =
+          '<label style="display:block;margin-bottom:10px">Manter o certificado ativo por ' +
+          lifetimeSelectHtml(
+            "ibc-lifetime",
+            "margin-left:6px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px",
+          ) +
+          "</label>" +
           '<div style="margin-bottom:8px">Escolha a certificadora onde seu certificado está hospedado:</div>' +
           '<div style="display:grid;gap:8px">' +
           pscsCache
@@ -253,8 +345,13 @@
             )
             .join("") +
           "</div>";
+        const lifetimeEl = body.querySelector("#ibc-lifetime");
+        lifetimeEl.value = String(lifetimeSeconds);
         body.querySelectorAll(".ibc-psc-opt").forEach((btn, i) => {
-          btn.onclick = () => connectToPsc(pscsCache[i]);
+          btn.onclick = () => {
+            lifetimeSeconds = readLifetime(lifetimeEl);
+            connectToPsc(pscsCache[i]);
+          };
         });
       }
 
@@ -265,6 +362,7 @@
           const result = await connect(token, {
             pscName: psc.name,
             cpf,
+            lifetimeSeconds,
             onStatus: (text) => {
               statusEl.textContent = text;
             },
@@ -297,7 +395,14 @@
     });
   }
 
-  window.IntegraBryConnect = { listPscs, connect, promptAndConnect };
+  window.IntegraBryConnect = {
+    listPscs,
+    connect,
+    promptAndConnect,
+    lifetimeSelectHtml,
+    readLifetime,
+    needsCertificate,
+  };
 
   // Roda a checagem de retorno assim que o script carrega, em qualquer
   // página que o inclua.
