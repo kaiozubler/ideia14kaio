@@ -18,10 +18,10 @@ Os outros três tipos seguem o mesmo contrato: o médico cadastra uma vez
 toda assinatura futura reusa essa referência (`signDocument`).
 
 O Integra Bry não se encaixa nesse molde porque a credencial que ele gera
-(`X-API-KEY`) nasce com um `lifetime` (180 a 604800 segundos — o "tempo de
-vida da requisição" citado pelas outras certificadoras; usamos 12h como
-padrão) e um `scope` que normalmente é `single_signature`: uma credencial
-por assinatura, não uma credencial permanente. Por isso ele vive em
+(`X-API-KEY`) nasce com um `lifetime` (180 a 604800 segundos) escolhido
+pelo médico a cada conexão (1h a 7 dias; padrão 12h, lembrando a última
+escolha) e `scope: signature_session`: vale para várias assinaturas, mas só
+até esse prazo — não é uma credencial permanente. Por isso ele vive em
 `signature_psc_link_sessions` (TTL 15 min até ser linkada, depois válida
 até o `lifetime` do link) em vez de em `doctor_certificates`.
 
@@ -90,11 +90,24 @@ reconectar, voltar e preencher tudo de novo.
 
 Agora, em `_assinarPdfBase64` (geração/assinatura da receita) e em
 `executarForcarAssinatura` (reassinar um documento já gerado), quando a
-API retorna `credential_expired`, o app chama `promptAndConnect` **ali
+API indica falta de certificado válido (`credential_expired`,
+`not_configured` ou `cloud_certificate_not_found` — ver
+`IntegraBryConnect.needsCertificate`), o app chama `promptAndConnect` **ali
 mesmo, sem navegar pra lugar nenhum** — o formulário por trás do overlay
 continua intacto — e tenta assinar de novo automaticamente assim que a
 Bry confirmar o vínculo. Se o médico cancelar o overlay, cai no
 comportamento de sempre (gera o PDF sem assinatura, com aviso).
+
+O overlay pede o prazo de vigência junto com a certificadora. Durante esse
+prazo o vínculo é reutilizado sem novo login. Ele termina antes quando:
+- `/auth/info` informa expiração menor (o prazo local é encurtado no callback);
+- o HUB recusa o token com 401/403 ou mensagem de expiração/revogação (o
+  vínculo é encerrado e a API devolve `credential_expired`, o que abre o
+  overlay de novo).
+
+Um vínculo Integra Bry ativo tem precedência sobre a linha de
+`doctor_certificates` quando é mais recente que ela ou quando aquele
+certificado venceu (`resolveActiveCredential` em `SignatureService`).
 
 ## O que está confirmado vs. o que precisa validação
 

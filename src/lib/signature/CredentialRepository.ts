@@ -309,10 +309,13 @@ export const CredentialRepository = {
       holderDocument?: string | null;
       validUntil?: string | null;
     },
+    /** Encurta o prazo local quando o PSC autorizou por menos tempo do que o pedido. */
+    expiresAt?: string | null,
   ): Promise<void> {
     const sb = await admin();
     const patch: Record<string, unknown> = { status: "linked" };
     if (apiKey) patch.api_key = apiKey;
+    if (expiresAt) patch.expires_at = expiresAt;
     if (certificateSummary) {
       patch.certificate_subject = certificateSummary.subject ?? null;
       patch.holder_document = certificateSummary.holderDocument ?? null;
@@ -337,11 +340,14 @@ export const CredentialRepository = {
     holderDocument: string | null;
     validUntil: string | null;
     expiresAt: string;
+    createdAt: string;
   } | null> {
     const sb = await admin();
     const { data, error } = await sb
       .from("signature_psc_link_sessions")
-      .select("id, psc_name, certificate_subject, holder_document, valid_until, expires_at")
+      .select(
+        "id, psc_name, certificate_subject, holder_document, valid_until, expires_at, created_at",
+      )
       .eq("doctor_id", doctorId)
       .eq("status", "linked")
       .gt("expires_at", new Date().toISOString())
@@ -357,6 +363,7 @@ export const CredentialRepository = {
       holder_document: string | null;
       valid_until: string | null;
       expires_at: string;
+      created_at: string;
     };
     return {
       id: row.id,
@@ -365,6 +372,7 @@ export const CredentialRepository = {
       holderDocument: row.holder_document,
       validUntil: row.valid_until,
       expiresAt: row.expires_at,
+      createdAt: row.created_at,
     };
   },
 

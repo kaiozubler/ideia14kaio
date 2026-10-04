@@ -16357,7 +16357,7 @@ let rxSelected = [];
                                                       resp = await post(pin);
                                                       j = await resp.json().catch(() => ({}));
                                                     }
-                                                    if (!resp.ok && j.error === 'credential_expired' && window.IntegraBryConnect) {
+                                                    if (!resp.ok && window.IntegraBryConnect && window.IntegraBryConnect.needsCertificate(j)) {
                                                       // Certificado (A3 externo) expirado ou nunca conectado: em vez de
                                                       // desistir e devolver o PDF sem assinatura — o que faria o médico
                                                       // fechar a receita, ir em Minha Equipe reconectar e voltar pra
@@ -16368,7 +16368,7 @@ let rxSelected = [];
                                                         const cpfAtual = (currentUser && currentUser.user_metadata && currentUser.user_metadata.cpf) || undefined;
                                                         await window.IntegraBryConnect.promptAndConnect(sess2?.session?.access_token || token, {
                                                           cpf: cpfAtual,
-                                                          title: 'Seu certificado expirou — reconecte para assinar',
+                                                          title: 'Sem certificado digital válido — conecte para assinar',
                                                         });
                                                         resp = await post(null);
                                                         j = await resp.json().catch(() => ({}));
@@ -18160,12 +18160,12 @@ let rxSelected = [];
                                                       resp = await postSign(pin);
                                                       j = await resp.json().catch(() => ({}));
                                                     }
-                                                    if (!resp.ok && j.error === 'credential_expired' && window.IntegraBryConnect) {
+                                                    if (!resp.ok && window.IntegraBryConnect && window.IntegraBryConnect.needsCertificate(j)) {
                                                       try {
                                                         const cpfAtual = (currentUser && currentUser.user_metadata && currentUser.user_metadata.cpf) || undefined;
                                                         await window.IntegraBryConnect.promptAndConnect(token, {
                                                           cpf: cpfAtual,
-                                                          title: 'Seu certificado expirou — reconecte para assinar',
+                                                          title: 'Sem certificado digital válido — conecte para assinar',
                                                         });
                                                         resp = await postSign(null);
                                                         j = await resp.json().catch(() => ({}));

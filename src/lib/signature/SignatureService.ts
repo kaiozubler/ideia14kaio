@@ -34,6 +34,43 @@ async function uploadSignedPdf(
   };
 }
 
+/** Limites aceitos pelo Integra Bry para `lifetime` em /psc/link. */
+const PSC_MIN_LIFETIME_SECONDS = 180;
+const PSC_MAX_LIFETIME_SECONDS = 7 * 24 * 60 * 60;
+const PSC_DEFAULT_LIFETIME_SECONDS = 12 * 60 * 60;
+
+type ActivePscSession = NonNullable<
+  Awaited<ReturnType<typeof CredentialRepository.getActivePscLinkSession>>
+>;
+
+/**
+ * Decide qual credencial assina: a linha de doctor_certificates ou o vínculo
+ * Integra Bry. O vínculo vence quando é mais recente que o certificado ou
+ * quando o certificado venceu — é o que o médico acabou de conectar ao ser
+ * cobrado na hora de assinar, e sem isso um certificado antigo bloquearia
+ * para sempre o A3 externo.
+ */
+async function resolveActiveCredential(
+  doctorId: string,
+): Promise<
+  { kind: "certificate"; cert: StoredCertificate } | { kind: "psc"; psc: ActivePscSession } | null
+> {
+  const [cert, psc] = await Promise.all([
+    CredentialRepository.getActiveCertificate(doctorId),
+    CredentialRepository.getActivePscLinkSession(doctorId),
+  ]);
+  if (cert && psc) {
+    const provider = await CertificateProviderFactory.get(cert as StoredCertificate);
+    const expired = provider.getCertificateInformation(cert as StoredCertificate).expired;
+    const row = cert as { updated_at?: string | null; created_at?: string | null };
+    const certTime = Date.parse(row.updated_at ?? row.created_at ?? "") || 0;
+    if (expired || Date.parse(psc.createdAt) > certTime) return { kind: "psc", psc };
+  }
+  if (cert) return { kind: "certificate", cert: cert as StoredCertificate };
+  if (psc) return { kind: "psc", psc };
+  return null;
+}
+
 export const SignatureService = {
   /** Cloud enrollment via IntegraICP (fluxo legado, requer secrets da IntegraICP). */
   async authenticate(input: AuthenticateInput): Promise<AuthenticateResult> {
@@ -54,19 +91,19 @@ export const SignatureService = {
     return provider.authenticate(input as never);
   },
 
-  /**
-   * A3 externo (certificado hospedado por outro PSC, não pela BRy) via
-   * Integra Bry. Gera o link de autenticação com o PSC escolhido — o
-   * médico abre esse link, autentica no PSC e escolhe o certificado.
-   * `lifetimeSeconds` é o "tempo de vida da requisição" (180 a 604800s;
-   * default 12h, o mesmo valor citado pelas outras certificadoras).
-   */
   /** Lista os PSCs suportados pelo Integra Bry, para o médico escolher qual usar. */
   async listIntegraBryPscs() {
     const { IntegraBryApi } = await import("@/lib/bry/integraBry.server");
     return IntegraBryApi.listPscs();
   },
 
+  /**
+   * A3 externo (certificado hospedado por outro PSC, não pela BRy) via
+   * Integra Bry. Gera o link de autenticação com o PSC escolhido — o
+   * médico abre esse link, autentica no PSC e escolhe o certificado.
+   * `lifetimeSeconds` é o prazo de vigência escolhido pelo médico
+   * (180 a 604800s; default 12h).
+   */
   async startIntegraBryLink(req: {
     doctorId: string;
     pscName: string;
@@ -77,16 +114,19 @@ export const SignatureService = {
   }): Promise<{ sessionId: string; authorizationUrl: string; state: string }> {
     const { IntegraBryApi } = await import("@/lib/bry/integraBry.server");
     const state = crypto.randomUUID();
-    const lifetimeSeconds = req.lifetimeSeconds ?? 7 * 24 * 60 * 60;
+    const requested = Math.round(Number(req.lifetimeSeconds) || PSC_DEFAULT_LIFETIME_SECONDS);
+    const lifetimeSeconds = Math.min(
+      PSC_MAX_LIFETIME_SECONDS,
+      Math.max(PSC_MIN_LIFETIME_SECONDS, requested),
+    );
     const link = await IntegraBryApi.createLink({
       pscName: req.pscName,
       redirectUri: req.redirectUri,
       state,
-      // Por padrão usamos "signature_session" com o lifetime máximo (7 dias)
-      // para que a tela de configuração possa mostrar "conectado" por um
-      // tempo razoável, como os demais tipos de certificado. Para assinar
-      // documento a documento sem manter vínculo, o chamador pode passar
-      // scope: "single_signature".
+      // "signature_session" mantém o vínculo reutilizável durante todo o
+      // prazo escolhido pelo médico (e é o exigido pelo Vidaas acima de 20
+      // documentos). Para assinar um único documento sem manter vínculo, o
+      // chamador pode passar scope: "single_signature".
       scope: req.scope ?? "signature_session",
       lifetime: lifetimeSeconds,
       cpf: req.cpf,
@@ -107,10 +147,7 @@ export const SignatureService = {
    * autenticar e escolher o certificado. Confirma a sessão e devolve os
    * dados do certificado escolhido (via /auth/info + /auth/certificate).
    */
-  async completeIntegraBryLink(params: {
-    doctorId: string;
-    state: string;
-  }) {
+  async completeIntegraBryLink(params: { doctorId: string; state: string }) {
     const session = await CredentialRepository.getPscLinkSessionByState(params.state);
     if (!session) throw SignatureErrors.NotConfigured("Sessão de link Integra Bry não encontrada.");
     if (session.doctorId !== params.doctorId) {
@@ -129,15 +166,37 @@ export const SignatureService = {
       );
     }
     const { IntegraBryApi } = await import("@/lib/bry/integraBry.server");
-    const [info, certificate] = await Promise.all([
-      IntegraBryApi.getAuthInfo(apiKey),
-      IntegraBryApi.getAuthCertificate(apiKey),
-    ]);
-    await CredentialRepository.markPscLinkSessionLinked(session.id, apiKey, {
-      subject: certificate.subject,
-      holderDocument: certificate.holderDocument,
-      validUntil: certificate.validUntil,
-    });
+    const info = await IntegraBryApi.getAuthInfo(apiKey);
+    const status = (info.status ?? "").toLowerCase();
+    if (/pend|wait|aguard|^created$/.test(status)) {
+      // Médico ainda não concluiu no PSC: o callback responde 202 e o
+      // frontend continua aguardando.
+      const { BryError } = await import("@/lib/bry/bry.server");
+      throw new BryError("Autorização pendente no PSC.", 400, { error: "authorization_pending" });
+    }
+    if (/denied|negad|reject|recus|cancel|expired|revog|fail|error|erro/.test(status)) {
+      throw SignatureErrors.UserCancelled(
+        `A certificadora não autorizou o vínculo (status: ${info.status}). Tente novamente.`,
+      );
+    }
+    const certificate = await IntegraBryApi.getAuthCertificate(apiKey);
+    // Se o PSC autorizou por menos tempo do que o pedido (no Vidaas o
+    // médico escolhe o prazo no app), o vínculo local acompanha o prazo real.
+    const pscExpiry = info.expiresAt ? Date.parse(info.expiresAt) : NaN;
+    const expiresAt =
+      Number.isFinite(pscExpiry) && pscExpiry < Date.parse(session.expiresAt)
+        ? new Date(pscExpiry).toISOString()
+        : null;
+    await CredentialRepository.markPscLinkSessionLinked(
+      session.id,
+      apiKey,
+      {
+        subject: certificate.subject,
+        holderDocument: certificate.holderDocument,
+        validUntil: certificate.validUntil,
+      },
+      expiresAt,
+    );
     return { sessionId: session.id, pscName: session.pscName, info, certificate };
   },
 
@@ -163,12 +222,30 @@ export const SignatureService = {
       );
     }
     const { IntegraBryApi } = await import("@/lib/bry/integraBry.server");
-    const signed = await IntegraBryApi.signPdf({
-      apiKey: session.apiKey,
-      pdfBuffer: req.pdfBuffer,
-      filename: req.filename ?? `documento_${Date.now()}.pdf`,
-      reason: req.contentDescription ?? "Assinatura ICP-Brasil",
-    });
+    let signed: SignedDocument;
+    try {
+      signed = await IntegraBryApi.signPdf({
+        apiKey: session.apiKey,
+        pdfBuffer: req.pdfBuffer,
+        filename: req.filename ?? `documento_${Date.now()}.pdf`,
+        reason: req.contentDescription ?? "Assinatura ICP-Brasil",
+      });
+    } catch (err) {
+      // Autorização encerrada antes do prazo local (revogada no app do PSC
+      // ou prazo menor escolhido lá): encerra o vínculo e devolve
+      // credential_expired para a tela oferecer reconectar na hora.
+      const e = err as { name?: string; status?: number; message?: string };
+      const revoked =
+        e?.name === "BryError" &&
+        (e.status === 401 ||
+          e.status === 403 ||
+          /expir|revog|token.*inv[aá]lid|inv[aá]lid.*token|n[aã]o autoriz/i.test(e.message ?? ""));
+      if (!revoked) throw err;
+      await CredentialRepository.expirePscLinkSession(req.sessionId, req.doctorId);
+      throw SignatureErrors.CredentialExpired(
+        `A autorização do certificado em ${session.pscName} expirou ou foi revogada. Conecte novamente para assinar.`,
+      );
+    }
     return uploadSignedPdf(req.doctorId, req.filename, signed);
   },
 
@@ -201,8 +278,9 @@ export const SignatureService = {
   },
 
   async getCredential(doctorId: string) {
-    const cert = await CredentialRepository.getActiveCertificate(doctorId);
-    if (cert) {
+    const active = await resolveActiveCredential(doctorId);
+    if (active?.kind === "certificate") {
+      const cert = active.cert;
       const provider = await CertificateProviderFactory.get(cert as StoredCertificate);
       const info = provider.getCertificateInformation(cert as StoredCertificate);
       // Never expose secrets / raw material to the frontend.
@@ -212,10 +290,9 @@ export const SignatureService = {
       return { ...safe, expired: info.expired, info };
     }
 
-    // Sem certificado "tradicional" — verifica se há uma sessão Integra Bry
-    // (A3 externo / certificado de outro PSC) ainda válida.
-    const psc = await CredentialRepository.getActivePscLinkSession(doctorId);
-    if (!psc) return null;
+    // Vínculo Integra Bry (A3 externo / certificado de outro PSC) ativo.
+    if (!active) return null;
+    const psc = active.psc;
     return {
       provider: "integra_bry",
       provider_name: `Integra Bry (${psc.pscName})`,
@@ -234,15 +311,14 @@ export const SignatureService = {
   },
 
   async removeCredential(doctorId: string) {
-    const cert = await CredentialRepository.getActiveCertificate(doctorId);
-    if (cert) {
-      const provider = await CertificateProviderFactory.get(cert as StoredCertificate);
-      await provider.revokeAuthentication(cert as StoredCertificate);
+    const active = await resolveActiveCredential(doctorId);
+    if (active?.kind === "certificate") {
+      const provider = await CertificateProviderFactory.get(active.cert);
+      await provider.revokeAuthentication(active.cert);
       return { removed: true };
     }
-    const psc = await CredentialRepository.getActivePscLinkSession(doctorId);
-    if (psc) {
-      await CredentialRepository.expirePscLinkSession(psc.id, doctorId);
+    if (active?.kind === "psc") {
+      await CredentialRepository.expirePscLinkSession(active.psc.id, doctorId);
       return { removed: true };
     }
     return { removed: false };
@@ -256,26 +332,26 @@ export const SignatureService = {
     filename?: string;
     certificatePassword?: string | null;
   }): Promise<{ signedPdfUrl: string; signaturePath: string; signatureTimestamp: string | null }> {
-    const cert = await CredentialRepository.getActiveCertificate(req.doctorId);
-    if (!cert) {
-      const psc = await CredentialRepository.getActivePscLinkSession(req.doctorId);
-      if (psc) {
-        return this.signWithIntegraBry({
-          doctorId: req.doctorId,
-          sessionId: psc.id,
-          pdfBuffer: req.pdfBuffer,
-          contentDescription: req.contentDescription,
-          filename: req.filename,
-        });
-      }
+    const active = await resolveActiveCredential(req.doctorId);
+    if (active?.kind === "psc") {
+      return this.signWithIntegraBry({
+        doctorId: req.doctorId,
+        sessionId: active.psc.id,
+        pdfBuffer: req.pdfBuffer,
+        contentDescription: req.contentDescription,
+        filename: req.filename,
+      });
+    }
+    if (!active) {
       const latestPsc = await CredentialRepository.getLatestPscLinkSession(req.doctorId);
       if (latestPsc?.status === "linked" && new Date(latestPsc.expiresAt).getTime() <= Date.now()) {
         throw SignatureErrors.CredentialExpired(
-          "O vínculo do certificado VIDaaS expirou. Vincule o certificado novamente para assinar.",
+          "O prazo de vínculo do seu certificado digital terminou. Conecte novamente para assinar.",
         );
       }
-      throw SignatureErrors.CredentialExpired("Nenhum certificado ativo.");
+      throw SignatureErrors.CredentialExpired("Nenhum certificado digital ativo.");
     }
+    const cert = active.cert;
     const provider = await CertificateProviderFactory.get(cert as StoredCertificate);
     const signed = await provider.signDocument({
       certificate: cert as StoredCertificate,
