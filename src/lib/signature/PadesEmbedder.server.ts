@@ -155,7 +155,8 @@ export async function finalizeWithCms(params: {
   const signedPdf = Buffer.concat([
     pdf.subarray(0, byteRange[1]),
     Buffer.from(`<${signatureHex}>`),
-    pdf.subarray(byteRange[1]),
+    // O PDF da fase 1 ainda tem o placeholder <000…>: a assinatura o SUBSTITUI.
+    pdf.subarray(byteRange[2]),
   ]);
 
   return {
