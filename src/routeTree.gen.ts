@@ -50,6 +50,7 @@ import { Route as ApiBryGetEnvelopeRouteImport } from './routes/api/bry/get-enve
 import { Route as ApiCidBuscarRouteImport } from './routes/api/cid/buscar'
 import { Route as ApiComunicacaoConexaoRouteImport } from './routes/api/comunicacao/conexao'
 import { Route as ApiComunicacaoConexaoAcaoRouteImport } from './routes/api/comunicacao/conexao-acao'
+import { Route as ApiComunicacaoConfirmarAgendamentoRouteImport } from './routes/api/comunicacao/confirmar-agendamento'
 import { Route as ApiComunicacaoEnviarRouteImport } from './routes/api/comunicacao/enviar'
 import { Route as ApiComunicacaoMidiaRouteImport } from './routes/api/comunicacao/midia'
 import { Route as ApiComunicacaoModelosRouteImport } from './routes/api/comunicacao/modelos'
@@ -309,6 +310,12 @@ const ApiComunicacaoConexaoAcaoRoute =
   ApiComunicacaoConexaoAcaoRouteImport.update({
     id: '/api/comunicacao/conexao-acao',
     path: '/api/comunicacao/conexao-acao',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiComunicacaoConfirmarAgendamentoRoute =
+  ApiComunicacaoConfirmarAgendamentoRouteImport.update({
+    id: '/api/comunicacao/confirmar-agendamento',
+    path: '/api/comunicacao/confirmar-agendamento',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiComunicacaoEnviarRoute = ApiComunicacaoEnviarRouteImport.update({
@@ -603,6 +610,7 @@ export interface FileRoutesByFullPath {
   '/api/cid/buscar': typeof ApiCidBuscarRoute
   '/api/comunicacao/conexao': typeof ApiComunicacaoConexaoRoute
   '/api/comunicacao/conexao-acao': typeof ApiComunicacaoConexaoAcaoRoute
+  '/api/comunicacao/confirmar-agendamento': typeof ApiComunicacaoConfirmarAgendamentoRoute
   '/api/comunicacao/enviar': typeof ApiComunicacaoEnviarRoute
   '/api/comunicacao/midia': typeof ApiComunicacaoMidiaRoute
   '/api/comunicacao/modelos': typeof ApiComunicacaoModelosRoute
@@ -691,6 +699,7 @@ export interface FileRoutesByTo {
   '/api/cid/buscar': typeof ApiCidBuscarRoute
   '/api/comunicacao/conexao': typeof ApiComunicacaoConexaoRoute
   '/api/comunicacao/conexao-acao': typeof ApiComunicacaoConexaoAcaoRoute
+  '/api/comunicacao/confirmar-agendamento': typeof ApiComunicacaoConfirmarAgendamentoRoute
   '/api/comunicacao/enviar': typeof ApiComunicacaoEnviarRoute
   '/api/comunicacao/midia': typeof ApiComunicacaoMidiaRoute
   '/api/comunicacao/modelos': typeof ApiComunicacaoModelosRoute
@@ -780,6 +789,7 @@ export interface FileRoutesById {
   '/api/cid/buscar': typeof ApiCidBuscarRoute
   '/api/comunicacao/conexao': typeof ApiComunicacaoConexaoRoute
   '/api/comunicacao/conexao-acao': typeof ApiComunicacaoConexaoAcaoRoute
+  '/api/comunicacao/confirmar-agendamento': typeof ApiComunicacaoConfirmarAgendamentoRoute
   '/api/comunicacao/enviar': typeof ApiComunicacaoEnviarRoute
   '/api/comunicacao/midia': typeof ApiComunicacaoMidiaRoute
   '/api/comunicacao/modelos': typeof ApiComunicacaoModelosRoute
@@ -870,6 +880,7 @@ export interface FileRouteTypes {
     | '/api/cid/buscar'
     | '/api/comunicacao/conexao'
     | '/api/comunicacao/conexao-acao'
+    | '/api/comunicacao/confirmar-agendamento'
     | '/api/comunicacao/enviar'
     | '/api/comunicacao/midia'
     | '/api/comunicacao/modelos'
@@ -958,6 +969,7 @@ export interface FileRouteTypes {
     | '/api/cid/buscar'
     | '/api/comunicacao/conexao'
     | '/api/comunicacao/conexao-acao'
+    | '/api/comunicacao/confirmar-agendamento'
     | '/api/comunicacao/enviar'
     | '/api/comunicacao/midia'
     | '/api/comunicacao/modelos'
@@ -1046,6 +1058,7 @@ export interface FileRouteTypes {
     | '/api/cid/buscar'
     | '/api/comunicacao/conexao'
     | '/api/comunicacao/conexao-acao'
+    | '/api/comunicacao/confirmar-agendamento'
     | '/api/comunicacao/enviar'
     | '/api/comunicacao/midia'
     | '/api/comunicacao/modelos'
@@ -1135,6 +1148,7 @@ export interface RootRouteChildren {
   ApiCidBuscarRoute: typeof ApiCidBuscarRoute
   ApiComunicacaoConexaoRoute: typeof ApiComunicacaoConexaoRoute
   ApiComunicacaoConexaoAcaoRoute: typeof ApiComunicacaoConexaoAcaoRoute
+  ApiComunicacaoConfirmarAgendamentoRoute: typeof ApiComunicacaoConfirmarAgendamentoRoute
   ApiComunicacaoEnviarRoute: typeof ApiComunicacaoEnviarRoute
   ApiComunicacaoMidiaRoute: typeof ApiComunicacaoMidiaRoute
   ApiComunicacaoModelosRoute: typeof ApiComunicacaoModelosRoute
@@ -1469,6 +1483,13 @@ declare module '@tanstack/react-router' {
       path: '/api/comunicacao/conexao-acao'
       fullPath: '/api/comunicacao/conexao-acao'
       preLoaderRoute: typeof ApiComunicacaoConexaoAcaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/comunicacao/confirmar-agendamento': {
+      id: '/api/comunicacao/confirmar-agendamento'
+      path: '/api/comunicacao/confirmar-agendamento'
+      fullPath: '/api/comunicacao/confirmar-agendamento'
+      preLoaderRoute: typeof ApiComunicacaoConfirmarAgendamentoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/comunicacao/enviar': {
@@ -1832,6 +1853,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCidBuscarRoute: ApiCidBuscarRoute,
   ApiComunicacaoConexaoRoute: ApiComunicacaoConexaoRoute,
   ApiComunicacaoConexaoAcaoRoute: ApiComunicacaoConexaoAcaoRoute,
+  ApiComunicacaoConfirmarAgendamentoRoute:
+    ApiComunicacaoConfirmarAgendamentoRoute,
   ApiComunicacaoEnviarRoute: ApiComunicacaoEnviarRoute,
   ApiComunicacaoMidiaRoute: ApiComunicacaoMidiaRoute,
   ApiComunicacaoModelosRoute: ApiComunicacaoModelosRoute,
