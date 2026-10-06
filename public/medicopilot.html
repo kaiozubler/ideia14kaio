@@ -12478,7 +12478,7 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                       document.querySelectorAll('style[data-ia-rx-preview]').forEach(function(s){s.remove();});
                       const scopeId='ia-rx-preview-'+Date.now();
                       let rawCss=built.rawCss.replace(/\*\s*\{\s*box-sizing:\s*border-box;\s*margin:\s*0;\s*padding:\s*0;\s*\}/,
-                        '#'+scopeId+' * { box-sizing: border-box; margin: 0; padding: 0; }')
+                        ':where(#'+scopeId+') * { box-sizing: border-box; margin: 0; padding: 0; }')
                         .replace(/html,\s*body\s*\{([^}]*)\}/,function(_,decls){return '#'+scopeId+' { '+decls+' }';});
                       const styleEl=document.createElement('style');
                       styleEl.setAttribute('data-ia-rx-preview',scopeId);
@@ -12516,7 +12516,7 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                       document.querySelectorAll('style[data-ia-ex-preview]').forEach(function(s){s.remove();});
                       const scopeId='ia-ex-preview-'+Date.now();
                       let rawCss=built.rawCss.replace(/\*\s*\{\s*box-sizing:\s*border-box;\s*margin:\s*0;\s*padding:\s*0;\s*\}/,
-                        '#'+scopeId+' * { box-sizing: border-box; margin: 0; padding: 0; }')
+                        ':where(#'+scopeId+') * { box-sizing: border-box; margin: 0; padding: 0; }')
                         .replace(/html,\s*body\s*\{([^}]*)\}/,function(_,decls){return '#'+scopeId+' { '+decls+' }';});
                       const styleEl=document.createElement('style');
                       styleEl.setAttribute('data-ia-ex-preview',scopeId);
@@ -12962,7 +12962,7 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                     if(!built)throw new Error('Não foi possível carregar o modelo de receita.');
                     const scopeId='ia-rx-dl-'+Date.now();
                     const rawCss=built.rawCss.replace(/\*\s*\{\s*box-sizing:\s*border-box;\s*margin:\s*0;\s*padding:\s*0;\s*\}/,
-                      '#'+scopeId+' * { box-sizing: border-box; margin: 0; padding: 0; }')
+                      ':where(#'+scopeId+') * { box-sizing: border-box; margin: 0; padding: 0; }')
                       .replace(/html,\s*body\s*\{([^}]*)\}/,function(_,decls){return '#'+scopeId+' { '+decls+' }';});
                     const styleEl=document.createElement('style');
                     styleEl.textContent=rawCss;
@@ -12993,7 +12993,7 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                         html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false},
                         jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
                         pagebreak:{mode:['css','legacy']}
-                      }).from(holder.querySelector('.sheet')||holder).save();
+                      }).from(holder).save(); // holder, não a .sheet: ver _renderDocumentoPdf
                     }finally{
                       clipper.remove();
                       styleEl.remove();
@@ -13007,7 +13007,7 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                     if(!built)throw new Error('Não foi possível carregar o modelo de solicitação de exames.');
                     const scopeId='ia-ex-dl-'+Date.now();
                     const rawCss=built.rawCss.replace(/\*\s*\{\s*box-sizing:\s*border-box;\s*margin:\s*0;\s*padding:\s*0;\s*\}/,
-                      '#'+scopeId+' * { box-sizing: border-box; margin: 0; padding: 0; }')
+                      ':where(#'+scopeId+') * { box-sizing: border-box; margin: 0; padding: 0; }')
                       .replace(/html,\s*body\s*\{([^}]*)\}/,function(_,decls){return '#'+scopeId+' { '+decls+' }';});
                     const styleEl=document.createElement('style');
                     styleEl.textContent=rawCss;
@@ -13039,7 +13039,7 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                         html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false},
                         jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
                         pagebreak:{mode:['css','legacy']}
-                      }).from(holder.querySelector('.sheet')||holder).save();
+                      }).from(holder).save(); // holder, não a .sheet: ver _renderDocumentoPdf
                     }finally{
                       clipper.remove();
                       styleEl.remove();
@@ -16171,11 +16171,17 @@ let rxSelected = [];
 
                                                   // Converte logo / assinatura / QR para data URI em paralelo — nenhuma delas
                                                   // chega ao html2canvas como URL externa (evita o bug do CORS + alt text gigante).
-                                                  const [logoDataUrl, sigDataUrl, qrDataUrl] = await Promise.all([
+                                                  const [logoDataUrl, sigDataUrl, qrClinica, verificacao] = await Promise.all([
                                                     _rxImgToDataUrl(clinic.logo || ''),
                                                     _rxImgToDataUrl(clinic.assinatura_url || ''),
                                                     _rxImgToDataUrl(clinic.qr_url || ''),
+                                                    _rxReservarVerificacao({ tipo: filenamePrefix, titulo: docTitle || 'Documento Médico', patientName, patientCpf, doctorName, doctorCrm, doctorSpec, clinic, clinicName, addr }),
                                                   ]);
+                                                  // QR de verificação próprio do documento; sem ele, o QR fixo configurado na clínica (se houver).
+                                                  const qrDataUrl = verificacao ? verificacao.qrDataUrl : qrClinica;
+                                                  const verificacaoTexto = verificacao
+                                                    ? verificacao.urlImpressa + ' (senha: 4 últimos dígitos do CPF do paciente)'
+                                                    : (clinic.verificacao_url || 'validar.iti.gov.br');
                                                   const primaryColor = clinic.cor_primaria || '#0E6E5D';
 
                                                   const repl = {
@@ -16201,7 +16207,7 @@ let rxSelected = [];
                                                     '{{SIGNATURE_CERT_ID}}' : _rxEsc(clinic.cert_id || 'ICP-Brasil'),
                                                     '{{SIGNATURE_IMAGE_URL}}': sigDataUrl,
                                                     '{{QR_CODE_URL}}'  : qrDataUrl,
-                                                    '{{VERIFICATION_URL}}': _rxEsc(clinic.verificacao_url || 'validar.iti.gov.br'),
+                                                    '{{VERIFICATION_URL}}': _rxEsc(verificacaoTexto),
                                                     // Modelo de 2 vias (controle especial / retenção)
                                                     '{{PATIENT_SEX}}'   : _rxEsc(patientSex || '—'),
                                                     '{{VIA1_LABEL}}'    : _rxEsc(via1Label || '1ª via — Retenção da farmácia'),
@@ -16218,9 +16224,11 @@ let rxSelected = [];
                                                   let rawCss    = styleMatch ? styleMatch[1] : '';
                                                   const rawBody = bodyMatch  ? bodyMatch[1]  : html;
 
+                                                  // :where() deixa o reset com especificidade zero, como o "*" do modelo:
+                                                  // um "#id *" venceria os paddings/margens das classes (.sheet, .patient-strip…).
                                                   rawCss = rawCss
                                                     .replace(/\*\s*\{\s*box-sizing:\s*border-box;\s*margin:\s*0;\s*padding:\s*0;\s*\}/,
-                                                      `#${scopeId} * { box-sizing: border-box; margin: 0; padding: 0; }`)
+                                                      `:where(#${scopeId}) * { box-sizing: border-box; margin: 0; padding: 0; }`)
                                                     .replace(/html,\s*body\s*\{([^}]*)\}/,
                                                       (_, decls) => `#${scopeId} { ${decls} }`);
 
@@ -16278,7 +16286,10 @@ let rxSelected = [];
                                                     const safeName = (patientName || 'paciente').replace(/[^\w\-]+/g, '_').toLowerCase();
                                                     const filename = `${filenamePrefix}_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
-                                                    // Modelos de 2 vias têm uma .sheet por via: renderiza todas.
+                                                    // Renderiza o holder (todas as .sheet), nunca a .sheet solta: o html2pdf
+                                                    // clona o elemento para fora do holder e o reset "#rx-scope-… *" deixaria de
+                                                    // valer — as margens padrão de <p>/<h2> esticam a folha além de 297mm e
+                                                    // criam uma página em branco no fim.
                                                     const gerarPdf = () => window.html2pdf().set({
                                                       margin: 0,
                                                       filename,
@@ -16286,7 +16297,7 @@ let rxSelected = [];
                                                       html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
                                                       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                                                       pagebreak: { mode: ['css', 'legacy'] }
-                                                    }).from(holder.querySelectorAll('.sheet').length > 1 ? holder : (holder.querySelector('.sheet') || holder)).outputPdf('blob');
+                                                    }).from(holder).outputPdf('blob');
                                                     const pdfBlob = await gerarPdf();
 
                                                     // Try to sign with ICP-Brasil. Fallback to unsigned download.
@@ -16316,12 +16327,13 @@ let rxSelected = [];
                                                     // da assinatura) por uma linha para assinatura manual e gera de novo.
                                                     if (!signedUrl) {
                                                       try {
-                                                        _rxTrocarSeloPorAssinaturaManual(holder, doctorName, doctorCrm);
+                                                        _rxTrocarSeloPorAssinaturaManual(holder, doctorName, doctorCrm, verificacao);
                                                         finalBlob = await gerarPdf();
                                                       } catch (e) { console.warn('Falha ao gerar versão para assinatura manual:', e); }
                                                     }
 
-                                                    return { finalBlob, filename, signedUrl };
+                                                    const verificado = await _rxEmitirVerificacao(verificacao, finalBlob);
+                                                    return { finalBlob, filename, signedUrl, verificacao: verificado ? { id: verificacao.id, codigo: verificacao.codigo, url: verificacao.urlCurta } : null };
                                                   } catch (e) {
                                                     console.error('Falha ao gerar PDF do documento:', e);
                                                     showToast && showToast('Falha ao gerar PDF do documento', 'error');
@@ -16340,22 +16352,114 @@ let rxSelected = [];
                                                 }
 
                                                 /* Sem assinatura ICP-Brasil o documento só vale assinado de próprio punho:
-                                                   troca o selo digital por uma linha para assinatura manual. */
-                                                function _rxTrocarSeloPorAssinaturaManual(holder, doctorName, doctorCrm) {
+                                                   troca o selo digital por uma linha para assinatura manual. O QR de
+                                                   verificação continua: ele confirma que a clínica emitiu o documento. */
+                                                function _rxTrocarSeloPorAssinaturaManual(holder, doctorName, doctorCrm, verificacao) {
                                                   const sheets = holder.querySelectorAll('.sheet');
                                                   (sheets.length ? Array.from(sheets) : [holder]).forEach(sheet => {
                                                     sheet.querySelectorAll('.signature-area').forEach(n => n.remove());
                                                     const area = document.createElement('div');
                                                     area.className = 'signature-area';
+                                                    const qr = verificacao && verificacao.qrDataUrl ? `
+                                                        <div class="sig-main" style="font-size:9.5px;color:#5b6660;line-height:1.5">
+                                                          Confira a autenticidade em <b style="color:#16201d">${_rxEsc(verificacao.urlImpressa)}</b><br>
+                                                          Senha: 4 últimos dígitos do CPF do paciente
+                                                        </div>
+                                                        <div class="qr-field">
+                                                          <span class="eyebrow">Verificação</span>
+                                                          <div class="qr-box"><img src="${verificacao.qrDataUrl}" alt="QR verificação" /></div>
+                                                          <span class="qr-caption">Escaneie para autenticar</span>
+                                                        </div>` : '';
                                                     area.innerHTML = `<div class="signature-card" style="justify-content:flex-end">
                                                         <div class="sig-graphic">
                                                           <div class="sig-graphic-slot"></div>
                                                           <div class="sig-name-line">${_rxEsc(doctorName)} — CRM ${_rxEsc(doctorCrm)}</div>
-                                                        </div>
+                                                        </div>${qr}
                                                       </div>`;
                                                     const anchor = sheet.querySelector('.legal-note') || sheet.querySelector('.ce-block') || sheet.querySelector('.doc-footer');
                                                     if (anchor) anchor.parentNode.insertBefore(area, anchor); else sheet.appendChild(area);
                                                   });
+                                                }
+
+                                                /* ── VERIFICAÇÃO PÚBLICA (QR code) ────────────────────────────────────
+                                                   Antes de renderizar, reserva um registro em /api/documentos/verificacao
+                                                   e gera o QR com o link autenticado (/v/<codigo>?k=...). O link curto
+                                                   impresso abre com os 4 últimos dígitos do CPF do paciente. Depois do
+                                                   PDF final (assinado ou não), _rxEmitirVerificacao envia o arquivo para
+                                                   o servidor guardar a cópia e ler a assinatura. Qualquer falha aqui só
+                                                   deixa o documento sem QR — nunca impede a emissão. */
+                                                let _qrLibPromise = null;
+                                                function _rxCarregarQrLib() {
+                                                  if (window.qrcode) return Promise.resolve(window.qrcode);
+                                                  _qrLibPromise = _qrLibPromise || new Promise((resolve, reject) => {
+                                                    const s = document.createElement('script');
+                                                    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
+                                                    s.onload = () => window.qrcode ? resolve(window.qrcode) : reject(new Error('qrcode indisponível'));
+                                                    s.onerror = () => { _qrLibPromise = null; reject(new Error('qrcode indisponível')); };
+                                                    document.head.appendChild(s);
+                                                  });
+                                                  return _qrLibPromise;
+                                                }
+
+                                                async function _rxReservarVerificacao({ tipo, titulo, patientName, patientCpf, doctorName, doctorCrm, doctorSpec, clinic, clinicName, addr }) {
+                                                  if (String(patientCpf || '').replace(/\D/g, '').length !== 11) return null;
+                                                  try {
+                                                    const { data: sess } = await sb.auth.getSession();
+                                                    const token = sess?.session?.access_token;
+                                                    if (!token) return null;
+                                                    const [resp, qrcode] = await Promise.all([
+                                                      fetch('/api/documentos/verificacao/reservar', {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                                                        body: JSON.stringify({
+                                                          tipo, titulo,
+                                                          pacienteNome: patientName || null,
+                                                          pacienteCpf: patientCpf,
+                                                          medico: { nome: doctorName, crm: doctorCrm, especialidade: doctorSpec || null },
+                                                          clinica: { nome: clinicName, endereco: addr || null, telefone: clinic.telefone || null, email: clinic.email || null, cor: clinic.cor_primaria || null },
+                                                        }),
+                                                      }),
+                                                      _rxCarregarQrLib(),
+                                                    ]);
+                                                    if (!resp.ok) { console.warn('Reserva de verificação falhou:', resp.status); return null; }
+                                                    const v = await resp.json();
+                                                    const qr = qrcode(0, 'M');
+                                                    qr.addData(v.url);
+                                                    qr.make();
+                                                    return {
+                                                      ...v,
+                                                      token,
+                                                      qrDataUrl: qr.createDataURL(8, 2),
+                                                      urlImpressa: String(v.urlCurta).replace(/^https?:\/\//, ''),
+                                                    };
+                                                  } catch (e) {
+                                                    console.warn('Verificação por QR indisponível, seguindo sem ela:', e);
+                                                    return null;
+                                                  }
+                                                }
+
+                                                async function _rxEmitirVerificacao(verificacao, blob) {
+                                                  if (!verificacao || !blob) return false;
+                                                  try {
+                                                    const pdfBase64 = await new Promise((resolve, reject) => {
+                                                      const r = new FileReader();
+                                                      r.onload = () => resolve(String(r.result).split(',')[1] || '');
+                                                      r.onerror = reject;
+                                                      r.readAsDataURL(blob);
+                                                    });
+                                                    const { data: sess } = await sb.auth.getSession();
+                                                    const resp = await fetch('/api/documentos/verificacao/emitir', {
+                                                      method: 'POST',
+                                                      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (sess?.session?.access_token || verificacao.token) },
+                                                      body: JSON.stringify({ id: verificacao.id, pdfBase64 }),
+                                                    });
+                                                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                                                    return true;
+                                                  } catch (e) {
+                                                    console.warn('Falha ao registrar documento para verificação:', e);
+                                                    showToast && showToast('Documento gerado, mas o QR de verificação não foi registrado', 'warn');
+                                                    return false;
+                                                  }
                                                 }
 
                                                 /* Envia o PDF para assinatura ICP-Brasil; se o certificado exigir PIN, solicita ao usuário e repete. */
@@ -16554,7 +16658,7 @@ let rxSelected = [];
                                                     pacienteNome: p.name || 'Paciente',
                                                     pacienteCpf: p.cpf || null,
                                                     pacienteId: p.id || null,
-                                                    conteudo: { documento: modo === 'COMUM' ? 'Receituário Médico' : tipoDoc.titulo, medicamentos: meds, formulas: formulasList },
+                                                    conteudo: { documento: modo === 'COMUM' ? 'Receituário Médico' : tipoDoc.titulo, medicamentos: meds, formulas: formulasList, verificacao: result.verificacao || null },
                                                     blob: result.finalBlob,
                                                     filename: result.filename,
                                                     assinado: !!result.signedUrl,
@@ -17449,7 +17553,7 @@ let rxSelected = [];
                                                   let rawCss = styleMatch ? styleMatch[1] : '';
                                                   const rawBody = bodyMatch ? bodyMatch[1] : html;
                                                   rawCss = rawCss
-                                                    .replace(/\*\s*\{\s*box-sizing:\s*border-box;\s*margin:\s*0;\s*padding:\s*0;\s*\}/, `#${scopeId} * { box-sizing: border-box; margin: 0; padding: 0; }`)
+                                                    .replace(/\*\s*\{\s*box-sizing:\s*border-box;\s*margin:\s*0;\s*padding:\s*0;\s*\}/, `:where(#${scopeId}) * { box-sizing: border-box; margin: 0; padding: 0; }`)
                                                     .replace(/html,\s*body\s*\{([^}]*)\}/, (_, decls) => `#${scopeId} { ${decls} }`);
 
                                                   const styleEl = document.createElement('style');
@@ -17481,7 +17585,7 @@ let rxSelected = [];
                                                       html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
                                                       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                                                       pagebreak: { mode: ['css', 'legacy'] },
-                                                    }).from(holder.querySelector('.sheet') || holder).outputPdf('blob');
+                                                    }).from(holder).outputPdf('blob'); // holder, não a .sheet: ver _renderDocumentoPdf
 
                                                     let finalBlob = pdfBlob;
                                                     let assinado = false;
@@ -17806,11 +17910,17 @@ let rxSelected = [];
                                                     html = await resp.text();
                                                   } catch (e) { showToast && showToast('Falha ao carregar modelo de solicitação de exames', 'error'); return null; }
 
-                                                  const [logoDataUrl, sigDataUrl, qrDataUrl] = await Promise.all([
+                                                  const [logoDataUrl, sigDataUrl, qrClinica, verificacao] = await Promise.all([
                                                     _rxImgToDataUrl(clinic.logo || ''),
                                                     _rxImgToDataUrl(clinic.assinatura_url || ''),
                                                     _rxImgToDataUrl(clinic.qr_url || ''),
+                                                    _rxReservarVerificacao({ tipo: 'solicitacao_exame', titulo: 'Solicitação de Exame', patientName, patientCpf, doctorName, doctorCrm, doctorSpec, clinic, clinicName, addr }),
                                                   ]);
+                                                  // QR de verificação próprio do documento; sem ele, o QR fixo configurado na clínica (se houver).
+                                                  const qrDataUrl = verificacao ? verificacao.qrDataUrl : qrClinica;
+                                                  const verificacaoTexto = verificacao
+                                                    ? verificacao.urlImpressa + ' (senha: 4 últimos dígitos do CPF do paciente)'
+                                                    : (clinic.verificacao_url || 'validar.iti.gov.br');
                                                   const primaryColor = clinic.cor_primaria || '#0E6E5D';
 
                                                   const repl = {
@@ -17844,7 +17954,7 @@ let rxSelected = [];
                                                     '{{SIGNATURE_CERT_ID}}' : _rxEsc(clinic.cert_id || 'ICP-Brasil'),
                                                     '{{SIGNATURE_IMAGE_URL}}': sigDataUrl,
                                                     '{{QR_CODE_URL}}'  : qrDataUrl,
-                                                    '{{VERIFICATION_URL}}': _rxEsc(clinic.verificacao_url || 'validar.iti.gov.br'),
+                                                    '{{VERIFICATION_URL}}': _rxEsc(verificacaoTexto),
                                                   };
                                                   for (const [k, v] of Object.entries(repl)) {
                                                     html = html.split(k).join(v);
@@ -17858,7 +17968,7 @@ let rxSelected = [];
 
                                                   rawCss = rawCss
                                                     .replace(/\*\s*\{\s*box-sizing:\s*border-box;\s*margin:\s*0;\s*padding:\s*0;\s*\}/,
-                                                      `#${scopeId} * { box-sizing: border-box; margin: 0; padding: 0; }`)
+                                                      `:where(#${scopeId}) * { box-sizing: border-box; margin: 0; padding: 0; }`)
                                                     .replace(/html,\s*body\s*\{([^}]*)\}/,
                                                       (_, decls) => `#${scopeId} { ${decls} }`);
 
@@ -17923,7 +18033,7 @@ let rxSelected = [];
                                                       html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
                                                       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                                                       pagebreak: { mode: ['css', 'legacy'] }
-                                                    }).from(holder.querySelector('.sheet') || holder).outputPdf('blob');
+                                                    }).from(holder).outputPdf('blob'); // holder, não a .sheet: ver _renderDocumentoPdf
                                                     const pdfBlob = await gerarPdf();
 
                                                     let finalBlob = pdfBlob;
@@ -17949,12 +18059,13 @@ let rxSelected = [];
 
                                                     if (!signedUrl) {
                                                       try {
-                                                        _rxTrocarSeloPorAssinaturaManual(holder, doctorName, doctorCrm);
+                                                        _rxTrocarSeloPorAssinaturaManual(holder, doctorName, doctorCrm, verificacao);
                                                         finalBlob = await gerarPdf();
                                                       } catch (e) { console.warn('Falha ao gerar versão para assinatura manual:', e); }
                                                     }
 
-                                                    return { finalBlob, filename, signedUrl };
+                                                    const verificado = await _rxEmitirVerificacao(verificacao, finalBlob);
+                                                    return { finalBlob, filename, signedUrl, verificacao: verificado ? { id: verificacao.id, codigo: verificacao.codigo, url: verificacao.urlCurta } : null };
                                                   } catch (e) {
                                                     console.error('Falha ao gerar PDF da solicitação de exames:', e);
                                                     showToast && showToast('Falha ao gerar PDF da solicitação de exames', 'error');

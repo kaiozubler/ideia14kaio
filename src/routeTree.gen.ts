@@ -31,6 +31,7 @@ import { Route as ContratacaoPagamentoRouteImport } from './routes/contratacao/p
 import { Route as ContratacaoTermosRouteImport } from './routes/contratacao/termos'
 import { Route as FFormIdRouteImport } from './routes/f.$formId'
 import { Route as TTermoIdRouteImport } from './routes/t.$termoId'
+import { Route as VCodigoRouteImport } from './routes/v.$codigo'
 import { Route as ApiAsaasCheckoutRouteImport } from './routes/api/asaas/checkout'
 import { Route as ApiAsaasWebhookRouteImport } from './routes/api/asaas/webhook'
 import { Route as ApiAssinaturaAtualizarCartaoRouteImport } from './routes/api/assinatura/atualizar-cartao'
@@ -72,6 +73,10 @@ import { Route as ApiTermosGerarIaRouteImport } from './routes/api/termos/gerar-
 import { Route as ApiTussBuscarRouteImport } from './routes/api/tuss/buscar'
 import { Route as ApiTussCriarRouteImport } from './routes/api/tuss/criar'
 import { Route as ApiWhatsappSegurancaRouteImport } from './routes/api/whatsapp/seguranca'
+import { Route as ApiDocumentosVerificacaoEmitirRouteImport } from './routes/api/documentos/verificacao/emitir'
+import { Route as ApiDocumentosVerificacaoReservarRouteImport } from './routes/api/documentos/verificacao/reservar'
+import { Route as ApiPublicDocumentosAbrirRouteImport } from './routes/api/public/documentos/abrir'
+import { Route as ApiPublicDocumentosIdentidadeRouteImport } from './routes/api/public/documentos/identidade'
 import { Route as ApiPublicExtensaoChatRouteImport } from './routes/api/public/extensao/chat'
 import { Route as ApiPublicExtensaoDeepgramTokenRouteImport } from './routes/api/public/extensao/deepgram-token'
 import { Route as ApiPublicFormulariosCodigoRouteImport } from './routes/api/public/formularios/codigo'
@@ -201,6 +206,11 @@ const FFormIdRoute = FFormIdRouteImport.update({
 const TTermoIdRoute = TTermoIdRouteImport.update({
   id: '/t/$termoId',
   path: '/t/$termoId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VCodigoRoute = VCodigoRouteImport.update({
+  id: '/v/$codigo',
+  path: '/v/$codigo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAsaasCheckoutRoute = ApiAsaasCheckoutRouteImport.update({
@@ -424,6 +434,30 @@ const ApiWhatsappSegurancaRoute = ApiWhatsappSegurancaRouteImport.update({
   path: '/api/whatsapp/seguranca',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDocumentosVerificacaoEmitirRoute =
+  ApiDocumentosVerificacaoEmitirRouteImport.update({
+    id: '/api/documentos/verificacao/emitir',
+    path: '/api/documentos/verificacao/emitir',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiDocumentosVerificacaoReservarRoute =
+  ApiDocumentosVerificacaoReservarRouteImport.update({
+    id: '/api/documentos/verificacao/reservar',
+    path: '/api/documentos/verificacao/reservar',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicDocumentosAbrirRoute =
+  ApiPublicDocumentosAbrirRouteImport.update({
+    id: '/api/public/documentos/abrir',
+    path: '/api/public/documentos/abrir',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicDocumentosIdentidadeRoute =
+  ApiPublicDocumentosIdentidadeRouteImport.update({
+    id: '/api/public/documentos/identidade',
+    path: '/api/public/documentos/identidade',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicExtensaoChatRoute = ApiPublicExtensaoChatRouteImport.update({
   id: '/api/public/extensao/chat',
   path: '/api/public/extensao/chat',
@@ -550,6 +584,7 @@ export interface FileRoutesByFullPath {
   '/contratacao/termos': typeof ContratacaoTermosRoute
   '/f/$formId': typeof FFormIdRoute
   '/t/$termoId': typeof TTermoIdRoute
+  '/v/$codigo': typeof VCodigoRoute
   '/api/asaas/checkout': typeof ApiAsaasCheckoutRoute
   '/api/asaas/webhook': typeof ApiAsaasWebhookRoute
   '/api/assinatura/atualizar-cartao': typeof ApiAssinaturaAtualizarCartaoRoute
@@ -591,6 +626,10 @@ export interface FileRoutesByFullPath {
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/tuss/criar': typeof ApiTussCriarRoute
   '/api/whatsapp/seguranca': typeof ApiWhatsappSegurancaRoute
+  '/api/documentos/verificacao/emitir': typeof ApiDocumentosVerificacaoEmitirRoute
+  '/api/documentos/verificacao/reservar': typeof ApiDocumentosVerificacaoReservarRoute
+  '/api/public/documentos/abrir': typeof ApiPublicDocumentosAbrirRoute
+  '/api/public/documentos/identidade': typeof ApiPublicDocumentosIdentidadeRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
   '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
@@ -633,6 +672,7 @@ export interface FileRoutesByTo {
   '/contratacao/termos': typeof ContratacaoTermosRoute
   '/f/$formId': typeof FFormIdRoute
   '/t/$termoId': typeof TTermoIdRoute
+  '/v/$codigo': typeof VCodigoRoute
   '/api/asaas/checkout': typeof ApiAsaasCheckoutRoute
   '/api/asaas/webhook': typeof ApiAsaasWebhookRoute
   '/api/assinatura/atualizar-cartao': typeof ApiAssinaturaAtualizarCartaoRoute
@@ -674,6 +714,10 @@ export interface FileRoutesByTo {
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/tuss/criar': typeof ApiTussCriarRoute
   '/api/whatsapp/seguranca': typeof ApiWhatsappSegurancaRoute
+  '/api/documentos/verificacao/emitir': typeof ApiDocumentosVerificacaoEmitirRoute
+  '/api/documentos/verificacao/reservar': typeof ApiDocumentosVerificacaoReservarRoute
+  '/api/public/documentos/abrir': typeof ApiPublicDocumentosAbrirRoute
+  '/api/public/documentos/identidade': typeof ApiPublicDocumentosIdentidadeRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
   '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
@@ -717,6 +761,7 @@ export interface FileRoutesById {
   '/contratacao/termos': typeof ContratacaoTermosRoute
   '/f/$formId': typeof FFormIdRoute
   '/t/$termoId': typeof TTermoIdRoute
+  '/v/$codigo': typeof VCodigoRoute
   '/api/asaas/checkout': typeof ApiAsaasCheckoutRoute
   '/api/asaas/webhook': typeof ApiAsaasWebhookRoute
   '/api/assinatura/atualizar-cartao': typeof ApiAssinaturaAtualizarCartaoRoute
@@ -758,6 +803,10 @@ export interface FileRoutesById {
   '/api/tuss/buscar': typeof ApiTussBuscarRoute
   '/api/tuss/criar': typeof ApiTussCriarRoute
   '/api/whatsapp/seguranca': typeof ApiWhatsappSegurancaRoute
+  '/api/documentos/verificacao/emitir': typeof ApiDocumentosVerificacaoEmitirRoute
+  '/api/documentos/verificacao/reservar': typeof ApiDocumentosVerificacaoReservarRoute
+  '/api/public/documentos/abrir': typeof ApiPublicDocumentosAbrirRoute
+  '/api/public/documentos/identidade': typeof ApiPublicDocumentosIdentidadeRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
   '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
@@ -802,6 +851,7 @@ export interface FileRouteTypes {
     | '/contratacao/termos'
     | '/f/$formId'
     | '/t/$termoId'
+    | '/v/$codigo'
     | '/api/asaas/checkout'
     | '/api/asaas/webhook'
     | '/api/assinatura/atualizar-cartao'
@@ -843,6 +893,10 @@ export interface FileRouteTypes {
     | '/api/tuss/buscar'
     | '/api/tuss/criar'
     | '/api/whatsapp/seguranca'
+    | '/api/documentos/verificacao/emitir'
+    | '/api/documentos/verificacao/reservar'
+    | '/api/public/documentos/abrir'
+    | '/api/public/documentos/identidade'
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
     | '/api/public/formularios/codigo'
@@ -885,6 +939,7 @@ export interface FileRouteTypes {
     | '/contratacao/termos'
     | '/f/$formId'
     | '/t/$termoId'
+    | '/v/$codigo'
     | '/api/asaas/checkout'
     | '/api/asaas/webhook'
     | '/api/assinatura/atualizar-cartao'
@@ -926,6 +981,10 @@ export interface FileRouteTypes {
     | '/api/tuss/buscar'
     | '/api/tuss/criar'
     | '/api/whatsapp/seguranca'
+    | '/api/documentos/verificacao/emitir'
+    | '/api/documentos/verificacao/reservar'
+    | '/api/public/documentos/abrir'
+    | '/api/public/documentos/identidade'
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
     | '/api/public/formularios/codigo'
@@ -968,6 +1027,7 @@ export interface FileRouteTypes {
     | '/contratacao/termos'
     | '/f/$formId'
     | '/t/$termoId'
+    | '/v/$codigo'
     | '/api/asaas/checkout'
     | '/api/asaas/webhook'
     | '/api/assinatura/atualizar-cartao'
@@ -1009,6 +1069,10 @@ export interface FileRouteTypes {
     | '/api/tuss/buscar'
     | '/api/tuss/criar'
     | '/api/whatsapp/seguranca'
+    | '/api/documentos/verificacao/emitir'
+    | '/api/documentos/verificacao/reservar'
+    | '/api/public/documentos/abrir'
+    | '/api/public/documentos/identidade'
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
     | '/api/public/formularios/codigo'
@@ -1052,6 +1116,7 @@ export interface RootRouteChildren {
   ContratacaoTermosRoute: typeof ContratacaoTermosRoute
   FFormIdRoute: typeof FFormIdRoute
   TTermoIdRoute: typeof TTermoIdRoute
+  VCodigoRoute: typeof VCodigoRoute
   ApiAsaasCheckoutRoute: typeof ApiAsaasCheckoutRoute
   ApiAsaasWebhookRoute: typeof ApiAsaasWebhookRoute
   ApiAssinaturaAtualizarCartaoRoute: typeof ApiAssinaturaAtualizarCartaoRoute
@@ -1093,6 +1158,10 @@ export interface RootRouteChildren {
   ApiTussBuscarRoute: typeof ApiTussBuscarRoute
   ApiTussCriarRoute: typeof ApiTussCriarRoute
   ApiWhatsappSegurancaRoute: typeof ApiWhatsappSegurancaRoute
+  ApiDocumentosVerificacaoEmitirRoute: typeof ApiDocumentosVerificacaoEmitirRoute
+  ApiDocumentosVerificacaoReservarRoute: typeof ApiDocumentosVerificacaoReservarRoute
+  ApiPublicDocumentosAbrirRoute: typeof ApiPublicDocumentosAbrirRoute
+  ApiPublicDocumentosIdentidadeRoute: typeof ApiPublicDocumentosIdentidadeRoute
   ApiPublicExtensaoChatRoute: typeof ApiPublicExtensaoChatRoute
   ApiPublicExtensaoDeepgramTokenRoute: typeof ApiPublicExtensaoDeepgramTokenRoute
   ApiPublicFormulariosCodigoRoute: typeof ApiPublicFormulariosCodigoRoute
@@ -1267,6 +1336,13 @@ declare module '@tanstack/react-router' {
       path: '/t/$termoId'
       fullPath: '/t/$termoId'
       preLoaderRoute: typeof TTermoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v/$codigo': {
+      id: '/v/$codigo'
+      path: '/v/$codigo'
+      fullPath: '/v/$codigo'
+      preLoaderRoute: typeof VCodigoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/asaas/checkout': {
@@ -1556,6 +1632,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWhatsappSegurancaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/documentos/verificacao/emitir': {
+      id: '/api/documentos/verificacao/emitir'
+      path: '/api/documentos/verificacao/emitir'
+      fullPath: '/api/documentos/verificacao/emitir'
+      preLoaderRoute: typeof ApiDocumentosVerificacaoEmitirRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/documentos/verificacao/reservar': {
+      id: '/api/documentos/verificacao/reservar'
+      path: '/api/documentos/verificacao/reservar'
+      fullPath: '/api/documentos/verificacao/reservar'
+      preLoaderRoute: typeof ApiDocumentosVerificacaoReservarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/documentos/abrir': {
+      id: '/api/public/documentos/abrir'
+      path: '/api/public/documentos/abrir'
+      fullPath: '/api/public/documentos/abrir'
+      preLoaderRoute: typeof ApiPublicDocumentosAbrirRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/documentos/identidade': {
+      id: '/api/public/documentos/identidade'
+      path: '/api/public/documentos/identidade'
+      fullPath: '/api/public/documentos/identidade'
+      preLoaderRoute: typeof ApiPublicDocumentosIdentidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/extensao/chat': {
       id: '/api/public/extensao/chat'
       path: '/api/public/extensao/chat'
@@ -1708,6 +1812,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContratacaoTermosRoute: ContratacaoTermosRoute,
   FFormIdRoute: FFormIdRoute,
   TTermoIdRoute: TTermoIdRoute,
+  VCodigoRoute: VCodigoRoute,
   ApiAsaasCheckoutRoute: ApiAsaasCheckoutRoute,
   ApiAsaasWebhookRoute: ApiAsaasWebhookRoute,
   ApiAssinaturaAtualizarCartaoRoute: ApiAssinaturaAtualizarCartaoRoute,
@@ -1751,6 +1856,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTussBuscarRoute: ApiTussBuscarRoute,
   ApiTussCriarRoute: ApiTussCriarRoute,
   ApiWhatsappSegurancaRoute: ApiWhatsappSegurancaRoute,
+  ApiDocumentosVerificacaoEmitirRoute: ApiDocumentosVerificacaoEmitirRoute,
+  ApiDocumentosVerificacaoReservarRoute: ApiDocumentosVerificacaoReservarRoute,
+  ApiPublicDocumentosAbrirRoute: ApiPublicDocumentosAbrirRoute,
+  ApiPublicDocumentosIdentidadeRoute: ApiPublicDocumentosIdentidadeRoute,
   ApiPublicExtensaoChatRoute: ApiPublicExtensaoChatRoute,
   ApiPublicExtensaoDeepgramTokenRoute: ApiPublicExtensaoDeepgramTokenRoute,
   ApiPublicFormulariosCodigoRoute: ApiPublicFormulariosCodigoRoute,
