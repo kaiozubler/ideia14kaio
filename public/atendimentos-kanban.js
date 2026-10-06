@@ -951,6 +951,8 @@
     S.modal = { c, opts, risco: c.risco || "" };
     const p = listaPacientes().find((x) => x.id === c.pacienteId) || {};
     const ic = p.infoComp || {};
+    const altCad = parseFloat(String(ic.altura || "").replace(",", "."));
+    const alturaInicial = altCad > 0 && altCad < 3 ? Math.round(altCad * 100) : ic.altura || "";
     const prof = lsGet("akTriagemProf") || {};
     const campo = (id, label, un, ph, attrs) =>
       '<div class="fld akt-v"><label>' + label + '</label><div class="akt-in"><input id="' + id + '" type="number" inputmode="decimal" placeholder="' + (ph || "") + '" oninput="AK.alertasTriagem()" ' + (attrs || "") + ">" +
@@ -967,7 +969,7 @@
       campo("akt-spo2", "Saturação O₂", "%") +
       campo("akt-gli", "Glicemia capilar", "mg/dL") +
       campo("akt-peso", "Peso", "kg", "", 'step="0.1" value="' + esc(ic.peso || "") + '"') +
-      campo("akt-alt", "Altura", "cm", "", 'value="' + esc(ic.altura || "") + '"') +
+      campo("akt-alt", "Altura", "cm", "", 'value="' + esc(alturaInicial) + '"') +
       '<div class="fld akt-v"><label>IMC</label><div class="akt-in akt-ro"><span id="akt-imc">—</span></div></div>' +
       "</div>" +
       '<div class="fld akt-dor"><label>Dor <b id="akt-dor-v">—</b></label><input id="akt-dor" type="range" min="0" max="10" step="1" value="0" data-tocado="0" oninput="this.dataset.tocado=1;document.getElementById(\'akt-dor-v\').textContent=this.value+\'/10\';AK.alertasTriagem()"></div>' +
@@ -1000,12 +1002,42 @@
     S.modal.risco = k;
     document.querySelectorAll("#m-ak-triagem .akt-risco").forEach((b) => b.classList.toggle("on", b.dataset.r === k));
   }
+  // Mesmas faixas dos CHECKs de public.triagens: o erro aparece no campo
+  // antes de chegar ao banco.
+  const FAIXAS = [
+    ["akt-pas", "Pressão sistólica", 30, 300, "mmHg"],
+    ["akt-pad", "Pressão diastólica", 10, 200, "mmHg"],
+    ["akt-fc", "Frequência cardíaca", 10, 300, "bpm"],
+    ["akt-fr", "Frequência respiratória", 2, 80, "irpm"],
+    ["akt-temp", "Temperatura", 25, 45, "°C"],
+    ["akt-spo2", "Saturação O₂", 30, 100, "%"],
+    ["akt-gli", "Glicemia capilar", 10, 1500, "mg/dL"],
+    ["akt-peso", "Peso", 0.3, 400, "kg"],
+    ["akt-alt", "Altura", 20, 250, "cm"],
+  ];
+  // Altura do cadastro costuma vir em metros (1,76).
+  function alturaCm() {
+    const a = num("akt-alt");
+    return a != null && a > 0 && a < 3 ? Math.round(a * 1000) / 10 : a;
+  }
+  function validarVitais() {
+    const erros = [];
+    FAIXAS.forEach(([id, nome, min, max, un]) => {
+      const el = $(id);
+      const v = id === "akt-alt" ? alturaCm() : num(id);
+      const ruim = el && el.value.trim() !== "" && (v == null || !isFinite(v) || v < min || v > max);
+      if (el) el.closest(".akt-in").classList.toggle("akt-erro", !!ruim);
+      if (ruim) erros.push(nome + " (" + String(min).replace(".", ",") + "–" + max + " " + un + ")");
+    });
+    return erros;
+  }
+
   // Sinais de alerta só sinalizam: a classificação é sempre do profissional.
   function alertasTriagem() {
     const box = $("akt-alertas");
     if (!box) return;
     const pas = num("akt-pas"), pad = num("akt-pad"), fc = num("akt-fc"), fr = num("akt-fr");
-    const t = num("akt-temp"), sat = num("akt-spo2"), gli = num("akt-gli"), peso = num("akt-peso"), alt = num("akt-alt");
+    const t = num("akt-temp"), sat = num("akt-spo2"), gli = num("akt-gli"), peso = num("akt-peso"), alt = alturaCm();
     const dorEl = $("akt-dor");
     const dor = dorEl && dorEl.dataset.tocado === "1" ? Number(dorEl.value) : null;
     const imcEl = $("akt-imc");
@@ -1021,6 +1053,7 @@
     if (dor != null && dor >= 8) a.push("Dor " + dor + "/10");
     box.innerHTML = a.length ? '<i class="ti ti-alert-triangle"></i> Sinais de alerta: <b>' + a.join(" · ") + "</b> — considere classificar como laranja ou vermelho." : "";
     box.style.display = a.length ? "block" : "none";
+    validarVitais();
   }
   async function salvarTriagem() {
     const m = S.modal;
@@ -1029,6 +1062,11 @@
     const prof = val("akt-prof");
     if (!prof) {
       toast("Informe o nome de quem fez a triagem", "error");
+      return;
+    }
+    const foraDaFaixa = validarVitais();
+    if (foraDaFaixa.length) {
+      toast("Confira os valores: " + foraDaFaixa.join(", "), "error");
       return;
     }
     if (!m.risco) {
@@ -1056,7 +1094,7 @@
           spo2: num("akt-spo2"),
           glicemia: num("akt-gli"),
           peso: num("akt-peso"),
-          altura: num("akt-alt"),
+          altura: alturaCm(),
           dor: dorEl && dorEl.dataset.tocado === "1" ? Number(dorEl.value) : null,
           queixa_principal: val("akt-queixa") || null,
           alergias: val("akt-alerg") || null,
