@@ -1,4 +1,5 @@
 import { enviarParaPaciente } from "./envio.server";
+import { ConfiguracaoError } from "./meta.server";
 
 /**
  * Avisos automáticos de consulta pelo WhatsApp da clínica:
@@ -23,6 +24,8 @@ const STATUS_IGNORADOS = [
   "concluído",
   "faltou",
   "realizado",
+  "compareceu",
+  "atendido",
 ];
 const MAX_POR_EXECUCAO = 200;
 
@@ -72,6 +75,7 @@ async function enviarAviso(
       .update({ mensagem_id: r.mensagem?.id ?? null })
       .eq("agendamento_id", ag.id)
       .eq("tipo", tipo);
+    if (tipo === "confirmacao_agendamento") await marcarConfirmacaoEnviada(db, ag.id);
     return "enviado";
   } catch (e) {
     await db
@@ -80,6 +84,93 @@ async function enviarAviso(
       .eq("agendamento_id", ag.id)
       .eq("tipo", tipo);
     return "falhou";
+  }
+}
+
+// Agenda e kanban leem a confirmação pelo status do agendamento; só avança
+// quem ainda está "agendado" (não desfaz um "confirmado" pelo paciente).
+async function marcarConfirmacaoEnviada(db: Db, agendamentoId: string) {
+  await db
+    .from("agendamentos")
+    .update({ status: "confirmacao_enviada" })
+    .eq("id", agendamentoId)
+    .eq("status", "agendado");
+}
+
+/**
+ * Botão/gatilho "Enviar confirmação" do kanban de Atendimentos. Usa o mesmo
+ * modelo e a mesma reserva da confirmação automática, para que o job não
+ * repita a mensagem; um envio anterior que falhou libera nova tentativa.
+ */
+export async function enviarConfirmacaoManual(db: Db, idMedico: string, agendamentoId: string) {
+  const { data: ag } = await db
+    .from("agendamentos")
+    .select("id,paciente_id,telefone,data_hora,status")
+    .eq("id", agendamentoId)
+    .eq("id_medico", idMedico)
+    .maybeSingle();
+  if (!ag) throw new ConfiguracaoError("agendamento_inexistente", "Agendamento não encontrado.");
+  if (!ag.paciente_id && !ag.telefone) {
+    throw new ConfiguracaoError(
+      "sem_destino",
+      "O agendamento não tem paciente nem telefone vinculado.",
+    );
+  }
+  const { data: a } = await db
+    .from("comunicacao_whatsapp_automacoes")
+    .select("confirmacao_modelo_id")
+    .eq("id_medico", idMedico)
+    .maybeSingle();
+  if (!a?.confirmacao_modelo_id) {
+    throw new ConfiguracaoError(
+      "sem_modelo_confirmacao",
+      "Escolha o modelo de confirmação em Configurações › WhatsApp dos pacientes › Automações.",
+    );
+  }
+  const tipo = "confirmacao_agendamento";
+  const { data: anterior } = await db
+    .from("comunicacao_whatsapp_envios_automaticos")
+    .select("sucesso")
+    .eq("agendamento_id", ag.id)
+    .eq("tipo", tipo)
+    .maybeSingle();
+  if (anterior?.sucesso) {
+    await marcarConfirmacaoEnviada(db, ag.id);
+    return { jaEnviado: true };
+  }
+  if (anterior) {
+    await db
+      .from("comunicacao_whatsapp_envios_automaticos")
+      .delete()
+      .eq("agendamento_id", ag.id)
+      .eq("tipo", tipo);
+  }
+  const { error: reservaErr } = await db
+    .from("comunicacao_whatsapp_envios_automaticos")
+    .insert({ id_medico: idMedico, agendamento_id: ag.id, tipo });
+  if (reservaErr) return { jaEnviado: true };
+  try {
+    const r = await enviarParaPaciente(db, {
+      idMedico,
+      destino: { pacienteId: ag.paciente_id, telefone: ag.paciente_id ? null : ag.telefone },
+      tipo: "modelo",
+      modeloId: a.confirmacao_modelo_id,
+      agendamentoId: ag.id,
+    });
+    await db
+      .from("comunicacao_whatsapp_envios_automaticos")
+      .update({ mensagem_id: r.mensagem?.id ?? null })
+      .eq("agendamento_id", ag.id)
+      .eq("tipo", tipo);
+    await marcarConfirmacaoEnviada(db, ag.id);
+    return { jaEnviado: false };
+  } catch (e) {
+    await db
+      .from("comunicacao_whatsapp_envios_automaticos")
+      .update({ sucesso: false, erro: e instanceof Error ? e.message : String(e) })
+      .eq("agendamento_id", ag.id)
+      .eq("tipo", tipo);
+    throw e;
   }
 }
 
