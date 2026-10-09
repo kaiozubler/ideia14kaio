@@ -102,7 +102,8 @@
   function roleTone(r) {
     r = (r || "").toLowerCase();
     if (r.includes("médic")) return "emerald";
-    if (r.includes("recep")) return "sky";
+    if (r.includes("recep") || r.includes("secret")) return "sky";
+    if (r.includes("enferm")) return "violet";
     if (r.includes("admin")) return "amber";
     return "slate";
   }
@@ -655,64 +656,100 @@
     }
   }
 
-  /* ---------- users table ---------- */
+  /* ---------- equipe real (clinica_membros) ----------
+     Secretária e enfermagem entram com login próprio pelo link de convite
+     (o banco guarda só o hash do token). O papel limita o que cada um vê:
+     ver public/medicopilot.html (EQUIPE) e a migração equipe_papeis_triagem. */
+  const PAPEIS = { secretaria: "Secretária", enfermeiro: "Enfermeiro(a)" };
+  const SITUACAO = { convidado: ["Convite pendente", "amber"], ativo: ["Ativo", "emerald"], inativo: ["Inativo", "slate"] };
+  S.membros = [];
+  S.membrosErro = "";
+  async function loadMembros() {
+    if (!window.sb) return;
+    const { data, error } = await window.sb
+      .from("clinica_membros")
+      .select("id,email,nome,papel,registro,status,convite_expira_em,aceito_em,created_at")
+      .order("created_at");
+    S.membrosErro = error ? error.message : "";
+    S.membros = error ? [] : data || [];
+    renderUsers();
+  }
+  const linkConvite = (token) => location.origin + "/medicopilot.html?convite=" + encodeURIComponent(token);
+  async function rpcEquipe(fn, args) {
+    const { data, error } = await window.sb.rpc(fn, args);
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
   function renderUsers() {
     const q = S.search.toLowerCase();
-    const list = S.users.filter((u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
+    const list = S.membros.filter((u) => u.nome.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
     const t = document.getElementById("eq-users-table");
     if (!t) return;
+    const vazio = S.membrosErro
+      ? `Não foi possível carregar a equipe: ${esc(S.membrosErro)}`
+      : S.membros.length
+        ? "Nenhum usuário encontrado."
+        : "Nenhum membro ainda. Use “Convidar usuário” para chamar a secretária ou a enfermagem.";
     t.innerHTML = `
-    <div class="eq-thead"><div>Nome</div><div>Email</div><div>Função</div><div>Grupo</div><div>Ações</div></div>
+    <div class="eq-thead"><div>Nome</div><div>Email</div><div>Função</div><div>Situação</div><div>Ações</div></div>
     ${
       list.length === 0
-        ? `<div class="eq-empty">Nenhum usuário encontrado.</div>`
+        ? `<div class="eq-empty">${vazio}</div>`
         : list
             .map((u) => {
-              const g = S.groups.find((x) => x.id === u.group);
-              return `<div class="eq-row ${u.status === "inactive" ? "inactive" : ""}" data-uid="${u.id}">
-        <div class="eq-uname">${avatar(u.name, g ? g.color : "slate", 10)}<div class="txt"><b>${esc(u.name)}</b><span>${u.status === "inactive" ? "Inativo" : "Ativo"}</span></div></div>
+              const [sit, tom] = SITUACAO[u.status] || [u.status, "slate"];
+              const expirado = u.status === "convidado" && u.convite_expira_em && new Date(u.convite_expira_em) < new Date();
+              return `<div class="eq-row ${u.status === "inativo" ? "inactive" : ""}" data-mid="${u.id}">
+        <div class="eq-uname">${avatar(u.nome, u.papel === "enfermeiro" ? "violet" : "sky", 10)}<div class="txt"><b>${esc(u.nome)}</b><span>${esc(u.registro || PAPEIS[u.papel] || "")}</span></div></div>
         <div class="eq-uemail">${esc(u.email)}</div>
-        <div>${badge(u.role, roleTone(u.role))}</div>
-        <div><select data-uid="${u.id}" class="eq-change-group">${S.groups.map((gg) => `<option value="${gg.id}" ${gg.id === u.group ? "selected" : ""}>${esc(gg.name)}</option>`).join("")}</select></div>
+        <div><select data-mid="${u.id}" class="eq-change-papel">${Object.keys(PAPEIS).map((k) => `<option value="${k}" ${k === u.papel ? "selected" : ""}>${PAPEIS[k]}</option>`).join("")}</select></div>
+        <div>${badge(expirado ? "Convite expirado" : sit, expirado ? "rose" : tom)}</div>
         <div class="eq-row-act">
-          <button title="Configurar agenda" data-act="sched" data-uid="${u.id}"><i class="ti ti-calendar"></i></button>
-          <button class="eq-power" title="${u.status === "inactive" ? "Ativar" : "Inativar"}" data-act="toggle" data-uid="${u.id}"><i class="ti ti-power"></i></button>
+          ${u.status !== "ativo" && !u.aceito_em ? `<button title="Gerar novo link de convite" data-act="link" data-mid="${u.id}"><i class="ti ti-link"></i></button>` : ""}
+          ${u.status === "ativo" ? `<button class="eq-power" title="Inativar acesso" data-act="inativar" data-mid="${u.id}"><i class="ti ti-power"></i></button>` : ""}
+          ${u.status === "inativo" && u.aceito_em ? `<button title="Reativar acesso" data-act="ativar" data-mid="${u.id}"><i class="ti ti-player-play"></i></button>` : ""}
+          ${u.status === "convidado" ? `<button class="eq-power" title="Cancelar convite" data-act="inativar" data-mid="${u.id}"><i class="ti ti-x"></i></button>` : ""}
+          <button title="Remover da equipe" data-act="remover" data-mid="${u.id}"><i class="ti ti-trash"></i></button>
         </div>
       </div>`;
             })
             .join("")
     }
   `;
-    t.querySelectorAll(".eq-row").forEach((r) => {
-      r.addEventListener("click", (e) => {
-        if (e.target.closest(".eq-row-act") || e.target.closest("select")) return;
-        const u = S.users.find((x) => x.id === r.dataset.uid);
-        if (u) openDetailPanel(u);
-      });
-    });
-    t.querySelectorAll(".eq-change-group").forEach((sel) => {
-      sel.addEventListener("click", (e) => e.stopPropagation());
-      sel.addEventListener("change", (e) => {
-        const uid = sel.dataset.uid;
-        const gid = sel.value;
-        const u = S.users.find((x) => x.id === uid);
-        if (u) {
-          u.group = gid;
-          renderUsers();
+    t.querySelectorAll(".eq-change-papel").forEach((sel) => {
+      sel.addEventListener("change", async () => {
+        try {
+          await rpcEquipe("clinica_membro_atualizar", { p_id: sel.dataset.mid, p_papel: sel.value });
+          if (typeof window.showToast === "function") window.showToast("Função atualizada", "success");
+        } catch (e) {
+          if (typeof window.showToast === "function") window.showToast(e.message, "error");
         }
+        loadMembros();
       });
     });
-    t.querySelectorAll("button[data-act]").forEach((b) => {
-      b.addEventListener("click", (e) => {
+    t.querySelectorAll("[data-act]").forEach((b) => {
+      b.addEventListener("click", async (e) => {
         e.stopPropagation();
-        const uid = b.dataset.uid;
-        const u = S.users.find((x) => x.id === uid);
-        if (!u) return;
-        if (b.dataset.act === "sched") openScheduleModal(u, false);
-        else if (b.dataset.act === "toggle") {
-          u.status = u.status === "active" ? "inactive" : "active";
-          renderUsers();
+        const m = S.membros.find((x) => x.id === b.dataset.mid);
+        if (!m) return;
+        try {
+          if (b.dataset.act === "link") {
+            const token = await rpcEquipe("clinica_convidar", { p_email: m.email, p_nome: m.nome, p_papel: m.papel, p_registro: m.registro });
+            if (token) mostrarLinkConvite(m, token);
+          } else if (b.dataset.act === "inativar") {
+            if (!confirm(m.status === "convidado" ? `Cancelar o convite de ${m.nome}?` : `Inativar o acesso de ${m.nome}? A pessoa deixa de ver os dados da clínica na hora.`)) return;
+            await rpcEquipe("clinica_membro_atualizar", { p_id: m.id, p_status: "inativo" });
+          } else if (b.dataset.act === "ativar") {
+            await rpcEquipe("clinica_membro_atualizar", { p_id: m.id, p_status: "ativo" });
+          } else if (b.dataset.act === "remover") {
+            if (!confirm(`Remover ${m.nome} da equipe? O login dela continua existindo, mas sem acesso à clínica.`)) return;
+            await rpcEquipe("clinica_membro_remover", { p_id: m.id });
+          }
+        } catch (err) {
+          if (typeof window.showToast === "function") window.showToast(err.message, "error");
         }
+        loadMembros();
       });
     });
   }
@@ -1322,53 +1359,104 @@
   }
 
   /* ---------- Invite modal ---------- */
+  // Sem envio de e-mail: o médico copia o link (ou manda pelo WhatsApp) e a
+  // pessoa cria a conta com o e-mail convidado; o vínculo acontece no login.
   function openInviteModal() {
-    const st = { email: "", groupId: S.groups[0]?.id || "", sent: false };
-    const body = `<div id="eq-invite-body"></div>`;
-    const footerSlot = `<div id="eq-invite-footer" style="display:contents"></div>`;
+    const st = { nome: "", email: "", papel: "secretaria", registro: "", erro: "", enviando: false };
     const el = modal({
       title: "Convidar usuário",
-      subtitle: "Envie um convite por e-mail para acessar a clínica.",
+      subtitle: "Secretária ou enfermagem com login próprio e acesso limitado.",
       icon: "user-plus",
       variant: "sky",
-      body,
-      footer: footerSlot,
+      body: `<div id="eq-invite-body"></div>`,
+      footer: `<div id="eq-invite-footer" style="display:contents"></div>`,
     });
     const bd = el.querySelector("#eq-invite-body");
     const ft = el.querySelector("#eq-invite-footer");
+    const valido = () => st.nome.trim() && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(st.email.trim());
     function draw() {
-      if (st.sent) {
-        bd.innerHTML = `<div class="eq-invite-ok"><div class="eq-ok-badge"><i class="ti ti-check"></i></div>
-        <p style="margin:0;font-weight:700;color:#1e293b">Convite enviado para ${esc(st.email)}</p>
-        <p style="margin:0;font-size:13px;color:#64748b">A pessoa receberá um e-mail para concluir o cadastro.</p></div>`;
-        ft.innerHTML = "";
-        setTimeout(() => closeModal(el), 1600);
-        return;
-      }
       bd.innerHTML = `
       <div style="display:flex;flex-direction:column;gap:14px">
+        <div><label class="eq-label"><i class="ti ti-user"></i> Nome</label>
+          <input class="eq-input" id="eq-inv-nome" placeholder="Nome completo" value="${esc(st.nome)}"></div>
         <div><label class="eq-label"><i class="ti ti-mail"></i> E-mail</label>
-          <input type="email" class="eq-input" id="eq-inv-email" placeholder="nome@exemplo.com" value="${esc(st.email)}" autofocus></div>
-        <div><label class="eq-label"><i class="ti ti-briefcase"></i> Grupo</label>
-          <select class="eq-input" id="eq-inv-group">${S.groups.map((g) => `<option value="${g.id}" ${g.id === st.groupId ? "selected" : ""}>${esc(g.name)}</option>`).join("")}</select>
-          <p style="margin:6px 0 0;font-size:11px;color:#94a3b8">As permissões serão definidas pelo grupo escolhido.</p></div>
+          <input type="email" class="eq-input" id="eq-inv-email" placeholder="nome@exemplo.com" value="${esc(st.email)}">
+          <p style="margin:6px 0 0;font-size:11px;color:#94a3b8">A pessoa precisa criar a conta (ou entrar) com este mesmo e-mail.</p></div>
+        <div><label class="eq-label"><i class="ti ti-briefcase"></i> Função</label>
+          <select class="eq-input" id="eq-inv-papel">${Object.keys(PAPEIS).map((k) => `<option value="${k}" ${k === st.papel ? "selected" : ""}>${PAPEIS[k]}</option>`).join("")}</select>
+          <p style="margin:6px 0 0;font-size:11px;color:#94a3b8">${
+            st.papel === "enfermeiro"
+              ? "Vê o kanban, a agenda e o cadastro dos pacientes e faz a triagem. Não abre prontuário nem financeiro."
+              : "Vê o kanban, a agenda e o cadastro dos pacientes, dá entrada e cobra consultas. Não abre prontuário nem triagem."
+          }</p></div>
+        ${st.papel === "enfermeiro" ? `<div><label class="eq-label"><i class="ti ti-id-badge-2"></i> COREN</label>
+          <input class="eq-input" id="eq-inv-reg" placeholder="COREN-UF 000000" value="${esc(st.registro)}"></div>` : ""}
+        ${st.erro ? `<div style="font-size:12px;color:#be123c;background:#fff1f2;border:1px solid #fecdd3;border-radius:12px;padding:8px 10px">${esc(st.erro)}</div>` : ""}
       </div>`;
       ft.innerHTML = `<button class="eq-btn eq-btn-ghost" data-close="1">Cancelar</button>
-      <button class="eq-btn eq-btn-primary ${!st.email ? "disabled" : ""}" id="eq-inv-send"><i class="ti ti-mail"></i> Enviar convite</button>`;
-      bd.querySelector("#eq-inv-email").addEventListener("input", (e) => {
-        st.email = e.target.value;
-        ft.querySelector("#eq-inv-send").classList.toggle("disabled", !st.email);
-      });
-      bd.querySelector("#eq-inv-group").addEventListener("change", (e) => {
-        st.groupId = e.target.value;
-      });
-      ft.querySelector("#eq-inv-send").onclick = () => {
-        if (!st.email) return;
-        st.sent = true;
+      <button class="eq-btn eq-btn-primary ${!valido() || st.enviando ? "disabled" : ""}" id="eq-inv-send"><i class="ti ti-link"></i> ${st.enviando ? "Gerando…" : "Gerar link de convite"}</button>`;
+      const bind = (id, k, redraw) => {
+        const inp = bd.querySelector(id);
+        if (!inp) return;
+        inp.addEventListener(inp.tagName === "SELECT" ? "change" : "input", (e) => {
+          st[k] = e.target.value;
+          if (redraw) draw();
+          else ft.querySelector("#eq-inv-send").classList.toggle("disabled", !valido());
+        });
+      };
+      bind("#eq-inv-nome", "nome");
+      bind("#eq-inv-email", "email");
+      bind("#eq-inv-papel", "papel", true);
+      bind("#eq-inv-reg", "registro");
+      ft.querySelector("#eq-inv-send").onclick = async () => {
+        if (!valido() || st.enviando) return;
+        st.enviando = true;
+        st.erro = "";
         draw();
+        try {
+          const token = await rpcEquipe("clinica_convidar", {
+            p_email: st.email.trim(),
+            p_nome: st.nome.trim(),
+            p_papel: st.papel,
+            p_registro: st.papel === "enfermeiro" ? st.registro.trim() || null : null,
+          });
+          closeModal(el);
+          loadMembros();
+          if (token) mostrarLinkConvite({ nome: st.nome.trim(), email: st.email.trim(), papel: st.papel }, token);
+          else if (typeof window.showToast === "function") window.showToast("Acesso reativado", "success");
+        } catch (e) {
+          st.enviando = false;
+          st.erro = e.message;
+          draw();
+        }
       };
     }
     draw();
+  }
+
+  function mostrarLinkConvite(m, token) {
+    const link = linkConvite(token);
+    const msg = `Olá, ${m.nome}! Você foi convidado(a) para acessar a clínica no MediCopilot como ${PAPEIS[m.papel] || m.papel}. Crie sua conta com o e-mail ${m.email} por este link: ${link}`;
+    const el = modal({
+      title: "Link de convite pronto",
+      subtitle: `Envie para ${m.nome}. Vale por 7 dias e só funciona com ${m.email}.`,
+      icon: "link",
+      variant: "emerald",
+      body: `<div style="display:flex;flex-direction:column;gap:10px">
+        <input class="eq-input" id="eq-link" readonly value="${esc(link)}" onclick="this.select()">
+        <p style="margin:0;font-size:11.5px;color:#64748b">Por segurança, o link não fica salvo: se perder, gere outro pela lista da equipe.</p></div>`,
+      footer: `<a class="eq-btn eq-btn-ghost" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}"><i class="ti ti-brand-whatsapp"></i> Enviar pelo WhatsApp</a>
+        <button class="eq-btn eq-btn-primary" id="eq-link-copy"><i class="ti ti-copy"></i> Copiar link</button>`,
+    });
+    el.querySelector("#eq-link-copy").onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(link);
+      } catch (e) {
+        el.querySelector("#eq-link").select();
+        document.execCommand("copy");
+      }
+      el.querySelector("#eq-link-copy").innerHTML = '<i class="ti ti-check"></i> Copiado';
+    };
   }
 
   /* ---------- perfil real (usuário logado) ---------- */
@@ -1398,5 +1486,6 @@
   window.initEquipe = function () {
     render();
     loadRealProfile();
+    loadMembros();
   };
 })();

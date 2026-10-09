@@ -26,6 +26,16 @@
       var uid = userRes.data && userRes.data.user ? userRes.data.user.id : null;
       if (!uid) return;
 
+      // Secretária/enfermagem não têm assinatura própria: valem pelo plano
+      // da clínica (minha_clinica lê a assinatura do médico no servidor).
+      try {
+        var mc = await sb.rpc("minha_clinica");
+        if (!mc.error && mc.data && mc.data.papel !== "medico") {
+          estado.ehFree = !mc.data.plano_pago;
+          return;
+        }
+      } catch (e) {}
+
       // Aplica downgrade/cancelamento agendados que já venceram (ver migration
       // meu_plano_gestao). Falha aqui (função ainda não migrada) não bloqueia.
       try { await sb.rpc("aplicar_agendamentos_assinatura"); } catch (e) {}
