@@ -1202,8 +1202,29 @@
     }
   });
 
+  // Garante o meu-plano.css: se o <link> do HTML não carregou (preview/CDN com
+  // cache antigo, link perdido num merge do medicopilot.html), a tela ficava
+  // sem nenhum estilo. Testa uma classe da folha e, se não pegou, carrega de novo.
+  var VERSAO_CSS = "6";
+  function garantirEstilo() {
+    var teste = document.createElement("div");
+    teste.className = "mp-panel";
+    teste.style.position = "absolute";
+    teste.style.visibility = "hidden";
+    document.body.appendChild(teste);
+    var ok = getComputedStyle(teste).borderTopLeftRadius === "24px";
+    document.body.removeChild(teste);
+    if (ok || document.getElementById("mp-estilo-reforco")) return;
+    var link = document.createElement("link");
+    link.id = "mp-estilo-reforco";
+    link.rel = "stylesheet";
+    link.href = "/meu-plano.css?v=" + VERSAO_CSS + "&r=" + Date.now();
+    document.head.appendChild(link);
+  }
+
   window.initMeuPlano = function () {
     S.modal = null;
+    garantirEstilo();
     carregar();
   };
 })();
