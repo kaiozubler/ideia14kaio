@@ -94,8 +94,33 @@
     } catch (e) {}
   }
 
+  /* ---------- papel e triagem ---------- */
+  // Papel vem de minha_clinica (medicopilot.html). O banco já barra o que
+  // cada papel não pode ler/gravar; aqui só não oferecemos a ação.
+  const ACOES_POR_PAPEL = {
+    secretaria: ["chegada", "entrada", "atender", "finalizar", "cobrar", "confirmar", "reagendar"],
+    enfermeiro: ["chegada", "triagem", "atender"],
+  };
+  const papel = () => (window.CLINICA && window.CLINICA.papel) || "medico";
+  const ehMedico = () => papel() === "medico";
+  const triagemAtiva = () => !window.CLINICA || window.CLINICA.triagem_ativa !== false;
+  function acaoPermitida(a) {
+    if (ehMedico()) return true;
+    return (ACOES_POR_PAPEL[papel()] || []).includes(a);
+  }
+
   /* ---------- etapas ---------- */
-  const etapa = (id) => S.etapas.find((e) => e.id === id) || null;
+  // S.todasEtapas inclui a triagem mesmo com a chave desligada: cards e
+  // encaminhamentos que apontam para ela seguem para a etapa seguinte.
+  const etapaOculta = (e) => e && e.tipo === "triagem" && !triagemAtiva();
+  function etapaVisivel(id) {
+    let e = (S.todasEtapas || []).find((x) => x.id === id) || null;
+    for (let i = 0; e && etapaOculta(e) && i < 5; i++) {
+      e = e.encaminhar_para ? (S.todasEtapas || []).find((x) => x.id === e.encaminhar_para) || null : null;
+    }
+    return e && !etapaOculta(e) ? S.etapas.find((x) => x.id === e.id) || null : null;
+  }
+  const etapa = (id) => etapaVisivel(id);
   const etapaTipo = (tipo) => S.etapas.find((e) => e.tipo === tipo) || null;
   function etapaSeguinte(e) {
     const i = S.etapas.indexOf(e);
@@ -154,7 +179,8 @@
       toast("Não foi possível carregar as etapas do kanban", "error");
       return;
     }
-    S.etapas = etapas || [];
+    S.todasEtapas = etapas || [];
+    S.etapas = S.todasEtapas.filter((e) => !etapaOculta(e));
     const [ini, fim] = intervalo();
     const [{ data: fluxo, error: fErr }] = await Promise.all([
       sb
@@ -208,6 +234,8 @@
       .on("postgres_changes", { event: "*", schema: "public", table: "atendimento_fluxo" }, (p) => {
         avisarEntrada(p.new);
         agendar();
+        const pac = typeof currentPatient !== "undefined" && currentPatient;
+        if (pac && p.new && p.new.paciente_id === pac.id && ehMedico()) triagemBanner(pac.id);
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "agendamentos" }, agendar)
       .subscribe();
@@ -328,14 +356,14 @@
             '<div class="ak-col-hd"><span class="ak-col-dot"></span>' +
             '<span class="ak-col-title" title="' + esc(tipo.label) + '">' + esc(e.nome) + "</span>" +
             '<span class="ak-col-ct">' + lista.length + "</span>" +
-            '<button class="ak-col-cfg" title="Configurar etapa" onclick="AK.configurar(\'' + e.id + '\')"><i class="ti ti-adjustments-horizontal"></i></button></div>' +
+            (ehMedico() ? '<button class="ak-col-cfg" title="Configurar etapa" onclick="AK.configurar(\'' + e.id + '\')"><i class="ti ti-adjustments-horizontal"></i></button>' : "") + "</div>" +
             '<div class="ak-col-body">' +
             (lista.length ? lista.map(cardHtml).join("") : '<div class="ak-empty"><i class="ti ' + tipo.icon + '"></i>Nenhum paciente</div>') +
             "</div></div>"
           );
         })
         .join("") +
-      '<button class="ak-col-new" onclick="AK.configurar(null)"><i class="ti ti-plus"></i><span>Nova etapa</span></button>';
+      (ehMedico() ? '<button class="ak-col-new" onclick="AK.configurar(null)"><i class="ti ti-plus"></i><span>Nova etapa</span></button>' : "");
     ligarArrastar();
   }
 
@@ -420,7 +448,7 @@
     return (
       '<div class="ak-card' + (c.risco ? " has-risco" : "") + '" draggable="true" data-key="' + esc(c.key) + '"' +
       (c.risco ? ' style="--rc:' + RISCOS[c.risco].cor + '"' : "") +
-      ' onclick="AK.abrirCard(\'' + esc(c.key) + "')\">" +
+      ' onclick="AK.abrirCard(event,\'' + esc(c.key) + "')\">" +
       '<div class="ak-card-hd"><div class="ak-av">' + esc(c.init || "?") + "</div>" +
       '<div class="ak-id"><div class="ak-name">' + esc(c.nome) + "</div>" +
       '<div class="ak-sub">' + sub + "</div>" +
@@ -435,6 +463,8 @@
   }
 
   function acaoDisponivel(a, c) {
+    if (!acaoPermitida(a)) return false;
+    if (a === "triagem" && !triagemAtiva()) return false;
     const f = c.f;
     const st = String((c.ag && c.ag.status) || "").toLowerCase();
     switch (a) {
@@ -542,7 +572,7 @@
     if (e.acao_ao_entrar && e.acao_ao_entrar !== opts.origem) {
       await executar(e.acao_ao_entrar, c, { aoEntrar: true });
     }
-    if (e.gatilho_cobranca && c.lanc && Number(c.lanc.valor) > 0 && !c.lanc.pago && e.acao_ao_entrar !== "cobrar" && opts.origem !== "cobrar") {
+    if (e.gatilho_cobranca && acaoPermitida("cobrar") && c.lanc && Number(c.lanc.valor) > 0 && !c.lanc.pago && e.acao_ao_entrar !== "cobrar" && opts.origem !== "cobrar") {
       abrirCobrar(c, true);
     }
   }
@@ -556,6 +586,13 @@
   /* ---------- ações ---------- */
   async function executar(acao, c, opts) {
     opts = opts || {};
+    // Ação da etapa que este papel não faz (ex.: secretária arrasta para a
+    // Triagem): o card entra, quem tem o papel executa depois.
+    if (!acaoPermitida(acao) || (acao === "triagem" && !triagemAtiva())) {
+      if (!opts.aoEntrar) toast("Ação não disponível para o seu perfil", "error");
+      else render();
+      return;
+    }
     try {
       switch (acao) {
         case "chegada":
@@ -602,7 +639,7 @@
   }
 
   async function acaoAtender(c, opts) {
-    if (!c.pacienteId) {
+    if (!c.pacienteId && ehMedico()) {
       toast("Vincule o paciente ao agendamento para abrir o prontuário", "error");
       return;
     }
@@ -612,7 +649,8 @@
     await registrarPresenca(c);
     S.atendendo = c.f.id;
     if (!opts.aoEntrar) await seguir(c, "atender");
-    abrirProntuario(c);
+    if (ehMedico()) abrirProntuario(c);
+    else if (!opts.aoEntrar) toast(c.nome.split(" ")[0] + " chamado(a) para o consultório", "success");
   }
 
   async function acaoFinalizar(c, opts) {
@@ -695,7 +733,7 @@
   const opcoes = (lista, sel) => lista.map((o) => '<option value="' + esc(o) + '"' + (o === sel ? " selected" : "") + ">" + esc(o) + "</option>").join("");
   function medicosConhecidos() {
     const set = new Set();
-    const eu = nomeUsuario();
+    const eu = ehMedico() ? nomeUsuario() : "";
     if (eu) set.add(eu);
     listaAgendamentos().forEach((a) => a.medico_nome && set.add(a.medico_nome));
     S.fluxo.forEach((f) => f.medico && set.add(f.medico));
@@ -711,7 +749,7 @@
     const valor = c.lanc ? c.lanc.valor : "";
     const corpo =
       '<div class="akm-grid">' +
-      '<div class="fld"><label>Médico</label><input id="ake-medico" list="ake-medicos" value="' + esc(c.medico || nomeUsuario()) + '"><datalist id="ake-medicos">' +
+      '<div class="fld"><label>Médico</label><input id="ake-medico" list="ake-medicos" value="' + esc(c.medico || (ehMedico() ? nomeUsuario() : "")) + '"><datalist id="ake-medicos">' +
       medicosConhecidos().map((m) => '<option value="' + esc(m) + '">').join("") + "</datalist></div>" +
       '<div class="fld"><label>Especialidade</label><input id="ake-esp" value="' + esc(f.especialidade || (c.ag && c.ag.especialidade) || "") + '" placeholder="Ex.: Cardiologia"></div>' +
       '<div class="fld wide"><label>Motivo da consulta</label><input id="ake-motivo" value="' + esc(f.motivo || (c.ag && c.ag.motivo) || "") + '"></div>' +
@@ -953,7 +991,8 @@
     const ic = p.infoComp || {};
     const altCad = parseFloat(String(ic.altura || "").replace(",", "."));
     const alturaInicial = altCad > 0 && altCad < 3 ? Math.round(altCad * 100) : ic.altura || "";
-    const prof = lsGet("akTriagemProf") || {};
+    const cl = window.CLINICA || {};
+    const prof = !ehMedico() && cl.membro_nome ? { nome: cl.membro_nome, registro: cl.registro } : lsGet("akTriagemProf") || {};
     const campo = (id, label, un, ph, attrs) =>
       '<div class="fld akt-v"><label>' + label + '</label><div class="akt-in"><input id="' + id + '" type="number" inputmode="decimal" placeholder="' + (ph || "") + '" oninput="AK.alertasTriagem()" ' + (attrs || "") + ">" +
       (un ? "<span>" + un + "</span>" : "") + "</div></div>";
@@ -988,7 +1027,7 @@
         })
         .join("") +
       "</div>";
-    const destino = destinoApos("triagem", c.etapa);
+    const destino = opts && opts.doAtendimento ? null : destinoApos("triagem", c.etapa);
     abrirModal(
       "ak-triagem",
       modalHtml("ak-triagem", "ti-heart-rate-monitor", "g-violet", "Triagem", esc(c.nome) + (c.medico ? " · " + esc(c.medico) : ""), corpo,
@@ -1076,16 +1115,16 @@
     const btn = $("akt-ok");
     if (btn) btn.disabled = true;
     try {
-      lsSet("akTriagemProf", { nome: prof, registro: val("akt-reg") });
-      const f = await garantirFluxo(c);
+      if (ehMedico()) lsSet("akTriagemProf", { nome: prof, registro: val("akt-reg") });
+      const f = c.avulsa ? null : await garantirFluxo(c);
       const dorEl = $("akt-dor");
       const ts = agoraIso();
       const { error } = await db()
         .from("triagens")
         .insert({
           paciente_id: c.pacienteId,
-          fluxo_id: f.id,
-          agendamento_id: f.agendamento_id || null,
+          fluxo_id: f ? f.id : null,
+          agendamento_id: (f && f.agendamento_id) || null,
           pa_sistolica: num("akt-pas"),
           pa_diastolica: num("akt-pad"),
           fc: num("akt-fc"),
@@ -1106,14 +1145,17 @@
           realizado_em: ts,
         });
       if (error) throw error;
-      const patch = { risco: m.risco, triagem_em: ts };
-      if (!f.chegada_em) patch.chegada_em = ts;
-      await atualizarFluxo(c, patch);
-      c.risco = m.risco;
-      await registrarPresenca(c);
+      if (f) {
+        const patch = { risco: m.risco, triagem_em: ts };
+        if (!f.chegada_em) patch.chegada_em = ts;
+        await atualizarFluxo(c, patch);
+        c.risco = m.risco;
+        await registrarPresenca(c);
+      }
       fecharModal();
       toast("Triagem registrada · " + RISCOS[m.risco].label, "success");
-      if (m.opts && m.opts.aoEntrar) render();
+      if (c.aoSalvar) c.aoSalvar();
+      if (!f || (m.opts && (m.opts.aoEntrar || m.opts.doAtendimento))) render();
       else await seguir(c, "triagem");
     } catch (e) {
       console.error("[kanban] triagem", e);
@@ -1156,7 +1198,7 @@
         '<button class="btn primary" onclick="closeModal()">Fechar</button>', 520),
     );
   }
-  function triagemResumoHtml(t) {
+  function triagemResumoHtml(t, semRisco) {
     const it = [];
     if (t.pa_sistolica && t.pa_diastolica) it.push(["PA", t.pa_sistolica + "/" + t.pa_diastolica]);
     if (t.fc) it.push(["FC", t.fc + " bpm"]);
@@ -1170,7 +1212,7 @@
     const r = t.risco && RISCOS[t.risco];
     return (
       '<div class="akd-tri">' +
-      (r ? '<span class="ak-badge risco" style="--rc:' + r.cor + '"><span class="dot"></span>' + r.label + "</span>" : "") +
+      (r && !semRisco ? '<span class="ak-badge risco" style="--rc:' + r.cor + '"><span class="dot"></span>' + r.label + "</span>" : "") +
       '<div class="akd-vit">' + it.map((x) => "<span><small>" + x[0] + "</small><b>" + esc(x[1]) + "</b></span>").join("") + "</div>" +
       (t.queixa_principal ? "<p><b>Queixa:</b> " + esc(t.queixa_principal) + "</p>" : "") +
       (t.alergias ? "<p><b>Alergias:</b> " + esc(t.alergias) + "</p>" : "") +
@@ -1198,10 +1240,11 @@
     const itens = ["chegada", "entrada", "triagem", "atender", "finalizar", "cobrar", "confirmar", "reagendar", "prontuario"]
       .filter((a) => acaoDisponivel(a, c))
       .map((a) => '<button onclick="AK.acao(\'' + a + "','" + esc(key) + '\')"><i class="ti ' + ACOES[a].icon + '"></i>' + ACOES[a].label + "</button>");
-    if (c.ag && c.etapa.tipo === "agendado" && st !== "confirmado")
+    if (c.ag && c.etapa.tipo === "agendado" && st !== "confirmado" && acaoPermitida("confirmar"))
       itens.push('<button onclick="AK.extra(\'confirmado\',\'' + esc(key) + '\')"><i class="ti ti-check"></i>Marcar como confirmado</button>');
-    itens.push('<button onclick="AK.extra(\'detalhes\',\'' + esc(key) + '\')"><i class="ti ti-timeline"></i>Linha do tempo</button>');
-    if (c.etapa.tipo !== "concluido")
+    if (ehMedico())
+      itens.push('<button onclick="AK.extra(\'detalhes\',\'' + esc(key) + '\')"><i class="ti ti-timeline"></i>Linha do tempo</button>');
+    if (c.etapa.tipo !== "concluido" && acaoPermitida("reagendar"))
       itens.push('<button class="danger" onclick="AK.extra(\'falta\',\'' + esc(key) + '\')"><i class="ti ti-user-x"></i>Registrar falta</button>');
     const destinos = S.etapas.filter((e) => podeMover(c.etapa, e));
     el.innerHTML =
@@ -1278,6 +1321,7 @@
 
   /* ---------- configuração das etapas ---------- */
   function configurar(id) {
+    if (!ehMedico()) return;
     const e = id ? etapa(id) : null;
     const novo = !e;
     const cfg = e || {
@@ -1491,20 +1535,15 @@
     }
   }
 
-  // Faixa com a triagem do dia no topo do prontuário, para o médico.
+  // Triagem dentro do atendimento (prontuário › Atendimentos): a do dia,
+  // recolhível, com "Inserir no prontuário"; "+ Nova triagem" quando a
+  // clínica faz triagem. Só o médico vê — a equipe não abre o prontuário.
   async function triagemBanner(pacienteId) {
-    const ref = $("pth-video-banner");
-    if (!ref) return;
-    let el = $("pth-triagem");
-    if (!el) {
-      el = document.createElement("div");
-      el.id = "pth-triagem";
-      el.className = "pth-triagem";
-      ref.parentNode.insertBefore(el, ref.nextSibling);
-    }
-    el.style.display = "none";
+    const el = $("atd-triagem-box");
+    if (!el) return;
     el.dataset.pid = pacienteId || "";
-    if (!pacienteId || !db()) return;
+    el.style.display = "none";
+    if (!pacienteId || !db() || !ehMedico()) return;
     const desde = new Date(agora() - 18 * 3600 * 1000).toISOString();
     const { data } = await db()
       .from("triagens")
@@ -1513,12 +1552,100 @@
       .gte("realizado_em", desde)
       .order("realizado_em", { ascending: false })
       .limit(1);
-    const t = (data || [])[0];
-    if (!t || el.dataset.pid !== pacienteId) return;
+    if (el.dataset.pid !== pacienteId) return;
+    const t = (data || [])[0] || null;
+    S.triagemAtual = t;
+    if (!t && !triagemAtiva()) return;
+    const nova = triagemAtiva()
+      ? '<button type="button" class="atb-btn" onclick="event.stopPropagation();AK.novaTriagem()"><i class="ti ti-plus"></i>Nova triagem</button>'
+      : "";
+    const ic = '<span class="atb-ic"><i class="ti ti-heart-rate-monitor"></i></span>';
+    if (!t) {
+      el.className = "atd-tri-box vazio";
+      el.innerHTML = '<div class="atb-hd">' + ic + '<span class="atb-tt">Sem triagem hoje</span>' + nova + "</div>";
+      el.style.display = "block";
+      return;
+    }
+    const r = t.risco && RISCOS[t.risco];
+    el.className = "atd-tri-box" + (S.triagemAberta ? " aberta" : "");
     el.innerHTML =
-      '<div class="ptt-ic"><i class="ti ti-heart-rate-monitor"></i></div><div class="ptt-body"><div class="ptt-title">Triagem de hoje · ' + hhmm(t.realizado_em) + "</div>" +
-      triagemResumoHtml(t) + "</div>";
-    el.style.display = "flex";
+      '<div class="atb-hd" onclick="AK.alternarTriagem()">' + ic +
+      '<span class="atb-tt">Triagem · ' + hhmm(t.realizado_em) + "</span>" +
+      (r ? '<span class="ak-badge risco" style="--rc:' + r.cor + '"><span class="dot"></span>' + r.label + "</span>" : "") +
+      '<span class="atb-resumo">' + esc(resumoVitais(t)) + "</span>" +
+      '<button type="button" class="atb-btn primary" onclick="event.stopPropagation();AK.inserirTriagem()" title="Copia a triagem para o texto do prontuário"><i class="ti ti-file-import"></i>Inserir no prontuário</button>' +
+      nova + '<i class="ti ti-chevron-down atb-chev"></i></div>' +
+      '<div class="atb-body">' + triagemResumoHtml(t, true) + "</div>";
+    el.style.display = "block";
+  }
+  function resumoVitais(t) {
+    const it = [];
+    if (t.pa_sistolica && t.pa_diastolica) it.push("PA " + t.pa_sistolica + "/" + t.pa_diastolica);
+    if (t.fc) it.push("FC " + t.fc);
+    if (t.spo2) it.push("SpO₂ " + t.spo2 + "%");
+    if (t.temperatura != null) it.push(String(t.temperatura).replace(".", ",") + " °C");
+    return it.join(" · ");
+  }
+  function triagemTexto(t) {
+    const v = [];
+    if (t.pa_sistolica && t.pa_diastolica) v.push("PA " + t.pa_sistolica + "/" + t.pa_diastolica + " mmHg");
+    if (t.fc) v.push("FC " + t.fc + " bpm");
+    if (t.fr) v.push("FR " + t.fr + " irpm");
+    if (t.temperatura != null) v.push("Tax " + String(t.temperatura).replace(".", ",") + " °C");
+    if (t.spo2) v.push("SpO₂ " + t.spo2 + "%");
+    if (t.glicemia) v.push("Glicemia capilar " + t.glicemia + " mg/dL");
+    if (t.peso) v.push("Peso " + String(t.peso).replace(".", ",") + " kg");
+    if (t.altura) v.push("Altura " + String(t.altura).replace(".", ",") + " cm");
+    if (t.peso && t.altura) v.push("IMC " + (t.peso / Math.pow(t.altura / 100, 2)).toFixed(1).replace(".", ","));
+    if (t.dor != null) v.push("Dor " + t.dor + "/10");
+    const r = t.risco && RISCOS[t.risco];
+    const linhas = [
+      "Triagem (" + new Date(t.realizado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) + " · " +
+        t.profissional_nome + (t.profissional_registro ? ", " + t.profissional_registro : "") + ")",
+    ];
+    if (v.length) linhas.push("Sinais vitais: " + v.join("; ") + ".");
+    if (r) linhas.push("Classificação de risco: " + t.risco.charAt(0).toUpperCase() + t.risco.slice(1) + " (" + r.label.toLowerCase() + ").");
+    if (t.queixa_principal) linhas.push("Queixa principal: " + t.queixa_principal);
+    if (t.alergias) linhas.push("Alergias: " + t.alergias);
+    if (t.medicamentos) linhas.push("Medicamentos em uso: " + t.medicamentos);
+    if (t.observacoes) linhas.push("Observações da triagem: " + t.observacoes);
+    return linhas.join("\n");
+  }
+  function inserirTriagem() {
+    const t = S.triagemAtual;
+    const pa = $("pront-area");
+    if (!t || !pa) {
+      toast("Abra um atendimento para inserir a triagem", "error");
+      return;
+    }
+    const txt = triagemTexto(t);
+    pa.value = pa.value.trim() ? pa.value.replace(/\s+$/, "") + "\n\n" + txt : txt;
+    if (typeof atendEmAndamento !== "undefined" && atendEmAndamento) atendEmAndamento.pront = pa.value;
+    if (typeof markAtendDirty === "function") markAtendDirty();
+    toast("Triagem inserida no prontuário", "success");
+  }
+  function novaTriagem() {
+    const el = $("atd-triagem-box");
+    const pid = el && el.dataset.pid;
+    if (!pid) return;
+    const p = listaPacientes().find((x) => x.id === pid) || {};
+    // Usa o card do paciente hoje, se houver; senão a triagem fica só no prontuário.
+    const c = (S.carregado && montarCards().find((x) => x.pacienteId === pid && x.etapa.tipo !== "concluido")) || {
+      key: "avulsa:" + pid,
+      avulsa: true,
+      f: null,
+      ag: null,
+      etapa: null,
+      pacienteId: pid,
+      nome: p.name || "Paciente",
+      medico: nomeUsuario(),
+      risco: null,
+    };
+    c.aoSalvar = () => {
+      S.triagemAberta = true;
+      triagemBanner(pid);
+    };
+    abrirTriagem(c, { doAtendimento: true });
   }
 
   /* ---------- API pública ---------- */
@@ -1540,9 +1667,11 @@
         setTimeout(() => col.classList.remove("pulse"), 900);
       }
     },
-    abrirCard(key) {
+    abrirCard(ev, key) {
       const c = cardPorKey(key);
-      if (c) abrirDetalhes(c);
+      if (!c) return;
+      if (ehMedico()) abrirDetalhes(c);
+      else menu(ev, key);
     },
     acao(a, key) {
       fecharMenu();
@@ -1564,6 +1693,13 @@
     salvarTriagem,
     escolherRisco,
     alertasTriagem,
+    novaTriagem,
+    inserirTriagem,
+    alternarTriagem() {
+      S.triagemAberta = !S.triagemAberta;
+      const el = $("atd-triagem-box");
+      if (el) el.classList.toggle("aberta", S.triagemAberta);
+    },
   };
   window.atdOnConsultaFinalizada = onConsultaFinalizada;
   window.atdTriagemBanner = triagemBanner;

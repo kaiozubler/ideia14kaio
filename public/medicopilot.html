@@ -16,13 +16,13 @@
     <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
     <script src="https://unpkg.com/@daily-co/daily-js"></script>
     <link rel="stylesheet" href="equipe.css" />
-    <link rel="stylesheet" href="atendimentos-kanban.css?v=2" />
-    <script src="atendimentos-kanban.js?v=2" defer></script>
+    <link rel="stylesheet" href="atendimentos-kanban.css?v=3" />
+    <script src="atendimentos-kanban.js?v=3" defer></script>
     <link rel="stylesheet" href="paciente-protocolos.css" />
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="integra-bry-connect.js" defer></script>
     <script src="paciente-protocolos.js" defer></script>
-    <script src="equipe.js" defer></script>
+    <script src="equipe.js?v=2" defer></script>
     <script src="receituario-controlado.js" defer></script>
     <link rel="stylesheet" href="protocolos.css?v=2" />
     <script src="protocolos.js?v=2" defer></script>
@@ -35,7 +35,7 @@
     <link rel="stylesheet" href="comunicacao-whatsapp.css?v=1" />
     <script src="comunicacao-whatsapp.js?v=1" defer></script>
     <script src="conversas-pacientes.js?v=1" defer></script>
-    <script src="plano-gate.js?v=2" defer></script>
+    <script src="plano-gate.js?v=3" defer></script>
     <script>
       window.addEventListener("DOMContentLoaded", async () => {
         const BASE = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/";
@@ -242,6 +242,13 @@
                                                       .empty-st .ti{font-size:30px;color:var(--n200);display:block;margin-bottom:8px}
                                                       .empty-st p{font-size:12.5px}
 
+                                                      /* EQUIPE (secretária/enfermagem): só agenda, kanban e cadastro do paciente */
+                                                      body.papel-equipe #nav-conversas,body.papel-equipe #nav-receitas,body.papel-equipe #nav-protocolos,body.papel-equipe #nav-questionarios,
+                                                      body.papel-equipe #nav-faturamento,body.papel-equipe #nav-indicadores,body.papel-equipe #nav-mapa-familiar,body.papel-equipe #grp-ia,
+                                                      body.papel-equipe #global-atend-chip,body.papel-equipe #global-save-chip,body.papel-equipe .ia-assist-launcher,
+                                                      body.papel-equipe #tabs-row .tab:not(:first-child),body.papel-equipe .pth-actions,body.papel-equipe #pth-video-banner,
+                                                      body.papel-equipe .so-medico,body.papel-equipe #bulk-bar{display:none!important}
+                                                      body.papel-equipe #nav-configuracoes{cursor:default}
                                                       /* PATIENT HEADER */
                                                       .pt-hdr-card{background:var(--white);border:0.5px solid var(--n150);border-radius:var(--r12);padding:10px 14px;display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-shrink:0;min-height:64px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
                                                       /* ===== FAIXA: consulta por vídeo vinculada a este atendimento ===== */
@@ -2833,37 +2840,40 @@
                 </div>
               </div>
 
-              <div class="sec-hd" style="display:flex;align-items:center;justify-content:space-between">
-                <span>Documentos do LME</span>
-              </div>
-              <div id="lme-docs-panel" class="lme-panel"><div class="lme-empty">Carregando…</div></div>
-
-              <div class="sec-hd">Documentos do cadastro</div>
-              <div class="attach-row">
-                <div class="attach-item attach-add" onclick="openModal('add-exame')">
-                  <i class="ti ti-plus" style="color:var(--n400)"></i> Adicionar
+              <!-- LME, anexos e parentesco: dados clínicos, só para o médico -->
+              <div class="so-medico">
+                <div class="sec-hd" style="display:flex;align-items:center;justify-content:space-between">
+                  <span>Documentos do LME</span>
                 </div>
-              </div>
+                <div id="lme-docs-panel" class="lme-panel"><div class="lme-empty">Carregando…</div></div>
 
-              <div class="sec-hd" style="display:flex;align-items:center;justify-content:space-between">
-                <span>Parentesco</span>
-                <button class="btn sm" onclick="openMapaFamiliar(currentPatient&&currentPatient.id)"><i class="ti ti-affiliate"></i> Ver mapa familiar</button>
-              </div>
-              <div
-                id="par-sugest"
-                style="display:none;border:0.5px solid #bfdbfe;background:#eff6ff;border-radius:var(--r8);padding:9px 11px;margin-bottom:10px"
-              >
-                <div style="font-size:11.5px;font-weight:600;color:#1d4ed8;margin-bottom:6px">
-                  <i class="ti ti-users-group" style="font-size:12px"></i> Possíveis parentes
+                <div class="sec-hd">Documentos do cadastro</div>
+                <div class="attach-row">
+                  <div class="attach-item attach-add" onclick="openModal('add-exame')">
+                    <i class="ti ti-plus" style="color:var(--n400)"></i> Adicionar
+                  </div>
                 </div>
-                <div id="par-sugest-list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+
+                <div class="sec-hd" style="display:flex;align-items:center;justify-content:space-between">
+                  <span>Parentesco</span>
+                  <button class="btn sm" onclick="openMapaFamiliar(currentPatient&&currentPatient.id)"><i class="ti ti-affiliate"></i> Ver mapa familiar</button>
+                </div>
+                <div
+                  id="par-sugest"
+                  style="display:none;border:0.5px solid #bfdbfe;background:#eff6ff;border-radius:var(--r8);padding:9px 11px;margin-bottom:10px"
+                >
+                  <div style="font-size:11.5px;font-weight:600;color:#1d4ed8;margin-bottom:6px">
+                    <i class="ti ti-users-group" style="font-size:12px"></i> Possíveis parentes
+                  </div>
+                  <div id="par-sugest-list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+                </div>
+                <div id="par-rows" style="display:flex;flex-direction:column;gap:8px"></div>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:9px">
+                  <button class="btn sm" onclick="addParentescoRow()"><i class="ti ti-plus"></i> Adicionar parente</button>
+                  <span style="font-size:11px;color:var(--n400)" id="par-fam-hint"></span>
+                </div>
+                <div id="par-familiar-cids" style="margin-top:10px"></div>
               </div>
-              <div id="par-rows" style="display:flex;flex-direction:column;gap:8px"></div>
-              <div style="display:flex;align-items:center;gap:8px;margin-top:9px">
-                <button class="btn sm" onclick="addParentescoRow()"><i class="ti ti-plus"></i> Adicionar parente</button>
-                <span style="font-size:11px;color:var(--n400)" id="par-fam-hint"></span>
-              </div>
-              <div id="par-familiar-cids" style="margin-top:10px"></div>
               <div style="height:64px"></div>
             </div>
 
@@ -2966,6 +2976,8 @@
                     <div class="pront-header">
                       <span class="pront-label">Prontuário</span>
                     </div>
+                    <!-- Triagem do dia (preenchida por public/atendimentos-kanban.js) -->
+                    <div id="atd-triagem-box" class="atd-tri-box" style="display:none"></div>
                     <div class="toolbar">
                       <button class="tbtn" title="Negrito"><b>B</b></button>
                       <button class="tbtn" title="Itálico" style="font-style:italic">I</button>
@@ -4274,6 +4286,23 @@
                     <label for="cli-pais">País</label><input type="text" id="cli-pais" value="Brasil" />
                   </div>
                 </div>
+              </div>
+
+              <div style="border-top:0.5px solid var(--n200);padding-top:16px;display:flex;flex-direction:column;gap:10px">
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:var(--n700)">Fluxo de atendimento</div>
+                  <div style="font-size:11.5px;color:var(--n400);margin-top:2px">Etapas que o paciente percorre na clínica.</div>
+                </div>
+                <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer">
+                  <input type="checkbox" id="cli-triagem" role="switch" class="cop-switch" style="margin-top:2px" onchange="salvarTriagemAtiva(this)" />
+                  <span style="display:flex;flex-direction:column;gap:2px">
+                    <b style="font-size:12.5px;color:var(--n700)">A clínica faz triagem de enfermagem</b>
+                    <span style="font-size:11.5px;color:var(--n500);line-height:1.5">
+                      Ligada: o kanban mostra a etapa Triagem e o atendimento permite registrar sinais vitais e classificação de risco.
+                      Desligada: o paciente vai direto da recepção para o médico. Salva automaticamente.
+                    </span>
+                  </span>
+                </label>
               </div>
 
               <div style="display:flex;justify-content:flex-end;gap:8px">
@@ -6296,7 +6325,8 @@
                                                               const btn=document.getElementById('auth-submit');btn.disabled=true;btn.innerHTML='Aguarde…';
                                                               try{
                                                                 if(authMode==='signup'){
-                                                                  const {error}=await sb.auth.signUp({email,password:pass,options:{data:{name_user:name||email.split('@')[0],tipo_user:'medico'},emailRedirectTo:window.location.origin}});
+                                                                  const conv=window._conviteInfo,convTok=conviteToken();
+const {error}=await sb.auth.signUp({email,password:pass,options:{data:{name_user:name||email.split('@')[0],tipo_user:conv?conv.papel:'medico'},emailRedirectTo:window.location.origin+(convTok?'/medicopilot.html?convite='+encodeURIComponent(convTok):'')}});
                                                                   if(error)throw error;
                                                                   // tenta login direto (se confirm email estiver desligado)
                                                                   const {error:e2}=await sb.auth.signInWithPassword({email,password:pass});
@@ -6319,7 +6349,7 @@
                                                             }
 
                                                             async function loadPatients(){
-                                                              const {data,error}=await sb.from('pacientes').select('*').order('created_at',{ascending:false});
+                                                              const {data,error}=await sb.from(ehMembroEquipe()?'pacientes_cadastro':'pacientes').select('*').order('created_at',{ascending:false});
                                                               if(error){console.error('Erro ao carregar pacientes:',error);patients=[];renderPatients(patients);return;}
                                                               patients=(data||[]).map(mapPatientRow);
                                                               gruposCache=[...new Set(patients.map(p=>p.grupo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
@@ -6328,12 +6358,97 @@
                                                               if(typeof renderAgenda==='function'&&document.getElementById('ag-body'))loadAgendamentos().then(renderAgenda);
                                                             }
 
+                                                            /* ========== EQUIPE: papel do usuário na clínica ==========
+                                                               A clínica é a conta do médico; secretária e enfermagem entram com login
+                                                               próprio (convite em Configurações › Minha equipe). O banco só libera a eles
+                                                               agenda, kanban, o cadastro do paciente (visão pacientes_cadastro) e, por
+                                                               papel, triagem ou cobrança — prontuário e consultas ficam com o médico.
+                                                               Aqui a interface acompanha: menu, abas e ações por papel. */
+                                                            const CLINICA={clinica_id:null,papel:'medico',triagem_ativa:true};window.CLINICA=CLINICA;
+                                                            const TELAS_EQUIPE=['atendimentos','patients','agenda','patient-detail'];
+                                                            const PAPEL_LABEL={medico:'Médico(a)',secretaria:'Secretária',enfermeiro:'Enfermagem'};
+                                                            function ehMembroEquipe(){return CLINICA.papel==='secretaria'||CLINICA.papel==='enfermeiro';}
+                                                            function clinicaId(){return CLINICA.clinica_id||(currentUser&&currentUser.id)||null;}
+                                                            function telaPermitidaPapel(name){return !ehMembroEquipe()||TELAS_EQUIPE.includes(name);}
+                                                            window.ehMembroEquipe=ehMembroEquipe;window.clinicaId=clinicaId;
+                                                            // O link chega como ?convite=; fica guardado até o login porque a
+                                                            // confirmação de e-mail pode trazer a pessoa de volta sem o parâmetro.
+                                                            function conviteToken(){
+                                                            let t=new URLSearchParams(location.search).get('convite');
+                                                            try{if(t)localStorage.setItem('conviteClinica',t);else t=localStorage.getItem('conviteClinica');}catch(e){}
+                                                            return t||null;
+                                                            }
+                                                            function conviteDescartar(){
+                                                            try{localStorage.removeItem('conviteClinica');}catch(e){}
+                                                            const u=new URL(location.href);
+                                                            if(u.searchParams.has('convite')){u.searchParams.delete('convite');history.replaceState(null,'',u.pathname+u.search+u.hash);}
+                                                            }
+                                                            async function conviteMostrarNoLogin(){
+                                                            const t=conviteToken();if(!t)return;
+                                                            const {data,error}=await sb.rpc('convite_info',{p_token:t});
+                                                            const sub=document.getElementById('auth-sub');
+                                                            if(error||!data||!data.valido){if(sub)sub.textContent='Este convite expirou ou já foi usado. Peça um novo link à clínica.';conviteDescartar();return;}
+                                                            window._conviteInfo=data;
+                                                            if(authMode!=='signup')authToggle();
+                                                            document.getElementById('auth-title').textContent='Convite de '+data.clinica_nome;
+                                                            sub.textContent='Crie sua conta de '+(PAPEL_LABEL[data.papel]||data.papel)+' com o e-mail '+data.email+'. Se já tiver conta com esse e-mail, clique em Entrar.';
+                                                            const em=document.getElementById('auth-email');if(em&&!em.value)em.value=data.email;
+                                                            const nm=document.getElementById('auth-name');if(nm&&!nm.value)nm.value=data.nome||'';
+                                                            }
+                                                            async function carregarAcessoClinica(){
+                                                            const t=conviteToken();
+                                                            if(t){
+                                                            const {error}=await sb.rpc('convite_aceitar',{p_token:t});
+                                                            if(error)showToast('Convite não aceito: '+error.message,'error');
+                                                            else showToast('Bem-vindo(a) à equipe!','success');
+                                                            conviteDescartar();
+                                                            }
+                                                            const {data,error}=await sb.rpc('minha_clinica');
+                                                            if(error)console.warn('[equipe] minha_clinica indisponível, seguindo como médico:',error.message);
+                                                            Object.assign(CLINICA,{clinica_id:currentUser.id,papel:'medico',triagem_ativa:true,membro_nome:null},(!error&&data)||{});
+                                                            aplicarPapelNaInterface();
+                                                            }
+                                                            function aplicarPapelNaInterface(){
+                                                            const membro=ehMembroEquipe();
+                                                            document.body.classList.toggle('papel-equipe',membro);
+                                                            document.body.dataset.papel=CLINICA.papel;
+                                                            const cfg=document.getElementById('nav-configuracoes');
+                                                            if(cfg&&membro){
+                                                            const lbl=cfg.querySelector('.sb-lbl');if(lbl)lbl.textContent=(CLINICA.membro_nome||'Equipe')+' · '+(PAPEL_LABEL[CLINICA.papel]||'');
+                                                            const ic=cfg.querySelector(':scope > i.ti');if(ic)ic.className='ti ti-user-circle';
+                                                            cfg.onclick=null;
+                                                            }
+                                                            }
+                                                            function mostrarAcessoDesativado(){
+                                                            showAuthGate();
+                                                            document.getElementById('auth-title').textContent='Acesso desativado';
+                                                            document.getElementById('auth-sub').textContent='Seu acesso à clínica foi desativado pelo médico responsável. Fale com a clínica para reativá-lo.';
+                                                            const btn=document.getElementById('auth-submit');
+                                                            if(btn){btn.disabled=false;btn.innerHTML='Sair <i class="ti ti-door-exit"></i>';btn.onclick=logout;}
+                                                            }
+                                                            // Equipe grava o cadastro pela função do banco, que só aceita campos
+                                                            // cadastrais (dados clínicos e parentescos ficam fora).
+                                                            async function pacienteCadastroSalvar(id,payload){
+                                                            const dados=Object.assign({},payload);delete dados.parentescos;delete dados.user_id;
+                                                            const {data:pid,error}=await sb.rpc('paciente_cadastro_salvar',{p_id:id||null,p_dados:dados});
+                                                            if(error)return {data:null,error};
+                                                            return sb.from('pacientes_cadastro').select('*').eq('paciente_id',pid).single();
+                                                            }
+                                                            async function entrarNoApp(session){
+                                                            currentUser=session.user;
+                                                            await carregarAcessoClinica();
+                                                            if(CLINICA.papel==='inativo'){mostrarAcessoDesativado();return;}
+                                                            showApp();
+                                                            await loadPatients();
+                                                            if(!ehMembroEquipe()&&typeof fetchAnamneseModels==='function')fetchAnamneseModels();
+                                                            }
+
                                                             async function bootstrap(){
                                                         const {data}=await sb.auth.getSession();
-                                                        if(data.session){currentUser=data.session.user;showApp();await loadPatients();if(typeof fetchAnamneseModels==='function')fetchAnamneseModels();}
-                                                        else{showAuthGate();}
+                                                        if(data.session){await entrarNoApp(data.session);}
+                                                        else{showAuthGate();conviteMostrarNoLogin();}
                                                         sb.auth.onAuthStateChange((event,session)=>{
-                                                          if(event==='SIGNED_IN'&&session){currentUser=session.user;showApp();loadPatients();if(typeof fetchAnamneseModels==='function')fetchAnamneseModels();}
+                                                          if(event==='SIGNED_IN'&&session){entrarNoApp(session);}
                                                           if(event==='SIGNED_OUT'){anamneseModelsCache=null;location.reload();}
                                                         });
                                                         initCepAutofillFields(); // <-- adicionar aqui
@@ -6421,6 +6536,7 @@
 
                                                             /* ========== SCREEN NAV ========== */
                                                             function goScreen(name){
+if(!telaPermitidaPapel(name)){showToast('Área disponível apenas para o médico responsável','error');return;}
                                                               const leavingPatientDetail=name!=='patient-detail'&&document.getElementById('s-patient-detail')?.style.display!=='none';
                                                               if(leavingPatientDetail&&currentPatient&&atendEmAndamento&&atendEmAndamento.dirty){saveAtendState();saveAtendDraft();stopAtendAutoSave();}
                                                               if(name!=='patient-detail')updateCadastroFloatBar(null);
@@ -6512,6 +6628,7 @@
                                                               const rm=document.getElementById('cli-logo-remove');
                                                               if(c.logo){prev.innerHTML=`<img src="${c.logo}" style="width:100%;height:100%;object-fit:contain">`;rm.style.display='inline-flex';}
                                                               else{prev.innerHTML='<i class="ti ti-photo" style="font-size:28px"></i>';rm.style.display='none';}
+const tri=document.getElementById('cli-triagem');if(tri)tri.checked=CLINICA.triagem_ativa!==false;
                                                               if(currentUser?.id){
                                                                 const {data,error}=await sb.from('medico_whatsapp_config').select('phone_number_id').eq('id_medico',currentUser.id).maybeSingle();
                                                                 if(error)console.error('[minha-clinica] Falha ao carregar Phone Number ID:',error.message);
@@ -6533,6 +6650,16 @@
                                                               delete c.logo;localStorage.setItem(CLINICA_KEY,JSON.stringify(c));
                                                               const inp=document.getElementById('cli-logo');if(inp)inp.value='';
                                                               loadClinica();
+                                                            }
+                                                            // Chave de triagem da clínica: lida pelo kanban e pelo atendimento (via
+                                                            // minha_clinica para a equipe). Salva na hora, sem depender do botão Salvar.
+                                                            async function salvarTriagemAtiva(el){
+                                                            const ativa=!!el.checked;
+                                                            const {error}=await sb.from('medico_clinica_config').upsert({id_medico:currentUser.id,triagem_ativa:ativa},{onConflict:'id_medico'});
+                                                            if(error){el.checked=!ativa;showToast('Não foi possível salvar: '+error.message,'error');return;}
+                                                            CLINICA.triagem_ativa=ativa;
+                                                            if(typeof renderKanban==='function')renderKanban();
+                                                            showToast(ativa?'Triagem ativada na clínica':'Triagem desativada: pacientes vão direto ao médico','success');
                                                             }
                                                             async function saveClinica(){
                                                               const get=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
@@ -7624,7 +7751,7 @@
                                                         currentResumoProntuario='';
                                                         hidePatientVideoBanner();
                                                         updatePatientVideoBanner(id).catch(e=>console.warn('updatePatientVideoBanner falhou:',e));
-                                                        await loadPatientRecords(id);
+                                                        if(!ehMembroEquipe())await loadPatientRecords(id);else{atendimentos=[];exames=[];timelineEvents=[];}
                                                         goScreen('patient-detail');
                                                         document.getElementById('nav-patients').classList.add('active');
                                                         const pt2=document.getElementById('page-title');
@@ -7650,7 +7777,7 @@
                                                         if(currentPatient.medico&&medicoNames[currentPatient.medico]){mb.textContent=medicoNames[currentPatient.medico];mb.style.display='';}
                                                         else mb.style.display='none';
                                                         const prof=document.getElementById('pth-prof');
-                                                        if(prof)prof.textContent=(currentPatient.medico&&medicoNames[currentPatient.medico])||(currentUser?.email?.split('@')[0])||'—';
+                                                        if(prof)prof.textContent=(currentPatient.medico&&medicoNames[currentPatient.medico])||(!ehMembroEquipe()&&currentUser?.email?.split('@')[0])||'—';
                                                         const lv=document.getElementById('pth-last-visit');
                                                         if(lv){try{if(atendimentos&&atendimentos.length){const a=atendimentos[0];lv.textContent=(a.date||a.data||a.consulta||'—');}else lv.textContent='Sem registros';}catch(e){lv.textContent='—';}}
                                                         document.getElementById('print-name').textContent=currentPatient.name;
@@ -7686,7 +7813,7 @@
                                                         openTab('cadastro',document.querySelector('.tab'));
                                                         renderAtendimentos();renderExames();renderTimeline();updateAtendProgress();
                                                         if(typeof renderLmeDocsPanel==='function')renderLmeDocsPanel();
-                                                        if(typeof window.atdTriagemBanner==='function')window.atdTriagemBanner(id);
+                                                        if(!ehMembroEquipe()&&typeof window.atdTriagemBanner==='function')window.atdTriagemBanner(id);
                                                       }
                                                       function backToPatients(){saveAtendState();goScreen('patients');}
                                                       function showToast(msg,type){
@@ -7815,7 +7942,7 @@
                                                                 ocupacao:document.getElementById('d-ocup')?.value.trim()||null
                                                                ,parentescos:getParentescosPayload()
                                                                };
-                                                              const {data,error}=await sb.from('pacientes').update(payload).eq('paciente_id',currentPatient.id).select('*').single();
+                                                              const {data,error}=ehMembroEquipe()?await pacienteCadastroSalvar(currentPatient.id,payload):await sb.from('pacientes').update(payload).eq('paciente_id',currentPatient.id).select('*').single();
                                                               if(error){showToast('Erro ao salvar paciente: '+error.message,'error');return;}
                                                               const updated=mapPatientRow(data);
                                                               Object.assign(currentPatient,updated);
@@ -7824,7 +7951,7 @@
                                                               const mb=document.getElementById('pth-medico');
                                                               if(currentPatient.medico&&medicoNames[currentPatient.medico]){mb.textContent=medicoNames[currentPatient.medico];mb.style.display='';}
                                                               else mb.style.display='none';
-                                                              await addTimelineEvent({date:new Date().toLocaleDateString('pt-BR'),type:'cadastro',icon:'ti-user-edit',title:'Cadastro atualizado',sub:'Dados alterados'});
+                                                              if(!ehMembroEquipe())await addTimelineEvent({date:new Date().toLocaleDateString('pt-BR'),type:'cadastro',icon:'ti-user-edit',title:'Cadastro atualizado',sub:'Dados alterados'});
                                                               renderPatients(patients);renderTimeline();
                                                               showToast('Dados do paciente salvos com sucesso','success');
                                                             }
@@ -8726,6 +8853,7 @@
 
                                                             /* ========== TABS ========== */
                                                             function openTab(name,el){
+if(ehMembroEquipe()&&name!=='cadastro'){name='cadastro';el=null;}
                                                               document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
                                                               document.querySelectorAll('.tab-body').forEach(b=>b.style.display='none');
                                                               const names=['cadastro','atendimentos','exames','protocolos','financeiro','agenda','timeline','prontuario'];
@@ -18375,9 +18503,9 @@ let rxSelected = [];
                                                                 sexo:val('np-sexo')||null,
                                                                 medico:val('np-medico')||null,
                                                                 grupo:val('np-grupo')||null,
-                                                                user_id:currentUser.id
+                                                                user_id:clinicaId()
                                                               };
-                                                              const {data,error}=await sb.from('pacientes').insert(payload).select('*').single();
+                                                              const {data,error}=ehMembroEquipe()?await pacienteCadastroSalvar(null,payload):await sb.from('pacientes').insert(payload).select('*').single();
                                                               if(error){alert('Erro ao salvar paciente: '+error.message);return;}
                                                               closeModal();
                                                               await loadPatients();
@@ -19408,13 +19536,13 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                 let pacienteId=AGM_STATE.selectedPatientId;
                                                                 if(!pacienteId){
                                                                   const payload={name:nome,cpf:cpfDigits||null,telefone:telefone||null,medico:doc?doc.name:null};
-                                                                  const{data,error}=await sb.from('pacientes').insert(payload).select('*').single();
+                                                                  const{data,error}=ehMembroEquipe()?await pacienteCadastroSalvar(null,payload):await sb.from('pacientes').insert(payload).select('*').single();
                                                                   if(error)throw error;
                                                                   pacienteId=data.paciente_id;
                                                                 }
                                                                 const dataHora=new Date(dia+'T'+hora+':00').toISOString();
                                                                 const agPayload={
-                                                                  paciente_id:pacienteId,paciente_nome:nome,id_medico:(currentUser&&currentUser.id)||null,
+                                                                  paciente_id:pacienteId,paciente_nome:nome,id_medico:clinicaId(),
                                                                   data_hora:dataHora,duracao_min:AGM_STATE.duracao,status:'agendado',
                                                                   motivo:AGM_STATE.tipo+(especialidade?' — '+especialidade:''),origem:'secretaria',
                                                                   tipo:AGM_STATE.tipo,especialidade:especialidade,medico_nome:doc?doc.name:null,
