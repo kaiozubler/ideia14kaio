@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "sdk_version": "3.0.6",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://lgsywisgyvgorppuoehy.supabase.co/auth/v1",
+    "require_oauth_client_claim": true,
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "core-relaunch",
+      "version": "1.0.0",
+      "title": "Core Relaunch"
+    },
+    "tools": [
+      {
+        "name": "list_appointments",
+        "title": "Consultar agenda",
+        "description": "Consulta até 50 agendamentos de um intervalo, respeitando as permissões da clínica do usuário.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Início inclusivo em ISO 8601 com fuso horário."
+            },
+            "end": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Fim exclusivo em ISO 8601 com fuso horário."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "description": "Máximo de agendamentos retornados."
+            }
+          },
+          "required": [
+            "start",
+            "end"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_protocols",
+        "title": "Consultar protocolos",
+        "description": "Lista os títulos e a situação de até 50 protocolos acessíveis ao usuário, sem publicar ou alterar protocolos.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "description": "Máximo de protocolos retornados."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

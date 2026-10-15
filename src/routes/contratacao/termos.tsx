@@ -9,7 +9,7 @@ import { atualizarPedido, lerPedido, type Pedido } from "@/lib/contratacao/pedid
 
 export const Route = createFileRoute("/contratacao/termos")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Termo de uso | MediCopilot" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Termo de uso | MediCopilot" }, { name: "description", content: "Revise os termos da contratação do MediCopilot." }, { property: "og:title", content: "Termo de uso | MediCopilot" }, { property: "og:description", content: "Revise os termos da contratação do MediCopilot." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
   component: PaginaTermos,
 });
 

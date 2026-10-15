@@ -19,7 +19,7 @@ import {
 
 export const Route = createFileRoute("/contratacao/dados")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Meus dados | MediCopilot" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Meus dados | MediCopilot" }, { name: "description", content: "Informe os dados para contratar o MediCopilot." }, { property: "og:title", content: "Meus dados | MediCopilot" }, { property: "og:description", content: "Informe os dados para contratar o MediCopilot." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
   component: PaginaDados,
 });
 
