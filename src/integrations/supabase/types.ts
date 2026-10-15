@@ -3737,6 +3737,54 @@ export type Database = {
         }
         Relationships: []
       }
+      sncr_numeracoes: {
+        Row: {
+          ambiente: string
+          conselho: string
+          created_at: string
+          documento_conselho: string
+          id: string
+          numero: string
+          reservado_em: string | null
+          status: string
+          tipo: string
+          uf: string
+          usado_em: string | null
+          user_id: string
+          uso: Json | null
+        }
+        Insert: {
+          ambiente: string
+          conselho: string
+          created_at?: string
+          documento_conselho: string
+          id?: string
+          numero: string
+          reservado_em?: string | null
+          status?: string
+          tipo: string
+          uf: string
+          usado_em?: string | null
+          user_id?: string
+          uso?: Json | null
+        }
+        Update: {
+          ambiente?: string
+          conselho?: string
+          created_at?: string
+          documento_conselho?: string
+          id?: string
+          numero?: string
+          reservado_em?: string | null
+          status?: string
+          tipo?: string
+          uf?: string
+          usado_em?: string | null
+          user_id?: string
+          uso?: Json | null
+        }
+        Relationships: []
+      }
       substancias: {
         Row: {
           api_id: number | null
@@ -4480,6 +4528,30 @@ export type Database = {
       sincronizar_protocolos_paciente: {
         Args: { p_paciente_id: string }
         Returns: undefined
+      }
+      sncr_concluir_numero: {
+        Args: { p_id: string; p_status: string; p_uso?: Json }
+        Returns: undefined
+      }
+      sncr_registrar_numeracoes: {
+        Args: {
+          p_ambiente: string
+          p_conselho: string
+          p_documento: string
+          p_fim?: string
+          p_inicio?: string
+          p_numeros?: string[]
+          p_tipo: string
+          p_uf: string
+        }
+        Returns: number
+      }
+      sncr_reservar_numero: {
+        Args: { p_ambiente: string; p_tipo: string }
+        Returns: {
+          id: string
+          numero: string
+        }[]
       }
       sobrenome_paciente: { Args: { nome: string }; Returns: string }
       termo_publico: { Args: { p_id: string }; Returns: Json }
