@@ -39,7 +39,7 @@ function ConsentError({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   return <main className="min-h-screen bg-background px-6 py-16 text-foreground"><div className="mx-auto max-w-md space-y-5">
     <ShieldCheck className="size-10 text-primary" /><h1 className="text-2xl font-semibold">Autorização indisponível</h1>
-    <p role="alert" className="text-muted-foreground">{error.message}</p>
+    <p role="alert" className="text-muted-foreground">{error instanceof Error ? error.message : "Não foi possível carregar a autorização."}</p>
     <Button variant="outline" onClick={() => { reset?.(); void router.invalidate(); }}>Tentar novamente</Button>
   </div></main>;
 }
