@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as PlanosRouteImport } from './routes/planos'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -34,6 +35,7 @@ import { Route as ContratacaoTermosRouteImport } from './routes/contratacao/term
 import { Route as FFormIdRouteImport } from './routes/f.$formId'
 import { Route as TTermoIdRouteImport } from './routes/t.$termoId'
 import { Route as VCodigoRouteImport } from './routes/v.$codigo'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiAsaasCheckoutRouteImport } from './routes/api/asaas/checkout'
 import { Route as ApiAsaasWebhookRouteImport } from './routes/api/asaas/webhook'
 import { Route as ApiAssinaturaAtualizarCartaoRouteImport } from './routes/api/assinatura/atualizar-cartao'
@@ -102,6 +104,11 @@ import { Route as ApiPublicWebhooksWhatsappClinicaChaveRouteImport } from './rou
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const McpRoute = McpRouteImport.update({
@@ -225,6 +232,11 @@ const TTermoIdRoute = TTermoIdRouteImport.update({
 const VCodigoRoute = VCodigoRouteImport.update({
   id: '/v/$codigo',
   path: '/v/$codigo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAsaasCheckoutRoute = ApiAsaasCheckoutRouteImport.update({
@@ -583,6 +595,7 @@ const ApiPublicWebhooksWhatsappClinicaChaveRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/planos': typeof PlanosRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -607,6 +620,7 @@ export interface FileRoutesByFullPath {
   '/f/$formId': typeof FFormIdRoute
   '/t/$termoId': typeof TTermoIdRoute
   '/v/$codigo': typeof VCodigoRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/asaas/checkout': typeof ApiAsaasCheckoutRoute
   '/api/asaas/webhook': typeof ApiAsaasWebhookRoute
   '/api/assinatura/atualizar-cartao': typeof ApiAssinaturaAtualizarCartaoRoute
@@ -674,6 +688,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/planos': typeof PlanosRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -698,6 +713,7 @@ export interface FileRoutesByTo {
   '/f/$formId': typeof FFormIdRoute
   '/t/$termoId': typeof TTermoIdRoute
   '/v/$codigo': typeof VCodigoRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/asaas/checkout': typeof ApiAsaasCheckoutRoute
   '/api/asaas/webhook': typeof ApiAsaasWebhookRoute
   '/api/assinatura/atualizar-cartao': typeof ApiAssinaturaAtualizarCartaoRoute
@@ -766,6 +782,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/planos': typeof PlanosRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -790,6 +807,7 @@ export interface FileRoutesById {
   '/f/$formId': typeof FFormIdRoute
   '/t/$termoId': typeof TTermoIdRoute
   '/v/$codigo': typeof VCodigoRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/asaas/checkout': typeof ApiAsaasCheckoutRoute
   '/api/asaas/webhook': typeof ApiAsaasWebhookRoute
   '/api/assinatura/atualizar-cartao': typeof ApiAssinaturaAtualizarCartaoRoute
@@ -859,6 +877,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
     | '/mcp'
     | '/planos'
     | '/.well-known/oauth-protected-resource'
@@ -883,6 +902,7 @@ export interface FileRouteTypes {
     | '/f/$formId'
     | '/t/$termoId'
     | '/v/$codigo'
+    | '/.lovable/oauth/consent'
     | '/api/asaas/checkout'
     | '/api/asaas/webhook'
     | '/api/assinatura/atualizar-cartao'
@@ -950,6 +970,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/login'
     | '/mcp'
     | '/planos'
     | '/.well-known/oauth-protected-resource'
@@ -974,6 +995,7 @@ export interface FileRouteTypes {
     | '/f/$formId'
     | '/t/$termoId'
     | '/v/$codigo'
+    | '/.lovable/oauth/consent'
     | '/api/asaas/checkout'
     | '/api/asaas/webhook'
     | '/api/assinatura/atualizar-cartao'
@@ -1041,6 +1063,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/login'
     | '/mcp'
     | '/planos'
     | '/.well-known/oauth-protected-resource'
@@ -1065,6 +1088,7 @@ export interface FileRouteTypes {
     | '/f/$formId'
     | '/t/$termoId'
     | '/v/$codigo'
+    | '/.lovable/oauth/consent'
     | '/api/asaas/checkout'
     | '/api/asaas/webhook'
     | '/api/assinatura/atualizar-cartao'
@@ -1133,6 +1157,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
   PlanosRoute: typeof PlanosRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -1157,6 +1182,7 @@ export interface RootRouteChildren {
   FFormIdRoute: typeof FFormIdRoute
   TTermoIdRoute: typeof TTermoIdRoute
   VCodigoRoute: typeof VCodigoRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiAsaasCheckoutRoute: typeof ApiAsaasCheckoutRoute
   ApiAsaasWebhookRoute: typeof ApiAsaasWebhookRoute
   ApiAssinaturaAtualizarCartaoRoute: typeof ApiAssinaturaAtualizarCartaoRoute
@@ -1230,6 +1256,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mcp': {
@@ -1398,6 +1431,13 @@ declare module '@tanstack/react-router' {
       path: '/v/$codigo'
       fullPath: '/v/$codigo'
       preLoaderRoute: typeof VCodigoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/asaas/checkout': {
@@ -1853,6 +1893,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LoginRoute: LoginRoute,
   McpRoute: McpRoute,
   PlanosRoute: PlanosRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
@@ -1878,6 +1919,7 @@ const rootRouteChildren: RootRouteChildren = {
   FFormIdRoute: FFormIdRoute,
   TTermoIdRoute: TTermoIdRoute,
   VCodigoRoute: VCodigoRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiAsaasCheckoutRoute: ApiAsaasCheckoutRoute,
   ApiAsaasWebhookRoute: ApiAsaasWebhookRoute,
   ApiAssinaturaAtualizarCartaoRoute: ApiAssinaturaAtualizarCartaoRoute,
