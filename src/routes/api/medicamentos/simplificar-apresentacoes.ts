@@ -1,53 +1,48 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { simplificarLote } from "@/lib/medicamentos/apresentacao.server";
+import { validarApresentacao } from "@/lib/medicamentos/apresentacao.server";
 
-const BodySchema = z.object({
-  // quantas apresentações distintas processar nesta chamada
-  limite: z.number().int().min(1).max(2000).optional(),
+const ItensSchema = z.object({
+  itens: z
+    .array(
+      z.object({
+        apresentacao: z.string().min(1),
+        texto_simplificado: z.string(),
+        posologia_padrao: z.string().nullable().optional(),
+      }),
+    )
+    .min(1)
+    .max(1000),
 });
 
-const TAM_LOTE = 8;
-const CONCORRENCIA = 6;
+async function sha256(texto: string): Promise<Uint8Array> {
+  return new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(texto)));
+}
 
 /**
- * Processa (de forma retomável) as apresentações da Anvisa que ainda não têm
- * versão legível: chama a IA, grava o cache em apresentacao_legivel e propaga
- * para medicamentos.apresentacao_simplificada / posologia_padrao.
- *
- * Requer usuário autenticado (o token é validado antes de qualquer trabalho);
- * a escrita usa o cliente administrativo porque o catálogo é somente-leitura
- * para o app.
+ * O catálogo é compartilhado por todas as clínicas, então só quem tem o
+ * CATALOGO_ADMIN_TOKEN (o operador do scripts/apresentacoes.mjs) lê a fila e
+ * grava textos — um login comum não pode reescrever apresentações.
  */
-async function handle(request: Request) {
-  const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  if (!token) return Response.json({ error: "unauthorized" }, { status: 401 });
+async function exigirOperador(request: Request): Promise<Response | null> {
+  const esperado = process.env["CATALOGO_ADMIN_TOKEN"];
+  if (!esperado) return Response.json({ error: "missing_admin_token" }, { status: 500 });
+  const recebido = request.headers.get("x-catalogo-token") ?? "";
+  const [a, b] = await Promise.all([sha256(esperado), sha256(recebido)]);
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0 ? null : Response.json({ error: "unauthorized" }, { status: 401 });
+}
 
-  const anon = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  );
-  const { data: userData, error: userErr } = await anon.auth.getUser(token);
-  if (userErr || !userData?.user) return Response.json({ error: "unauthorized" }, { status: 401 });
-
-  let body: unknown = {};
-  try {
-    body = await request.json();
-  } catch {
-    body = {};
-  }
-  const parsed = BodySchema.safeParse(body ?? {});
-  if (!parsed.success) return Response.json({ error: "invalid_body" }, { status: 400 });
-  const limite = parsed.data.limite ?? 200;
-
-  const apiKey = process.env["LOVABLE_API_KEY"];
-  if (!apiKey) return Response.json({ error: "missing_api_key" }, { status: 500 });
+/** Apresentações distintas da Anvisa que ainda não têm versão legível. */
+async function listarPendentes(request: Request) {
+  const negado = await exigirOperador(request);
+  if (negado) return negado;
+  const url = new URL(request.url);
+  const limite = Math.min(Math.max(Number(url.searchParams.get("limite")) || 500, 1), 20000);
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  // apresentações já traduzidas (cache)
   const feitos = new Set<string>();
   for (let from = 0; ; from += 1000) {
     const { data, error } = await supabaseAdmin
@@ -59,76 +54,88 @@ async function handle(request: Request) {
     if (!data || data.length < 1000) break;
   }
 
-  // apresentações distintas pendentes
   const pendentes = new Set<string>();
   for (let from = 0; ; from += 1000) {
     const { data, error } = await supabaseAdmin
       .from("medicamentos")
       .select("apresentacao")
+      .is("apresentacao_simplificada", null)
       .not("apresentacao", "is", null)
       .neq("apresentacao", "")
+      .order("id")
       .range(from, from + 999);
     if (error) return Response.json({ error: "read_failed" }, { status: 500 });
     (data ?? []).forEach((r) => {
-      const a = r.apresentacao;
-      if (a && !feitos.has(a)) pendentes.add(a);
+      if (r.apresentacao && !feitos.has(r.apresentacao)) pendentes.add(r.apresentacao);
     });
     if (!data || data.length < 1000) break;
   }
 
-  const alvo = [...pendentes].slice(0, limite);
-  if (alvo.length === 0) {
-    return Response.json({ pendentes: 0, processadas: 0, falhas: 0, restantes: 0 });
+  const todas = [...pendentes].sort();
+  return Response.json({
+    total: todas.length,
+    ja_traduzidas: feitos.size,
+    apresentacoes: todas.slice(0, limite),
+  });
+}
+
+/**
+ * Grava as versões legíveis no cache e propaga para medicamentos. Itens que
+ * trazem números ausentes do original são recusados e devolvidos.
+ */
+async function importar(request: Request) {
+  const negado = await exigirOperador(request);
+  if (negado) return negado;
+
+  let body: unknown = null;
+  try {
+    body = await request.json();
+  } catch {
+    body = null;
+  }
+  const parsed = ItensSchema.safeParse(body);
+  if (!parsed.success) return Response.json({ error: "invalid_body" }, { status: 400 });
+
+  const aceitos = [];
+  const recusados: { apresentacao: string; motivo: string }[] = [];
+  for (const it of parsed.data.itens) {
+    const item = {
+      apresentacao: it.apresentacao,
+      texto_simplificado: it.texto_simplificado.trim(),
+      posologia_padrao: (it.posologia_padrao ?? "").trim() || null,
+    };
+    const motivo = validarApresentacao(item);
+    if (motivo) recusados.push({ apresentacao: item.apresentacao, motivo });
+    else aceitos.push(item);
   }
 
-  const lotes: string[][] = [];
-  for (let i = 0; i < alvo.length; i += TAM_LOTE) lotes.push(alvo.slice(i, i + TAM_LOTE));
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  let processadas = 0;
-  let falhas = 0;
-
-  async function worker(fila: string[][]) {
-    for (const lote of fila) {
-      try {
-        const rows = await simplificarLote({ apiKey: apiKey!, apresentacoes: lote });
-        if (rows.length) {
-          const { error } = await supabaseAdmin
-            .from("apresentacao_legivel")
-            .upsert(rows, { onConflict: "apresentacao" });
-          if (error) throw new Error(error.message);
-          processadas += rows.length;
-        }
-      } catch (err) {
-        falhas++;
-        console.error(
-          "[simplificar-apresentacoes] lote falhou:",
-          err instanceof Error ? err.message : err,
-        );
-      }
-    }
+  if (aceitos.length) {
+    const { error } = await supabaseAdmin
+      .from("apresentacao_legivel")
+      .upsert(aceitos, { onConflict: "apresentacao" });
+    if (error)
+      return Response.json({ error: "write_failed", detail: error.message }, { status: 500 });
   }
 
-  const filas = Array.from({ length: CONCORRENCIA }, (_, k) =>
-    lotes.filter((_, i) => i % CONCORRENCIA === k),
+  const { data: sincronizados, error: syncErr } = await supabaseAdmin.rpc(
+    "sincronizar_apresentacao_legivel",
   );
-  await Promise.all(filas.map(worker));
-
-  // propaga o cache para a tabela de medicamentos
-  const { error: syncErr } = await supabaseAdmin.rpc("sincronizar_apresentacao_legivel");
   if (syncErr) console.error("[simplificar-apresentacoes] sync falhou:", syncErr.message);
 
   return Response.json({
-    pendentes: pendentes.size,
-    processadas,
-    falhas,
-    restantes: Math.max(0, pendentes.size - processadas),
+    gravadas: aceitos.length,
+    recusados,
+    medicamentos_atualizados: sincronizados ?? null,
   });
 }
 
 export const Route = createFileRoute("/api/medicamentos/simplificar-apresentacoes")({
   server: {
     handlers: {
-      POST: async ({ request }) => handle(request),
+      GET: async ({ request }) => listarPendentes(request),
+      POST: async ({ request }) => importar(request),
     },
   },
 });
