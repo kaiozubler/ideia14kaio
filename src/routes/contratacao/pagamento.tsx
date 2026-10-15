@@ -18,7 +18,7 @@ import {
 
 export const Route = createFileRoute("/contratacao/pagamento")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Pagamento | MediCopilot" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Pagamento | MediCopilot" }, { name: "description", content: "Conclua o pagamento do seu plano MediCopilot." }, { property: "og:title", content: "Pagamento | MediCopilot" }, { property: "og:description", content: "Conclua o pagamento do seu plano MediCopilot." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
   component: PaginaPagamento,
 });
 

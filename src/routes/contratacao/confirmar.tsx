@@ -19,7 +19,7 @@ import {
 
 export const Route = createFileRoute("/contratacao/confirmar")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Confirme seu plano | MediCopilot" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Confirme seu plano | MediCopilot" }, { name: "description", content: "Revise o plano escolhido para sua clínica no MediCopilot." }, { property: "og:title", content: "Confirme seu plano | MediCopilot" }, { property: "og:description", content: "Revise o plano escolhido para sua clínica no MediCopilot." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
   component: PaginaConfirmar,
 });
 

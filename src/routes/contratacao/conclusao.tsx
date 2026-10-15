@@ -8,7 +8,7 @@ import { PLANOS_BASE, PLANO_PADRAO, WHATSAPP_COMERCIAL, formatarPreco, precoAnua
 
 export const Route = createFileRoute("/contratacao/conclusao")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Pedido recebido | MediCopilot" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Pedido recebido | MediCopilot" }, { name: "description", content: "Acompanhe a conclusão da contratação do MediCopilot." }, { property: "og:title", content: "Pedido recebido | MediCopilot" }, { property: "og:description", content: "Acompanhe a conclusão da contratação do MediCopilot." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
   component: PaginaConclusao,
 });
 
