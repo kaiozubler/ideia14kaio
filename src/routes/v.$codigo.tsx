@@ -23,6 +23,10 @@ export const Route = createFileRoute("/v/$codigo")({
   head: () => ({
     meta: [
       { title: "Verificar documento | MediCopilot" },
+      { property: "og:title", content: "Verificar documento | MediCopilot" },
+      { property: "og:description", content: "Confira a autenticidade e a assinatura digital do documento emitido pela sua clínica." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       {
         name: "description",
         content:

@@ -1,4 +1,4 @@
-import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
+import { createFileRoute, redirect, useRouter, type ErrorComponentProps } from "@tanstack/react-router";
 import { useState } from "react";
 import { ShieldCheck, CalendarDays, Workflow } from "lucide-react";
 import { useWebMCP } from "use-webmcp-tool";
@@ -35,12 +35,12 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
   errorComponent: ConsentError,
 });
 
-function ConsentError({ error, reset }: { error: Error; reset: () => void }) {
+function ConsentError({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   return <main className="min-h-screen bg-background px-6 py-16 text-foreground"><div className="mx-auto max-w-md space-y-5">
     <ShieldCheck className="size-10 text-primary" /><h1 className="text-2xl font-semibold">Autorização indisponível</h1>
     <p role="alert" className="text-muted-foreground">{error.message}</p>
-    <Button variant="outline" onClick={() => { reset(); void router.invalidate(); }}>Tentar novamente</Button>
+    <Button variant="outline" onClick={() => { reset?.(); void router.invalidate(); }}>Tentar novamente</Button>
   </div></main>;
 }
 
@@ -49,7 +49,7 @@ function Consent() {
   const { authorization_id } = Route.useSearch();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const name = details.client.name ?? "Assistente";
+  const name = details?.client.name ?? "Assistente";
   useWebMCP({
     name: "read_integration_request",
     description: "Lê o nome do assistente e as permissões mostradas neste pedido, sem autorizar o acesso.",
@@ -73,7 +73,7 @@ function Consent() {
   return <main className="min-h-screen bg-background px-6 py-16 text-foreground"><div className="mx-auto max-w-md space-y-6">
     <ShieldCheck className="size-10 text-primary" /><p className="text-sm font-medium text-muted-foreground">MediCopilot · Integrações</p>
     <h1 className="break-words text-2xl font-semibold">Conectar {name}?</h1>
-    <p className="break-all text-sm text-muted-foreground">Conta: {details.user.email}</p>
+    <p className="break-all text-sm text-muted-foreground">Conta: {details?.user.email}</p>
     <ul className="space-y-4 border-y border-border py-5">
       <li className="flex gap-3"><CalendarDays className="size-5 shrink-0 text-primary" /><span>Consultar sua agenda</span></li>
       <li className="flex gap-3"><Workflow className="size-5 shrink-0 text-primary" /><span>Consultar títulos e situação dos protocolos</span></li>

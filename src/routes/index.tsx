@@ -5,9 +5,11 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "MediCopilot" },
-      { name: "description", content: "MediCopilot MVP" },
+      { name: "description", content: "Agenda, prontuários e assistência clínica no MediCopilot." },
       { property: "og:title", content: "MediCopilot" },
-      { property: "og:description", content: "MediCopilot MVP" },
+      { property: "og:description", content: "Agenda, prontuários e assistência clínica no MediCopilot." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Index,
