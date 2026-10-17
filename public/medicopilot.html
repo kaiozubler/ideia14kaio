@@ -6335,7 +6335,7 @@ const {error}=await sb.auth.signUp({email,password:pass,options:{data:{name_user
                                                                   const {error}=await sb.auth.signInWithPassword({email,password:pass});
                                                                   if(error)throw error;
                                                                 }
-                                                              }catch(e){authError(e.message||'Erro ao autenticar.');btn.disabled=false;btn.innerHTML=(authMode==='signin'?'Entrar':'Criar conta')+' <i class="ti ti-arrow-right"></i>';}
+                                                              }catch(e){authError(/banned/i.test(e.message||'')?MSG_ACESSO_SUSPENSO:(e.message||'Erro ao autenticar.'));btn.disabled=false;btn.innerHTML=(authMode==='signin'?'Entrar':'Criar conta')+' <i class="ti ti-arrow-right"></i>';}
                                                             }
                                                             async function logout(){await sb.auth.signOut();location.reload();}
 
@@ -6434,8 +6434,26 @@ const {error}=await sb.auth.signUp({email,password:pass,options:{data:{name_user
                                                             if(error)return {data:null,error};
                                                             return sb.from('pacientes_cadastro').select('*').eq('paciente_id',pid).single();
                                                             }
+                                                            // Acesso suspenso pelo Zubler CRM (acessos_bloqueados): sai da conta e
+                                                            // mostra o aviso na tela de login, que volta depois do reload do SIGNED_OUT.
+                                                            const MSG_ACESSO_SUSPENSO='Seu acesso está suspenso. Fale com o suporte Zubler.';
+                                                            async function acessoSuspenso(uid){
+                                                            const {data,error}=await sb.rpc('acesso_bloqueado',{uid});
+                                                            if(error){console.warn('[acesso] acesso_bloqueado indisponível:',error.message);return false;}
+                                                            return data===true;
+                                                            }
+                                                            async function sairPorSuspensao(){
+                                                            try{sessionStorage.setItem('acessoSuspenso','1');}catch(e){}
+                                                            await sb.auth.signOut();
+                                                            showAuthGate();authError(MSG_ACESSO_SUSPENSO);
+                                                            }
+                                                            function avisoSuspensaoPendente(){
+                                                            let p=false;try{p=sessionStorage.getItem('acessoSuspenso')==='1';sessionStorage.removeItem('acessoSuspenso');}catch(e){}
+                                                            if(p)authError(MSG_ACESSO_SUSPENSO);
+                                                            }
                                                             async function entrarNoApp(session){
                                                             currentUser=session.user;
+                                                            if(await acessoSuspenso(session.user.id)){await sairPorSuspensao();return;}
                                                             await carregarAcessoClinica();
                                                             if(CLINICA.papel==='inativo'){mostrarAcessoDesativado();return;}
                                                             showApp();
@@ -6446,7 +6464,7 @@ const {error}=await sb.auth.signUp({email,password:pass,options:{data:{name_user
                                                             async function bootstrap(){
                                                         const {data}=await sb.auth.getSession();
                                                         if(data.session){await entrarNoApp(data.session);}
-                                                        else{showAuthGate();conviteMostrarNoLogin();}
+                                                        else{showAuthGate();avisoSuspensaoPendente();conviteMostrarNoLogin();}
                                                         sb.auth.onAuthStateChange((event,session)=>{
                                                           if(event==='SIGNED_IN'&&session){entrarNoApp(session);}
                                                           if(event==='SIGNED_OUT'){anamneseModelsCache=null;location.reload();}

@@ -2291,6 +2291,21 @@ function App() {
   const [loginError, setLoginError] = useState(null);
   const [loggingIn, setLoggingIn] = useState(false);
 
+  // Acesso suspenso pelo Zubler CRM: sai da conta em vez de abrir o Studio.
+  const MSG_SUSPENSO = "Seu acesso está suspenso. Fale com o suporte Zubler.";
+  async function aplicarSessao(s) {
+    if (s) {
+      const { data, error } = await supabaseClient.rpc("acesso_bloqueado", { uid: s.user.id });
+      if (!error && data === true) {
+        await supabaseClient.auth.signOut();
+        setLoginError(MSG_SUSPENSO);
+        setSession(null);
+        return;
+      }
+    }
+    setSession(s);
+  }
+
   useEffect(() => {
     if (!supabaseClient) { setSession(null); return; }
 
@@ -2303,12 +2318,15 @@ function App() {
     if (at && rt) {
       history.replaceState(null, "", location.pathname + location.search); // tira o token da URL/histórico
       supabaseClient.auth.setSession({ access_token: at, refresh_token: rt })
-        .then(({ data }) => setSession(data?.session || null));
+        .then(({ data }) => aplicarSessao(data?.session || null));
     } else {
-      supabaseClient.auth.getSession().then(({ data }) => setSession(data?.session || null));
+      supabaseClient.auth.getSession().then(({ data }) => aplicarSessao(data?.session || null));
     }
 
-    const { data: sub } = supabaseClient.auth.onAuthStateChange((_event, s) => setSession(s));
+    const { data: sub } = supabaseClient.auth.onAuthStateChange((event, s) => {
+      if (event === "SIGNED_IN") aplicarSessao(s);
+      else setSession(s);
+    });
     return () => sub?.subscription?.unsubscribe();
   }, []);
 
@@ -2330,7 +2348,7 @@ function App() {
       e.preventDefault();
       setLoggingIn(true); setLoginError(null);
       const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-      if (error) setLoginError(error.message);
+      if (error) setLoginError(/banned/i.test(error.message) ? MSG_SUSPENSO : error.message);
       setLoggingIn(false);
     }
     return (
