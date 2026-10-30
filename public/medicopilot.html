@@ -2212,6 +2212,8 @@
       .lg-foot a{color:#16a34a;font-weight:600;text-decoration:none;margin-left:4px}
       @media(max-width:560px){.lg-safe{display:none}.lg-card{padding:28px 20px}}
     </style>
+    <link rel="stylesheet" href="tema-escuro.css?v=1" />
+    <script src="tema-escuro.js?v=1"></script>
   </head>
   <body>
     <div id="toast" class="toast"></div>
@@ -2328,6 +2330,9 @@
           </div>
         </nav>
         <div class="sb-footer">
+          <div class="sb-item sb-tema" id="nav-tema" onclick="MCTema.alternar()">
+            <i class="ti ti-moon"></i><i class="ti ti-sun"></i><span class="sb-lbl" id="nav-tema-lbl">Modo escuro</span>
+          </div>
           <div class="sb-item" id="nav-configuracoes" onclick="goScreen('configuracoes')">
             <i class="ti ti-settings"></i><span class="sb-lbl">Configurações</span>
             <button class="sb-logout-badge" id="nav-logout" onclick="event.stopPropagation();logout()" title="Sair">
@@ -6561,6 +6566,7 @@ const {error}=await sb.auth.signUp({email,password:pass,options:{data:{name_user
                                                             }
                                                             async function entrarNoApp(session){
                                                             currentUser=session.user;
+                                                            MCTema.doUsuario(session.user);
                                                             if(await acessoSuspenso(session.user.id)){await sairPorSuspensao();return;}
                                                             await carregarAcessoClinica();
                                                             if(CLINICA.papel==='inativo'){mostrarAcessoDesativado();return;}
