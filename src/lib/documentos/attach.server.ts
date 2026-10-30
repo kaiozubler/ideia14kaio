@@ -15,8 +15,17 @@ export async function getDoctorInfo(db: Db, medicoId: string | null): Promise<Do
     const meta = (data.user.user_metadata || {}) as Record<string, unknown>;
     const name =
       (meta.full_name as string) || (meta.name as string) || data.user.email?.split("@")[0] || "Médico responsável";
-    const crm = (meta.crm as string) || (meta.CRM as string) || null;
-    const especialidade = (meta.especialidade as string) || (meta.specialty as string) || null;
+    // Minha equipe grava crm_numero/crm_uf; crm/CRM são de contas antigas.
+    const crmNumero = String(meta.crm_numero || "").trim();
+    const crm = crmNumero
+      ? meta.crm_uf
+        ? `${crmNumero}/${meta.crm_uf}`
+        : crmNumero
+      : (meta.crm as string) || (meta.CRM as string) || null;
+    // Especialidade só com RQE (Res. CFM 2.336/2023), como em _medicoEspecialidade.
+    const esp = String(meta.especialidade || meta.specialty || "").trim();
+    const rqe = String(meta.rqe || "").trim();
+    const especialidade = esp && rqe ? `${esp} · RQE ${rqe}` : null;
     return { name, crm, especialidade };
   } catch {
     return { name: "Médico responsável" };
