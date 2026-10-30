@@ -115,6 +115,10 @@
                                                       .sb-logout-badge .ti{font-size:19px;color:#dc2626}
                                                       .sb-logout-badge:hover .ti{color:#b91c1c}
                                                       .sidebar:hover .sb-logout-badge{display:flex}
+                                                      .sb-tema-badge{position:absolute;top:50%;right:38px;transform:translateY(-50%);width:30px;height:30px;border-radius:8px;background:transparent;border:none;color:var(--n400);display:none;align-items:center;justify-content:center;cursor:pointer;padding:0;z-index:2}
+                                                      .sb-tema-badge .ti{font-size:18px}
+                                                      .sb-tema-badge:hover{color:var(--n700);background:var(--n100)}
+                                                      .sidebar:hover .sb-tema-badge{display:flex}
                                                       .sb-group{overflow:hidden}
                                                       .sb-sub{max-height:0;overflow:hidden;transition:max-height .2s ease}
                                                       .sb-group.open .sb-sub{max-height:240px}
@@ -2212,8 +2216,8 @@
       .lg-foot a{color:#16a34a;font-weight:600;text-decoration:none;margin-left:4px}
       @media(max-width:560px){.lg-safe{display:none}.lg-card{padding:28px 20px}}
     </style>
-    <link rel="stylesheet" href="tema-escuro.css?v=1" />
-    <script src="tema-escuro.js?v=1"></script>
+    <link rel="stylesheet" href="tema-escuro.css?v=2" />
+    <script src="tema-escuro.js?v=2"></script>
   </head>
   <body>
     <div id="toast" class="toast"></div>
@@ -2330,11 +2334,11 @@
           </div>
         </nav>
         <div class="sb-footer">
-          <div class="sb-item sb-tema" id="nav-tema" onclick="MCTema.alternar()">
-            <i class="ti ti-moon"></i><i class="ti ti-sun"></i><span class="sb-lbl" id="nav-tema-lbl">Modo escuro</span>
-          </div>
           <div class="sb-item" id="nav-configuracoes" onclick="goScreen('configuracoes')">
             <i class="ti ti-settings"></i><span class="sb-lbl">Configurações</span>
+            <button class="sb-tema-badge" id="nav-tema" onclick="event.stopPropagation();MCTema.alternar()" title="Modo escuro">
+              <i class="ti ti-moon"></i><i class="ti ti-sun"></i>
+            </button>
             <button class="sb-logout-badge" id="nav-logout" onclick="event.stopPropagation();logout()" title="Sair">
               <i class="ti ti-door-exit"></i>
             </button>
