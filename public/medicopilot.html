@@ -22,7 +22,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="integra-bry-connect.js" defer></script>
     <script src="paciente-protocolos.js" defer></script>
-    <script src="equipe.js?v=2" defer></script>
+    <script src="equipe.js?v=3" defer></script>
     <script src="receituario-controlado.js" defer></script>
     <link rel="stylesheet" href="protocolos.css?v=2" />
     <script src="protocolos.js?v=2" defer></script>
@@ -64,7 +64,7 @@
     </script>
     <link rel="stylesheet" href="base-conhecimento.css?v=1" />
     <script src="base-conhecimento.js?v=1" defer></script>
-    <script src="prontuario-exportar.js?v=1" defer></script>
+    <script src="prontuario-exportar.js?v=3" defer></script>
     <link rel="stylesheet" href="mapa-familiar.css" />
     <style>
                                                       *{box-sizing:border-box;margin:0;padding:0}
@@ -2794,6 +2794,7 @@
                 <div class="fld"><label>Cartão SUS</label><input type="text" id="d-sus" /></div>
                 <div class="fld"><label>Nome da mãe</label><input type="text" id="d-mae" /></div>
                 <div class="fld"><label>Nome do pai</label><input type="text" id="d-pai" /></div>
+                <div class="fld"><label>Naturalidade</label><input type="text" id="d-natural" placeholder="Município/UF de nascimento" /></div>
               </div>
 
               <div class="sec-hd">Contato</div>
@@ -4722,6 +4723,7 @@
             </div>
             <div class="fld"><label>Nome da mãe</label><input type="text" id="np-mae" /></div>
             <div class="fld"><label>Nome do pai</label><input type="text" id="np-pai" /></div>
+            <div class="fld"><label>Naturalidade</label><input type="text" id="np-natural" placeholder="Município/UF de nascimento" /></div>
             <div class="fld wide">
               <label>Endereço</label><input type="text" id="np-end" placeholder="Rua, nº — Bairro, Cidade, UF" />
             </div>
@@ -6386,6 +6388,22 @@
                                                             const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);window.sb=sb;
                                                             let currentUser=null;
                                                             function getCurrentUser(){ return currentUser; }
+                                                            // CRM do médico como "000000/UF". Minha equipe grava crm_numero/crm_uf;
+                                                            // crm/CRM ficam como fallback de contas antigas.
+                                                            function _medicoCrm(meta){
+                                                              meta=meta||{};
+                                                              const num=String(meta.crm_numero||'').trim();
+                                                              if(num) return meta.crm_uf ? num+'/'+meta.crm_uf : num;
+                                                              return String(meta.crm||meta.CRM||'').trim();
+                                                            }
+                                                            // Especialidade só sai nos documentos com o RQE (Res. CFM 2.336/2023 veda
+                                                            // anunciar especialidade sem registro de qualificação).
+                                                            function _medicoEspecialidade(meta){
+                                                              meta=meta||{};
+                                                              const esp=String(meta.especialidade||meta.specialty||'').trim();
+                                                              const rqe=String(meta.rqe||'').trim();
+                                                              return esp&&rqe ? esp+' · RQE '+rqe : '';
+                                                            }
                                                             let authMode='signin'; // 'signin' | 'signup'
                                                             let gruposCache=[];
 
@@ -6404,7 +6422,7 @@
                                                                 dob:dateToBR(p.data_nascimento),
                                                                 nasc:p.data_nascimento||'',
                                                                 tel:p.telefone||'—',init:patientInitials(p.name),
-                                                                conv:p.convenio||'Particular',sus:p.sus||'—',email:p.email||'',mae:p.mae||'',pai:p.pai||'',end:p.endereco||'—',sexo:p.sexo||'',medico:p.medico||'',
+                                                                conv:p.convenio||'Particular',sus:p.sus||'—',email:p.email||'',mae:p.mae||'',pai:p.pai||'',naturalidade:p.naturalidade||'',end:p.endereco||'—',sexo:p.sexo||'',medico:p.medico||'',
                                                                  grupo:p.grupo||'',ocup:p.ocupacao||'',cpf:p.cpf||'',dadosClinicos:p.dados_clinicos||'',infoComp:p.info_complementar||{},updated_at:p.updated_at||p.created_at||null
                                                                  ,cids:Array.isArray(p.cids)?p.cids:[]
                                                                  ,parentescos:Array.isArray(p.parentescos)?p.parentescos:[]
@@ -7934,6 +7952,7 @@ const tri=document.getElementById('cli-triagem');if(tri)tri.checked=CLINICA.tria
                                                         document.getElementById('d-cpf').value=formatCPF(currentPatient.cpf);
                                                         document.getElementById('d-mae').value=currentPatient.mae;
                                                         document.getElementById('d-pai').value=currentPatient.pai;
+                                                        document.getElementById('d-natural').value=currentPatient.naturalidade||'';
                                                         document.getElementById('d-cep').value=currentPatient.cep||'';
                                                         document.getElementById('d-log').value=currentPatient.logradouro||'';
                                                         document.getElementById('d-num').value=currentPatient.numero||'';
@@ -8069,6 +8088,7 @@ const tri=document.getElementById('cli-triagem');if(tri)tri.checked=CLINICA.tria
                                                                 cpf:document.getElementById('d-cpf')?.value.trim()||null,
                                                                 mae:document.getElementById('d-mae')?.value.trim()||null,
                                                                 pai:document.getElementById('d-pai')?.value.trim()||null,
+                                                                naturalidade:document.getElementById('d-natural')?.value.trim()||null,
                                                                 cep:addr.cep||null,
                                                                 logradouro:addr.logradouro||null,
                                                                 numero:addr.numero||null,
@@ -9480,6 +9500,7 @@ if(ehMembroEquipe()&&name!=='cadastro'){name='cadastro';el=null;}
                                                               setV('d-email',currentPatient.email);
                                                               setV('d-mae',currentPatient.mae);
                                                               setV('d-pai',currentPatient.pai);
+                                                              setV('d-natural',currentPatient.naturalidade);
                                                               setV('d-cep',currentPatient.cep);
                                                               setV('d-log',currentPatient.logradouro);
                                                               setV('d-num',currentPatient.numero);
@@ -12248,8 +12269,8 @@ if(d.action){
                     const u=(typeof currentUser!=='undefined')?(currentUser||{}):{};
                     const meta=u.user_metadata||{};
                     const doctorName=meta.full_name||meta.name||meta.name_user||(u.email||'').split('@')[0]||'Médico responsável';
-                    const doctorCrm=meta.crm||meta.CRM||'—';
-                    const doctorSpec=meta.especialidade||meta.specialty||'';
+                    const doctorCrm=_medicoCrm(meta)||'—';
+                    const doctorSpec=_medicoEspecialidade(meta);
                     const clinicName=clinic.fantasia||clinic.razao||'Clínica';
                     const cidadeUf=[clinic.cidade,clinic.uf].filter(Boolean).join('/');
                     const addr=[[clinic.logradouro,clinic.numero].filter(Boolean).join(', '),clinic.complemento,clinic.bairro,cidadeUf,clinic.cep?('CEP '+clinic.cep):''].filter(Boolean).join(' · ');
@@ -12321,8 +12342,8 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                     const u=(typeof currentUser!=='undefined')?(currentUser||{}):{};
                     const meta=u.user_metadata||{};
                     const doctorName=meta.full_name||meta.name||meta.name_user||(u.email||'').split('@')[0]||'Médico responsável';
-                    const doctorCrm=meta.crm||meta.CRM||'—';
-                    const doctorSpec=meta.especialidade||meta.specialty||'';
+                    const doctorCrm=_medicoCrm(meta)||'—';
+                    const doctorSpec=_medicoEspecialidade(meta);
                     const clinicName=clinic.fantasia||clinic.razao||'Clínica';
                     const cidadeUf=[clinic.cidade,clinic.uf].filter(Boolean).join('/');
                     const addr=[[clinic.logradouro,clinic.numero].filter(Boolean).join(', '),clinic.complemento,clinic.bairro,cidadeUf,clinic.cep?('CEP '+clinic.cep):''].filter(Boolean).join(' · ');
@@ -14262,7 +14283,7 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                             }
                                                             function closeResumoPanel(){document.getElementById('resumo-panel').classList.remove('open');}
                                                             function copyResumo(){
-                                                              ['np-nome','np-cpf','np-dob','np-tel','np-email','np-sus','np-mae','np-pai','np-cep','np-log','np-num','np-compl','np-bairro','np-cidade','np-uf'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+                                                              ['np-nome','np-cpf','np-dob','np-tel','np-email','np-sus','np-mae','np-pai','np-natural','np-cep','np-log','np-num','np-compl','np-bairro','np-cidade','np-uf'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
                                                                 const npPais=document.getElementById('np-pais');if(npPais)npPais.value='Brasil';
                                                               navigator.clipboard.writeText(txt).catch(()=>{});
                                                               const btn=event.target.closest('button');
@@ -14358,7 +14379,7 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                               document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
                                                               const m=document.getElementById('m-'+name);if(m)m.style.display='flex';
                                                               if(name==='new-patient'){
-                                                                ['np-nome','np-cpf','np-dob','np-tel','np-email','np-sus','np-mae','np-pai','np-end'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+                                                                ['np-nome','np-cpf','np-dob','np-tel','np-email','np-sus','np-mae','np-pai','np-natural','np-end'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
                                                                 ['np-conv','np-sexo','np-medico'].forEach(id=>{const el=document.getElementById(id);if(el)el.selectedIndex=0;});
                                                                 const g=document.getElementById('np-grupo');if(g){populateGrupoSelect(g);g.value='';}
                                                               }
@@ -15978,7 +15999,7 @@ let rxSelected = [];
                                                               const u = currentUser || {};
                                                               const meta = u.user_metadata || {};
                                                               const doctorName = meta.full_name || meta.name || (u.email || '').split('@')[0] || 'Médico responsável';
-                                                              const doctorCrm  = meta.crm || meta.CRM || '—';
+                                                              const doctorCrm  = _medicoCrm(meta) || '—';
                                                               const clinicName = clinic.fantasia || clinic.razao || 'Clínica';
                                                               const cidadeUf   = [clinic.cidade, clinic.uf].filter(Boolean).join('/');
                                                               const addr = [
@@ -16127,8 +16148,8 @@ let rxSelected = [];
                                                   const u = currentUser || {};
                                                   const meta = u.user_metadata || {};
                                                   const doctorName  = meta.full_name || meta.name || (u.email || '').split('@')[0] || 'Médico responsável';
-                                                  const doctorCrm   = meta.crm || meta.CRM || '—';
-                                                  const doctorSpec  = meta.especialidade || meta.specialty || '';
+                                                  const doctorCrm   = _medicoCrm(meta) || '—';
+                                                  const doctorSpec  = _medicoEspecialidade(meta);
                                                   const clinicName  = clinic.fantasia || clinic.razao || 'Clínica';
                                                   const cidadeUf    = [clinic.cidade, clinic.uf].filter(Boolean).join('/');
                                                   const addr = [
@@ -17456,7 +17477,7 @@ let rxSelected = [];
                                                   let clinic = {}; try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
                                                   const u = currentUser || {};
                                                   const meta = u.user_metadata || {};
-                                                  const doctorCrm = meta.crm || meta.CRM || '';
+                                                  const doctorCrm = _medicoCrm(meta);
                                                   const cidadeUf = [clinic.cidade, clinic.uf].filter(Boolean).join('/');
                                                   const addr = [
                                                     [clinic.logradouro, clinic.numero].filter(Boolean).join(', '),
@@ -17870,8 +17891,8 @@ let rxSelected = [];
                                                   const u = currentUser || {};
                                                   const meta = u.user_metadata || {};
                                                   const doctorName  = meta.full_name || meta.name || (u.email || '').split('@')[0] || 'Médico responsável';
-                                                  const doctorCrm   = meta.crm || meta.CRM || '—';
-                                                  const doctorSpec  = meta.especialidade || meta.specialty || '';
+                                                  const doctorCrm   = _medicoCrm(meta) || '—';
+                                                  const doctorSpec  = _medicoEspecialidade(meta);
                                                   const clinicName  = clinic.fantasia || clinic.razao || 'Clínica';
                                                   const cidadeUf    = [clinic.cidade, clinic.uf].filter(Boolean).join('/');
                                                   const addr = [
@@ -18641,6 +18662,7 @@ let rxSelected = [];
                                                                 sus:val('np-sus')||null,
                                                                 mae:val('np-mae')||null,
                                                                 pai:val('np-pai')||null,
+                                                                naturalidade:val('np-natural')||null,
                                                                 endereco:val('np-end')||null,
                                                                 convenio:val('np-conv')||'Particular',
                                                                 sexo:val('np-sexo')||null,
@@ -18945,7 +18967,7 @@ let rxSelected = [];
                                                                 if(typeof showToast==='function')showToast('Erro ao excluir prompt: '+(e.message||e),'error');
                                                                 else alert('Erro ao excluir prompt: '+(e.message||e));
                                                               }
-                                                            document.getElementById('d-pai').value='';
+                                                            document.getElementById('d-pai').value='';document.getElementById('d-natural').value='';
                                                               ['d-cep','d-log','d-num','d-compl','d-bairro','d-cidade','d-uf'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
                                                               document.getElementById('d-pais').value='Brasil';
                                                             }
@@ -18969,7 +18991,7 @@ let rxSelected = [];
                                                               document.getElementById('print-sub2').textContent='';document.getElementById('print-sub3').textContent='';
                                                               document.getElementById('d-nome').value='';document.getElementById('d-tel').value='';
                                                               document.getElementById('d-email').value='';document.getElementById('d-cpf').value='';document.getElementById('d-mae').value='';
-                                                              document.getElementById('d-pai').value='';document.getElementById('d-end').value='';
+                                                              document.getElementById('d-pai').value='';document.getElementById('d-natural').value='';document.getElementById('d-end').value='';
                                                               document.getElementById('d-nasc').value='';document.getElementById('d-sus').value='';
 const de=document.getElementById('np-end');if(de)de.value='';
                                                               const cv=document.getElementById('d-conv');if(cv)cv.value='Particular';

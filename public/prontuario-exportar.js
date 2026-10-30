@@ -120,6 +120,21 @@
     return isNaN(d) ? String(v) : d.toLocaleDateString("pt-BR");
   };
   const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+
+  // O PDF só sai com CPF válido: a verificação por QR (/v/<codigo>) usa os 4
+  // últimos dígitos como senha e a reserva não acontece sem os 11 dígitos.
+  function cpfValido(v) {
+    const c = String(v || "").replace(/\D/g, "");
+    if (c.length !== 11 || /^(\d)\1+$/.test(c)) return false;
+    for (let t = 9; t < 11; t++) {
+      let s = 0;
+      for (let i = 0; i < t; i++) s += Number(c[i]) * (t + 1 - i);
+      if (((s * 10) % 11) % 10 !== Number(c[t])) return false;
+    }
+    return true;
+  }
+  const AVISO_CPF =
+    "Preencha um CPF válido no cadastro do paciente para exportar ou imprimir o prontuário";
   function fmtValor(campo, v) {
     if (v == null || v === "") return "";
     if (campo === "cids" && Array.isArray(v)) {
@@ -383,6 +398,10 @@
       toast("Abra um paciente para exportar o prontuário", "warn");
       return;
     }
+    if (!cpfValido(p.cpf)) {
+      toast(AVISO_CPF, "warn");
+      return;
+    }
     $("pexp-de").value = (opts && opts.de) || "";
     $("pexp-ate").value = (opts && opts.ate) || "";
     $("pexp-internas").checked = false;
@@ -461,6 +480,13 @@
 
   const linha = (rot, val) =>
     val ? '<div class="pex-l"><span>' + esc(rot) + ":</span> " + esc(val) + "</div>" : "";
+  // Campos exigidos pela Res. CFM 1.638/2002: a ausência aparece no PDF em vez de sumir.
+  const obrig = (rot, val) =>
+    '<div class="pex-l"><span>' +
+    esc(rot) +
+    ":</span> " +
+    (val ? esc(val) : '<i style="color:#b45309">não informado</i>') +
+    "</div>";
   const blocoTexto = (rot, txt) =>
     txt
       ? '<div class="pex-t"><div class="pex-tr">' +
@@ -504,7 +530,37 @@
     );
   }
 
-  function montarHtml(dados, { de, ate, internas }) {
+  // Estabelecimento e médico responsável, das mesmas fontes do cabeçalho do PDF
+  // (Minha clínica em clinicaCfg e o perfil de Minha equipe).
+  function responsavel() {
+    let c = {};
+    try {
+      c = JSON.parse(localStorage.getItem("clinicaCfg") || "{}") || {};
+    } catch (e) {}
+    const u = (window.getCurrentUser && window.getCurrentUser()) || {};
+    const m = u.user_metadata || {};
+    const crm = window._medicoCrm ? window._medicoCrm(m) : m.crm || "";
+    return {
+      razao: c.razao || "",
+      fantasia: c.fantasia || "",
+      fiscal: c.fiscal || "",
+      endereco: [
+        [c.logradouro, c.numero].filter(Boolean).join(", "),
+        c.complemento,
+        c.bairro,
+        [c.cidade, c.uf].filter(Boolean).join("/"),
+        c.cep ? "CEP " + c.cep : "",
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      telefone: c.telefone || "",
+      medico: m.full_name || m.name || (u.email || "").split("@")[0] || "",
+      crm,
+      especialidade: m.especialidade || m.specialty || "",
+    };
+  }
+
+  function montarHtml(dados, { de, ate, internas, responsavel: r }) {
     const p = dados.paciente;
     const V = dados.versoes;
     const periodo =
@@ -555,16 +611,33 @@
     );
 
     s.push(
+      secao("Estabelecimento e profissional responsável", [
+        '<div class="pex-item">' +
+          obrig("Estabelecimento", r.razao || r.fantasia) +
+          (r.razao && r.fantasia && r.fantasia !== r.razao
+            ? linha("Nome fantasia", r.fantasia)
+            : "") +
+          obrig("CNPJ/CPF", r.fiscal) +
+          obrig("Endereço", r.endereco) +
+          linha("Telefone", r.telefone) +
+          obrig("Médico responsável", r.medico) +
+          obrig("CRM/UF", r.crm) +
+          linha("Especialidade", r.especialidade) +
+          "</div>",
+      ]),
+    );
+
+    s.push(
       secao("Identificação do paciente", [
         '<div class="pex-item">' +
-          linha("Nome", p.name) +
-          linha("Data de nascimento", fmtData(p.data_nascimento)) +
-          linha("Sexo", p.sexo) +
-          linha("CPF", p.cpf) +
+          obrig("Nome completo", p.name) +
+          obrig("Data de nascimento", fmtData(p.data_nascimento)) +
+          obrig("Sexo", p.sexo) +
+          obrig("CPF", p.cpf) +
           linha("CNS", p.sus) +
-          linha("Mãe", p.mae) +
+          obrig("Nome da mãe", p.mae) +
           linha("Pai", p.pai) +
-          linha("Endereço", endereco) +
+          obrig("Endereço", endereco) +
           linha("Telefone", p.telefone) +
           linha("Convênio", p.convenio) +
           linha("Ocupação", p.ocupacao) +
@@ -599,7 +672,12 @@
           "</div>" +
           '<div class="pex-meta">' +
           esc(fmtDataHora(c.started_at) + fim) +
-          (autorOriginal(vs) ? " · Registrado por " + esc(autorOriginal(vs)) : "") +
+          // A equipe não grava atendimentos (RLS): sem autor na versão, o registro é do médico da conta.
+          " · Registrado por " +
+          esc(
+            autorOriginal(vs) ||
+              [r.medico, r.crm ? "CRM " + r.crm : ""].filter(Boolean).join(" — "),
+          ) +
           "</div>" +
           (notas
             ? '<div class="pex-tt">' + esc(notas) + "</div>"
@@ -755,6 +833,11 @@
       status("Reunindo os registros do prontuário…");
       const dados = await carregar(p.id, de, ate);
       const pac = dados.paciente;
+      // O cadastro em tela pode estar desatualizado: vale o CPF gravado no banco.
+      if (!cpfValido(pac.cpf)) {
+        toast(AVISO_CPF, "warn");
+        return;
+      }
       status(assinar ? "Gerando e assinando o PDF…" : "Gerando o PDF…");
       const result = await window._renderDocumentoPdf({
         docTitle: "Prontuário do Paciente",
@@ -764,7 +847,7 @@
         patientCpf: pac.cpf || "",
         patientAddress: pac.endereco || "",
         patientSex: pac.sexo || "",
-        bodyHtml: montarHtml(dados, { de, ate, internas }),
+        bodyHtml: montarHtml(dados, { de, ate, internas, responsavel: responsavel() }),
         filenamePrefix: "prontuario",
         contentDescription: "Prontuário de " + (pac.name || "paciente"),
         assinar,
