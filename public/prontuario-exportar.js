@@ -93,6 +93,7 @@
       cpf: { rotulo: "CPF" },
       sexo: { rotulo: "Sexo" },
       mae: { rotulo: "Mãe" },
+      naturalidade: { rotulo: "Naturalidade" },
       dados_clinicos: { rotulo: "Dados clínicos", texto: true },
       cids: { rotulo: "CIDs" },
     },
@@ -556,7 +557,8 @@
       telefone: c.telefone || "",
       medico: m.full_name || m.name || (u.email || "").split("@")[0] || "",
       crm,
-      especialidade: m.especialidade || m.specialty || "",
+      // Especialidade só com RQE (Res. CFM 2.336/2023), como no cabeçalho do PDF.
+      especialidade: window._medicoEspecialidade ? window._medicoEspecialidade(m) : "",
     };
   }
 
@@ -622,7 +624,7 @@
           linha("Telefone", r.telefone) +
           obrig("Médico responsável", r.medico) +
           obrig("CRM/UF", r.crm) +
-          linha("Especialidade", r.especialidade) +
+          linha("Especialidade / RQE", r.especialidade) +
           "</div>",
       ]),
     );
@@ -636,6 +638,7 @@
           obrig("CPF", p.cpf) +
           linha("CNS", p.sus) +
           obrig("Nome da mãe", p.mae) +
+          obrig("Naturalidade", p.naturalidade) +
           linha("Pai", p.pai) +
           obrig("Endereço", endereco) +
           linha("Telefone", p.telefone) +
