@@ -230,8 +230,8 @@
   function atual(){return ativo?'escuro':'claro';}
 
   function atualizarBotao(){
-    var lbl=document.getElementById('nav-tema-lbl');
-    if(lbl)lbl.textContent=ativo?'Modo claro':'Modo escuro';
+    var btn=document.getElementById('nav-tema');
+    if(btn)btn.title=ativo?'Modo claro':'Modo escuro';
   }
 
   async function alternar(){

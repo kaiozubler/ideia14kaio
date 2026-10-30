@@ -35,6 +35,6 @@ html[data-tema="escuro"] :is(.ia-prev-sheet,[id^="rx-scope-"],[id^="lme-scope-"]
 html.tema-trocando *,html.tema-trocando *::before,html.tema-trocando *::after{transition:none!important}
 
 /* Botão do menu lateral: mostra a lua no claro e o sol no escuro. */
-.sb-tema .ti-sun{display:none}
-html[data-tema="escuro"] .sb-tema .ti-sun{display:inline-block}
-html[data-tema="escuro"] .sb-tema .ti-moon{display:none}
+.sb-tema-badge .ti-sun{display:none}
+html[data-tema="escuro"] .sb-tema-badge .ti-sun{display:inline-block}
+html[data-tema="escuro"] .sb-tema-badge .ti-moon{display:none}
