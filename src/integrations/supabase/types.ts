@@ -1091,6 +1091,7 @@ export type Database = {
           ended_at: string | null
           id: string
           id_medico: string
+          motivo_alteracao: string | null
           nota_personal: string | null
           notas: string | null
           paciente_id: string
@@ -1106,6 +1107,7 @@ export type Database = {
           ended_at?: string | null
           id?: string
           id_medico?: string
+          motivo_alteracao?: string | null
           nota_personal?: string | null
           notas?: string | null
           paciente_id: string
@@ -1121,6 +1123,7 @@ export type Database = {
           ended_at?: string | null
           id?: string
           id_medico?: string
+          motivo_alteracao?: string | null
           nota_personal?: string | null
           notas?: string | null
           paciente_id?: string
@@ -1470,6 +1473,7 @@ export type Database = {
           enviado_em: string | null
           id: string
           id_medico: string
+          motivo_alteracao: string | null
           paciente_cpf: string | null
           paciente_id: string | null
           paciente_nome: string | null
@@ -1487,6 +1491,7 @@ export type Database = {
           enviado_em?: string | null
           id?: string
           id_medico: string
+          motivo_alteracao?: string | null
           paciente_cpf?: string | null
           paciente_id?: string | null
           paciente_nome?: string | null
@@ -1504,6 +1509,7 @@ export type Database = {
           enviado_em?: string | null
           id?: string
           id_medico?: string
+          motivo_alteracao?: string | null
           paciente_cpf?: string | null
           paciente_id?: string | null
           paciente_nome?: string | null
@@ -1713,6 +1719,7 @@ export type Database = {
           data: string | null
           file_name: string | null
           id: string
+          motivo_alteracao: string | null
           nome: string
           obs: string | null
           paciente_id: string
@@ -1735,6 +1742,7 @@ export type Database = {
           data?: string | null
           file_name?: string | null
           id?: string
+          motivo_alteracao?: string | null
           nome: string
           obs?: string | null
           paciente_id: string
@@ -1757,6 +1765,7 @@ export type Database = {
           data?: string | null
           file_name?: string | null
           id?: string
+          motivo_alteracao?: string | null
           nome?: string
           obs?: string | null
           paciente_id?: string
@@ -2855,6 +2864,7 @@ export type Database = {
           logradouro: string | null
           mae: string | null
           medico: string | null
+          motivo_alteracao: string | null
           name: string
           numero: string | null
           ocupacao: string | null
@@ -2886,6 +2896,7 @@ export type Database = {
           logradouro?: string | null
           mae?: string | null
           medico?: string | null
+          motivo_alteracao?: string | null
           name: string
           numero?: string | null
           ocupacao?: string | null
@@ -2917,6 +2928,7 @@ export type Database = {
           logradouro?: string | null
           mae?: string | null
           medico?: string | null
+          motivo_alteracao?: string | null
           name?: string
           numero?: string | null
           ocupacao?: string | null
@@ -2929,6 +2941,51 @@ export type Database = {
           uf?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      prontuario_versoes: {
+        Row: {
+          alterado_em: string
+          alterado_por: string | null
+          alterado_por_nome: string | null
+          dados: Json
+          id: string
+          id_medico: string
+          motivo: string | null
+          operacao: string
+          paciente_id: string | null
+          registro_id: string
+          tabela: string
+          versao: number
+        }
+        Insert: {
+          alterado_em?: string
+          alterado_por?: string | null
+          alterado_por_nome?: string | null
+          dados: Json
+          id?: string
+          id_medico: string
+          motivo?: string | null
+          operacao: string
+          paciente_id?: string | null
+          registro_id: string
+          tabela: string
+          versao: number
+        }
+        Update: {
+          alterado_em?: string
+          alterado_por?: string | null
+          alterado_por_nome?: string | null
+          dados?: Json
+          id?: string
+          id_medico?: string
+          motivo?: string | null
+          operacao?: string
+          paciente_id?: string | null
+          registro_id?: string
+          tabela?: string
+          versao?: number
         }
         Relationships: []
       }
@@ -4007,6 +4064,7 @@ export type Database = {
           id: string
           id_medico: string
           medicamentos: string | null
+          motivo_alteracao: string | null
           observacoes: string | null
           pa_diastolica: number | null
           pa_sistolica: number | null
@@ -4034,6 +4092,7 @@ export type Database = {
           id?: string
           id_medico?: string
           medicamentos?: string | null
+          motivo_alteracao?: string | null
           observacoes?: string | null
           pa_diastolica?: number | null
           pa_sistolica?: number | null
@@ -4061,6 +4120,7 @@ export type Database = {
           id?: string
           id_medico?: string
           medicamentos?: string | null
+          motivo_alteracao?: string | null
           observacoes?: string | null
           pa_diastolica?: number | null
           pa_sistolica?: number | null

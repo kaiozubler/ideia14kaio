@@ -64,6 +64,7 @@
     </script>
     <link rel="stylesheet" href="base-conhecimento.css?v=1" />
     <script src="base-conhecimento.js?v=1" defer></script>
+    <script src="prontuario-exportar.js?v=1" defer></script>
     <link rel="stylesheet" href="mapa-familiar.css" />
     <style>
                                                       *{box-sizing:border-box;margin:0;padding:0}
@@ -2694,6 +2695,9 @@
                 </div>
               </div>
               <div class="pth-actions">
+                <button class="ib" onclick="ProntuarioExport.abrir()" title="Exportar / imprimir prontuário">
+                  <i class="ti ti-printer"></i>
+                </button>
                 <button
                   class="ib"
                   onclick="openMemoriaPaciente()"
@@ -2892,9 +2896,14 @@
                       <i class="ti ti-file-report"></i> Gerar dossiê
                     </button>
                   </div>
-                  <button class="btn primary sm" onclick="handleNovoAtendimentoClick()">
-                    <i class="ti ti-plus"></i> Novo atendimento
-                  </button>
+                  <div style="display:flex;gap:6px">
+                    <button class="btn sm" onclick="ProntuarioExport.abrir()" title="Exportar ou imprimir o prontuário">
+                      <i class="ti ti-printer"></i> Exportar / imprimir
+                    </button>
+                    <button class="btn primary sm" onclick="handleNovoAtendimentoClick()">
+                      <i class="ti ti-plus"></i> Novo atendimento
+                    </button>
+                  </div>
                 </div>
                 <div id="atend-list"></div>
               </div>
@@ -2911,16 +2920,26 @@
                       <div style="font-size:11px;color:var(--n500);margin-top:4px">
                         <i class="ti ti-user-circle" style="font-size:12px"></i> Médico: <span id="adv-medico">—</span>
                       </div>
+                      <button
+                        type="button"
+                        id="adv-editado"
+                        onclick="ProntuarioExport.historicoConsultaAberta()"
+                        style="display:none;margin-top:6px;border:0;background:#fef3c7;color:#92400e;font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;cursor:pointer"
+                      ></button>
                     </div>
                     <div style="display:flex;gap:6px;flex-shrink:0">
-                      <button class="btn sm ghost" title="Ver receita"><i class="ti ti-file-prescription"></i></button>
-                      <button class="btn sm ghost" title="Ver atestado"><i class="ti ti-certificate"></i></button>
-                      <button class="btn sm" title="Imprimir"><i class="ti ti-printer"></i></button>
+                      <button class="btn sm ghost" title="Editar registro (a versão original fica no histórico)" onclick="ProntuarioExport.editarConsultaAberta()"><i class="ti ti-pencil"></i></button>
+                      <button class="btn sm ghost" title="Histórico de versões" onclick="ProntuarioExport.historicoConsultaAberta()"><i class="ti ti-history"></i></button>
+                      <button class="btn sm" title="Imprimir este atendimento" onclick="ProntuarioExport.imprimirConsultaAberta()"><i class="ti ti-printer"></i></button>
                     </div>
                   </div>
                   <div class="notes-block" id="adv-anamnese-block" style="display:none;margin-top:10px">
                     <div class="notes-label"><i class="ti ti-file-text"></i> Anamnese gerada</div>
                     <div class="notes-text" id="adv-anamnese" style="white-space:pre-wrap">—</div>
+                  </div>
+                  <div class="notes-block" id="adv-nota-interna-block" style="display:none;margin-top:10px;background:#fefce8">
+                    <div class="notes-label"><i class="ti ti-lock"></i> Anotação interna</div>
+                    <div class="notes-text" id="adv-nota-interna" style="white-space:pre-wrap">—</div>
                   </div>
                 </div>
                 <div
@@ -5279,6 +5298,95 @@
         <div class="mfoot">
           <button class="btn" onclick="closeModal()">Fechar</button>
           <button class="btn primary"><i class="ti ti-file-export"></i> Exportar PDF</button>
+        </div>
+      </div>
+
+      <!-- EXPORTAR / IMPRIMIR PRONTUÁRIO (public/prontuario-exportar.js) -->
+      <div class="modal" id="m-prontuario-exportar" style="display:none">
+        <div class="mhd">
+          <span class="mhd-title"><i class="ti ti-printer"></i> Exportar / imprimir prontuário</span
+          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody">
+          <div style="font-size:12px;color:var(--n500);line-height:1.5;margin-bottom:12px">
+            Atendimentos, triagens, exames e documentos do período, com a versão original e todas as alterações de cada
+            registro. Deixe as datas em branco para exportar todo o prontuário.
+          </div>
+          <div class="form-grid">
+            <div class="fld"><label>De</label><input type="date" id="pexp-de" /></div>
+            <div class="fld"><label>Até</label><input type="date" id="pexp-ate" /></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px;margin-top:14px">
+            <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer">
+              <input type="checkbox" id="pexp-internas" role="switch" class="cop-switch" style="margin-top:2px" />
+              <span style="display:flex;flex-direction:column;gap:2px">
+                <b style="font-size:12.5px;color:var(--n700)">Incluir anotações internas</b>
+                <span style="font-size:11.5px;color:var(--n500);line-height:1.5">
+                  Anotações internas da consulta e trechos marcados como [NOTA INTERNA].
+                </span>
+              </span>
+            </label>
+            <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer">
+              <input type="checkbox" id="pexp-assinar" role="switch" class="cop-switch" style="margin-top:2px" onchange="ProntuarioExport.atualizarBotoes()" />
+              <span style="display:flex;flex-direction:column;gap:2px">
+                <b style="font-size:12.5px;color:var(--n700)">Assinar digitalmente e enviar ao paciente</b>
+                <span style="font-size:11.5px;color:var(--n500);line-height:1.5">
+                  Assina com o certificado ICP-Brasil, guarda em Documentos e envia pelo WhatsApp da clínica.
+                </span>
+              </span>
+            </label>
+          </div>
+          <div id="pexp-status" style="display:none;margin-top:12px;font-size:12px;color:var(--n500)"></div>
+        </div>
+        <div class="mfoot">
+          <button class="btn" onclick="closeModal()">Cancelar</button>
+          <button class="btn" id="pexp-imprimir" onclick="ProntuarioExport.gerar('imprimir')"><i class="ti ti-printer"></i> Imprimir</button>
+          <button class="btn primary" id="pexp-baixar" onclick="ProntuarioExport.gerar('baixar')"><i class="ti ti-download"></i> Baixar PDF</button>
+          <button class="btn primary" id="pexp-enviar" style="display:none" onclick="ProntuarioExport.gerar('enviar')"><i class="ti ti-signature"></i> Assinar e enviar</button>
+        </div>
+      </div>
+
+      <!-- EDITAR ATENDIMENTO FINALIZADO (versão anterior vai para prontuario_versoes) -->
+      <div class="modal wide" id="m-prontuario-editar" style="display:none">
+        <div class="mhd">
+          <span class="mhd-title"><i class="ti ti-pencil"></i> Editar atendimento</span
+          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody">
+          <div style="font-size:12px;color:#92400e;background:#fef3c7;border-radius:var(--r8);padding:8px 10px;margin-bottom:12px;line-height:1.5">
+            <i class="ti ti-info-circle"></i> O registro não é apagado: a versão atual fica guardada no histórico, com data,
+            autor e motivo, e aparece também na impressão.
+          </div>
+          <div class="form-grid">
+            <div class="fld wide">
+              <label>Prontuário</label>
+              <textarea id="pedit-notas" class="cf-ta" style="min-height:220px"></textarea>
+            </div>
+            <div class="fld wide">
+              <label>Anotação interna <span style="font-weight:400;color:var(--n300)">(opcional)</span></label>
+              <textarea id="pedit-nota-interna" class="cf-ta" style="min-height:70px"></textarea>
+            </div>
+            <div class="fld wide">
+              <label>Motivo da alteração *</label>
+              <input type="text" id="pedit-motivo" maxlength="300" placeholder="Ex.: correção de digitação, complemento do exame físico" />
+            </div>
+          </div>
+        </div>
+        <div class="mfoot">
+          <button class="btn" onclick="closeModal()">Cancelar</button>
+          <button class="btn primary" id="pedit-salvar" onclick="ProntuarioExport.salvarEdicao()"><i class="ti ti-device-floppy"></i> Salvar alteração</button>
+        </div>
+      </div>
+
+      <!-- HISTÓRICO DE VERSÕES DE UM REGISTRO -->
+      <div class="modal wide" id="m-prontuario-historico" style="display:none">
+        <div class="mhd">
+          <span class="mhd-title"><i class="ti ti-history"></i> <span id="phist-titulo">Histórico de versões</span></span
+          ><button class="mclose" onclick="closeModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="mbody" id="phist-corpo" style="max-height:65vh;overflow-y:auto"></div>
+        <div class="mfoot">
+          <button class="btn" onclick="closeModal()">Fechar</button>
         </div>
       </div>
 
@@ -9065,6 +9173,14 @@ if(ehMembroEquipe()&&name!=='cadastro'){name='cadastro';el=null;}
                                                                 if(a.notas&&a.notas!=='Sem anotações.'){anam.textContent=a.notas;anamBlock.style.display='';}
                                                                 else{anamBlock.style.display='none';}
                                                               }
+                                                              const notaBlock=document.getElementById('adv-nota-interna-block');
+                                                              if(notaBlock){
+                                                                notaBlock.style.display=a.notaPersonal?'':'none';
+                                                                document.getElementById('adv-nota-interna').textContent=a.notaPersonal||'';
+                                                              }
+                                                              // Consulta editada depois de finalizada: selo com o nº de alterações (abre o histórico)
+                                                              window._atendAbertoId=a.id;
+                                                              if(window.ProntuarioExport)ProntuarioExport.marcarEdicoes(a.id);
                                                               // Inicia chat IA contextual da consulta
                                                               initAtendChatIA(a);
                                                             }
@@ -9492,9 +9608,7 @@ showAtendList();
                                                               const pa=document.getElementById('pront-area');
                                                               if(pa){
                                                                 const ts=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-                                                                const tag=`
-                                                            [NOTA INTERNA ${ts}] ${inp.value}
-                                                            `;
+                                                                const tag='\n[NOTA INTERNA '+ts+'] '+inp.value+'\n';
                                                                 const pos=pa.selectionStart||pa.value.length;
                                                                 pa.value=pa.value.slice(0,pos)+tag+pa.value.slice(pos);
                                                                 markAtendDirty();
@@ -9534,19 +9648,9 @@ showAtendList();
                                                                   <div class="exame-acts">
                                                                     ${e.statusTuss==='nao_localizado'?`<button class="ra-btn" title="Corrigir vinculo TUSS" onclick="corrigirTussExame('${e.id}')"><i class="ti ti-link"></i></button>`:''}<button class="ra-btn" title="Visualizar" onclick="viewExame('${e.id}')"><i class="ti ti-eye"></i></button>
                                                                     <button class="ra-btn" title="Baixar" onclick="downloadExame('${e.id}')"><i class="ti ti-download"></i></button>
-                                                                    <button class="ra-btn" title="Excluir" onclick="deleteExame('${e.id}')"><i class="ti ti-trash"></i></button>
+                                                                    <button class="ra-btn" title="Histórico de versões" onclick="ProntuarioExport.historico('exames','${e.id}')"><i class="ti ti-history"></i></button>
                                                                   </div>
                                                                 </div>`).join('');
-                                                            }
-                                                            async function deleteExame(id){
-                                                              const exame=exames.find(e=>e.id===id);
-                                                              const {error}=await sb.from('exames').delete().eq('id',id);
-                                                              if(error){showToast('Erro ao excluir exame: '+error.message,'error');return;}
-                                                              if(exame && exame.arquivoPath){
-                                                                await sb.storage.from('exames-arquivos').remove([exame.arquivoPath]);
-                                                              }
-                                                              exames=exames.filter(e=>e.id!==id);renderExames();
-                                                              if(typeof renderLmeDocsPanel==='function')renderLmeDocsPanel();
                                                             }
                                                             async function saveExame(){
                                                               const nome=document.getElementById('exame-nome').value.trim();if(!nome)return;
@@ -15991,10 +16095,11 @@ let rxSelected = [];
 
                                                             /* Renderiza qualquer documento (receita, atestado, laudo, solicitação de
                                                    exame, encaminhamento...) usando o mesmo modelo visual, tentando
-                                                   assinar digitalmente (ICP-Brasil) e retornando o PDF final pronto
+                                                   assinar digitalmente (ICP-Brasil; assinar: false pula a tentativa e
+                                                   já sai com a linha de assinatura manual) e retornando o PDF final pronto
                                                    para download/upload. Não baixa nem salva nada sozinho — quem chama
                                                    decide o que fazer com o resultado. */
-                                                async function _renderDocumentoPdf({ docTitle, docMark, patientName, patientAge, patientCpf, patientAddress, patientSex, bodyHtml, filenamePrefix, contentDescription, isControleEspecial, via1Label, via2Label, legalNote }) {
+                                                async function _renderDocumentoPdf({ docTitle, docMark, patientName, patientAge, patientCpf, patientAddress, patientSex, bodyHtml, filenamePrefix, contentDescription, isControleEspecial, via1Label, via2Label, legalNote, assinar = true }) {
                                                   // Dados da clínica (localStorage)
                                                   let clinic = {};
                                                   try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
@@ -16160,7 +16265,7 @@ let rxSelected = [];
                                                     try {
                                                       const { data: sess } = await sb.auth.getSession();
                                                       const token = sess?.session?.access_token;
-                                                      if (token) {
+                                                      if (token && assinar) {
                                                         const pdfBase64 = await new Promise((resolve, reject) => {
                                                           const r = new FileReader();
                                                           r.onload = () => resolve(String(r.result).split(',')[1] || '');
@@ -17943,6 +18048,7 @@ let rxSelected = [];
                                                   laudo:              { label: 'Laudo',                   icon: 'ti-clipboard-text' },
                                                   solicitacao_exame:  { label: 'Solicitação de exame',     icon: 'ti-test-pipe' },
                                                   encaminhamento:     { label: 'Encaminhamento',           icon: 'ti-send' },
+                                                  prontuario:         { label: 'Prontuário',               icon: 'ti-notes' },
                                                 };
                                                 const DOC_STATUS_META = {
                                                   nao_assinado: { label: 'Não assinado', cls: 'rx-st-nao_assinado' },
