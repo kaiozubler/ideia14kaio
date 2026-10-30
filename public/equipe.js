@@ -65,6 +65,8 @@
       phone: "",
       cpf: "",
       crm: { uf: "", number: "" },
+      especialidade: "",
+      rqe: "",
       notifications: { novoPaciente: true, agendaAlterada: true, mensagens: false, faturamento: true },
       scheduleRules: [],
     },
@@ -207,7 +209,10 @@
               ${p.crm?.uf && p.crm?.number?.length === 6 ? `<span class="eq-crm-ok">CRM/${esc(p.crm.uf)} ${esc(p.crm.number)}</span>` : ""}
             </div>
           </div>
+          <div><label class="eq-label">Especialidade</label><input class="eq-input" id="eq-p-esp" placeholder="Ex: Cardiologia" value="${esc(p.especialidade)}"></div>
+          <div><label class="eq-label">RQE</label><input class="eq-input" id="eq-p-rqe" maxlength="10" placeholder="Registro de Qualificação de Especialista" value="${esc(p.rqe)}"></div>
         </div>
+        <div style="font-size:11.5px;color:#64748b;margin:-4px 0 12px">A especialidade só aparece nos documentos e no prontuário junto com o RQE (Res. CFM 2.336/2023).</div>
         <div>
           <label class="eq-label"><i class="ti ti-certificate"></i> Certificado ICP-Brasil</label>
           <div id="eq-p-cert-status" style="font-size:12px;color:#64748b;margin-bottom:8px">Verificando…</div>
@@ -261,6 +266,13 @@
       bind("eq-p-crm-num", (e) => {
         p.crm = { ...p.crm, number: e.target.value.replace(/\D/g, "").slice(0, 6) };
       });
+      bind("eq-p-esp", (e) => {
+        p.especialidade = e.target.value;
+      });
+      bind("eq-p-rqe", (e) => {
+        p.rqe = e.target.value.replace(/\D/g, "").slice(0, 10);
+        e.target.value = p.rqe;
+      });
       document.getElementById("eq-p-save").onclick = async () => {
         const btn = document.getElementById("eq-p-save");
         const s = document.getElementById("eq-p-saved");
@@ -270,6 +282,8 @@
           cpf: p.cpf,
           crm_uf: p.crm?.uf || "",
           crm_numero: p.crm?.number || "",
+          especialidade: p.especialidade.trim(),
+          rqe: p.rqe,
         };
         if (window.sb?.auth?.updateUser) {
           btn.disabled = true;
@@ -1479,6 +1493,8 @@
     S.profile.phone = meta.telefone || meta.phone || "";
     S.profile.cpf = (meta.cpf || "").replace(/\D/g, "").slice(0, 11);
     S.profile.crm = { uf: meta.crm_uf || "", number: meta.crm_numero || "" };
+    S.profile.especialidade = meta.especialidade || meta.specialty || "";
+    S.profile.rqe = meta.rqe || "";
     renderProfile();
   }
 
