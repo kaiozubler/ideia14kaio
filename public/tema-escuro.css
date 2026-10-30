@@ -1,0 +1,40 @@
+/* Modo escuro do MediCopilot.
+   As telas usam os tokens --n* / --g* / --white de medicopilot.html, redefinidos
+   aqui; as cores fixas espalhadas pelo CSS e pelo HTML gerado em JS são
+   convertidas por tema-escuro.js. Os neutros foram escolhidos para manter texto
+   e bordas legíveis: texto secundário (--n400) fica acima de 7:1 sobre os cartões
+   e as bordas (--n150/--n200) se destacam do fundo em vez de sumirem. */
+html[data-tema="escuro"]{
+  color-scheme:dark;
+  --g50:#13251a;--g100:#183320;--g200:#265533;--g300:#3a8049;--g400:#52b262;
+  --g500:#3d9a3d;--g600:#72cf72;--g700:#98dd98;--g800:#c2ecc2;
+  --n25:#16191d;--n50:#20242a;--n75:#101215;--n100:#272c33;--n150:#353b44;--n200:#444b55;
+  --n300:#666e79;--n400:#a3abb5;--n500:#bcc3cb;--n600:#d6dbe1;--n700:#eef0f3;--n800:#f8f9fa;
+  --white:#1a1d21;
+}
+
+/* --g600 é verde-claro no escuro (texto ativo); como fundo de hover com texto
+   branco ele precisa continuar escuro. */
+html[data-tema="escuro"] .btn.primary:hover,
+html[data-tema="escuro"] .lf-send:hover,
+html[data-tema="escuro"] .ai-sbtn:hover{background:#327f32}
+
+html[data-tema="escuro"] .toast{background:#2b3139;color:#f3f4f6;border:1px solid var(--n200)}
+html[data-tema="escuro"] .toast.success{background:#2e7d32;border-color:#2e7d32}
+
+html[data-tema="escuro"] input::placeholder,
+html[data-tema="escuro"] textarea::placeholder{color:#8a929c}
+
+html[data-tema="escuro"] img{color-scheme:light}
+
+/* Folhas de documento (prévias e o holder do PDF) continuam papel branco. */
+html[data-tema="escuro"] :is(.ia-prev-sheet,[id^="rx-scope-"],[id^="lme-scope-"],[id^="ex-scope-"],[id^="ia-rx-"],[id^="ia-ex-"],.html2pdf__overlay,[data-tema-ignorar]){
+  color-scheme:light;color:#1a1a1a
+}
+
+html.tema-trocando *,html.tema-trocando *::before,html.tema-trocando *::after{transition:none!important}
+
+/* Botão do menu lateral: mostra a lua no claro e o sol no escuro. */
+.sb-tema .ti-sun{display:none}
+html[data-tema="escuro"] .sb-tema .ti-sun{display:inline-block}
+html[data-tema="escuro"] .sb-tema .ti-moon{display:none}
