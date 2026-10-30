@@ -18,7 +18,8 @@ CREATE TABLE public.lme_processos (
   protocolo_id uuid REFERENCES public.protocolos(id) ON DELETE SET NULL,
   processo_anterior_id uuid REFERENCES public.lme_processos(id) ON DELETE SET NULL,
 
-  medicamento_id uuid REFERENCES public.medicamentos(id) ON DELETE SET NULL,
+  -- text: medicamentos.id passou a ser text em 20260702124559.
+  medicamento_id text REFERENCES public.medicamentos(id) ON DELETE SET NULL,
   medicamento_nome text NOT NULL,
   cid_code text,
 
