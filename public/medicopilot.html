@@ -2218,6 +2218,8 @@
     </style>
     <link rel="stylesheet" href="tema-escuro.css?v=2" />
     <script src="tema-escuro.js?v=2"></script>
+    <link rel="stylesheet" href="tour-guiado.css?v=1" />
+    <script src="tour-guiado.js?v=1"></script>
   </head>
   <body>
     <div id="toast" class="toast"></div>
@@ -2354,6 +2356,9 @@
             <div class="bc" id="breadcrumb"></div>
           </div>
           <div class="topbar-right">
+            <button type="button" class="tour-gatilho" id="nav-tour" onclick="MCTour.abrirTelaAtual()" title="Tour guiado desta tela" aria-label="Tour guiado desta tela">
+              <i class="ti ti-help-circle"></i>
+            </button>
             <button
               class="global-atend-chip"
               id="global-atend-chip"
@@ -6571,10 +6576,12 @@ const {error}=await sb.auth.signUp({email,password:pass,options:{data:{name_user
                                                             async function entrarNoApp(session){
                                                             currentUser=session.user;
                                                             MCTema.doUsuario(session.user);
+                                                            MCTour.doUsuario(session.user);
                                                             if(await acessoSuspenso(session.user.id)){await sairPorSuspensao();return;}
                                                             await carregarAcessoClinica();
                                                             if(CLINICA.papel==='inativo'){mostrarAcessoDesativado();return;}
                                                             showApp();
+                                                            MCTour.aoEntrarNaTela(MCTour.telaAtual());
                                                             await loadPatients();
                                                             if(!ehMembroEquipe()&&typeof fetchAnamneseModels==='function')fetchAnamneseModels();
                                                             }
@@ -6712,6 +6719,7 @@ if(!telaPermitidaPapel(name)){showToast('Área disponível apenas para o médico
                                                               if(['secretaria','anamnese','copiloto','base-conhecimento'].includes(name)){
                                                                 const g=document.getElementById('grp-ia');if(g)g.classList.add('open');
                                                               }
+                                                              MCTour.aoEntrarNaTela(name);
                                                             }
                                                             function toggleIAGroup(){document.getElementById('grp-ia').classList.toggle('open');}
 
@@ -9312,6 +9320,7 @@ if(ehMembroEquipe()&&name!=='cadastro'){name='cadastro';el=null;}
                                                               if(!restore&&_cpc.enabled&&_cpc.voz&&_cpc.vozAuto&&!listening){
                                                                 setTimeout(()=>{if(!listening&&typeof toggleListen==='function')toggleListen();},600);
                                                               }
+                                                              MCTour.aoEntrarNaTela('consulta');
                                                             }
                                                             /* Cria o registro de "Rascunho" no banco assim que o atendimento é iniciado
                                                                (clique em "Novo atendimento"), mesmo que o médico ainda não tenha digitado
