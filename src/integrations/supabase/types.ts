@@ -2866,6 +2866,7 @@ export type Database = {
           medico: string | null
           motivo_alteracao: string | null
           name: string
+          naturalidade: string | null
           numero: string | null
           ocupacao: string | null
           paciente_id: string
@@ -2898,6 +2899,7 @@ export type Database = {
           medico?: string | null
           motivo_alteracao?: string | null
           name: string
+          naturalidade?: string | null
           numero?: string | null
           ocupacao?: string | null
           paciente_id?: string
@@ -2930,6 +2932,7 @@ export type Database = {
           medico?: string | null
           motivo_alteracao?: string | null
           name?: string
+          naturalidade?: string | null
           numero?: string | null
           ocupacao?: string | null
           paciente_id?: string

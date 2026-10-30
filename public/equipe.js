@@ -67,12 +67,7 @@
       crm: { uf: "", number: "" },
       especialidade: "",
       rqe: "",
-      notifications: {
-        novoPaciente: true,
-        agendaAlterada: true,
-        mensagens: false,
-        faturamento: true,
-      },
+      notifications: { novoPaciente: true, agendaAlterada: true, mensagens: false, faturamento: true },
       scheduleRules: [],
     },
     // A listagem de membros da equipe e os grupos de acesso ainda não têm
@@ -295,10 +290,7 @@
           try {
             await window.sb.auth.updateUser({ data: newMeta });
             if (window.currentUser) {
-              window.currentUser.user_metadata = {
-                ...(window.currentUser.user_metadata || {}),
-                ...newMeta,
-              };
+              window.currentUser.user_metadata = { ...(window.currentUser.user_metadata || {}), ...newMeta };
             }
           } catch (e) {
             console.error("Falha ao salvar perfil", e);
@@ -327,13 +319,10 @@
           showExtensionInstructions();
         } catch (e) {
           console.error("Falha ao baixar extensão", e);
-          msg.innerHTML =
-            '<b style="color:#dc2626">Não foi possível baixar o pacote. Tente novamente.</b>';
+          msg.innerHTML = '<b style="color:#dc2626">Não foi possível baixar o pacote. Tente novamente.</b>';
           setTimeout(() => {
             const m = document.getElementById("eq-p-ext-msg");
-            if (m)
-              m.textContent =
-                "Assistente IA no navegador: analisa a tela e responde no painel lateral.";
+            if (m) m.textContent = "Assistente IA no navegador: analisa a tela e responde no painel lateral.";
           }, 3000);
         } finally {
           btn.disabled = false;
@@ -379,14 +368,11 @@
         const msgEl = document.getElementById("eq-p-reset-msg");
         if (!p.email || !window.sb?.auth?.resetPasswordForEmail) return;
         try {
-          await window.sb.auth.resetPasswordForEmail(p.email, {
-            redirectTo: window.location.origin,
-          });
+          await window.sb.auth.resetPasswordForEmail(p.email, { redirectTo: window.location.origin });
           msgEl.innerHTML = '<b style="color:#059669">Link enviado para o seu e-mail ✓</b>';
         } catch (e) {
           console.error("Falha ao solicitar redefinição de senha", e);
-          msgEl.innerHTML =
-            '<b style="color:#dc2626">Não foi possível enviar o link. Tente novamente.</b>';
+          msgEl.innerHTML = '<b style="color:#dc2626">Não foi possível enviar o link. Tente novamente.</b>';
         }
         setTimeout(() => {
           const m = document.getElementById("eq-p-reset-msg");
@@ -470,9 +456,7 @@
               certStatus.textContent = "Faça login para conectar o certificado.";
               return;
             }
-            const res = await fetch("/api/signature/credential", {
-              headers: { Authorization: "Bearer " + token },
-            });
+            const res = await fetch("/api/signature/credential", { headers: { Authorization: "Bearer " + token } });
             const j = await res.json();
             renderCert(j.credential || null);
           } catch (err) {
@@ -545,8 +529,7 @@
             const pass = document.getElementById("eq-cert-pass").value;
             const label = document.getElementById("eq-cert-label").value;
             if (!file) return (msg.textContent = "Selecione o arquivo do certificado.");
-            if (!/\.(pfx|p12)$/i.test(file.name))
-              return (msg.textContent = "Formato inválido. Use .pfx ou .p12.");
+            if (!/\.(pfx|p12)$/i.test(file.name)) return (msg.textContent = "Formato inválido. Use .pfx ou .p12.");
             if (file.size > 5 * 1024 * 1024) return (msg.textContent = "Arquivo maior que 5 MB.");
             if (!pass) return (msg.textContent = "Informe a senha do certificado.");
             msg.textContent = "Validando certificado…";
@@ -561,13 +544,7 @@
               const resp = await fetch("/api/signature/local-certificate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-                body: JSON.stringify({
-                  fileBase64,
-                  filename: file.name,
-                  mimeType: file.type,
-                  password: pass,
-                  label,
-                }),
+                body: JSON.stringify({ fileBase64, filename: file.name, mimeType: file.type, password: pass, label }),
               });
               const j = await resp.json();
               if (!resp.ok) {
@@ -698,11 +675,7 @@
      (o banco guarda só o hash do token). O papel limita o que cada um vê:
      ver public/medicopilot.html (EQUIPE) e a migração equipe_papeis_triagem. */
   const PAPEIS = { secretaria: "Secretária", enfermeiro: "Enfermeiro(a)" };
-  const SITUACAO = {
-    convidado: ["Convite pendente", "amber"],
-    ativo: ["Ativo", "emerald"],
-    inativo: ["Inativo", "slate"],
-  };
+  const SITUACAO = { convidado: ["Convite pendente", "amber"], ativo: ["Ativo", "emerald"], inativo: ["Inativo", "slate"] };
   S.membros = [];
   S.membrosErro = "";
   async function loadMembros() {
@@ -715,8 +688,7 @@
     S.membros = error ? [] : data || [];
     renderUsers();
   }
-  const linkConvite = (token) =>
-    location.origin + "/medicopilot.html?convite=" + encodeURIComponent(token);
+  const linkConvite = (token) => location.origin + "/medicopilot.html?convite=" + encodeURIComponent(token);
   async function rpcEquipe(fn, args) {
     const { data, error } = await window.sb.rpc(fn, args);
     if (error) throw new Error(error.message);
@@ -725,9 +697,7 @@
 
   function renderUsers() {
     const q = S.search.toLowerCase();
-    const list = S.membros.filter(
-      (u) => u.nome.toLowerCase().includes(q) || u.email.toLowerCase().includes(q),
-    );
+    const list = S.membros.filter((u) => u.nome.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
     const t = document.getElementById("eq-users-table");
     if (!t) return;
     const vazio = S.membrosErro
@@ -743,18 +713,11 @@
         : list
             .map((u) => {
               const [sit, tom] = SITUACAO[u.status] || [u.status, "slate"];
-              const expirado =
-                u.status === "convidado" &&
-                u.convite_expira_em &&
-                new Date(u.convite_expira_em) < new Date();
+              const expirado = u.status === "convidado" && u.convite_expira_em && new Date(u.convite_expira_em) < new Date();
               return `<div class="eq-row ${u.status === "inativo" ? "inactive" : ""}" data-mid="${u.id}">
         <div class="eq-uname">${avatar(u.nome, u.papel === "enfermeiro" ? "violet" : "sky", 10)}<div class="txt"><b>${esc(u.nome)}</b><span>${esc(u.registro || PAPEIS[u.papel] || "")}</span></div></div>
         <div class="eq-uemail">${esc(u.email)}</div>
-        <div><select data-mid="${u.id}" class="eq-change-papel">${Object.keys(PAPEIS)
-          .map(
-            (k) => `<option value="${k}" ${k === u.papel ? "selected" : ""}>${PAPEIS[k]}</option>`,
-          )
-          .join("")}</select></div>
+        <div><select data-mid="${u.id}" class="eq-change-papel">${Object.keys(PAPEIS).map((k) => `<option value="${k}" ${k === u.papel ? "selected" : ""}>${PAPEIS[k]}</option>`).join("")}</select></div>
         <div>${badge(expirado ? "Convite expirado" : sit, expirado ? "rose" : tom)}</div>
         <div class="eq-row-act">
           ${u.status !== "ativo" && !u.aceito_em ? `<button title="Gerar novo link de convite" data-act="link" data-mid="${u.id}"><i class="ti ti-link"></i></button>` : ""}
@@ -771,12 +734,8 @@
     t.querySelectorAll(".eq-change-papel").forEach((sel) => {
       sel.addEventListener("change", async () => {
         try {
-          await rpcEquipe("clinica_membro_atualizar", {
-            p_id: sel.dataset.mid,
-            p_papel: sel.value,
-          });
-          if (typeof window.showToast === "function")
-            window.showToast("Função atualizada", "success");
+          await rpcEquipe("clinica_membro_atualizar", { p_id: sel.dataset.mid, p_papel: sel.value });
+          if (typeof window.showToast === "function") window.showToast("Função atualizada", "success");
         } catch (e) {
           if (typeof window.showToast === "function") window.showToast(e.message, "error");
         }
@@ -790,32 +749,15 @@
         if (!m) return;
         try {
           if (b.dataset.act === "link") {
-            const token = await rpcEquipe("clinica_convidar", {
-              p_email: m.email,
-              p_nome: m.nome,
-              p_papel: m.papel,
-              p_registro: m.registro,
-            });
+            const token = await rpcEquipe("clinica_convidar", { p_email: m.email, p_nome: m.nome, p_papel: m.papel, p_registro: m.registro });
             if (token) mostrarLinkConvite(m, token);
           } else if (b.dataset.act === "inativar") {
-            if (
-              !confirm(
-                m.status === "convidado"
-                  ? `Cancelar o convite de ${m.nome}?`
-                  : `Inativar o acesso de ${m.nome}? A pessoa deixa de ver os dados da clínica na hora.`,
-              )
-            )
-              return;
+            if (!confirm(m.status === "convidado" ? `Cancelar o convite de ${m.nome}?` : `Inativar o acesso de ${m.nome}? A pessoa deixa de ver os dados da clínica na hora.`)) return;
             await rpcEquipe("clinica_membro_atualizar", { p_id: m.id, p_status: "inativo" });
           } else if (b.dataset.act === "ativar") {
             await rpcEquipe("clinica_membro_atualizar", { p_id: m.id, p_status: "ativo" });
           } else if (b.dataset.act === "remover") {
-            if (
-              !confirm(
-                `Remover ${m.nome} da equipe? O login dela continua existindo, mas sem acesso à clínica.`,
-              )
-            )
-              return;
+            if (!confirm(`Remover ${m.nome} da equipe? O login dela continua existindo, mas sem acesso à clínica.`)) return;
             await rpcEquipe("clinica_membro_remover", { p_id: m.id });
           }
         } catch (err) {
@@ -851,9 +793,7 @@
     el && el.remove();
   }
   function closeAllModals() {
-    document
-      .querySelectorAll("#eq-modals > .eq-modal-overlay, #eq-modals > .eq-slide-over")
-      .forEach((x) => x.remove());
+    document.querySelectorAll("#eq-modals > .eq-modal-overlay, #eq-modals > .eq-slide-over").forEach((x) => x.remove());
   }
 
   /* ---------- Notif modal ---------- */
@@ -1408,9 +1348,7 @@
           (cb) =>
             (cb.onchange = () => {
               const id = cb.dataset.mem;
-              draft.members = cb.checked
-                ? [...new Set([...draft.members, id])]
-                : draft.members.filter((x) => x !== id);
+              draft.members = cb.checked ? [...new Set([...draft.members, id])] : draft.members.filter((x) => x !== id);
             }),
         );
         footEl.querySelector("#eq-g-cancel").onclick = () => {
@@ -1438,14 +1376,7 @@
   // Sem envio de e-mail: o médico copia o link (ou manda pelo WhatsApp) e a
   // pessoa cria a conta com o e-mail convidado; o vínculo acontece no login.
   function openInviteModal() {
-    const st = {
-      nome: "",
-      email: "",
-      papel: "secretaria",
-      registro: "",
-      erro: "",
-      enviando: false,
-    };
+    const st = { nome: "", email: "", papel: "secretaria", registro: "", erro: "", enviando: false };
     const el = modal({
       title: "Convidar usuário",
       subtitle: "Secretária ou enfermagem com login próprio e acesso limitado.",
@@ -1466,23 +1397,14 @@
           <input type="email" class="eq-input" id="eq-inv-email" placeholder="nome@exemplo.com" value="${esc(st.email)}">
           <p style="margin:6px 0 0;font-size:11px;color:#94a3b8">A pessoa precisa criar a conta (ou entrar) com este mesmo e-mail.</p></div>
         <div><label class="eq-label"><i class="ti ti-briefcase"></i> Função</label>
-          <select class="eq-input" id="eq-inv-papel">${Object.keys(PAPEIS)
-            .map(
-              (k) =>
-                `<option value="${k}" ${k === st.papel ? "selected" : ""}>${PAPEIS[k]}</option>`,
-            )
-            .join("")}</select>
+          <select class="eq-input" id="eq-inv-papel">${Object.keys(PAPEIS).map((k) => `<option value="${k}" ${k === st.papel ? "selected" : ""}>${PAPEIS[k]}</option>`).join("")}</select>
           <p style="margin:6px 0 0;font-size:11px;color:#94a3b8">${
             st.papel === "enfermeiro"
               ? "Vê o kanban, a agenda e o cadastro dos pacientes e faz a triagem. Não abre prontuário nem financeiro."
               : "Vê o kanban, a agenda e o cadastro dos pacientes, dá entrada e cobra consultas. Não abre prontuário nem triagem."
           }</p></div>
-        ${
-          st.papel === "enfermeiro"
-            ? `<div><label class="eq-label"><i class="ti ti-id-badge-2"></i> COREN</label>
-          <input class="eq-input" id="eq-inv-reg" placeholder="COREN-UF 000000" value="${esc(st.registro)}"></div>`
-            : ""
-        }
+        ${st.papel === "enfermeiro" ? `<div><label class="eq-label"><i class="ti ti-id-badge-2"></i> COREN</label>
+          <input class="eq-input" id="eq-inv-reg" placeholder="COREN-UF 000000" value="${esc(st.registro)}"></div>` : ""}
         ${st.erro ? `<div style="font-size:12px;color:#be123c;background:#fff1f2;border:1px solid #fecdd3;border-radius:12px;padding:8px 10px">${esc(st.erro)}</div>` : ""}
       </div>`;
       ft.innerHTML = `<button class="eq-btn eq-btn-ghost" data-close="1">Cancelar</button>
@@ -1514,13 +1436,8 @@
           });
           closeModal(el);
           loadMembros();
-          if (token)
-            mostrarLinkConvite(
-              { nome: st.nome.trim(), email: st.email.trim(), papel: st.papel },
-              token,
-            );
-          else if (typeof window.showToast === "function")
-            window.showToast("Acesso reativado", "success");
+          if (token) mostrarLinkConvite({ nome: st.nome.trim(), email: st.email.trim(), papel: st.papel }, token);
+          else if (typeof window.showToast === "function") window.showToast("Acesso reativado", "success");
         } catch (e) {
           st.enviando = false;
           st.erro = e.message;
@@ -1571,8 +1488,7 @@
     if (!u) return;
     const meta = u.user_metadata || {};
     S.profile.id = u.id;
-    S.profile.name =
-      meta.full_name || meta.name || meta.name_user || (u.email || "").split("@")[0] || "Usuário";
+    S.profile.name = meta.full_name || meta.name || meta.name_user || (u.email || "").split("@")[0] || "Usuário";
     S.profile.email = u.email || "";
     S.profile.phone = meta.telefone || meta.phone || "";
     S.profile.cpf = (meta.cpf || "").replace(/\D/g, "").slice(0, 11);
