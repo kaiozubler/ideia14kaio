@@ -10,13 +10,18 @@ const BodySchema = z.object({
 /**
  * Migra (mescla) todos os dados de um paciente para outro paciente do mesmo médico.
  * Todas as tabelas que referenciam paciente_id são reapontadas para o destino.
- * O cadastro de origem é removido no final (merge de duplicidade).
+ * O cadastro de origem é removido no final (merge de duplicidade) — o banco só
+ * deixa excluir um paciente sem registro clínico, então toda tabela clínica
+ * precisa estar aqui. As versionadas (prontuario_versoes) recebem o motivo.
  */
-const TABELAS: Array<{ tabela: string; coluna: string }> = [
+const TABELAS: Array<{ tabela: string; coluna: string; versionada?: boolean }> = [
   { tabela: "agendamentos", coluna: "paciente_id" },
-  { tabela: "consulta", coluna: "paciente_id" },
-  { tabela: "documentos_paciente", coluna: "paciente_id" },
-  { tabela: "exames", coluna: "paciente_id" },
+  { tabela: "consulta", coluna: "paciente_id", versionada: true },
+  { tabela: "documentos_paciente", coluna: "paciente_id", versionada: true },
+  { tabela: "exames", coluna: "paciente_id", versionada: true },
+  { tabela: "triagens", coluna: "paciente_id", versionada: true },
+  { tabela: "medicamentos_em_uso", coluna: "paciente_id" },
+  { tabela: "lme_processos", coluna: "paciente_id" },
   { tabela: "lancamentos_financeiros", coluna: "paciente_id" },
   { tabela: "paciente_protocolos", coluna: "paciente_id" },
   { tabela: "protocolo_tarefas", coluna: "paciente_id" },
@@ -71,11 +76,14 @@ async function handle(request: Request) {
   }
 
   const movidos: Record<string, number> = {};
-  for (const { tabela, coluna } of TABELAS) {
+  const motivo = `Mesclagem do cadastro duplicado "${origem.name}" neste paciente`;
+  for (const { tabela, coluna, versionada } of TABELAS) {
     const admin = supabaseAdmin as unknown as { from: (t: string) => any };
     const { data, error } = await admin
       .from(tabela)
-      .update({ [coluna]: destino_id })
+      .update(
+        versionada ? { [coluna]: destino_id, motivo_alteracao: motivo } : { [coluna]: destino_id },
+      )
       .eq(coluna, origem_id)
       .select("id");
     if (error) {
@@ -116,7 +124,7 @@ async function handle(request: Request) {
 
   const { error: upErr } = await supabaseAdmin
     .from("pacientes")
-    .update({ cids, parentescos, dados_clinicos })
+    .update({ cids, parentescos, dados_clinicos, motivo_alteracao: motivo })
     .eq("paciente_id", destino_id);
   if (upErr) {
     console.error("[pacientes/migrar] merge cadastro:", upErr.message);
