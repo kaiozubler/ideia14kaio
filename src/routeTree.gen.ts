@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as PlanosRouteImport } from './routes/planos'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AgendarTokenRouteImport } from './routes/agendar.$token'
 import { Route as ApiAnalisarExameRouteImport } from './routes/api/analisar-exame'
 import { Route as ApiAssistenteIaRouteImport } from './routes/api/assistente-ia'
 import { Route as ApiAssistenteIaConversasRouteImport } from './routes/api/assistente-ia-conversas'
@@ -80,6 +81,9 @@ import { Route as ApiTussCriarRouteImport } from './routes/api/tuss/criar'
 import { Route as ApiWhatsappSegurancaRouteImport } from './routes/api/whatsapp/seguranca'
 import { Route as ApiDocumentosVerificacaoEmitirRouteImport } from './routes/api/documentos/verificacao/emitir'
 import { Route as ApiDocumentosVerificacaoReservarRouteImport } from './routes/api/documentos/verificacao/reservar'
+import { Route as ApiPublicAgendamentoClinicaRouteImport } from './routes/api/public/agendamento/clinica'
+import { Route as ApiPublicAgendamentoHorariosRouteImport } from './routes/api/public/agendamento/horarios'
+import { Route as ApiPublicAgendamentoReservarRouteImport } from './routes/api/public/agendamento/reservar'
 import { Route as ApiPublicCrmClinicasRouteImport } from './routes/api/public/crm/clinicas'
 import { Route as ApiPublicCrmPagamentosRouteImport } from './routes/api/public/crm/pagamentos'
 import { Route as ApiPublicCrmUsuariosRouteImport } from './routes/api/public/crm/usuarios'
@@ -136,6 +140,11 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AgendarTokenRoute = AgendarTokenRouteImport.update({
+  id: '/agendar/$token',
+  path: '/agendar/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAnalisarExameRoute = ApiAnalisarExameRouteImport.update({
   id: '/api/analisar-exame',
   path: '/api/analisar-exame',
@@ -487,6 +496,24 @@ const ApiDocumentosVerificacaoReservarRoute =
     path: '/api/documentos/verificacao/reservar',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicAgendamentoClinicaRoute =
+  ApiPublicAgendamentoClinicaRouteImport.update({
+    id: '/api/public/agendamento/clinica',
+    path: '/api/public/agendamento/clinica',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicAgendamentoHorariosRoute =
+  ApiPublicAgendamentoHorariosRouteImport.update({
+    id: '/api/public/agendamento/horarios',
+    path: '/api/public/agendamento/horarios',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicAgendamentoReservarRoute =
+  ApiPublicAgendamentoReservarRouteImport.update({
+    id: '/api/public/agendamento/reservar',
+    path: '/api/public/agendamento/reservar',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCrmClinicasRoute = ApiPublicCrmClinicasRouteImport.update({
   id: '/api/public/crm/clinicas',
   path: '/api/public/crm/clinicas',
@@ -657,6 +684,7 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/planos': typeof PlanosRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/agendar/$token': typeof AgendarTokenRoute
   '/api/analisar-exame': typeof ApiAnalisarExameRoute
   '/api/assistente-ia': typeof ApiAssistenteIaRoute
   '/api/assistente-ia-conversas': typeof ApiAssistenteIaConversasRoute
@@ -723,6 +751,9 @@ export interface FileRoutesByFullPath {
   '/api/whatsapp/seguranca': typeof ApiWhatsappSegurancaRoute
   '/api/documentos/verificacao/emitir': typeof ApiDocumentosVerificacaoEmitirRoute
   '/api/documentos/verificacao/reservar': typeof ApiDocumentosVerificacaoReservarRoute
+  '/api/public/agendamento/clinica': typeof ApiPublicAgendamentoClinicaRoute
+  '/api/public/agendamento/horarios': typeof ApiPublicAgendamentoHorariosRoute
+  '/api/public/agendamento/reservar': typeof ApiPublicAgendamentoReservarRoute
   '/api/public/crm/clinicas': typeof ApiPublicCrmClinicasRouteWithChildren
   '/api/public/crm/pagamentos': typeof ApiPublicCrmPagamentosRouteWithChildren
   '/api/public/crm/usuarios': typeof ApiPublicCrmUsuariosRouteWithChildren
@@ -759,6 +790,7 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/planos': typeof PlanosRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/agendar/$token': typeof AgendarTokenRoute
   '/api/analisar-exame': typeof ApiAnalisarExameRoute
   '/api/assistente-ia': typeof ApiAssistenteIaRoute
   '/api/assistente-ia-conversas': typeof ApiAssistenteIaConversasRoute
@@ -825,6 +857,9 @@ export interface FileRoutesByTo {
   '/api/whatsapp/seguranca': typeof ApiWhatsappSegurancaRoute
   '/api/documentos/verificacao/emitir': typeof ApiDocumentosVerificacaoEmitirRoute
   '/api/documentos/verificacao/reservar': typeof ApiDocumentosVerificacaoReservarRoute
+  '/api/public/agendamento/clinica': typeof ApiPublicAgendamentoClinicaRoute
+  '/api/public/agendamento/horarios': typeof ApiPublicAgendamentoHorariosRoute
+  '/api/public/agendamento/reservar': typeof ApiPublicAgendamentoReservarRoute
   '/api/public/crm/clinicas': typeof ApiPublicCrmClinicasRouteWithChildren
   '/api/public/crm/pagamentos': typeof ApiPublicCrmPagamentosRouteWithChildren
   '/api/public/crm/usuarios': typeof ApiPublicCrmUsuariosRouteWithChildren
@@ -862,6 +897,7 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/planos': typeof PlanosRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/agendar/$token': typeof AgendarTokenRoute
   '/api/analisar-exame': typeof ApiAnalisarExameRoute
   '/api/assistente-ia': typeof ApiAssistenteIaRoute
   '/api/assistente-ia-conversas': typeof ApiAssistenteIaConversasRoute
@@ -928,6 +964,9 @@ export interface FileRoutesById {
   '/api/whatsapp/seguranca': typeof ApiWhatsappSegurancaRoute
   '/api/documentos/verificacao/emitir': typeof ApiDocumentosVerificacaoEmitirRoute
   '/api/documentos/verificacao/reservar': typeof ApiDocumentosVerificacaoReservarRoute
+  '/api/public/agendamento/clinica': typeof ApiPublicAgendamentoClinicaRoute
+  '/api/public/agendamento/horarios': typeof ApiPublicAgendamentoHorariosRoute
+  '/api/public/agendamento/reservar': typeof ApiPublicAgendamentoReservarRoute
   '/api/public/crm/clinicas': typeof ApiPublicCrmClinicasRouteWithChildren
   '/api/public/crm/pagamentos': typeof ApiPublicCrmPagamentosRouteWithChildren
   '/api/public/crm/usuarios': typeof ApiPublicCrmUsuariosRouteWithChildren
@@ -966,6 +1005,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/planos'
     | '/.well-known/oauth-protected-resource'
+    | '/agendar/$token'
     | '/api/analisar-exame'
     | '/api/assistente-ia'
     | '/api/assistente-ia-conversas'
@@ -1032,6 +1072,9 @@ export interface FileRouteTypes {
     | '/api/whatsapp/seguranca'
     | '/api/documentos/verificacao/emitir'
     | '/api/documentos/verificacao/reservar'
+    | '/api/public/agendamento/clinica'
+    | '/api/public/agendamento/horarios'
+    | '/api/public/agendamento/reservar'
     | '/api/public/crm/clinicas'
     | '/api/public/crm/pagamentos'
     | '/api/public/crm/usuarios'
@@ -1068,6 +1111,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/planos'
     | '/.well-known/oauth-protected-resource'
+    | '/agendar/$token'
     | '/api/analisar-exame'
     | '/api/assistente-ia'
     | '/api/assistente-ia-conversas'
@@ -1134,6 +1178,9 @@ export interface FileRouteTypes {
     | '/api/whatsapp/seguranca'
     | '/api/documentos/verificacao/emitir'
     | '/api/documentos/verificacao/reservar'
+    | '/api/public/agendamento/clinica'
+    | '/api/public/agendamento/horarios'
+    | '/api/public/agendamento/reservar'
     | '/api/public/crm/clinicas'
     | '/api/public/crm/pagamentos'
     | '/api/public/crm/usuarios'
@@ -1170,6 +1217,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/planos'
     | '/.well-known/oauth-protected-resource'
+    | '/agendar/$token'
     | '/api/analisar-exame'
     | '/api/assistente-ia'
     | '/api/assistente-ia-conversas'
@@ -1236,6 +1284,9 @@ export interface FileRouteTypes {
     | '/api/whatsapp/seguranca'
     | '/api/documentos/verificacao/emitir'
     | '/api/documentos/verificacao/reservar'
+    | '/api/public/agendamento/clinica'
+    | '/api/public/agendamento/horarios'
+    | '/api/public/agendamento/reservar'
     | '/api/public/crm/clinicas'
     | '/api/public/crm/pagamentos'
     | '/api/public/crm/usuarios'
@@ -1273,6 +1324,7 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   PlanosRoute: typeof PlanosRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  AgendarTokenRoute: typeof AgendarTokenRoute
   ApiAnalisarExameRoute: typeof ApiAnalisarExameRoute
   ApiAssistenteIaRoute: typeof ApiAssistenteIaRoute
   ApiAssistenteIaConversasRoute: typeof ApiAssistenteIaConversasRoute
@@ -1339,6 +1391,9 @@ export interface RootRouteChildren {
   ApiWhatsappSegurancaRoute: typeof ApiWhatsappSegurancaRoute
   ApiDocumentosVerificacaoEmitirRoute: typeof ApiDocumentosVerificacaoEmitirRoute
   ApiDocumentosVerificacaoReservarRoute: typeof ApiDocumentosVerificacaoReservarRoute
+  ApiPublicAgendamentoClinicaRoute: typeof ApiPublicAgendamentoClinicaRoute
+  ApiPublicAgendamentoHorariosRoute: typeof ApiPublicAgendamentoHorariosRoute
+  ApiPublicAgendamentoReservarRoute: typeof ApiPublicAgendamentoReservarRoute
   ApiPublicCrmClinicasRoute: typeof ApiPublicCrmClinicasRouteWithChildren
   ApiPublicCrmPagamentosRoute: typeof ApiPublicCrmPagamentosRouteWithChildren
   ApiPublicCrmUsuariosRoute: typeof ApiPublicCrmUsuariosRouteWithChildren
@@ -1400,6 +1455,13 @@ declare module '@tanstack/react-router' {
       path: '/.well-known/oauth-protected-resource'
       fullPath: '/.well-known/oauth-protected-resource'
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agendar/$token': {
+      id: '/agendar/$token'
+      path: '/agendar/$token'
+      fullPath: '/agendar/$token'
+      preLoaderRoute: typeof AgendarTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/analisar-exame': {
@@ -1864,6 +1926,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDocumentosVerificacaoReservarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/agendamento/clinica': {
+      id: '/api/public/agendamento/clinica'
+      path: '/api/public/agendamento/clinica'
+      fullPath: '/api/public/agendamento/clinica'
+      preLoaderRoute: typeof ApiPublicAgendamentoClinicaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/agendamento/horarios': {
+      id: '/api/public/agendamento/horarios'
+      path: '/api/public/agendamento/horarios'
+      fullPath: '/api/public/agendamento/horarios'
+      preLoaderRoute: typeof ApiPublicAgendamentoHorariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/agendamento/reservar': {
+      id: '/api/public/agendamento/reservar'
+      path: '/api/public/agendamento/reservar'
+      fullPath: '/api/public/agendamento/reservar'
+      preLoaderRoute: typeof ApiPublicAgendamentoReservarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/crm/clinicas': {
       id: '/api/public/crm/clinicas'
       path: '/api/public/crm/clinicas'
@@ -2141,6 +2224,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlanosRoute: PlanosRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  AgendarTokenRoute: AgendarTokenRoute,
   ApiAnalisarExameRoute: ApiAnalisarExameRoute,
   ApiAssistenteIaRoute: ApiAssistenteIaRoute,
   ApiAssistenteIaConversasRoute: ApiAssistenteIaConversasRoute,
@@ -2210,6 +2294,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiWhatsappSegurancaRoute: ApiWhatsappSegurancaRoute,
   ApiDocumentosVerificacaoEmitirRoute: ApiDocumentosVerificacaoEmitirRoute,
   ApiDocumentosVerificacaoReservarRoute: ApiDocumentosVerificacaoReservarRoute,
+  ApiPublicAgendamentoClinicaRoute: ApiPublicAgendamentoClinicaRoute,
+  ApiPublicAgendamentoHorariosRoute: ApiPublicAgendamentoHorariosRoute,
+  ApiPublicAgendamentoReservarRoute: ApiPublicAgendamentoReservarRoute,
   ApiPublicCrmClinicasRoute: ApiPublicCrmClinicasRouteWithChildren,
   ApiPublicCrmPagamentosRoute: ApiPublicCrmPagamentosRouteWithChildren,
   ApiPublicCrmUsuariosRoute: ApiPublicCrmUsuariosRouteWithChildren,

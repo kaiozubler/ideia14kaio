@@ -14,8 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
+      agenda_medicos: {
+        Row: {
+          ativo: boolean
+          clinica_id: string
+          created_at: string
+          duracao_min: number
+          especialidade: string | null
+          horarios: Json | null
+          id: string
+          nome: string
+          responsavel: boolean
+          rqe: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          clinica_id: string
+          created_at?: string
+          duracao_min?: number
+          especialidade?: string | null
+          horarios?: Json | null
+          id?: string
+          nome: string
+          responsavel?: boolean
+          rqe?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          clinica_id?: string
+          created_at?: string
+          duracao_min?: number
+          especialidade?: string | null
+          horarios?: Json | null
+          id?: string
+          nome?: string
+          responsavel?: boolean
+          rqe?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      agenda_online_config: {
+        Row: {
+          antecedencia_horas: number
+          ativo: boolean
+          clinica_id: string
+          created_at: string
+          horarios: Json
+          janela_dias: number
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          antecedencia_horas?: number
+          ativo?: boolean
+          clinica_id: string
+          created_at?: string
+          horarios?: Json
+          janela_dias?: number
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          antecedencia_horas?: number
+          ativo?: boolean
+          clinica_id?: string
+          created_at?: string
+          horarios?: Json
+          janela_dias?: number
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       agendamentos: {
         Row: {
+          agenda_medico_id: string | null
           cpf: string | null
           created_at: string
           data_hora: string
@@ -39,6 +115,7 @@ export type Database = {
           video_room_url: string | null
         }
         Insert: {
+          agenda_medico_id?: string | null
           cpf?: string | null
           created_at?: string
           data_hora: string
@@ -62,6 +139,7 @@ export type Database = {
           video_room_url?: string | null
         }
         Update: {
+          agenda_medico_id?: string | null
           cpf?: string | null
           created_at?: string
           data_hora?: string
@@ -85,6 +163,13 @@ export type Database = {
           video_room_url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "agendamentos_agenda_medico_id_fkey"
+            columns: ["agenda_medico_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_medicos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "agendamentos_paciente_id_fkey"
             columns: ["paciente_id"]
@@ -4439,6 +4524,21 @@ export type Database = {
           nome_exibicao: string
           qtd_fabricantes: number
         }[]
+      }
+      agenda_online_novo_link: { Args: never; Returns: string }
+      agenda_online_preparar: { Args: never; Returns: undefined }
+      agenda_publica_reservar: {
+        Args: {
+          p_cpf: string
+          p_email: string
+          p_inicio: string
+          p_ip_hash: string
+          p_medico_id: string
+          p_nome: string
+          p_telefone: string
+          p_token: string
+        }
+        Returns: Json
       }
       buscar_pacientes: {
         Args: { p_limit?: number; termo: string }
