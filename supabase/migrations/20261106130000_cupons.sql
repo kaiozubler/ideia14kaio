@@ -44,7 +44,13 @@ alter table public.cupons enable row level security;
 revoke all on public.cupons from anon, authenticated;
 grant all on public.cupons to service_role;
 
--- Qual cupom a contratação usou (conta os usos do cupom).
+-- Cupom da contratação.
+--   cupom_id        qual cupom foi informado (conta os usos do cupom)
+--   cupom_aplicado  foto do benefício calculado ao gerar a cobrança (desconto,
+--                   meses, dias de teste, recurso extra). O webhook do Asaas e a
+--                   ativação usam esta foto, não o cupom atual: editar o cupom
+--                   no CRM depois não muda o que o cliente já contratou.
 alter table public.contratacoes
-  add column if not exists cupom_id uuid references public.cupons(id) on delete set null;
+  add column if not exists cupom_id uuid references public.cupons(id) on delete set null,
+  add column if not exists cupom_aplicado jsonb;
 create index if not exists contratacoes_cupom_id_idx on public.contratacoes (cupom_id);

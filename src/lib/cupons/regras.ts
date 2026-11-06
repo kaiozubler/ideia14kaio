@@ -18,7 +18,7 @@
 // grátis, que já é medido em dias.
 
 import { z } from "zod";
-import { PLANOS_BASE, type PlanoBaseId } from "../plans/config.ts";
+import { DESCONTO_ANUAL, PLANOS_BASE, valorDaCobranca, type PlanoBaseId } from "../plans/config.ts";
 
 export const TIPOS_CUPOM = ["percentual", "valor", "teste_gratis", "recurso_adicional"] as const;
 export type TipoCupom = (typeof TIPOS_CUPOM)[number];
@@ -194,4 +194,106 @@ export function aplicarCupom(
         : null,
     bonificado: (cupom.tipo === "percentual" || cupom.tipo === "valor") && final === 0,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Cobrança recorrente com o cupom
+//
+// O Asaas cobra um valor fixo por ciclo, então o cupom vira:
+//   * teste grátis            -> primeira cobrança adiada X dias
+//   * 100% por N meses        -> primeira cobrança adiada N meses (preço cheio depois)
+//   * 100% vitalício          -> nenhuma cobrança (bonificação; o time ativa pelo CRM)
+//   * desconto vitalício      -> todas as cobranças com o preço com desconto
+//   * desconto por N meses    -> as N primeiras mensalidades com desconto; no anual,
+//                                o desconto dos meses cobertos sai da cobrança do ano
+//   * recurso adicional       -> preço cheio; o extra entra na franquia da assinatura
+// Cobrança k = 0 é a primeira. O webhook do Asaas (PAYMENT_CREATED) usa
+// `valorDaCobrancaComCupom` para acertar o valor de cada cobrança seguinte.
+// ---------------------------------------------------------------------------
+
+export type CupomAplicado = Extract<ResultadoCupom, { ok: true }> & { codigo: string };
+
+function somarDias(iso: string, dias: number): string {
+  const d = new Date(`${iso}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + dias);
+  return d.toISOString().slice(0, 10);
+}
+
+function somarMeses(iso: string, meses: number): string {
+  const d = new Date(`${iso}T12:00:00Z`);
+  const dia = d.getUTCDate();
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() + meses);
+  const ultimo = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  d.setUTCDate(Math.min(dia, ultimo));
+  return d.toISOString().slice(0, 10);
+}
+
+const bonificadoPorTempo = (c: CupomAplicado) => c.bonificado && c.meses != null;
+
+/** 100% vitalício: não existe cobrança para gerar. */
+export function semCobranca(c: CupomAplicado | null): boolean {
+  return !!c && c.bonificado && c.meses == null;
+}
+
+/** Data da primeira cobrança (AAAA-MM-DD). */
+export function primeiraCobrancaEm(c: CupomAplicado | null, hoje: string): string {
+  if (!c) return hoje;
+  if (c.diasTeste > 0) return somarDias(hoje, c.diasTeste);
+  if (bonificadoPorTempo(c)) return somarMeses(hoje, c.meses!);
+  return hoje;
+}
+
+/** Valor da cobrança `k` (0 = primeira): mensalidade, ou o ano com o desconto anual. */
+export function valorDaCobrancaComCupom(
+  c: CupomAplicado | null,
+  precoMensal: number,
+  ciclo: "mensal" | "anual",
+  k: number,
+): number {
+  const cheio = valorDaCobranca(precoMensal, ciclo);
+  if (!c || c.descontoMensal <= 0 || bonificadoPorTempo(c)) return cheio;
+  if (c.meses == null) return valorDaCobranca(c.precoMensalComDesconto, ciclo);
+  if (ciclo === "mensal")
+    return k < c.meses ? valorDaCobranca(c.precoMensalComDesconto, ciclo) : cheio;
+  const mesesNoAno = Math.min(12, Math.max(0, c.meses - 12 * k));
+  return centavos(cheio - c.descontoMensal * (1 - DESCONTO_ANUAL) * mesesNoAno);
+}
+
+/** O recurso adicional ainda vale na cobrança `k`? */
+export function bonusVigente(
+  c: CupomAplicado | null,
+  ciclo: "mensal" | "anual",
+  k: number,
+): boolean {
+  if (!c?.bonus) return false;
+  if (c.meses == null) return true;
+  return (ciclo === "mensal" ? k : 12 * k) < c.meses;
+}
+
+const UNIDADE_BONUS: Record<RecursoBonus, string> = {
+  copiloto: "consultas de Copiloto",
+  whatsapp: "conversas de WhatsApp",
+  video: "min de vídeo",
+  medicos: "médico(s)",
+  secretarias: "usuário(s) de gestão",
+  copiloto_ativo: "Copiloto ativo",
+};
+
+const reais = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+/** Frase para o cliente: "20% de desconto por 3 meses", "+5.000 conversas de WhatsApp/mês"... */
+export function textoDoCupom(c: CupomAplicado): string {
+  const prazo =
+    c.meses == null ? "" : c.meses === 1 ? " na 1ª mensalidade" : ` por ${c.meses} meses`;
+  if (c.diasTeste > 0) return `${c.diasTeste} dias grátis antes da primeira cobrança`;
+  if (c.bonus) {
+    const extra =
+      c.bonus.recurso === "copiloto_ativo"
+        ? "Copiloto ativo grátis"
+        : `+${c.bonus.quantidade.toLocaleString("pt-BR")} ${UNIDADE_BONUS[c.bonus.recurso]}/mês`;
+    return `${extra}${prazo || " enquanto durar a assinatura"}`;
+  }
+  if (c.bonificado) return `Uso sem custo${prazo || " (bonificação)"}`;
+  return `${reais(c.descontoMensal)} de desconto por mês${prazo || " enquanto durar a assinatura"}`;
 }

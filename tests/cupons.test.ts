@@ -7,7 +7,13 @@ import {
   CupomNovoSchema,
   CupomPatchSchema,
   aplicarCupom,
+  bonusVigente,
+  primeiraCobrancaEm,
+  semCobranca,
+  textoDoCupom,
+  valorDaCobrancaComCupom,
   type Cupom,
+  type CupomAplicado,
 } from "../src/lib/cupons/regras.ts";
 
 const base = { tipo: "percentual", valor: 20 };
@@ -108,4 +114,70 @@ test("inativo, fora da validade, esgotado e ciclo errado não valem", () => {
   assert.equal(motivo({ valido_de: "2026-11-06", valido_ate: "2026-11-06" }), null);
   assert.match(motivo({ limite_usos: 10 }, 10)!, /limite/);
   assert.match(motivo({ ciclo: "anual" })!, /anual/);
+});
+
+// ---------------------------------------------------------------------------
+// Cobrança recorrente com o cupom
+// ---------------------------------------------------------------------------
+
+function aplicado(c: Partial<Cupom>, ciclo: "mensal" | "anual" = "mensal"): CupomAplicado {
+  const r = aplicarCupom(cupom(c), { ...pedidoPro, ciclo }, { agora });
+  assert.ok(r.ok);
+  return { ...r, codigo: "X" };
+}
+
+test("desconto por 3 meses: 3 mensalidades com desconto, depois preço cheio", () => {
+  const c = aplicado({ duracao_meses: 3 });
+  const valores = [0, 1, 2, 3, 4].map((k) => valorDaCobrancaComCupom(c, 249.9, "mensal", k));
+  assert.deepEqual(valores, [199.92, 199.92, 199.92, 249.9, 249.9]);
+  assert.equal(primeiraCobrancaEm(c, "2026-11-06"), "2026-11-06");
+  assert.match(textoDoCupom(c), /^R\$\s49,98 de desconto por mês por 3 meses$/);
+});
+
+test("no anual, o desconto dos meses cobertos sai da cobrança do ano", () => {
+  const c = aplicado({ duracao_meses: 3 }, "anual");
+  // ano cheio: 249,90 × 0,85 × 12 = 2.548,98; 3 meses × 49,98 × 0,85 = 127,45
+  assert.equal(valorDaCobrancaComCupom(c, 249.9, "anual", 0), 2421.53);
+  assert.equal(valorDaCobrancaComCupom(c, 249.9, "anual", 1), 2548.98);
+  const vitalicio = aplicado({}, "anual");
+  assert.equal(valorDaCobrancaComCupom(vitalicio, 249.9, "anual", 5), 2039.18);
+});
+
+test("100% por N meses adia a primeira cobrança; 100% vitalício não cobra", () => {
+  const c = aplicado({ valor: 100, duracao_meses: 2 });
+  assert.equal(semCobranca(c), false);
+  assert.equal(primeiraCobrancaEm(c, "2026-11-06"), "2027-01-06");
+  assert.equal(
+    primeiraCobrancaEm(aplicado({ valor: 100, duracao_meses: 1 }), "2027-01-31"),
+    "2027-02-28",
+  );
+  assert.equal(valorDaCobrancaComCupom(c, 249.9, "mensal", 0), 249.9);
+  assert.equal(semCobranca(aplicado({ valor: 100 })), true);
+});
+
+test("teste grátis adia a primeira cobrança sem mudar o valor", () => {
+  const c = aplicado({ tipo: "teste_gratis", valor: 30 });
+  assert.equal(primeiraCobrancaEm(c, "2026-11-06"), "2026-12-06");
+  assert.equal(valorDaCobrancaComCupom(c, 249.9, "mensal", 0), 249.9);
+  assert.equal(semCobranca(c), false);
+});
+
+test("recurso extra por 3 meses sai na 4ª mensalidade (ou no 2º ano no anual)", () => {
+  const c = aplicado({
+    tipo: "recurso_adicional",
+    valor: 5000,
+    recurso: "whatsapp",
+    duracao_meses: 3,
+  });
+  assert.deepEqual(
+    [0, 1, 2, 3].map((k) => bonusVigente(c, "mensal", k)),
+    [true, true, true, false],
+  );
+  assert.deepEqual(
+    [0, 1].map((k) => bonusVigente(c, "anual", k)),
+    [true, false],
+  );
+  assert.equal(valorDaCobrancaComCupom(c, 249.9, "mensal", 0), 249.9);
+  const sempre = aplicado({ tipo: "recurso_adicional", valor: 5000, recurso: "whatsapp" });
+  assert.equal(bonusVigente(sempre, "mensal", 40), true);
 });

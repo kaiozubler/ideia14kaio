@@ -1,7 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
-import { ambienteAsaas, asaasFetch, AsaasApiError, AsaasNaoConfiguradoError } from "@/lib/asaas/client.server";
+import {
+  ambienteAsaas,
+  asaasFetch,
+  AsaasApiError,
+  AsaasNaoConfiguradoError,
+} from "@/lib/asaas/client.server";
+import { avaliarCupom, type ContratacaoParaCupom } from "@/lib/cupons/contratacao.server";
+import {
+  primeiraCobrancaEm,
+  semCobranca,
+  textoDoCupom,
+  valorDaCobrancaComCupom,
+  type CupomAplicado,
+} from "@/lib/cupons/regras";
 import {
   PERSONALIZADO,
   PLANOS_BASE,
@@ -59,7 +72,9 @@ export const Route = createFileRoute("/api/asaas/checkout")({
         const faltando = camposObrigatorios.filter((c) => !contratacao[c]);
         if (faltando.length > 0) {
           return Response.json(
-            { error: `faltam dados da contratação antes de gerar o pagamento: ${faltando.join(", ")}` },
+            {
+              error: `faltam dados da contratação antes de gerar o pagamento: ${faltando.join(", ")}`,
+            },
             { status: 400 },
           );
         }
@@ -86,19 +101,75 @@ export const Route = createFileRoute("/api/asaas/checkout")({
           );
         }
         const ciclo = contratacao.ciclo === "anual" ? "anual" : "mensal";
-        // Ciclo anual: o Asaas cobra `value` uma vez por ano, então vão os 12 meses
-        // com o desconto anual (antes ia só uma mensalidade).
-        const valorCobranca = valorDaCobranca(valorMensal, ciclo);
-
         const hoje = new Date().toISOString().slice(0, 10);
+
+        // Cupom: conferido de novo aqui (plano/ciclo podem ter mudado depois de
+        // aplicado) e gravado como foto em cupom_aplicado para o webhook.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const db = supabaseAdmin as any;
+        let cupom: CupomAplicado | null = null;
+        // cupom_id ainda não está no types.ts gerado.
+        if ((contratacao as { cupom_id?: string | null }).cupom_id) {
+          const av = await avaliarCupom(db, contratacao as unknown as ContratacaoParaCupom);
+          if (!av.ok) {
+            return Response.json(
+              {
+                error: `O cupom não vale para esta contratação: ${av.motivo} Remova o cupom para continuar.`,
+                cupomInvalido: true,
+              },
+              { status: 409 },
+            );
+          }
+          cupom = av.cupom;
+        }
+
+        // 100% vitalício: não há o que cobrar. Fica como paga e o time ativa pelo CRM.
+        if (semCobranca(cupom)) {
+          const { error } = await db
+            .from("contratacoes")
+            .update({
+              status: "confirmada",
+              pagamento_confirmado_em: new Date().toISOString(),
+              preco_mensal_calculado: valorMensal,
+              cupom_aplicado: cupom,
+            })
+            .eq("id", contratacao.id);
+          if (error) {
+            console.error("[asaas:checkout] erro ao confirmar bonificação:", error.message);
+            return Response.json(
+              { error: "não foi possível concluir a contratação" },
+              { status: 500 },
+            );
+          }
+          return Response.json({ semCobranca: true });
+        }
+
+        // Ciclo anual: o Asaas cobra `value` uma vez por ano, então vão os 12 meses
+        // com o desconto anual. Com cupom, é o valor da primeira cobrança; o webhook
+        // acerta as seguintes (ex.: fim do desconto por N meses).
+        const valorCobranca = cupom
+          ? valorDaCobrancaComCupom(cupom, valorMensal, ciclo, 0)
+          : valorDaCobranca(valorMensal, ciclo);
         const origin = new URL(request.url).origin;
 
-        const nomeItens: Record<string, string> = { basic: "Basic", pro: "Pro", enterprise: "Enterprise" };
+        const nomeItens: Record<string, string> = {
+          basic: "Basic",
+          pro: "Pro",
+          enterprise: "Enterprise",
+        };
         const descricaoFranquias = [
-          contratacao.copiloto === PERSONALIZADO ? "Copiloto personalizado" : `Copiloto ${contratacao.copiloto} consultas`,
+          contratacao.copiloto === PERSONALIZADO
+            ? "Copiloto personalizado"
+            : `Copiloto ${contratacao.copiloto} consultas`,
           ...(contratacao.copiloto_ativo ? ["Copiloto ativo"] : []),
-          contratacao.whatsapp === PERSONALIZADO ? "WhatsApp personalizado" : `WhatsApp ${contratacao.whatsapp} conversas`,
-          contratacao.video === PERSONALIZADO ? "Vídeo personalizado" : contratacao.video ? `Vídeo ${contratacao.video} min` : "sem vídeo",
+          contratacao.whatsapp === PERSONALIZADO
+            ? "WhatsApp personalizado"
+            : `WhatsApp ${contratacao.whatsapp} conversas`,
+          contratacao.video === PERSONALIZADO
+            ? "Vídeo personalizado"
+            : contratacao.video
+              ? `Vídeo ${contratacao.video} min`
+              : "sem vídeo",
         ].join(" · ");
 
         try {
@@ -116,7 +187,7 @@ export const Route = createFileRoute("/api/asaas/checkout")({
               items: [
                 {
                   name: `MediCopilot — plano ${nomeItens[contratacao.plano] ?? contratacao.plano}`,
-                  description: `${contratacao.medicos} médico(s), ${contratacao.secretarias} usuário(s) de gestão · ${descricaoFranquias}`,
+                  description: `${contratacao.medicos} médico(s), ${contratacao.secretarias} usuário(s) de gestão · ${descricaoFranquias}${cupom ? ` · cupom ${cupom.codigo}: ${textoDoCupom(cupom)}` : ""}`,
                   quantity: 1,
                   value: valorCobranca,
                 },
@@ -124,8 +195,9 @@ export const Route = createFileRoute("/api/asaas/checkout")({
               subscription: {
                 cycle: contratacao.ciclo === "anual" ? "YEARLY" : "MONTHLY",
                 // Primeira cobrança agora — como já avisamos no passo "Confirme seu
-                // plano". As próximas seguem o `cycle` a partir daqui.
-                nextDueDate: hoje,
+                // plano" —, ou depois do teste grátis / meses bonificados do cupom.
+                // As próximas seguem o `cycle` a partir daqui.
+                nextDueDate: primeiraCobrancaEm(cupom, hoje),
               },
               customerData: {
                 name: String(contratacao.nome_clinica),
@@ -147,11 +219,20 @@ export const Route = createFileRoute("/api/asaas/checkout")({
 
           await supabaseAdmin
             .from("contratacoes")
-            .update({ asaas_checkout_id: checkout.id, preco_mensal_calculado: valorMensal })
+            .update({
+              asaas_checkout_id: checkout.id,
+              preco_mensal_calculado: valorMensal,
+              cupom_aplicado: cupom,
+            } as never)
             .eq("id", contratacao.id);
 
-          const dominioCheckout = ambienteAsaas() === "production" ? "https://www.asaas.com" : "https://sandbox.asaas.com";
-          return Response.json({ checkoutUrl: `${dominioCheckout}/checkoutSession/show?id=${checkout.id}` });
+          const dominioCheckout =
+            ambienteAsaas() === "production"
+              ? "https://www.asaas.com"
+              : "https://sandbox.asaas.com";
+          return Response.json({
+            checkoutUrl: `${dominioCheckout}/checkoutSession/show?id=${checkout.id}`,
+          });
         } catch (err) {
           if (err instanceof AsaasNaoConfiguradoError) {
             return Response.json({ error: err.message, naoConfigurado: true }, { status: 501 });

@@ -61,6 +61,7 @@ import { Route as ApiComunicacaoConfirmarAgendamentoRouteImport } from './routes
 import { Route as ApiComunicacaoEnviarRouteImport } from './routes/api/comunicacao/enviar'
 import { Route as ApiComunicacaoMidiaRouteImport } from './routes/api/comunicacao/midia'
 import { Route as ApiComunicacaoModelosRouteImport } from './routes/api/comunicacao/modelos'
+import { Route as ApiContratacaoCupomRouteImport } from './routes/api/contratacao.cupom'
 import { Route as ApiIaGerarFluxoRouteImport } from './routes/api/ia/gerar-fluxo'
 import { Route as ApiMedicamentosBuscarRouteImport } from './routes/api/medicamentos/buscar'
 import { Route as ApiMedicamentosSimplificarApresentacoesRouteImport } from './routes/api/medicamentos/simplificar-apresentacoes'
@@ -390,6 +391,11 @@ const ApiComunicacaoModelosRoute = ApiComunicacaoModelosRouteImport.update({
   id: '/api/comunicacao/modelos',
   path: '/api/comunicacao/modelos',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ApiContratacaoCupomRoute = ApiContratacaoCupomRouteImport.update({
+  id: '/cupom',
+  path: '/cupom',
+  getParentRoute: () => ApiContratacaoRoute,
 } as any)
 const ApiIaGerarFluxoRoute = ApiIaGerarFluxoRouteImport.update({
   id: '/api/ia/gerar-fluxo',
@@ -722,7 +728,7 @@ export interface FileRoutesByFullPath {
   '/api/assistente-medico-webhook': typeof ApiAssistenteMedicoWebhookRoute
   '/api/captacao-movel': typeof ApiCaptacaoMovelRoute
   '/api/chat-ia': typeof ApiChatIaRoute
-  '/api/contratacao': typeof ApiContratacaoRoute
+  '/api/contratacao': typeof ApiContratacaoRouteWithChildren
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/lme-ia': typeof ApiLmeIaRoute
@@ -761,6 +767,7 @@ export interface FileRoutesByFullPath {
   '/api/comunicacao/enviar': typeof ApiComunicacaoEnviarRoute
   '/api/comunicacao/midia': typeof ApiComunicacaoMidiaRoute
   '/api/comunicacao/modelos': typeof ApiComunicacaoModelosRoute
+  '/api/contratacao/cupom': typeof ApiContratacaoCupomRoute
   '/api/ia/gerar-fluxo': typeof ApiIaGerarFluxoRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
@@ -833,7 +840,7 @@ export interface FileRoutesByTo {
   '/api/assistente-medico-webhook': typeof ApiAssistenteMedicoWebhookRoute
   '/api/captacao-movel': typeof ApiCaptacaoMovelRoute
   '/api/chat-ia': typeof ApiChatIaRoute
-  '/api/contratacao': typeof ApiContratacaoRoute
+  '/api/contratacao': typeof ApiContratacaoRouteWithChildren
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/lme-ia': typeof ApiLmeIaRoute
@@ -872,6 +879,7 @@ export interface FileRoutesByTo {
   '/api/comunicacao/enviar': typeof ApiComunicacaoEnviarRoute
   '/api/comunicacao/midia': typeof ApiComunicacaoMidiaRoute
   '/api/comunicacao/modelos': typeof ApiComunicacaoModelosRoute
+  '/api/contratacao/cupom': typeof ApiContratacaoCupomRoute
   '/api/ia/gerar-fluxo': typeof ApiIaGerarFluxoRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
@@ -945,7 +953,7 @@ export interface FileRoutesById {
   '/api/assistente-medico-webhook': typeof ApiAssistenteMedicoWebhookRoute
   '/api/captacao-movel': typeof ApiCaptacaoMovelRoute
   '/api/chat-ia': typeof ApiChatIaRoute
-  '/api/contratacao': typeof ApiContratacaoRoute
+  '/api/contratacao': typeof ApiContratacaoRouteWithChildren
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
   '/api/lme-ia': typeof ApiLmeIaRoute
@@ -984,6 +992,7 @@ export interface FileRoutesById {
   '/api/comunicacao/enviar': typeof ApiComunicacaoEnviarRoute
   '/api/comunicacao/midia': typeof ApiComunicacaoMidiaRoute
   '/api/comunicacao/modelos': typeof ApiComunicacaoModelosRoute
+  '/api/contratacao/cupom': typeof ApiContratacaoCupomRoute
   '/api/ia/gerar-fluxo': typeof ApiIaGerarFluxoRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
@@ -1097,6 +1106,7 @@ export interface FileRouteTypes {
     | '/api/comunicacao/enviar'
     | '/api/comunicacao/midia'
     | '/api/comunicacao/modelos'
+    | '/api/contratacao/cupom'
     | '/api/ia/gerar-fluxo'
     | '/api/medicamentos/buscar'
     | '/api/medicamentos/simplificar-apresentacoes'
@@ -1208,6 +1218,7 @@ export interface FileRouteTypes {
     | '/api/comunicacao/enviar'
     | '/api/comunicacao/midia'
     | '/api/comunicacao/modelos'
+    | '/api/contratacao/cupom'
     | '/api/ia/gerar-fluxo'
     | '/api/medicamentos/buscar'
     | '/api/medicamentos/simplificar-apresentacoes'
@@ -1319,6 +1330,7 @@ export interface FileRouteTypes {
     | '/api/comunicacao/enviar'
     | '/api/comunicacao/midia'
     | '/api/comunicacao/modelos'
+    | '/api/contratacao/cupom'
     | '/api/ia/gerar-fluxo'
     | '/api/medicamentos/buscar'
     | '/api/medicamentos/simplificar-apresentacoes'
@@ -1392,7 +1404,7 @@ export interface RootRouteChildren {
   ApiAssistenteMedicoWebhookRoute: typeof ApiAssistenteMedicoWebhookRoute
   ApiCaptacaoMovelRoute: typeof ApiCaptacaoMovelRoute
   ApiChatIaRoute: typeof ApiChatIaRoute
-  ApiContratacaoRoute: typeof ApiContratacaoRoute
+  ApiContratacaoRoute: typeof ApiContratacaoRouteWithChildren
   ApiDailyRoomRoute: typeof ApiDailyRoomRoute
   ApiDeepgramTokenRoute: typeof ApiDeepgramTokenRoute
   ApiLmeIaRoute: typeof ApiLmeIaRoute
@@ -1850,6 +1862,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiComunicacaoModelosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/contratacao/cupom': {
+      id: '/api/contratacao/cupom'
+      path: '/cupom'
+      fullPath: '/api/contratacao/cupom'
+      preLoaderRoute: typeof ApiContratacaoCupomRouteImport
+      parentRoute: typeof ApiContratacaoRoute
+    }
     '/api/ia/gerar-fluxo': {
       id: '/api/ia/gerar-fluxo'
       path: '/api/ia/gerar-fluxo'
@@ -2252,6 +2271,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ApiContratacaoRouteChildren {
+  ApiContratacaoCupomRoute: typeof ApiContratacaoCupomRoute
+}
+
+const ApiContratacaoRouteChildren: ApiContratacaoRouteChildren = {
+  ApiContratacaoCupomRoute: ApiContratacaoCupomRoute,
+}
+
+const ApiContratacaoRouteWithChildren = ApiContratacaoRoute._addFileChildren(
+  ApiContratacaoRouteChildren,
+)
+
 interface ApiPublicCrmClinicasIdRouteChildren {
   ApiPublicCrmClinicasIdAcessoRoute: typeof ApiPublicCrmClinicasIdAcessoRoute
 }
@@ -2342,7 +2373,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAssistenteMedicoWebhookRoute: ApiAssistenteMedicoWebhookRoute,
   ApiCaptacaoMovelRoute: ApiCaptacaoMovelRoute,
   ApiChatIaRoute: ApiChatIaRoute,
-  ApiContratacaoRoute: ApiContratacaoRoute,
+  ApiContratacaoRoute: ApiContratacaoRouteWithChildren,
   ApiDailyRoomRoute: ApiDailyRoomRoute,
   ApiDeepgramTokenRoute: ApiDeepgramTokenRoute,
   ApiLmeIaRoute: ApiLmeIaRoute,
