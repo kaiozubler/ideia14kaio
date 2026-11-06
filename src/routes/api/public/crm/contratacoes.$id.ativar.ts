@@ -15,7 +15,7 @@ export const Route = createFileRoute("/api/public/crm/contratacoes/$id/ativar")(
         const { data: c, error } = await db
           .from("contratacoes")
           .select(
-            "id, user_id, plano, medicos, secretarias, copiloto, whatsapp, video, ciclo, dia_cobranca, preco_mensal_calculado, asaas_customer_id, asaas_subscription_id",
+            "id, user_id, plano, medicos, secretarias, copiloto, copiloto_ativo, whatsapp, video, ciclo, dia_cobranca, preco_mensal_calculado, asaas_customer_id, asaas_subscription_id",
           )
           .eq("id", id)
           .maybeSingle();
@@ -47,6 +47,7 @@ export const Route = createFileRoute("/api/public/crm/contratacoes/$id/ativar")(
             medicos: c.medicos,
             secretarias: c.secretarias,
             copiloto: c.copiloto,
+            copiloto_ativo: c.plano === "pro" || (c.plano === "enterprise" && !!c.copiloto_ativo),
             whatsapp: c.whatsapp,
             video: c.video,
             ciclo: c.ciclo,

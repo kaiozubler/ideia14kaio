@@ -96,6 +96,14 @@ function PaginaConfirmar() {
               {pedido.config.copiloto === PERSONALIZADO ? "personalizado" : `${pedido.config.copiloto} consultas`}
             </p>
             <p>
+              Copiloto ativo ·{" "}
+              {pedido.plano === "pro"
+                ? "incluído"
+                : pedido.plano === "enterprise" && pedido.config.copilotoAtivo
+                  ? "adicional contratado"
+                  : "não incluído (reativo)"}
+            </p>
+            <p>
               WhatsApp ·{" "}
               {pedido.config.whatsapp === PERSONALIZADO
                 ? "personalizado"

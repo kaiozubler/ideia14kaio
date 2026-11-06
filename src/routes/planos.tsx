@@ -11,6 +11,7 @@ import {
   FileSignature,
   FileText,
   FlaskConical,
+  Info,
   MessageCircle,
   Minus,
   Network,
@@ -27,7 +28,10 @@ import {
 import { ChatSuporte } from "@/components/suporte/ChatSuporte";
 import { salvarPedido } from "@/lib/contratacao/pedido";
 import {
+  COPILOTO_ATIVO_DESCRICAO,
+  COPILOTO_ATIVO_TITULO,
   DESCONTO_ANUAL,
+  PRECO_COPILOTO_ATIVO_POR_CONSULTA,
   MAX_MEDICOS,
   MAX_SECRETARIAS,
   PERSONALIZADO,
@@ -48,8 +52,10 @@ import {
   possuiItemPersonalizado,
   precoALaCarteDoPlano,
   precoAnualEquivalenteMensal,
+  precoCopilotoAtivo,
   precoDaConfiguracao,
   type ConfiguracaoPlano,
+  type PlanoBase,
   type PlanoBaseId,
 } from "@/lib/plans/config";
 
@@ -205,6 +211,9 @@ function listarBeneficiosExtras(atual: ConfiguracaoPlano, alvo: (typeof PLANOS_B
     const diff = alvo.secretarias - atual.secretarias;
     itens.push(`+${diff} usuário${diff > 1 ? "s" : ""} de gestão`);
   }
+  if (alvo.copilotoAtivo === "incluido" && !atual.copilotoAtivo) {
+    itens.push(`${COPILOTO_ATIVO_TITULO} incluído`);
+  }
   if (atual.copiloto !== PERSONALIZADO && alvo.copiloto > atual.copiloto) {
     itens.push(`+${(alvo.copiloto - atual.copiloto).toLocaleString("pt-BR")} consultas de Copiloto`);
   }
@@ -294,6 +303,8 @@ function PaginaPlanos() {
         p.copiloto >= novoConfig.copiloto &&
         p.whatsapp >= novoConfig.whatsapp &&
         p.video >= novoConfig.video &&
+        // Não sugere um plano em que o Copiloto ativo deixaria de vir incluído.
+        (!novoConfig.copilotoAtivo || p.copilotoAtivo === "incluido") &&
         p.precoMensal <= precoALaCarteAtual,
     );
     if (!candidato) return;
@@ -323,14 +334,21 @@ function PaginaPlanos() {
   function irParaPagamento() {
     if (!precisaCotacao && planoProximo) {
       const beneficios = listarBeneficiosExtras(config, planoProximo);
+      // Quem já tem o Copiloto ativo continua com ele no plano de cima
+      // (no Enterprise ele entra como adicional e o preço já considera isso).
+      const novoConfig: ConfiguracaoPlano = {
+        ...configuracaoDoPlano(planoProximo),
+        ...(config.copilotoAtivo && planoProximo.copilotoAtivo !== "indisponivel" ? { copilotoAtivo: true } : {}),
+      };
+      const precoAlvo = precoDaConfiguracao(novoConfig, planoProximo);
+      const precoAlvoExibido = ciclo === "anual" ? precoAnualEquivalenteMensal(precoAlvo) : precoAlvo;
       if (beneficios.length > 0) {
         setModal({
           alvo: planoProximo,
           direcao: "maior",
-          diferenca: precoDoPlanoExibido(planoProximo) - precoExibido,
+          diferenca: precoAlvoExibido - precoExibido,
           beneficios,
           aoConfirmar: () => {
-            const novoConfig = configuracaoDoPlano(planoProximo);
             salvarPedido({ plano: planoProximo.id, config: novoConfig, ciclo });
             setAncoraId(planoProximo.id);
             setConfig(novoConfig);
@@ -362,6 +380,7 @@ function PaginaPlanos() {
       `Médicos: ${config.medicos}`,
       `Secretárias/Gestão: ${config.secretarias}`,
       `Copiloto IA: ${config.copiloto === PERSONALIZADO ? "personalizado (sob consulta)" : `${config.copiloto} consultas`}`,
+      `${COPILOTO_ATIVO_TITULO}: ${resumoCopilotoAtivo(ancora, config)}`,
       `WhatsApp: ${config.whatsapp === PERSONALIZADO ? "personalizado (sob consulta)" : `${config.whatsapp} conversas`}`,
       `Vídeo: ${
         config.video === PERSONALIZADO
@@ -495,6 +514,9 @@ function PaginaPlanos() {
                       {plano.secretarias} usuário{plano.secretarias > 1 ? "s" : ""} de gestão
                     </ItemPlano>
                     <ItemPlano>{plano.copiloto} consultas de Copiloto</ItemPlano>
+                    <ItemPlano icone={plano.copilotoAtivo === "indisponivel" ? "neutro" : "ok"}>
+                      {textoCopilotoAtivoNoCartao(plano)} <DicaInfo texto={COPILOTO_ATIVO_DESCRICAO} />
+                    </ItemPlano>
                     <ItemPlano>{TEXTO_TRANSCRICAO[plano.transcricao]}</ItemPlano>
                     <ItemPlano>{plano.whatsapp.toLocaleString("pt-BR")} conversas de WhatsApp</ItemPlano>
                     <ItemPlano>
@@ -588,6 +610,12 @@ function PaginaPlanos() {
                 onChange={(v) => atualizarConfig({ copiloto: v })}
                 onAbaixoDoMinimo={sugerirPlanoInferior}
               />
+              <BlocoCopilotoAtivo
+                plano={ancora}
+                ligado={!!config.copilotoAtivo}
+                consultas={config.copiloto}
+                onChange={(v) => atualizarConfig({ copilotoAtivo: v })}
+              />
             </SectionCard>
 
             <SectionCard
@@ -665,6 +693,7 @@ function PaginaPlanos() {
               <LinhaResumo
                 label={`Copiloto · ${config.copiloto === PERSONALIZADO ? "personalizado (sob consulta)" : `${config.copiloto} consultas`}`}
               />
+              <LinhaResumo label={`${COPILOTO_ATIVO_TITULO} · ${resumoCopilotoAtivo(ancora, config)}`} />
               <LinhaResumo
                 label={`WhatsApp · ${config.whatsapp === PERSONALIZADO ? "personalizado (sob consulta)" : `${config.whatsapp.toLocaleString("pt-BR")} conversas`}`}
               />
@@ -929,12 +958,104 @@ function CicloButton({
   );
 }
 
-function ItemPlano({ children }: { children: React.ReactNode }) {
+function ItemPlano({ children, icone = "ok" }: { children: React.ReactNode; icone?: "ok" | "neutro" }) {
   return (
     <li className="flex items-start gap-2">
-      <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+      {icone === "ok" ? (
+        <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+      ) : (
+        <Minus className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />
+      )}
       <span>{children}</span>
     </li>
+  );
+}
+
+/** "i" que abre a explicação ao tocar (funciona no celular, onde não há hover). */
+function DicaInfo({ texto }: { texto: string }) {
+  const [aberta, setAberta] = useState(false);
+  return (
+    <span className="relative inline-block align-middle">
+      <button
+        type="button"
+        aria-label="O que é isso?"
+        aria-expanded={aberta}
+        title={texto}
+        onClick={(e) => {
+          e.stopPropagation();
+          setAberta((v) => !v);
+        }}
+        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-400 hover:text-violet-600"
+      >
+        <Info className="h-3.5 w-3.5" />
+      </button>
+      {aberta && (
+        <span
+          role="note"
+          className="absolute left-1/2 top-5 z-20 block w-64 -translate-x-1/2 rounded-xl border border-slate-200 bg-white p-3 text-xs font-normal leading-relaxed text-slate-600 shadow-lg"
+        >
+          {texto}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function textoCopilotoAtivoNoCartao(plano: PlanoBase) {
+  if (plano.copilotoAtivo === "incluido") return `${COPILOTO_ATIVO_TITULO} incluído`;
+  if (plano.copilotoAtivo === "opcional")
+    return `${COPILOTO_ATIVO_TITULO} opcional (+${formatarPreco(precoCopilotoAtivo(plano.copiloto))}/mês)`;
+  return "Copiloto reativo (responde quando o médico pede)";
+}
+
+function resumoCopilotoAtivo(plano: PlanoBase, config: ConfiguracaoPlano) {
+  if (plano.copilotoAtivo === "incluido") return "incluído";
+  if (plano.copilotoAtivo === "indisponivel") return "não incluído (Copiloto reativo)";
+  if (!config.copilotoAtivo) return "não contratado";
+  return config.copiloto === PERSONALIZADO
+    ? "adicional (sob consulta)"
+    : `adicional +${formatarPreco(precoCopilotoAtivo(config.copiloto))}/mês`;
+}
+
+function BlocoCopilotoAtivo({
+  plano,
+  ligado,
+  consultas,
+  onChange,
+}: {
+  plano: PlanoBase;
+  ligado: boolean;
+  consultas: number;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="mt-4 rounded-2xl border border-violet-100 bg-violet-50/60 p-4 text-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-semibold text-slate-800">{COPILOTO_ATIVO_TITULO}</p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-500">{COPILOTO_ATIVO_DESCRICAO}</p>
+        </div>
+        {plano.copilotoAtivo === "opcional" && (
+          <input
+            type="checkbox"
+            role="switch"
+            aria-label={`Adicionar ${COPILOTO_ATIVO_TITULO}`}
+            checked={ligado}
+            onChange={(e) => onChange(e.target.checked)}
+            className="mt-1 h-5 w-5 shrink-0 accent-violet-600"
+          />
+        )}
+      </div>
+      <p className="mt-2 text-xs font-semibold text-violet-700">
+        {plano.copilotoAtivo === "incluido"
+          ? "Incluído no plano Pro."
+          : plano.copilotoAtivo === "indisponivel"
+            ? "Disponível no plano Pro ou como adicional no Enterprise."
+            : consultas === PERSONALIZADO
+              ? "Adicional sob consulta para franquia personalizada."
+              : `Adicional: +${formatarPreco(precoCopilotoAtivo(consultas))}/mês (${formatarPreco(PRECO_COPILOTO_ATIVO_POR_CONSULTA)} por consulta da franquia).`}
+      </p>
+    </div>
   );
 }
 

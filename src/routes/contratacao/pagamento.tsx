@@ -75,6 +75,7 @@ function PaginaPagamento() {
       `Especialidade: ${d?.especialidade ?? ""}`,
       `Médicos: ${c.medicos} · Secretárias/Gestão: ${c.secretarias}`,
       `Copiloto: ${c.copiloto === PERSONALIZADO ? "personalizado" : c.copiloto}`,
+      `Copiloto ativo: ${pedido.plano === "pro" ? "incluído" : pedido.plano === "enterprise" && c.copilotoAtivo ? "adicional" : "não"}`,
       `WhatsApp (franquia): ${c.whatsapp === PERSONALIZADO ? "personalizado" : c.whatsapp}`,
       `Vídeo: ${c.video === PERSONALIZADO ? "personalizado" : c.video || "não incluído"}`,
       `Ciclo: ${pedido.ciclo}${pedido.diaCobranca ? ` · cobrança todo dia ${pedido.diaCobranca}` : ""}`,

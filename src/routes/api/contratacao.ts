@@ -39,6 +39,7 @@ const CriarSchema = z.object({
   copiloto: z.number().int(),
   whatsapp: z.number().int(),
   video: z.number().int(),
+  copilotoAtivo: z.boolean().optional(),
   ciclo: z.enum(["mensal", "anual"]),
   diaCobranca: z.number().int().min(1).max(28).nullable().optional(),
   precoMensalCalculado: z.number().nullable().optional(),
@@ -52,6 +53,7 @@ const AtualizarSchema = z.object({
   copiloto: z.number().int().optional(),
   whatsapp: z.number().int().optional(),
   video: z.number().int().optional(),
+  copilotoAtivo: z.boolean().optional(),
   ciclo: z.enum(["mensal", "anual"]).optional(),
   diaCobranca: z.number().int().min(1).max(28).nullable().optional(),
   precoMensalCalculado: z.number().nullable().optional(),
@@ -89,6 +91,7 @@ export const Route = createFileRoute("/api/contratacao")({
             copiloto: d.copiloto,
             whatsapp: d.whatsapp,
             video: d.video,
+            copiloto_ativo: copilotoAtivoDoPedido(d.plano, d.copilotoAtivo),
             ciclo: d.ciclo,
             dia_cobranca: d.diaCobranca ?? null,
             preco_mensal_calculado: d.precoMensalCalculado ?? null,
@@ -116,6 +119,8 @@ export const Route = createFileRoute("/api/contratacao")({
         if (d.copiloto !== undefined) updates.copiloto = d.copiloto;
         if (d.whatsapp !== undefined) updates.whatsapp = d.whatsapp;
         if (d.video !== undefined) updates.video = d.video;
+        // Sem o plano no PATCH não dá para saber se o adicional vale: só grava junto com ele.
+        if (d.plano !== undefined) updates.copiloto_ativo = copilotoAtivoDoPedido(d.plano, d.copilotoAtivo);
         if (d.ciclo !== undefined) updates.ciclo = d.ciclo;
         if (d.diaCobranca !== undefined) updates.dia_cobranca = d.diaCobranca;
         if (d.precoMensalCalculado !== undefined) updates.preco_mensal_calculado = d.precoMensalCalculado;
@@ -163,3 +168,10 @@ export const Route = createFileRoute("/api/contratacao")({
     },
   },
 });
+
+/** Pro sempre inclui o Copiloto ativo, Basic nunca; no Enterprise é o adicional escolhido. */
+function copilotoAtivoDoPedido(plano: "basic" | "pro" | "enterprise", pedido: boolean | undefined) {
+  if (plano === "pro") return true;
+  if (plano === "enterprise") return !!pedido;
+  return false;
+}

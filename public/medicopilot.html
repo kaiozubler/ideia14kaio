@@ -31,7 +31,7 @@
     <link rel="stylesheet" href="faturamento.css?v=3" />
     <script src="faturamento.js?v=3" defer></script>
     <link rel="stylesheet" href="meu-plano.css?v=6" />
-    <script src="meu-plano.js?v=7" defer></script>
+    <script src="meu-plano.js?v=8" defer></script>
     <link rel="stylesheet" href="comunicacao-whatsapp.css?v=1" />
     <script src="comunicacao-whatsapp.js?v=1" defer></script>
     <link rel="stylesheet" href="agendamento-online.css?v=1" />
@@ -6734,7 +6734,9 @@ const {error}=await sb.auth.signUp({email,password:pass,options:{data:{name_user
                                                                 enabled: cfg.enabled!==false,
                                                                 voz: cfg.voz!==false,
                                                                 vozAuto: cfg.vozAuto===true,
-                                                                tipo: cfg.tipo||'ativo',
+                                                                // Copiloto ativo só no Pro ou no Enterprise com o adicional (o servidor
+                                                                // também recusa o ciclo automático); fora disso vale o reativo.
+                                                                tipo: window.__copilotoAtivoLiberado===false ? 'reativo' : (cfg.tipo||'ativo'),
                                                                 freq: Number(cfg.freq)||480,
                                                                 perguntas: cfg.perguntas!==false,
                                                                 memoria: cfg.memoria!==false,
@@ -6925,9 +6927,30 @@ const tri=document.getElementById('cli-triagem');if(tri)tri.checked=CLINICA.tria
                                                             function updateCopTipoHint(){
                                                               const t=document.getElementById('cop-tipo');const h=document.getElementById('cop-tipo-hint');
                                                               if(!t||!h)return;
+                                                              const opAtivo=t.querySelector('option[value="ativo"]');
+                                                              const bloqueado=window.__copilotoAtivoLiberado===false;
+                                                              if(opAtivo){opAtivo.disabled=bloqueado;opAtivo.textContent=bloqueado?'Ativo — planos Pro e Enterprise':'Ativo';}
+                                                              if(bloqueado&&t.value==='ativo')t.value='reativo';
+                                                              if(bloqueado){
+                                                                h.innerHTML='O copiloto só responde quando o médico solicitar uma ação. O <strong>Copiloto ativo</strong> (a IA acompanha a consulta e traz sozinha perguntas, pontos de atenção e sugestões de conduta) faz parte do plano Pro e é adicional no Enterprise.';
+                                                                return;
+                                                              }
                                                               h.textContent=t.value==='ativo'
                                                                 ?'O copiloto traz sugestões e atualizações por conta própria durante a consulta.'
                                                                 :'O copiloto só responde quando o médico solicitar uma ação.';
+                                                            }
+                                                            // Lê se a conta pode usar o Copiloto ativo (plano Pro, ou Enterprise com o
+                                                            // adicional). Secretária/enfermagem não usam o copiloto. Falha = libera
+                                                            // (o servidor é quem bloqueia de fato).
+                                                            async function carregarPermissaoCopilotoAtivo(){
+                                                              try{
+                                                                const {data:u}=await sb.auth.getUser();
+                                                                if(!u||!u.user)return;
+                                                                const {data,error}=await sb.from('assinaturas').select('plano,copiloto_ativo').eq('medico_id',u.user.id).neq('status','cancelada').maybeSingle();
+                                                                if(error)return;
+                                                                window.__copilotoAtivoLiberado=!!data&&(data.plano==='pro'||(data.plano==='enterprise'&&!!data.copiloto_ativo));
+                                                              }catch(e){}
+                                                              updateCopTipoHint();
                                                             }
                                                             function updateCopEnabledState(){
                                                               const en=document.getElementById('cop-enabled');const body=document.getElementById('cop-geral-body');
@@ -6956,6 +6979,7 @@ const tri=document.getElementById('cli-triagem');if(tri)tri.checked=CLINICA.tria
                                                               try{loadCopVoiceCfg();}catch(e){console.error('[copiloto-voz] ERRO inesperado ao chamar loadCopVoiceCfg:',e);}
                                                               loadCopWhatsappSecurity();
                                                               loadCopTranscricaoIa();
+                                                              carregarPermissaoCopilotoAtivo();
                                                             }
                                                             // Transcrição e IA ficam em user_metadata (não no localStorage) porque o
                                                             // servidor decide com elas: o token do Deepgram (só Pro/Enterprise e
@@ -11381,6 +11405,7 @@ showAtendList();
                                                             /* ========== COPILOTO ATIVO — LOOP ========== */
                                                             function startCopilotoLoop(){
                                                               stopCopilotoLoop();
+                                                              if(window.__copilotoAtivoLiberado===undefined) carregarPermissaoCopilotoAtivo();
                                                               const cfg=getCopilotoCfg();
                                                               if(!cfg.enabled || cfg.tipo!=='ativo') return;
                                                               const ms=Math.max(15,cfg.freq)*1000;
@@ -11422,6 +11447,13 @@ showAtendList();
                                                                   payload.resumo_acumulado=copLastSummary||'';
                                                                 }
                                                                 const res=await iaAuthFetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+                                                                if(res.status===403 && !manual){
+                                                                  // Plano sem Copiloto ativo: para o ciclo automático e avisa uma vez.
+                                                                  window.__copilotoAtivoLiberado=false;
+                                                                  stopCopilotoLoop();
+                                                                  queueAiPanelItem('ia','O Copiloto ativo faz parte do plano Pro (ou adicional no Enterprise). Neste plano, use os botões Conduta e Dúvida para pedir sugestões à IA.');
+                                                                  return;
+                                                                }
                                                                 if(!res.ok) throw new Error(await res.text());
                                                                 const data=await res.json();
                                                                 copTranscriptCursor=cursorAtSend;

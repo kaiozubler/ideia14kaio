@@ -136,6 +136,9 @@ export const Route = createFileRoute("/api/assinatura/trocar-plano")({
             medicos: novo.medicos,
             secretarias: novo.secretarias,
             copiloto: novo.copiloto,
+            // Troca vai para a configuração de fábrica: Pro inclui o Copiloto ativo;
+            // no Enterprise o adicional é contratado à parte (/planos).
+            copiloto_ativo: novo.copilotoAtivo === "incluido",
             whatsapp: novo.whatsapp,
             video: novo.video,
             preco_mensal: novo.precoMensal,

@@ -392,6 +392,23 @@ export const Route = createFileRoute("/api/chat-ia")({
           }
 
           if (mode === "copiloto") {
+            // Ciclo automático (manual=false) é o Copiloto ativo: só no Pro ou no
+            // Enterprise com o adicional. Os botões (manual) valem em todo plano.
+            if (!body.manual) {
+              const { assinaturaDaConta } = await import("@/lib/assinatura/conta.server");
+              const { copilotoAtivoLiberado } = await import("@/lib/plans/config");
+              let liberado = true;
+              try {
+                const a = await assinaturaDaConta(userId);
+                liberado = copilotoAtivoLiberado(a?.plano, a?.copiloto_ativo);
+              } catch (err) {
+                // Falha ao ler o plano não pode derrubar quem paga: falha aberto.
+                console.warn("[chat-ia] falha ao ler plano:", err instanceof Error ? err.message : err);
+              }
+              if (!liberado) {
+                return Response.json({ error: "copiloto_ativo_indisponivel" }, { status: 403 });
+              }
+            }
             const ctx: Record<string, unknown> = {
               primeiro_processamento: !!body.primeiro_processamento,
               manual: !!body.manual,

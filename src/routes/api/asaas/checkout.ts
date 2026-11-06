@@ -67,6 +67,7 @@ export const Route = createFileRoute("/api/asaas/checkout")({
         const nomeItens: Record<string, string> = { basic: "Basic", pro: "Pro", enterprise: "Enterprise" };
         const descricaoFranquias = [
           contratacao.copiloto === PERSONALIZADO ? "Copiloto personalizado" : `Copiloto ${contratacao.copiloto} consultas`,
+          ...(contratacao.copiloto_ativo ? ["Copiloto ativo"] : []),
           contratacao.whatsapp === PERSONALIZADO ? "WhatsApp personalizado" : `WhatsApp ${contratacao.whatsapp} conversas`,
           contratacao.video === PERSONALIZADO ? "Vídeo personalizado" : contratacao.video ? `Vídeo ${contratacao.video} min` : "sem vídeo",
         ].join(" · ");
