@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { analisarExameArquivo, type AnaliseExame } from "@/lib/exames/analise.server";
+import { getUserIdFromRequest } from "@/lib/signature/requestAuth.server";
 
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -375,6 +376,12 @@ export const Route = createFileRoute("/api/chat-ia")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // Só usuários logados: cada chamada consome a chave de IA da conta, e o modo
+        // "anamnese" aceita system prompt livre — aberto, viraria um proxy de LLM grátis.
+        const userId = await getUserIdFromRequest(request);
+        if (!userId) {
+          return Response.json({ error: "unauthorized" }, { status: 401 });
+        }
         const apiKey = process.env.LOVABLE_API_KEY;
         if (!apiKey) {
           return new Response("Missing LOVABLE_API_KEY", { status: 500 });
@@ -513,18 +520,9 @@ export const Route = createFileRoute("/api/chat-ia")({
           // Base de conhecimento local do médico (opcional): se ele tiver bases
           // ativas para o chat_ai, isso injeta o índice delas + os trechos que
           // batem com a última mensagem do usuário. Ver src/lib/base-conhecimento.
-          // Preferência: user_id mandado no corpo pelo cliente (mesmo padrão do
-          // /api/assistente-ia). Fallback: header Authorization com token Supabase,
-          // caso algum caller antigo/externo ainda mande dessa forma.
-          let medicoId: string | null = body.user_id || null;
-          if (!medicoId) {
-            const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-            if (token) {
-              const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-              const { data: userData } = await supabaseAdmin.auth.getUser(token);
-              medicoId = userData.user?.id ?? null;
-            }
-          }
+          // Usa o usuário do token verificado acima, nunca um user_id do corpo,
+          // para ninguém ler a base de outro médico.
+          const medicoId: string | null = userId;
           const ultimaMensagemUsuario =
             [...history].reverse().find((m) => m?.role === "user")?.content ?? "";
           const { montarContextoBaseConhecimento, MARCADOR_BASE_LOCAL_USADA } = await import(

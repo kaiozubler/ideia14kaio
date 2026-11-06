@@ -7042,6 +7042,14 @@ const tri=document.getElementById('cli-triagem');if(tri)tri.checked=CLINICA.tria
                                                               const frequency=document.getElementById('cop-wa-frequency');
                                                               if(frequency&&['6','12','24','36'].includes(String(data.frequencia_horas)))frequency.value=String(data.frequencia_horas);
                                                             }
+                                                            // /api/chat-ia e /api/deepgram-token exigem login: anexa o token da sessão.
+                                                            async function iaAuthFetch(url,init){
+                                                              const {data}=await sb.auth.getSession();
+                                                              const token=data?.session?.access_token||null;
+                                                              const opts=Object.assign({},init||{});
+                                                              opts.headers=Object.assign({},opts.headers||{},token?{Authorization:'Bearer '+token}:{});
+                                                              return fetch(url,opts);
+                                                            }
                                                             async function getCopWhatsappToken(){
                                                               const {data}=await sb.auth.getSession();
                                                               return data?.session?.access_token||null;
@@ -9292,7 +9300,7 @@ if(ehMembroEquipe()&&name!=='cadastro'){name='cadastro';el=null;}
                                                               atendChatHistory.push({role:'user',content:txt});
                                                               appendAdvChat('assistant','...');
                                                               const loading=document.getElementById('adv-chat-log').lastChild;
-                                                              fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'chat',messages:atendChatHistory,resumo_prontuario:atendChatContext,user_id:(typeof currentUser!=='undefined'&&currentUser)?currentUser.id:null})})
+                                                              iaAuthFetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'chat',messages:atendChatHistory,resumo_prontuario:atendChatContext,user_id:(typeof currentUser!=='undefined'&&currentUser)?currentUser.id:null})})
                                                                 .then(r=>r.json()).then(async j=>{
                                                                   const raw=(j.reply||'').trim()||'(sem resposta)';
                                                                   const blocks=iaExtractJsonBlocks(raw);
@@ -9439,7 +9447,7 @@ if(ehMembroEquipe()&&name!=='cadastro'){name='cadastro';el=null;}
                                                               const userContent='Gere a resposta agora, seguindo estritamente as instruções acima. '
                                                                 +'Use apenas os dados já fornecidos no prompt do sistema; não invente nem complemente '
                                                                 +'com informações ausentes.';
-                                                              const r=await fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})});
+                                                              const r=await iaAuthFetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})});
                                                               if(!r.ok)throw new Error(await r.text());
                                                               const d=await r.json();
                                                               const txt=(d.reply||d.resumo||'').trim();
@@ -10477,7 +10485,7 @@ showAtendList();
                                         // novo algo que já aconteceu.
                                         const agendamentoJaFeito=(!opts||!opts.conteudoExtra)?(atendEmAndamento.agendamentoGerado||null):null;
                                         const receitaJaFeita=(!opts||!opts.conteudoExtra)?(atendEmAndamento.receitaGerada||null):null;
-                                        const res=await fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+                                        const res=await iaAuthFetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
                                           mode:'extrair_complementares',
                                           info_complementar_atual:infoAtual,
                                           cids_atuais:cidsAtuais,
@@ -10691,7 +10699,7 @@ showAtendList();
                                                               active: false,
                                                               includeCall: false,
                                                               async fetchToken(){
-                                                                const r = await fetch('/api/deepgram-token', { method:'GET' });
+                                                                const r = await iaAuthFetch('/api/deepgram-token', { method:'GET' });
                                                                 if(!r.ok){ throw new Error('Token error '+r.status+': '+await r.text()); }
                                                                 return r.json();
                                                               },
@@ -11207,7 +11215,7 @@ showAtendList();
                                                                 } else {
                                                                   payload.resumo_acumulado=copLastSummary||'';
                                                                 }
-                                                                const res=await fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+                                                                const res=await iaAuthFetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
                                                                 if(!res.ok) throw new Error(await res.text());
                                                                 const data=await res.json();
                                                                 copTranscriptCursor=cursorAtSend;
@@ -11317,7 +11325,7 @@ showAtendList();
                                                                 try{const{data}=await sb.from('consulta').select('*').eq('paciente_id',idPaciente).order('started_at',{ascending:false}).limit(10);atends=data||[];}catch(e){}
                                                                 try{const{data}=await sb.from('exames').select('*').eq('paciente_id',idPaciente).order('created_at',{ascending:false}).limit(20);exs=data||[];}catch(e){}
 
-                                                                const res=await fetch('/api/chat-ia',{
+                                                                const res=await iaAuthFetch('/api/chat-ia',{
                                                                   method:'POST',headers:{'Content-Type':'application/json'},
                                                                   body:JSON.stringify({mode:'resumo',paciente:pac,atendimentos:atends,exames:exs,info_complementar:loadInfoComp()})
                                                                 });
@@ -11778,7 +11786,7 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                                                               // O histórico enviado à IA vai com os atalhos ("/algo") já expandidos
                                                               // pro texto completo — aiChatHistory continua compacto (exibição).
                                                               const mensagensParaIA=await iaExpandirHistoricoAtalhos(aiChatHistory,'chat_ai');
-                                                              fetch('/api/chat-ia',{
+                                                              iaAuthFetch('/api/chat-ia',{
                                                                 method:'POST',
                                                                 headers:{'Content-Type':'application/json'},
                                                                 body:JSON.stringify(Object.assign({mode:'chat',messages:mensagensParaIA,resumo_prontuario:currentResumoProntuario||'',anexo:iaTakeAnexo('ai'),user_id:(typeof currentUser!=='undefined'&&currentUser)?currentUser.id:null},(function(){const p=iaExamePacienteCtx();return p?{paciente_nome:p.nome,paciente_cpf:p.cpf,paciente_nascimento:p.data_nascimento}:{};})()))
@@ -13293,7 +13301,7 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                               cfLoadSugestoes();
                                                             }
                                                             async function cfCallIaJson(systemPrompt,userContent){
-                                                              const r=await fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})});
+                                                              const r=await iaAuthFetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})});
                                                               if(!r.ok)throw new Error('IA '+r.status+': '+(await r.text()));
                                                               const d=await r.json();
                                                               const raw=(d.reply||d.resumo||'').trim();
@@ -14204,7 +14212,7 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                                     const ctxBlock=buildAnamneseContextBlock(sources);
                                                                     const systemPrompt=basePrompt+'\n\n---\n# CONTEXTO DISPONÍVEL\n\n'+(ctxBlock||'(nenhuma fonte de contexto selecionada)');
                                                                     const userContent='Gere a resposta agora, seguindo estritamente as instruções acima. Use apenas os dados já fornecidos no prompt do sistema; não invente nem complemente com informações ausentes.';
-                                                                    const r=await fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})});
+                                                                    const r=await iaAuthFetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})});
                                                                     if(!r.ok)throw new Error(await r.text());
                                                                     const d=await r.json();
                                                                     const txt=(d.reply||d.resumo||'').trim();
@@ -14275,7 +14283,7 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                                 +'Use apenas os dados já fornecidos no prompt do sistema; não invente nem complemente '
                                                                 +'com informações ausentes.';
                                                               window.__lastAnamnese='';
-                                                              fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})})
+                                                              iaAuthFetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})})
                                                                 .then(r=>r.ok?r.json():r.text().then(t=>{throw new Error(t);}))
                                                                 .then(d=>{const t=(d.reply||d.resumo||'').trim()||'(sem resposta)';window.__lastAnamnese=t;txtEl.classList.add('rich');txtEl.innerHTML=mdToHtml(t);})
                                                                 .catch(e=>{txtEl.classList.remove('rich');txtEl.textContent='⚠️ Erro ao gerar anamnese: '+(e.message||e);});
