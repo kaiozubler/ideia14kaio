@@ -90,6 +90,7 @@ import { Route as ApiPublicAgendamentoHorariosRouteImport } from './routes/api/p
 import { Route as ApiPublicAgendamentoReservarRouteImport } from './routes/api/public/agendamento/reservar'
 import { Route as ApiPublicCrmClinicasRouteImport } from './routes/api/public/crm/clinicas'
 import { Route as ApiPublicCrmCuponsRouteImport } from './routes/api/public/crm/cupons'
+import { Route as ApiPublicCrmHealthRouteImport } from './routes/api/public/crm/health'
 import { Route as ApiPublicCrmPagamentosRouteImport } from './routes/api/public/crm/pagamentos'
 import { Route as ApiPublicCrmUsuariosRouteImport } from './routes/api/public/crm/usuarios'
 import { Route as ApiPublicDocumentosAbrirRouteImport } from './routes/api/public/documentos/abrir'
@@ -550,6 +551,11 @@ const ApiPublicCrmCuponsRoute = ApiPublicCrmCuponsRouteImport.update({
   path: '/api/public/crm/cupons',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCrmHealthRoute = ApiPublicCrmHealthRouteImport.update({
+  id: '/api/public/crm/health',
+  path: '/api/public/crm/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCrmPagamentosRoute = ApiPublicCrmPagamentosRouteImport.update({
   id: '/api/public/crm/pagamentos',
   path: '/api/public/crm/pagamentos',
@@ -796,6 +802,7 @@ export interface FileRoutesByFullPath {
   '/api/public/agendamento/reservar': typeof ApiPublicAgendamentoReservarRoute
   '/api/public/crm/clinicas': typeof ApiPublicCrmClinicasRouteWithChildren
   '/api/public/crm/cupons': typeof ApiPublicCrmCuponsRouteWithChildren
+  '/api/public/crm/health': typeof ApiPublicCrmHealthRoute
   '/api/public/crm/pagamentos': typeof ApiPublicCrmPagamentosRouteWithChildren
   '/api/public/crm/usuarios': typeof ApiPublicCrmUsuariosRouteWithChildren
   '/api/public/documentos/abrir': typeof ApiPublicDocumentosAbrirRoute
@@ -908,6 +915,7 @@ export interface FileRoutesByTo {
   '/api/public/agendamento/reservar': typeof ApiPublicAgendamentoReservarRoute
   '/api/public/crm/clinicas': typeof ApiPublicCrmClinicasRouteWithChildren
   '/api/public/crm/cupons': typeof ApiPublicCrmCuponsRouteWithChildren
+  '/api/public/crm/health': typeof ApiPublicCrmHealthRoute
   '/api/public/crm/pagamentos': typeof ApiPublicCrmPagamentosRouteWithChildren
   '/api/public/crm/usuarios': typeof ApiPublicCrmUsuariosRouteWithChildren
   '/api/public/documentos/abrir': typeof ApiPublicDocumentosAbrirRoute
@@ -1021,6 +1029,7 @@ export interface FileRoutesById {
   '/api/public/agendamento/reservar': typeof ApiPublicAgendamentoReservarRoute
   '/api/public/crm/clinicas': typeof ApiPublicCrmClinicasRouteWithChildren
   '/api/public/crm/cupons': typeof ApiPublicCrmCuponsRouteWithChildren
+  '/api/public/crm/health': typeof ApiPublicCrmHealthRoute
   '/api/public/crm/pagamentos': typeof ApiPublicCrmPagamentosRouteWithChildren
   '/api/public/crm/usuarios': typeof ApiPublicCrmUsuariosRouteWithChildren
   '/api/public/documentos/abrir': typeof ApiPublicDocumentosAbrirRoute
@@ -1135,6 +1144,7 @@ export interface FileRouteTypes {
     | '/api/public/agendamento/reservar'
     | '/api/public/crm/clinicas'
     | '/api/public/crm/cupons'
+    | '/api/public/crm/health'
     | '/api/public/crm/pagamentos'
     | '/api/public/crm/usuarios'
     | '/api/public/documentos/abrir'
@@ -1247,6 +1257,7 @@ export interface FileRouteTypes {
     | '/api/public/agendamento/reservar'
     | '/api/public/crm/clinicas'
     | '/api/public/crm/cupons'
+    | '/api/public/crm/health'
     | '/api/public/crm/pagamentos'
     | '/api/public/crm/usuarios'
     | '/api/public/documentos/abrir'
@@ -1359,6 +1370,7 @@ export interface FileRouteTypes {
     | '/api/public/agendamento/reservar'
     | '/api/public/crm/clinicas'
     | '/api/public/crm/cupons'
+    | '/api/public/crm/health'
     | '/api/public/crm/pagamentos'
     | '/api/public/crm/usuarios'
     | '/api/public/documentos/abrir'
@@ -1471,6 +1483,7 @@ export interface RootRouteChildren {
   ApiPublicAgendamentoReservarRoute: typeof ApiPublicAgendamentoReservarRoute
   ApiPublicCrmClinicasRoute: typeof ApiPublicCrmClinicasRouteWithChildren
   ApiPublicCrmCuponsRoute: typeof ApiPublicCrmCuponsRouteWithChildren
+  ApiPublicCrmHealthRoute: typeof ApiPublicCrmHealthRoute
   ApiPublicCrmPagamentosRoute: typeof ApiPublicCrmPagamentosRouteWithChildren
   ApiPublicCrmUsuariosRoute: typeof ApiPublicCrmUsuariosRouteWithChildren
   ApiPublicDocumentosAbrirRoute: typeof ApiPublicDocumentosAbrirRoute
@@ -2065,6 +2078,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCrmCuponsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/crm/health': {
+      id: '/api/public/crm/health'
+      path: '/api/public/crm/health'
+      fullPath: '/api/public/crm/health'
+      preLoaderRoute: typeof ApiPublicCrmHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/crm/pagamentos': {
       id: '/api/public/crm/pagamentos'
       path: '/api/public/crm/pagamentos'
@@ -2443,6 +2463,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAgendamentoReservarRoute: ApiPublicAgendamentoReservarRoute,
   ApiPublicCrmClinicasRoute: ApiPublicCrmClinicasRouteWithChildren,
   ApiPublicCrmCuponsRoute: ApiPublicCrmCuponsRouteWithChildren,
+  ApiPublicCrmHealthRoute: ApiPublicCrmHealthRoute,
   ApiPublicCrmPagamentosRoute: ApiPublicCrmPagamentosRouteWithChildren,
   ApiPublicCrmUsuariosRoute: ApiPublicCrmUsuariosRouteWithChildren,
   ApiPublicDocumentosAbrirRoute: ApiPublicDocumentosAbrirRoute,

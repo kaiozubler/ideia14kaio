@@ -337,7 +337,6 @@ export type Database = {
       }
       assinaturas: {
         Row: {
-          copiloto_ativo: boolean
           asaas_customer_id: string | null
           asaas_subscription_id: string | null
           cancelamento_agendado_para: string | null
@@ -348,6 +347,7 @@ export type Database = {
           ciclo: string
           contratacao_id: string | null
           copiloto: number
+          copiloto_ativo: boolean
           created_at: string
           dia_cobranca: number | null
           id: string
@@ -366,7 +366,6 @@ export type Database = {
           whatsapp: number
         }
         Insert: {
-          copiloto_ativo?: boolean
           asaas_customer_id?: string | null
           asaas_subscription_id?: string | null
           cancelamento_agendado_para?: string | null
@@ -377,6 +376,7 @@ export type Database = {
           ciclo: string
           contratacao_id?: string | null
           copiloto: number
+          copiloto_ativo?: boolean
           created_at?: string
           dia_cobranca?: number | null
           id?: string
@@ -395,7 +395,6 @@ export type Database = {
           whatsapp: number
         }
         Update: {
-          copiloto_ativo?: boolean
           asaas_customer_id?: string | null
           asaas_subscription_id?: string | null
           cancelamento_agendado_para?: string | null
@@ -406,6 +405,7 @@ export type Database = {
           ciclo?: string
           contratacao_id?: string | null
           copiloto?: number
+          copiloto_ativo?: boolean
           created_at?: string
           dia_cobranca?: number | null
           id?: string
@@ -1586,7 +1586,6 @@ export type Database = {
       }
       contratacoes: {
         Row: {
-          copiloto_ativo: boolean
           asaas_checkout_id: string | null
           asaas_customer_id: string | null
           asaas_subscription_id: string | null
@@ -1598,6 +1597,7 @@ export type Database = {
           como_conheceu: string | null
           complemento: string | null
           copiloto: number
+          copiloto_ativo: boolean
           created_at: string
           dia_cobranca: number | null
           documento: string | null
@@ -1630,7 +1630,6 @@ export type Database = {
           whatsapp: number
         }
         Insert: {
-          copiloto_ativo?: boolean
           asaas_checkout_id?: string | null
           asaas_customer_id?: string | null
           asaas_subscription_id?: string | null
@@ -1642,6 +1641,7 @@ export type Database = {
           como_conheceu?: string | null
           complemento?: string | null
           copiloto: number
+          copiloto_ativo?: boolean
           created_at?: string
           dia_cobranca?: number | null
           documento?: string | null
@@ -1674,7 +1674,6 @@ export type Database = {
           whatsapp: number
         }
         Update: {
-          copiloto_ativo?: boolean
           asaas_checkout_id?: string | null
           asaas_customer_id?: string | null
           asaas_subscription_id?: string | null
@@ -1686,6 +1685,7 @@ export type Database = {
           como_conheceu?: string | null
           complemento?: string | null
           copiloto?: number
+          copiloto_ativo?: boolean
           created_at?: string
           dia_cobranca?: number | null
           documento?: string | null
