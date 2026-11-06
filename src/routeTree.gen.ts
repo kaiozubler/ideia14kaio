@@ -88,6 +88,7 @@ import { Route as ApiPublicAgendamentoClinicaRouteImport } from './routes/api/pu
 import { Route as ApiPublicAgendamentoHorariosRouteImport } from './routes/api/public/agendamento/horarios'
 import { Route as ApiPublicAgendamentoReservarRouteImport } from './routes/api/public/agendamento/reservar'
 import { Route as ApiPublicCrmClinicasRouteImport } from './routes/api/public/crm/clinicas'
+import { Route as ApiPublicCrmCuponsRouteImport } from './routes/api/public/crm/cupons'
 import { Route as ApiPublicCrmPagamentosRouteImport } from './routes/api/public/crm/pagamentos'
 import { Route as ApiPublicCrmUsuariosRouteImport } from './routes/api/public/crm/usuarios'
 import { Route as ApiPublicDocumentosAbrirRouteImport } from './routes/api/public/documentos/abrir'
@@ -110,6 +111,7 @@ import { Route as ApiSignatureIntegraBryLinkRouteImport } from './routes/api/sig
 import { Route as ApiSignatureIntegraBryPscsRouteImport } from './routes/api/signature/integra-bry/pscs'
 import { Route as ApiSignatureIntegraBrySignRouteImport } from './routes/api/signature/integra-bry/sign'
 import { Route as ApiPublicCrmClinicasIdRouteImport } from './routes/api/public/crm/clinicas.$id'
+import { Route as ApiPublicCrmCuponsIdRouteImport } from './routes/api/public/crm/cupons.$id'
 import { Route as ApiPublicCrmUsuariosIdRouteImport } from './routes/api/public/crm/usuarios.$id'
 import { Route as ApiPublicWebhooksWhatsappClinicaChaveRouteImport } from './routes/api/public/webhooks/whatsapp-clinica/$chave'
 import { Route as ApiPublicCrmClinicasIdAcessoRouteImport } from './routes/api/public/crm/clinicas.$id.acesso'
@@ -537,6 +539,11 @@ const ApiPublicCrmClinicasRoute = ApiPublicCrmClinicasRouteImport.update({
   path: '/api/public/crm/clinicas',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCrmCuponsRoute = ApiPublicCrmCuponsRouteImport.update({
+  id: '/api/public/crm/cupons',
+  path: '/api/public/crm/cupons',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCrmPagamentosRoute = ApiPublicCrmPagamentosRouteImport.update({
   id: '/api/public/crm/pagamentos',
   path: '/api/public/crm/pagamentos',
@@ -660,6 +667,11 @@ const ApiPublicCrmClinicasIdRoute = ApiPublicCrmClinicasIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiPublicCrmClinicasRoute,
 } as any)
+const ApiPublicCrmCuponsIdRoute = ApiPublicCrmCuponsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiPublicCrmCuponsRoute,
+} as any)
 const ApiPublicCrmUsuariosIdRoute = ApiPublicCrmUsuariosIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -776,6 +788,7 @@ export interface FileRoutesByFullPath {
   '/api/public/agendamento/horarios': typeof ApiPublicAgendamentoHorariosRoute
   '/api/public/agendamento/reservar': typeof ApiPublicAgendamentoReservarRoute
   '/api/public/crm/clinicas': typeof ApiPublicCrmClinicasRouteWithChildren
+  '/api/public/crm/cupons': typeof ApiPublicCrmCuponsRouteWithChildren
   '/api/public/crm/pagamentos': typeof ApiPublicCrmPagamentosRouteWithChildren
   '/api/public/crm/usuarios': typeof ApiPublicCrmUsuariosRouteWithChildren
   '/api/public/documentos/abrir': typeof ApiPublicDocumentosAbrirRoute
@@ -798,6 +811,7 @@ export interface FileRoutesByFullPath {
   '/api/signature/integra-bry/pscs': typeof ApiSignatureIntegraBryPscsRoute
   '/api/signature/integra-bry/sign': typeof ApiSignatureIntegraBrySignRoute
   '/api/public/crm/clinicas/$id': typeof ApiPublicCrmClinicasIdRouteWithChildren
+  '/api/public/crm/cupons/$id': typeof ApiPublicCrmCuponsIdRoute
   '/api/public/crm/usuarios/$id': typeof ApiPublicCrmUsuariosIdRouteWithChildren
   '/api/public/webhooks/whatsapp-clinica/$chave': typeof ApiPublicWebhooksWhatsappClinicaChaveRoute
   '/api/public/crm/clinicas/$id/acesso': typeof ApiPublicCrmClinicasIdAcessoRoute
@@ -885,6 +899,7 @@ export interface FileRoutesByTo {
   '/api/public/agendamento/horarios': typeof ApiPublicAgendamentoHorariosRoute
   '/api/public/agendamento/reservar': typeof ApiPublicAgendamentoReservarRoute
   '/api/public/crm/clinicas': typeof ApiPublicCrmClinicasRouteWithChildren
+  '/api/public/crm/cupons': typeof ApiPublicCrmCuponsRouteWithChildren
   '/api/public/crm/pagamentos': typeof ApiPublicCrmPagamentosRouteWithChildren
   '/api/public/crm/usuarios': typeof ApiPublicCrmUsuariosRouteWithChildren
   '/api/public/documentos/abrir': typeof ApiPublicDocumentosAbrirRoute
@@ -907,6 +922,7 @@ export interface FileRoutesByTo {
   '/api/signature/integra-bry/pscs': typeof ApiSignatureIntegraBryPscsRoute
   '/api/signature/integra-bry/sign': typeof ApiSignatureIntegraBrySignRoute
   '/api/public/crm/clinicas/$id': typeof ApiPublicCrmClinicasIdRouteWithChildren
+  '/api/public/crm/cupons/$id': typeof ApiPublicCrmCuponsIdRoute
   '/api/public/crm/usuarios/$id': typeof ApiPublicCrmUsuariosIdRouteWithChildren
   '/api/public/webhooks/whatsapp-clinica/$chave': typeof ApiPublicWebhooksWhatsappClinicaChaveRoute
   '/api/public/crm/clinicas/$id/acesso': typeof ApiPublicCrmClinicasIdAcessoRoute
@@ -995,6 +1011,7 @@ export interface FileRoutesById {
   '/api/public/agendamento/horarios': typeof ApiPublicAgendamentoHorariosRoute
   '/api/public/agendamento/reservar': typeof ApiPublicAgendamentoReservarRoute
   '/api/public/crm/clinicas': typeof ApiPublicCrmClinicasRouteWithChildren
+  '/api/public/crm/cupons': typeof ApiPublicCrmCuponsRouteWithChildren
   '/api/public/crm/pagamentos': typeof ApiPublicCrmPagamentosRouteWithChildren
   '/api/public/crm/usuarios': typeof ApiPublicCrmUsuariosRouteWithChildren
   '/api/public/documentos/abrir': typeof ApiPublicDocumentosAbrirRoute
@@ -1017,6 +1034,7 @@ export interface FileRoutesById {
   '/api/signature/integra-bry/pscs': typeof ApiSignatureIntegraBryPscsRoute
   '/api/signature/integra-bry/sign': typeof ApiSignatureIntegraBrySignRoute
   '/api/public/crm/clinicas/$id': typeof ApiPublicCrmClinicasIdRouteWithChildren
+  '/api/public/crm/cupons/$id': typeof ApiPublicCrmCuponsIdRoute
   '/api/public/crm/usuarios/$id': typeof ApiPublicCrmUsuariosIdRouteWithChildren
   '/api/public/webhooks/whatsapp-clinica/$chave': typeof ApiPublicWebhooksWhatsappClinicaChaveRoute
   '/api/public/crm/clinicas/$id/acesso': typeof ApiPublicCrmClinicasIdAcessoRoute
@@ -1106,6 +1124,7 @@ export interface FileRouteTypes {
     | '/api/public/agendamento/horarios'
     | '/api/public/agendamento/reservar'
     | '/api/public/crm/clinicas'
+    | '/api/public/crm/cupons'
     | '/api/public/crm/pagamentos'
     | '/api/public/crm/usuarios'
     | '/api/public/documentos/abrir'
@@ -1128,6 +1147,7 @@ export interface FileRouteTypes {
     | '/api/signature/integra-bry/pscs'
     | '/api/signature/integra-bry/sign'
     | '/api/public/crm/clinicas/$id'
+    | '/api/public/crm/cupons/$id'
     | '/api/public/crm/usuarios/$id'
     | '/api/public/webhooks/whatsapp-clinica/$chave'
     | '/api/public/crm/clinicas/$id/acesso'
@@ -1215,6 +1235,7 @@ export interface FileRouteTypes {
     | '/api/public/agendamento/horarios'
     | '/api/public/agendamento/reservar'
     | '/api/public/crm/clinicas'
+    | '/api/public/crm/cupons'
     | '/api/public/crm/pagamentos'
     | '/api/public/crm/usuarios'
     | '/api/public/documentos/abrir'
@@ -1237,6 +1258,7 @@ export interface FileRouteTypes {
     | '/api/signature/integra-bry/pscs'
     | '/api/signature/integra-bry/sign'
     | '/api/public/crm/clinicas/$id'
+    | '/api/public/crm/cupons/$id'
     | '/api/public/crm/usuarios/$id'
     | '/api/public/webhooks/whatsapp-clinica/$chave'
     | '/api/public/crm/clinicas/$id/acesso'
@@ -1324,6 +1346,7 @@ export interface FileRouteTypes {
     | '/api/public/agendamento/horarios'
     | '/api/public/agendamento/reservar'
     | '/api/public/crm/clinicas'
+    | '/api/public/crm/cupons'
     | '/api/public/crm/pagamentos'
     | '/api/public/crm/usuarios'
     | '/api/public/documentos/abrir'
@@ -1346,6 +1369,7 @@ export interface FileRouteTypes {
     | '/api/signature/integra-bry/pscs'
     | '/api/signature/integra-bry/sign'
     | '/api/public/crm/clinicas/$id'
+    | '/api/public/crm/cupons/$id'
     | '/api/public/crm/usuarios/$id'
     | '/api/public/webhooks/whatsapp-clinica/$chave'
     | '/api/public/crm/clinicas/$id/acesso'
@@ -1434,6 +1458,7 @@ export interface RootRouteChildren {
   ApiPublicAgendamentoHorariosRoute: typeof ApiPublicAgendamentoHorariosRoute
   ApiPublicAgendamentoReservarRoute: typeof ApiPublicAgendamentoReservarRoute
   ApiPublicCrmClinicasRoute: typeof ApiPublicCrmClinicasRouteWithChildren
+  ApiPublicCrmCuponsRoute: typeof ApiPublicCrmCuponsRouteWithChildren
   ApiPublicCrmPagamentosRoute: typeof ApiPublicCrmPagamentosRouteWithChildren
   ApiPublicCrmUsuariosRoute: typeof ApiPublicCrmUsuariosRouteWithChildren
   ApiPublicDocumentosAbrirRoute: typeof ApiPublicDocumentosAbrirRoute
@@ -2014,6 +2039,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCrmClinicasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/crm/cupons': {
+      id: '/api/public/crm/cupons'
+      path: '/api/public/crm/cupons'
+      fullPath: '/api/public/crm/cupons'
+      preLoaderRoute: typeof ApiPublicCrmCuponsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/crm/pagamentos': {
       id: '/api/public/crm/pagamentos'
       path: '/api/public/crm/pagamentos'
@@ -2168,6 +2200,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCrmClinicasIdRouteImport
       parentRoute: typeof ApiPublicCrmClinicasRoute
     }
+    '/api/public/crm/cupons/$id': {
+      id: '/api/public/crm/cupons/$id'
+      path: '/$id'
+      fullPath: '/api/public/crm/cupons/$id'
+      preLoaderRoute: typeof ApiPublicCrmCuponsIdRouteImport
+      parentRoute: typeof ApiPublicCrmCuponsRoute
+    }
     '/api/public/crm/usuarios/$id': {
       id: '/api/public/crm/usuarios/$id'
       path: '/$id'
@@ -2237,6 +2276,17 @@ const ApiPublicCrmClinicasRouteChildren: ApiPublicCrmClinicasRouteChildren = {
 
 const ApiPublicCrmClinicasRouteWithChildren =
   ApiPublicCrmClinicasRoute._addFileChildren(ApiPublicCrmClinicasRouteChildren)
+
+interface ApiPublicCrmCuponsRouteChildren {
+  ApiPublicCrmCuponsIdRoute: typeof ApiPublicCrmCuponsIdRoute
+}
+
+const ApiPublicCrmCuponsRouteChildren: ApiPublicCrmCuponsRouteChildren = {
+  ApiPublicCrmCuponsIdRoute: ApiPublicCrmCuponsIdRoute,
+}
+
+const ApiPublicCrmCuponsRouteWithChildren =
+  ApiPublicCrmCuponsRoute._addFileChildren(ApiPublicCrmCuponsRouteChildren)
 
 interface ApiPublicCrmPagamentosRouteChildren {
   ApiPublicCrmPagamentosIdStatusRoute: typeof ApiPublicCrmPagamentosIdStatusRoute
@@ -2361,6 +2411,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAgendamentoHorariosRoute: ApiPublicAgendamentoHorariosRoute,
   ApiPublicAgendamentoReservarRoute: ApiPublicAgendamentoReservarRoute,
   ApiPublicCrmClinicasRoute: ApiPublicCrmClinicasRouteWithChildren,
+  ApiPublicCrmCuponsRoute: ApiPublicCrmCuponsRouteWithChildren,
   ApiPublicCrmPagamentosRoute: ApiPublicCrmPagamentosRouteWithChildren,
   ApiPublicCrmUsuariosRoute: ApiPublicCrmUsuariosRouteWithChildren,
   ApiPublicDocumentosAbrirRoute: ApiPublicDocumentosAbrirRoute,

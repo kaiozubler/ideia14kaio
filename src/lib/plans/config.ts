@@ -310,3 +310,43 @@ export function pacotesCredito(recurso: "copiloto" | "whatsapp" | "video"): Paco
 
 // TODO: substituir pelo número real do WhatsApp comercial (formato DDI+DDD+número, só dígitos).
 export const WHATSAPP_COMERCIAL = "5511999999999";
+
+// ---------------------------------------------------------------------------
+// Validação e preço no servidor — a contratação nunca confia no preço que o
+// navegador manda: recalcula a partir do plano e da configuração.
+// ---------------------------------------------------------------------------
+
+/** Erro em português se a configuração não é uma combinação vendável daquele plano; null se ok. */
+export function erroDaConfiguracao(plano: PlanoBase, config: ConfiguracaoPlano): string | null {
+  const inteiro = (n: number) => Number.isInteger(n);
+  if (!inteiro(config.medicos) || config.medicos < plano.medicos || config.medicos > MAX_MEDICOS)
+    return "quantidade de médicos inválida para o plano";
+  if (!inteiro(config.secretarias) || config.secretarias < plano.secretarias || config.secretarias > MAX_SECRETARIAS)
+    return "quantidade de usuários de gestão inválida para o plano";
+  const franquia = (tiers: TierOption[], valor: number, minimo: number) =>
+    valor === PERSONALIZADO ? !!plano.personalizavel : tiers.some((t) => t.quantidade === valor) && valor >= minimo;
+  if (!franquia(TIERS_COPILOTO, config.copiloto, plano.copiloto)) return "franquia de Copiloto inválida para o plano";
+  if (!franquia(TIERS_WHATSAPP, config.whatsapp, plano.whatsapp)) return "franquia de WhatsApp inválida para o plano";
+  if (!franquia(TIERS_VIDEO, config.video, plano.video)) return "franquia de vídeo inválida para o plano";
+  return null;
+}
+
+/** Normaliza o adicional pelo plano: Pro sempre inclui, Basic nunca; Enterprise conforme pedido. */
+export function copilotoAtivoDaConfiguracao(plano: PlanoBase, pedido: boolean | null | undefined): boolean {
+  if (plano.copilotoAtivo === "incluido") return true;
+  if (plano.copilotoAtivo === "opcional") return !!pedido;
+  return false;
+}
+
+/** Preço mensal (sem desconto anual) calculado no servidor; null quando algum item é sob consulta. */
+export function precoMensalNoServidor(plano: PlanoBase, config: ConfiguracaoPlano): number | null {
+  if (possuiItemPersonalizado(config)) return null;
+  const normalizada = { ...config, copilotoAtivo: copilotoAtivoDaConfiguracao(plano, config.copilotoAtivo) };
+  return Math.round(precoDaConfiguracao(normalizada, plano) * 100) / 100;
+}
+
+/** Valor de cada cobrança recorrente: a mensalidade, ou 12 meses com o desconto anual. */
+export function valorDaCobranca(precoMensal: number, ciclo: "mensal" | "anual"): number {
+  if (ciclo === "mensal") return Math.round(precoMensal * 100) / 100;
+  return Math.round(precoAnualEquivalenteMensal(precoMensal) * 12 * 100) / 100;
+}

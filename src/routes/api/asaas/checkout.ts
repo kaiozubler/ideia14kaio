@@ -2,7 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { ambienteAsaas, asaasFetch, AsaasApiError, AsaasNaoConfiguradoError } from "@/lib/asaas/client.server";
-import { PERSONALIZADO, PLANOS_BASE, PLANO_PADRAO } from "@/lib/plans/config";
+import {
+  PERSONALIZADO,
+  PLANOS_BASE,
+  erroDaConfiguracao,
+  precoMensalNoServidor,
+  valorDaCobranca,
+} from "@/lib/plans/config";
 
 // Cria um Checkout Asaas (assinatura recorrente no cartão) a partir de uma
 // linha já existente em `contratacoes` (ver /api/contratacao). Devolve a URL
@@ -58,8 +64,31 @@ export const Route = createFileRoute("/api/asaas/checkout")({
           );
         }
 
-        const ancora = PLANOS_BASE.find((p) => p.id === contratacao.plano) ?? PLANO_PADRAO;
-        const valorMensal = Number(contratacao.preco_mensal_calculado ?? ancora.precoMensal);
+        // Preço sempre recalculado aqui a partir do plano e da configuração gravados
+        // (nunca o valor que o navegador possa ter mandado em contratações antigas).
+        const ancora = PLANOS_BASE.find((p) => p.id === contratacao.plano);
+        if (!ancora) return Response.json({ error: "plano inválido" }, { status: 400 });
+        const configContratada = {
+          medicos: contratacao.medicos,
+          secretarias: contratacao.secretarias,
+          copiloto: contratacao.copiloto,
+          whatsapp: contratacao.whatsapp,
+          video: contratacao.video,
+          copilotoAtivo: contratacao.copiloto_ativo,
+        };
+        const erroConfig = erroDaConfiguracao(ancora, configContratada);
+        if (erroConfig) return Response.json({ error: erroConfig }, { status: 400 });
+        const valorMensal = precoMensalNoServidor(ancora, configContratada);
+        if (valorMensal === null) {
+          return Response.json(
+            { error: "plano com item sob consulta — fale com nosso time para fechar o valor" },
+            { status: 409 },
+          );
+        }
+        const ciclo = contratacao.ciclo === "anual" ? "anual" : "mensal";
+        // Ciclo anual: o Asaas cobra `value` uma vez por ano, então vão os 12 meses
+        // com o desconto anual (antes ia só uma mensalidade).
+        const valorCobranca = valorDaCobranca(valorMensal, ciclo);
 
         const hoje = new Date().toISOString().slice(0, 10);
         const origin = new URL(request.url).origin;
@@ -89,7 +118,7 @@ export const Route = createFileRoute("/api/asaas/checkout")({
                   name: `MediCopilot — plano ${nomeItens[contratacao.plano] ?? contratacao.plano}`,
                   description: `${contratacao.medicos} médico(s), ${contratacao.secretarias} usuário(s) de gestão · ${descricaoFranquias}`,
                   quantity: 1,
-                  value: valorMensal,
+                  value: valorCobranca,
                 },
               ],
               subscription: {
@@ -118,7 +147,7 @@ export const Route = createFileRoute("/api/asaas/checkout")({
 
           await supabaseAdmin
             .from("contratacoes")
-            .update({ asaas_checkout_id: checkout.id })
+            .update({ asaas_checkout_id: checkout.id, preco_mensal_calculado: valorMensal })
             .eq("id", contratacao.id);
 
           const dominioCheckout = ambienteAsaas() === "production" ? "https://www.asaas.com" : "https://sandbox.asaas.com";
