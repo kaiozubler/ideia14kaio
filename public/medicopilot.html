@@ -11203,7 +11203,7 @@ showAtendList();
                                                               try{
                                                                 const cfgCop=getCopilotoCfg();
                                                                 const primeiro=copFirstRun;
-                                                                const payload={mode:'copiloto', manual, solicitacao: kind||'geral', primeiro_processamento: copFirstRun, trecho_transcricao: novo, atualizar_memoria: cfgCop.memoria};
+                                                                const payload={mode:'copiloto', manual, solicitacao: kind||'geral', primeiro_processamento: copFirstRun, trecho_transcricao: novo};
                                                                 if(copFirstRun){
                                                                   // primeiro processamento: envia todo o contexto disponível
                                                                   let infoComp=null; try{infoComp=loadInfoComp();}catch{}
@@ -11222,9 +11222,9 @@ showAtendList();
                                                                 copFirstRun=false;
                                                                 if(data && typeof data==='object'){
                                                                   if(data.resumo_clinico) copLastSummary=data.resumo_clinico;
-                                                                  const perguntas=Array.isArray(data.perguntas_sugeridas)?data.perguntas_sugeridas:[];
-                                                                  const condutas=Array.isArray(data.condutas_sugeridas)?data.condutas_sugeridas:[];
-                                                                  const pontos=Array.isArray(data.pontos_atencao)?data.pontos_atencao:[];
+                                                                  const perguntas=Array.isArray(data.perguntas_sugeridas)?data.perguntas_sugeridas.slice(0,2):[];
+                                                                  const condutas=Array.isArray(data.condutas_sugeridas)?data.condutas_sugeridas.slice(0,1):[];
+                                                                  const pontos=Array.isArray(data.pontos_atencao)?data.pontos_atencao.slice(0,1):[];
                                                                   // Perguntas personalizadas no início do atendimento seguem a configuração do copiloto.
                                                                   const showPerg = (!kind || kind==='duvida') && (!primeiro || manual || cfgCop.perguntas);
                                                                   const showCond = !kind || kind==='conduta';

@@ -20,6 +20,7 @@ type RequestBody = {
   system_prompt?: string;
   user_content?: string;
   manual?: boolean;
+  solicitacao?: "geral" | "duvida" | "conduta";
   primeiro_processamento?: boolean;
   trecho_transcricao?: string;
   resumo_acumulado?: string;
@@ -222,61 +223,34 @@ do paciente em português do Brasil, organizado em seções:
 Seja conciso, factual, sem invenções. Use bullets curtos. Não inclua disclaimers.`;
 
 const SYSTEM_COPILOTO = `Objetivo
-
-Você atua como um assistente clínico de apoio à consulta médica.
-Sua função auxiliar o profissional médico, NÃO substituir o julgamento médico.
-Sua função é:
-- Consolidar as informações disponíveis sobre o paciente.
-- Identificar informações relevantes para investigação diagnóstica.
-- Sugerir perguntas que possam confirmar ou descartar hipóteses diagnósticas (no máximo 1 a 2 por vez).
-- Destacar sinais de alerta ou pontos de atenção.
-- Sugerir, quando cabível, no máximo 1 possível conduta por vez, apenas quando houver evidências suficientes nos dados recebidos.
+Você é um assistente clínico de apoio à consulta. Ajuda o médico, NÃO substitui o julgamento dele.
 
 Dados Recebidos
-Você receberá: resumo acumulado da consulta, resumo do prontuário, memória clínica do paciente e trecho recente da transcrição. Considere tudo em conjunto.
+Resumo acumulado da consulta, trecho recente da transcrição e, só no primeiro processamento, dados do paciente, resumo do prontuário e informações complementares. Use o prontuário apenas como contexto da consulta atual.
 
-Regras Gerais
-- Nunca invente informações. Nunca complete lacunas com suposições.
-- Nunca crie sintomas, antecedentes, exames ou diagnósticos não informados.
-- Nunca considere como fato algo que não esteja explicitamente presente nos dados recebidos.
-- Nunca afirme certeza diagnóstica quando os dados forem insuficientes.
-- Não interprete silêncio ou ausência de informação como evidência clínica.
-- Não gere perguntas já realizadas ou claramente respondidas anteriormente.
-- Não gere sugestões redundantes.
-- Não gere orientações que possam induzir a erro, negligência ou prática ilegal.
-- Priorize segurança do paciente.
+Regras
+- Nunca invente nem complete lacunas; use só o que está explícito nos dados.
+- Nunca afirme certeza diagnóstica com dados insuficientes; silêncio não é evidência.
+- Não repita perguntas já feitas/respondidas nem sugestões já dadas.
+- Priorize a segurança do paciente.
+- Seja breve: cada item em UMA frase de no máximo ~25 palavras, sem justificativa.
+- Pense nas hipóteses diagnósticas apenas para escolher perguntas e condutas; NÃO as escreva na resposta.
+- Lista vazia é a resposta certa quando não houver nada relevante e novo.
 
-Memória Clínica
-Sempre que identificar informações clinicamente relevantes, registre-as na memória estruturada do paciente (histórico pessoal, histórico familiar, alergias, medicamentos em uso, hábitos e fatores de risco). Registre apenas o que for explicitamente mencionado.
+Campos
+- resumo_clinico: queixa principal, HDA, antecedentes relevantes. Máximo ~80 palavras; substitua o anterior em vez de acrescentar (ele é reenviado a cada ciclo).
+- pontos_atencao: NO MÁXIMO 1, e só para sinal de alarme ou risco clínico da consulta atual (ex.: sinal de gravidade, interação/alergia relevante). NUNCA comente organização ou preenchimento do prontuário (rascunhos, campos vazios, falta de descrição).
+- perguntas_sugeridas: NO MÁXIMO 2 — a mais importante primeiro; a segunda só se for igualmente urgente e independente. Só quando a resposta puder mudar a investigação.
+- condutas_sugeridas: NO MÁXIMO 1, apenas com base clínica suficiente, como possibilidade a avaliar.
 
-Resumo Clínico
-Gere um resumo consolidado da consulta contendo: queixa principal, história da doença atual, antecedentes relevantes e pontos de atenção. Não inclua interpretações não sustentadas pelos dados. Mantenha esse resumo sempre CURTO (no máximo ~6 linhas / ~100 palavras) — ele é reenviado como contexto em toda atualização seguinte da mesma consulta, então cresce a cada turno se não for mantido enxuto; atualize/substitua o conteúdo em vez de acrescentar tudo que já foi dito antes.
+Solicitação
+- "duvida": preencha só resumo_clinico e perguntas_sugeridas (demais listas vazias).
+- "conduta": preencha só resumo_clinico e condutas_sugeridas (demais listas vazias).
+- "geral": todos os campos.
 
-Perguntas de Investigação
-Gere no MÁXIMO 1 a 2 perguntas por vez — apenas as mais relevantes no momento, nunca uma lista longa. Gere perguntas somente quando: existir hipótese plausível ainda não esclarecida; a resposta puder alterar significativamente a investigação; a informação ainda não estiver disponível. As perguntas devem ser objetivas, clinicamente relevantes e ajudar a confirmar/descartar hipóteses. Priorize a única pergunta mais importante no momento; só inclua uma segunda se ambas forem igualmente urgentes e independentes entre si. Se não houver pergunta relevante, retorne lista vazia.
-
-Hipóteses Diagnósticas
-Somente apresente hipóteses quando houver evidências razoáveis nos dados. Para cada hipótese informe grau de confiança (Baixo/Moderado/Alto), evidências e informações ainda ausentes. Se faltarem dados, retorne lista vazia.
-
-Sugestões de Conduta
-Gere NO MÁXIMO 1 sugestão de conduta por vez — a mais relevante e melhor sustentada pelos dados disponíveis no momento, se houver. Só sugira quando existir base clínica suficiente (investigação adicional, exames, monitoramento, encaminhamento, suporte/orientação). Nunca apresente como obrigatória — descreva como possibilidade a ser avaliada pelo médico. Se não houver segurança suficiente para nenhuma conduta, retorne lista vazia (não force uma sugestão apenas para preencher o campo).
-
-Formato de Resposta
-Retorne EXCLUSIVAMENTE um JSON válido (sem comentários, sem markdown, sem cercas) no formato:
-{
-  "resumo_clinico": "",
-  "memoria_clinica": {
-    "historico_pessoal": [],
-    "historico_familiar": [],
-    "alergias": [],
-    "medicamentos_em_uso": [],
-    "fatores_risco": []
-  },
-  "pontos_atencao": [],
-  "perguntas_sugeridas": [],
-  "hipoteses_diagnosticas": [],
-  "condutas_sugeridas": []
-}`;
+Formato
+Retorne EXCLUSIVAMENTE JSON válido, sem markdown nem cercas:
+{"resumo_clinico":"","pontos_atencao":[],"perguntas_sugeridas":[],"condutas_sugeridas":[]}`;
 const SYSTEM_EXTRAI_COMPLEMENTARES = `Você é um assistente clínico responsável por revisar o conteúdo de UM
 atendimento (anotações do prontuário, transcrição, anamnese e notas do médico) e identificar
 1) informações objetivas que deveriam atualizar o cadastro "Informações complementares" do paciente, e
@@ -352,16 +326,29 @@ function parseJsonLoose(text: string): Record<string, unknown> {
   }
 }
 
-async function callGateway(messages: ChatMessage[], apiKey: string) {
-  const res = await fetch(GATEWAY_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Lovable-API-Key": apiKey,
-      "X-Lovable-AIG-SDK": "raw",
-    },
-    body: JSON.stringify({ model: MODEL, messages }),
-  });
+type GatewayOpts = {
+  /** Nível de raciocínio do Gemini; os tokens de "pensamento" são cobrados como saída. */
+  reasoningEffort?: "low" | "medium" | "high";
+};
+
+async function callGateway(messages: ChatMessage[], apiKey: string, opts: GatewayOpts = {}) {
+  const enviar = (extra: Record<string, unknown>) =>
+    fetch(GATEWAY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": apiKey,
+        "X-Lovable-AIG-SDK": "raw",
+      },
+      body: JSON.stringify({ model: MODEL, messages, ...extra }),
+    });
+  let res = await enviar(opts.reasoningEffort ? { reasoning_effort: opts.reasoningEffort } : {});
+  // Se o gateway não aceitar o parâmetro de raciocínio, repete a chamada sem ele
+  // em vez de derrubar o copiloto.
+  if (res.status === 400 && opts.reasoningEffort) {
+    console.warn("[chat-ia] gateway recusou reasoning_effort:", await res.text());
+    res = await enviar({});
+  }
   if (!res.ok) {
     const text = await res.text();
     throw new Response(`AI gateway error ${res.status}: ${text}`, { status: res.status });
@@ -439,6 +426,8 @@ export const Route = createFileRoute("/api/chat-ia")({
             const ctx: Record<string, unknown> = {
               primeiro_processamento: !!body.primeiro_processamento,
               manual: !!body.manual,
+              solicitacao:
+                body.solicitacao === "duvida" || body.solicitacao === "conduta" ? body.solicitacao : "geral",
               resumo_acumulado: body.resumo_acumulado ?? "",
               trecho_transcricao: body.trecho_transcricao ?? "",
             };
@@ -461,6 +450,7 @@ export const Route = createFileRoute("/api/chat-ia")({
                 },
               ],
               apiKey,
+              { reasoningEffort: "low" },
             );
             // tenta extrair JSON da resposta (modelo pode envolver em ```json)
             return Response.json(parseJsonLoose(text));
