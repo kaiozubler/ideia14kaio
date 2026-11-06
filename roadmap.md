@@ -8,4 +8,4 @@
 - [x] Tabelas acessos_bloqueados, pagamentos_manuais, crm_auditoria + função acesso_bloqueado(uid).
 - [x] Bloqueio respeitado no login (medicopilot.html) e em toda /api/* (middleware em src/start.ts).
 - [x] Rota /api/public/crm/health.
-- [ ] Verificar build + testes da ponte e confirmar rotas respondendo.
+- [x] Verificar build + testes da ponte e confirmar rotas respondendo (33/33 testes, 401 sem token, 200 com token).
