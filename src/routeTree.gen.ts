@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CaptarRouteImport } from './routes/captar'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as PlanosRouteImport } from './routes/planos'
@@ -19,6 +20,7 @@ import { Route as ApiAnalisarExameRouteImport } from './routes/api/analisar-exam
 import { Route as ApiAssistenteIaRouteImport } from './routes/api/assistente-ia'
 import { Route as ApiAssistenteIaConversasRouteImport } from './routes/api/assistente-ia-conversas'
 import { Route as ApiAssistenteMedicoWebhookRouteImport } from './routes/api/assistente-medico-webhook'
+import { Route as ApiCaptacaoMovelRouteImport } from './routes/api/captacao-movel'
 import { Route as ApiChatIaRouteImport } from './routes/api/chat-ia'
 import { Route as ApiContratacaoRouteImport } from './routes/api/contratacao'
 import { Route as ApiDailyRoomRouteImport } from './routes/api/daily-room'
@@ -70,6 +72,7 @@ import { Route as ApiProtocolosEstudioPublicarRouteImport } from './routes/api/p
 import { Route as ApiProtocolosEstudioRascunhoRouteImport } from './routes/api/protocolos/estudio-rascunho'
 import { Route as ApiProtocolosGerarIaRouteImport } from './routes/api/protocolos/gerar-ia'
 import { Route as ApiProtocolosSincronizarRouteImport } from './routes/api/protocolos/sincronizar'
+import { Route as ApiPublicCaptacaoMovelRouteImport } from './routes/api/public/captacao-movel'
 import { Route as ApiQuestionariosGerarIaRouteImport } from './routes/api/questionarios/gerar-ia'
 import { Route as ApiSignatureAuthenticateRouteImport } from './routes/api/signature/authenticate'
 import { Route as ApiSignatureCredentialRouteImport } from './routes/api/signature/credential'
@@ -117,6 +120,11 @@ import { Route as ApiPublicCrmUsuariosIdAcessoRouteImport } from './routes/api/p
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CaptarRoute = CaptarRouteImport.update({
+  id: '/captar',
+  path: '/captar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -167,6 +175,11 @@ const ApiAssistenteMedicoWebhookRoute =
     path: '/api/assistente-medico-webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiCaptacaoMovelRoute = ApiCaptacaoMovelRouteImport.update({
+  id: '/api/captacao-movel',
+  path: '/api/captacao-movel',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatIaRoute = ApiChatIaRouteImport.update({
   id: '/api/chat-ia',
   path: '/api/chat-ia',
@@ -437,6 +450,11 @@ const ApiProtocolosSincronizarRoute =
     path: '/api/protocolos/sincronizar',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCaptacaoMovelRoute = ApiPublicCaptacaoMovelRouteImport.update({
+  id: '/api/public/captacao-movel',
+  path: '/api/public/captacao-movel',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiQuestionariosGerarIaRoute = ApiQuestionariosGerarIaRouteImport.update({
   id: '/api/questionarios/gerar-ia',
   path: '/api/questionarios/gerar-ia',
@@ -680,6 +698,7 @@ const ApiPublicCrmUsuariosIdAcessoRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/captar': typeof CaptarRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/planos': typeof PlanosRoute
@@ -689,6 +708,7 @@ export interface FileRoutesByFullPath {
   '/api/assistente-ia': typeof ApiAssistenteIaRoute
   '/api/assistente-ia-conversas': typeof ApiAssistenteIaConversasRoute
   '/api/assistente-medico-webhook': typeof ApiAssistenteMedicoWebhookRoute
+  '/api/captacao-movel': typeof ApiCaptacaoMovelRoute
   '/api/chat-ia': typeof ApiChatIaRoute
   '/api/contratacao': typeof ApiContratacaoRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
@@ -740,6 +760,7 @@ export interface FileRoutesByFullPath {
   '/api/protocolos/estudio-rascunho': typeof ApiProtocolosEstudioRascunhoRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
+  '/api/public/captacao-movel': typeof ApiPublicCaptacaoMovelRoute
   '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
@@ -786,6 +807,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/captar': typeof CaptarRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/planos': typeof PlanosRoute
@@ -795,6 +817,7 @@ export interface FileRoutesByTo {
   '/api/assistente-ia': typeof ApiAssistenteIaRoute
   '/api/assistente-ia-conversas': typeof ApiAssistenteIaConversasRoute
   '/api/assistente-medico-webhook': typeof ApiAssistenteMedicoWebhookRoute
+  '/api/captacao-movel': typeof ApiCaptacaoMovelRoute
   '/api/chat-ia': typeof ApiChatIaRoute
   '/api/contratacao': typeof ApiContratacaoRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
@@ -846,6 +869,7 @@ export interface FileRoutesByTo {
   '/api/protocolos/estudio-rascunho': typeof ApiProtocolosEstudioRascunhoRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
+  '/api/public/captacao-movel': typeof ApiPublicCaptacaoMovelRoute
   '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
@@ -893,6 +917,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/captar': typeof CaptarRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/planos': typeof PlanosRoute
@@ -902,6 +927,7 @@ export interface FileRoutesById {
   '/api/assistente-ia': typeof ApiAssistenteIaRoute
   '/api/assistente-ia-conversas': typeof ApiAssistenteIaConversasRoute
   '/api/assistente-medico-webhook': typeof ApiAssistenteMedicoWebhookRoute
+  '/api/captacao-movel': typeof ApiCaptacaoMovelRoute
   '/api/chat-ia': typeof ApiChatIaRoute
   '/api/contratacao': typeof ApiContratacaoRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
@@ -953,6 +979,7 @@ export interface FileRoutesById {
   '/api/protocolos/estudio-rascunho': typeof ApiProtocolosEstudioRascunhoRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
+  '/api/public/captacao-movel': typeof ApiPublicCaptacaoMovelRoute
   '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
@@ -1001,6 +1028,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/captar'
     | '/login'
     | '/mcp'
     | '/planos'
@@ -1010,6 +1038,7 @@ export interface FileRouteTypes {
     | '/api/assistente-ia'
     | '/api/assistente-ia-conversas'
     | '/api/assistente-medico-webhook'
+    | '/api/captacao-movel'
     | '/api/chat-ia'
     | '/api/contratacao'
     | '/api/daily-room'
@@ -1061,6 +1090,7 @@ export interface FileRouteTypes {
     | '/api/protocolos/estudio-rascunho'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
+    | '/api/public/captacao-movel'
     | '/api/questionarios/gerar-ia'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
@@ -1107,6 +1137,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/captar'
     | '/login'
     | '/mcp'
     | '/planos'
@@ -1116,6 +1147,7 @@ export interface FileRouteTypes {
     | '/api/assistente-ia'
     | '/api/assistente-ia-conversas'
     | '/api/assistente-medico-webhook'
+    | '/api/captacao-movel'
     | '/api/chat-ia'
     | '/api/contratacao'
     | '/api/daily-room'
@@ -1167,6 +1199,7 @@ export interface FileRouteTypes {
     | '/api/protocolos/estudio-rascunho'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
+    | '/api/public/captacao-movel'
     | '/api/questionarios/gerar-ia'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
@@ -1213,6 +1246,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/captar'
     | '/login'
     | '/mcp'
     | '/planos'
@@ -1222,6 +1256,7 @@ export interface FileRouteTypes {
     | '/api/assistente-ia'
     | '/api/assistente-ia-conversas'
     | '/api/assistente-medico-webhook'
+    | '/api/captacao-movel'
     | '/api/chat-ia'
     | '/api/contratacao'
     | '/api/daily-room'
@@ -1273,6 +1308,7 @@ export interface FileRouteTypes {
     | '/api/protocolos/estudio-rascunho'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
+    | '/api/public/captacao-movel'
     | '/api/questionarios/gerar-ia'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
@@ -1320,6 +1356,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CaptarRoute: typeof CaptarRoute
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
   PlanosRoute: typeof PlanosRoute
@@ -1329,6 +1366,7 @@ export interface RootRouteChildren {
   ApiAssistenteIaRoute: typeof ApiAssistenteIaRoute
   ApiAssistenteIaConversasRoute: typeof ApiAssistenteIaConversasRoute
   ApiAssistenteMedicoWebhookRoute: typeof ApiAssistenteMedicoWebhookRoute
+  ApiCaptacaoMovelRoute: typeof ApiCaptacaoMovelRoute
   ApiChatIaRoute: typeof ApiChatIaRoute
   ApiContratacaoRoute: typeof ApiContratacaoRoute
   ApiDailyRoomRoute: typeof ApiDailyRoomRoute
@@ -1380,6 +1418,7 @@ export interface RootRouteChildren {
   ApiProtocolosEstudioRascunhoRoute: typeof ApiProtocolosEstudioRascunhoRoute
   ApiProtocolosGerarIaRoute: typeof ApiProtocolosGerarIaRoute
   ApiProtocolosSincronizarRoute: typeof ApiProtocolosSincronizarRoute
+  ApiPublicCaptacaoMovelRoute: typeof ApiPublicCaptacaoMovelRoute
   ApiQuestionariosGerarIaRoute: typeof ApiQuestionariosGerarIaRoute
   ApiSignatureAuthenticateRoute: typeof ApiSignatureAuthenticateRoute
   ApiSignatureCredentialRoute: typeof ApiSignatureCredentialRoute
@@ -1427,6 +1466,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/captar': {
+      id: '/captar'
+      path: '/captar'
+      fullPath: '/captar'
+      preLoaderRoute: typeof CaptarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -1490,6 +1536,13 @@ declare module '@tanstack/react-router' {
       path: '/api/assistente-medico-webhook'
       fullPath: '/api/assistente-medico-webhook'
       preLoaderRoute: typeof ApiAssistenteMedicoWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/captacao-movel': {
+      id: '/api/captacao-movel'
+      path: '/api/captacao-movel'
+      fullPath: '/api/captacao-movel'
+      preLoaderRoute: typeof ApiCaptacaoMovelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/chat-ia': {
@@ -1847,6 +1900,13 @@ declare module '@tanstack/react-router' {
       path: '/api/protocolos/sincronizar'
       fullPath: '/api/protocolos/sincronizar'
       preLoaderRoute: typeof ApiProtocolosSincronizarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/captacao-movel': {
+      id: '/api/public/captacao-movel'
+      path: '/api/public/captacao-movel'
+      fullPath: '/api/public/captacao-movel'
+      preLoaderRoute: typeof ApiPublicCaptacaoMovelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/questionarios/gerar-ia': {
@@ -2219,6 +2279,7 @@ const ApiPublicCrmUsuariosRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CaptarRoute: CaptarRoute,
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
   PlanosRoute: PlanosRoute,
@@ -2229,6 +2290,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAssistenteIaRoute: ApiAssistenteIaRoute,
   ApiAssistenteIaConversasRoute: ApiAssistenteIaConversasRoute,
   ApiAssistenteMedicoWebhookRoute: ApiAssistenteMedicoWebhookRoute,
+  ApiCaptacaoMovelRoute: ApiCaptacaoMovelRoute,
   ApiChatIaRoute: ApiChatIaRoute,
   ApiContratacaoRoute: ApiContratacaoRoute,
   ApiDailyRoomRoute: ApiDailyRoomRoute,
@@ -2283,6 +2345,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiProtocolosEstudioRascunhoRoute: ApiProtocolosEstudioRascunhoRoute,
   ApiProtocolosGerarIaRoute: ApiProtocolosGerarIaRoute,
   ApiProtocolosSincronizarRoute: ApiProtocolosSincronizarRoute,
+  ApiPublicCaptacaoMovelRoute: ApiPublicCaptacaoMovelRoute,
   ApiQuestionariosGerarIaRoute: ApiQuestionariosGerarIaRoute,
   ApiSignatureAuthenticateRoute: ApiSignatureAuthenticateRoute,
   ApiSignatureCredentialRoute: ApiSignatureCredentialRoute,

@@ -37,6 +37,8 @@
     <link rel="stylesheet" href="agendamento-online.css?v=1" />
     <script src="agendamento-online.js?v=1" defer></script>
     <script src="conversas-pacientes.js?v=1" defer></script>
+    <link rel="stylesheet" href="captacao-smartphone.css?v=1" />
+    <script src="captacao-smartphone.js?v=1" defer></script>
     <script src="plano-gate.js?v=3" defer></script>
     <script>
       window.addEventListener("DOMContentLoaded", async () => {
@@ -3194,6 +3196,14 @@
                       <div class="ai-ctrls">
                         <button class="btn sm" id="listen-btn" onclick="toggleListen()">
                           <i class="ti ti-microphone" id="lt-ico"></i> <span id="lt-lbl">Escutar</span>
+                        </button>
+                        <button
+                          class="btn sm"
+                          id="movel-btn"
+                          onclick="window.captacaoMovel&&captacaoMovel.abrir()"
+                          title="Gravar pelo smartphone (QR code)"
+                        >
+                          <i class="ti ti-device-mobile"></i> Smartphone
                         </button>
                         <div class="csep"></div>
                         <div
@@ -10857,6 +10867,7 @@ showAtendList();
                                                               listening=false;aiPaused=false;
                                                               clearInterval(transcriptInterval);
                                                               if(dgLive.active || dgLive.starting){ dgLive.stop(); }
+                                                              if(window.captacaoMovel){ captacaoMovel.encerrar(true); }
                                                               bblCount=0;sugIdx=0;aiRespIdx=0;transcriptIdx=0;
                                                               transcriptLog=[];transcriptTimeline=[];pinnedBbls=[];bubblesVisible=true;
                                                               __transcricaoAvisoMostrado=false;
@@ -10922,6 +10933,8 @@ showAtendList();
                                                             }
 
                                                             function toggleListen(){
+                                                              // Captação vindo do smartphone: pausar/retomar a chamada (public/captacao-smartphone.js).
+                                                              if(window.captacaoMovel && captacaoMovel.ativo()){ captacaoMovel.alternarPausa(); return; }
                                                               const cfg = getCopilotoCfg();
                                                               if(!cfg.enabled){
                                                                 if(typeof toast==='function') toast('Ative o copiloto em Minhas IA\u0027s › Copiloto de consulta para iniciar a gravação.');
