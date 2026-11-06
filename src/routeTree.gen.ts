@@ -10,14 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CaptarRouteImport } from './routes/captar'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as PlanosRouteImport } from './routes/planos'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AgendarTokenRouteImport } from './routes/agendar.$token'
 import { Route as ApiAnalisarExameRouteImport } from './routes/api/analisar-exame'
 import { Route as ApiAssistenteIaRouteImport } from './routes/api/assistente-ia'
 import { Route as ApiAssistenteIaConversasRouteImport } from './routes/api/assistente-ia-conversas'
 import { Route as ApiAssistenteMedicoWebhookRouteImport } from './routes/api/assistente-medico-webhook'
+import { Route as ApiCaptacaoMovelRouteImport } from './routes/api/captacao-movel'
 import { Route as ApiChatIaRouteImport } from './routes/api/chat-ia'
 import { Route as ApiContratacaoRouteImport } from './routes/api/contratacao'
 import { Route as ApiDailyRoomRouteImport } from './routes/api/daily-room'
@@ -69,6 +72,7 @@ import { Route as ApiProtocolosEstudioPublicarRouteImport } from './routes/api/p
 import { Route as ApiProtocolosEstudioRascunhoRouteImport } from './routes/api/protocolos/estudio-rascunho'
 import { Route as ApiProtocolosGerarIaRouteImport } from './routes/api/protocolos/gerar-ia'
 import { Route as ApiProtocolosSincronizarRouteImport } from './routes/api/protocolos/sincronizar'
+import { Route as ApiPublicCaptacaoMovelRouteImport } from './routes/api/public/captacao-movel'
 import { Route as ApiQuestionariosGerarIaRouteImport } from './routes/api/questionarios/gerar-ia'
 import { Route as ApiSignatureAuthenticateRouteImport } from './routes/api/signature/authenticate'
 import { Route as ApiSignatureCredentialRouteImport } from './routes/api/signature/credential'
@@ -80,6 +84,9 @@ import { Route as ApiTussCriarRouteImport } from './routes/api/tuss/criar'
 import { Route as ApiWhatsappSegurancaRouteImport } from './routes/api/whatsapp/seguranca'
 import { Route as ApiDocumentosVerificacaoEmitirRouteImport } from './routes/api/documentos/verificacao/emitir'
 import { Route as ApiDocumentosVerificacaoReservarRouteImport } from './routes/api/documentos/verificacao/reservar'
+import { Route as ApiPublicAgendamentoClinicaRouteImport } from './routes/api/public/agendamento/clinica'
+import { Route as ApiPublicAgendamentoHorariosRouteImport } from './routes/api/public/agendamento/horarios'
+import { Route as ApiPublicAgendamentoReservarRouteImport } from './routes/api/public/agendamento/reservar'
 import { Route as ApiPublicCrmClinicasRouteImport } from './routes/api/public/crm/clinicas'
 import { Route as ApiPublicCrmPagamentosRouteImport } from './routes/api/public/crm/pagamentos'
 import { Route as ApiPublicCrmUsuariosRouteImport } from './routes/api/public/crm/usuarios'
@@ -115,6 +122,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CaptarRoute = CaptarRouteImport.update({
+  id: '/captar',
+  path: '/captar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -136,6 +148,11 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AgendarTokenRoute = AgendarTokenRouteImport.update({
+  id: '/agendar/$token',
+  path: '/agendar/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAnalisarExameRoute = ApiAnalisarExameRouteImport.update({
   id: '/api/analisar-exame',
   path: '/api/analisar-exame',
@@ -158,6 +175,11 @@ const ApiAssistenteMedicoWebhookRoute =
     path: '/api/assistente-medico-webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiCaptacaoMovelRoute = ApiCaptacaoMovelRouteImport.update({
+  id: '/api/captacao-movel',
+  path: '/api/captacao-movel',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatIaRoute = ApiChatIaRouteImport.update({
   id: '/api/chat-ia',
   path: '/api/chat-ia',
@@ -428,6 +450,11 @@ const ApiProtocolosSincronizarRoute =
     path: '/api/protocolos/sincronizar',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCaptacaoMovelRoute = ApiPublicCaptacaoMovelRouteImport.update({
+  id: '/api/public/captacao-movel',
+  path: '/api/public/captacao-movel',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiQuestionariosGerarIaRoute = ApiQuestionariosGerarIaRouteImport.update({
   id: '/api/questionarios/gerar-ia',
   path: '/api/questionarios/gerar-ia',
@@ -485,6 +512,24 @@ const ApiDocumentosVerificacaoReservarRoute =
   ApiDocumentosVerificacaoReservarRouteImport.update({
     id: '/api/documentos/verificacao/reservar',
     path: '/api/documentos/verificacao/reservar',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicAgendamentoClinicaRoute =
+  ApiPublicAgendamentoClinicaRouteImport.update({
+    id: '/api/public/agendamento/clinica',
+    path: '/api/public/agendamento/clinica',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicAgendamentoHorariosRoute =
+  ApiPublicAgendamentoHorariosRouteImport.update({
+    id: '/api/public/agendamento/horarios',
+    path: '/api/public/agendamento/horarios',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicAgendamentoReservarRoute =
+  ApiPublicAgendamentoReservarRouteImport.update({
+    id: '/api/public/agendamento/reservar',
+    path: '/api/public/agendamento/reservar',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicCrmClinicasRoute = ApiPublicCrmClinicasRouteImport.update({
@@ -653,14 +698,17 @@ const ApiPublicCrmUsuariosIdAcessoRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/captar': typeof CaptarRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/planos': typeof PlanosRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/agendar/$token': typeof AgendarTokenRoute
   '/api/analisar-exame': typeof ApiAnalisarExameRoute
   '/api/assistente-ia': typeof ApiAssistenteIaRoute
   '/api/assistente-ia-conversas': typeof ApiAssistenteIaConversasRoute
   '/api/assistente-medico-webhook': typeof ApiAssistenteMedicoWebhookRoute
+  '/api/captacao-movel': typeof ApiCaptacaoMovelRoute
   '/api/chat-ia': typeof ApiChatIaRoute
   '/api/contratacao': typeof ApiContratacaoRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
@@ -712,6 +760,7 @@ export interface FileRoutesByFullPath {
   '/api/protocolos/estudio-rascunho': typeof ApiProtocolosEstudioRascunhoRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
+  '/api/public/captacao-movel': typeof ApiPublicCaptacaoMovelRoute
   '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
@@ -723,6 +772,9 @@ export interface FileRoutesByFullPath {
   '/api/whatsapp/seguranca': typeof ApiWhatsappSegurancaRoute
   '/api/documentos/verificacao/emitir': typeof ApiDocumentosVerificacaoEmitirRoute
   '/api/documentos/verificacao/reservar': typeof ApiDocumentosVerificacaoReservarRoute
+  '/api/public/agendamento/clinica': typeof ApiPublicAgendamentoClinicaRoute
+  '/api/public/agendamento/horarios': typeof ApiPublicAgendamentoHorariosRoute
+  '/api/public/agendamento/reservar': typeof ApiPublicAgendamentoReservarRoute
   '/api/public/crm/clinicas': typeof ApiPublicCrmClinicasRouteWithChildren
   '/api/public/crm/pagamentos': typeof ApiPublicCrmPagamentosRouteWithChildren
   '/api/public/crm/usuarios': typeof ApiPublicCrmUsuariosRouteWithChildren
@@ -755,14 +807,17 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/captar': typeof CaptarRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/planos': typeof PlanosRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/agendar/$token': typeof AgendarTokenRoute
   '/api/analisar-exame': typeof ApiAnalisarExameRoute
   '/api/assistente-ia': typeof ApiAssistenteIaRoute
   '/api/assistente-ia-conversas': typeof ApiAssistenteIaConversasRoute
   '/api/assistente-medico-webhook': typeof ApiAssistenteMedicoWebhookRoute
+  '/api/captacao-movel': typeof ApiCaptacaoMovelRoute
   '/api/chat-ia': typeof ApiChatIaRoute
   '/api/contratacao': typeof ApiContratacaoRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
@@ -814,6 +869,7 @@ export interface FileRoutesByTo {
   '/api/protocolos/estudio-rascunho': typeof ApiProtocolosEstudioRascunhoRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
+  '/api/public/captacao-movel': typeof ApiPublicCaptacaoMovelRoute
   '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
@@ -825,6 +881,9 @@ export interface FileRoutesByTo {
   '/api/whatsapp/seguranca': typeof ApiWhatsappSegurancaRoute
   '/api/documentos/verificacao/emitir': typeof ApiDocumentosVerificacaoEmitirRoute
   '/api/documentos/verificacao/reservar': typeof ApiDocumentosVerificacaoReservarRoute
+  '/api/public/agendamento/clinica': typeof ApiPublicAgendamentoClinicaRoute
+  '/api/public/agendamento/horarios': typeof ApiPublicAgendamentoHorariosRoute
+  '/api/public/agendamento/reservar': typeof ApiPublicAgendamentoReservarRoute
   '/api/public/crm/clinicas': typeof ApiPublicCrmClinicasRouteWithChildren
   '/api/public/crm/pagamentos': typeof ApiPublicCrmPagamentosRouteWithChildren
   '/api/public/crm/usuarios': typeof ApiPublicCrmUsuariosRouteWithChildren
@@ -858,14 +917,17 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/captar': typeof CaptarRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/planos': typeof PlanosRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/agendar/$token': typeof AgendarTokenRoute
   '/api/analisar-exame': typeof ApiAnalisarExameRoute
   '/api/assistente-ia': typeof ApiAssistenteIaRoute
   '/api/assistente-ia-conversas': typeof ApiAssistenteIaConversasRoute
   '/api/assistente-medico-webhook': typeof ApiAssistenteMedicoWebhookRoute
+  '/api/captacao-movel': typeof ApiCaptacaoMovelRoute
   '/api/chat-ia': typeof ApiChatIaRoute
   '/api/contratacao': typeof ApiContratacaoRoute
   '/api/daily-room': typeof ApiDailyRoomRoute
@@ -917,6 +979,7 @@ export interface FileRoutesById {
   '/api/protocolos/estudio-rascunho': typeof ApiProtocolosEstudioRascunhoRoute
   '/api/protocolos/gerar-ia': typeof ApiProtocolosGerarIaRoute
   '/api/protocolos/sincronizar': typeof ApiProtocolosSincronizarRoute
+  '/api/public/captacao-movel': typeof ApiPublicCaptacaoMovelRoute
   '/api/questionarios/gerar-ia': typeof ApiQuestionariosGerarIaRoute
   '/api/signature/authenticate': typeof ApiSignatureAuthenticateRoute
   '/api/signature/credential': typeof ApiSignatureCredentialRoute
@@ -928,6 +991,9 @@ export interface FileRoutesById {
   '/api/whatsapp/seguranca': typeof ApiWhatsappSegurancaRoute
   '/api/documentos/verificacao/emitir': typeof ApiDocumentosVerificacaoEmitirRoute
   '/api/documentos/verificacao/reservar': typeof ApiDocumentosVerificacaoReservarRoute
+  '/api/public/agendamento/clinica': typeof ApiPublicAgendamentoClinicaRoute
+  '/api/public/agendamento/horarios': typeof ApiPublicAgendamentoHorariosRoute
+  '/api/public/agendamento/reservar': typeof ApiPublicAgendamentoReservarRoute
   '/api/public/crm/clinicas': typeof ApiPublicCrmClinicasRouteWithChildren
   '/api/public/crm/pagamentos': typeof ApiPublicCrmPagamentosRouteWithChildren
   '/api/public/crm/usuarios': typeof ApiPublicCrmUsuariosRouteWithChildren
@@ -962,14 +1028,17 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/captar'
     | '/login'
     | '/mcp'
     | '/planos'
     | '/.well-known/oauth-protected-resource'
+    | '/agendar/$token'
     | '/api/analisar-exame'
     | '/api/assistente-ia'
     | '/api/assistente-ia-conversas'
     | '/api/assistente-medico-webhook'
+    | '/api/captacao-movel'
     | '/api/chat-ia'
     | '/api/contratacao'
     | '/api/daily-room'
@@ -1021,6 +1090,7 @@ export interface FileRouteTypes {
     | '/api/protocolos/estudio-rascunho'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
+    | '/api/public/captacao-movel'
     | '/api/questionarios/gerar-ia'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
@@ -1032,6 +1102,9 @@ export interface FileRouteTypes {
     | '/api/whatsapp/seguranca'
     | '/api/documentos/verificacao/emitir'
     | '/api/documentos/verificacao/reservar'
+    | '/api/public/agendamento/clinica'
+    | '/api/public/agendamento/horarios'
+    | '/api/public/agendamento/reservar'
     | '/api/public/crm/clinicas'
     | '/api/public/crm/pagamentos'
     | '/api/public/crm/usuarios'
@@ -1064,14 +1137,17 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/captar'
     | '/login'
     | '/mcp'
     | '/planos'
     | '/.well-known/oauth-protected-resource'
+    | '/agendar/$token'
     | '/api/analisar-exame'
     | '/api/assistente-ia'
     | '/api/assistente-ia-conversas'
     | '/api/assistente-medico-webhook'
+    | '/api/captacao-movel'
     | '/api/chat-ia'
     | '/api/contratacao'
     | '/api/daily-room'
@@ -1123,6 +1199,7 @@ export interface FileRouteTypes {
     | '/api/protocolos/estudio-rascunho'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
+    | '/api/public/captacao-movel'
     | '/api/questionarios/gerar-ia'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
@@ -1134,6 +1211,9 @@ export interface FileRouteTypes {
     | '/api/whatsapp/seguranca'
     | '/api/documentos/verificacao/emitir'
     | '/api/documentos/verificacao/reservar'
+    | '/api/public/agendamento/clinica'
+    | '/api/public/agendamento/horarios'
+    | '/api/public/agendamento/reservar'
     | '/api/public/crm/clinicas'
     | '/api/public/crm/pagamentos'
     | '/api/public/crm/usuarios'
@@ -1166,14 +1246,17 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/captar'
     | '/login'
     | '/mcp'
     | '/planos'
     | '/.well-known/oauth-protected-resource'
+    | '/agendar/$token'
     | '/api/analisar-exame'
     | '/api/assistente-ia'
     | '/api/assistente-ia-conversas'
     | '/api/assistente-medico-webhook'
+    | '/api/captacao-movel'
     | '/api/chat-ia'
     | '/api/contratacao'
     | '/api/daily-room'
@@ -1225,6 +1308,7 @@ export interface FileRouteTypes {
     | '/api/protocolos/estudio-rascunho'
     | '/api/protocolos/gerar-ia'
     | '/api/protocolos/sincronizar'
+    | '/api/public/captacao-movel'
     | '/api/questionarios/gerar-ia'
     | '/api/signature/authenticate'
     | '/api/signature/credential'
@@ -1236,6 +1320,9 @@ export interface FileRouteTypes {
     | '/api/whatsapp/seguranca'
     | '/api/documentos/verificacao/emitir'
     | '/api/documentos/verificacao/reservar'
+    | '/api/public/agendamento/clinica'
+    | '/api/public/agendamento/horarios'
+    | '/api/public/agendamento/reservar'
     | '/api/public/crm/clinicas'
     | '/api/public/crm/pagamentos'
     | '/api/public/crm/usuarios'
@@ -1269,14 +1356,17 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CaptarRoute: typeof CaptarRoute
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
   PlanosRoute: typeof PlanosRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  AgendarTokenRoute: typeof AgendarTokenRoute
   ApiAnalisarExameRoute: typeof ApiAnalisarExameRoute
   ApiAssistenteIaRoute: typeof ApiAssistenteIaRoute
   ApiAssistenteIaConversasRoute: typeof ApiAssistenteIaConversasRoute
   ApiAssistenteMedicoWebhookRoute: typeof ApiAssistenteMedicoWebhookRoute
+  ApiCaptacaoMovelRoute: typeof ApiCaptacaoMovelRoute
   ApiChatIaRoute: typeof ApiChatIaRoute
   ApiContratacaoRoute: typeof ApiContratacaoRoute
   ApiDailyRoomRoute: typeof ApiDailyRoomRoute
@@ -1328,6 +1418,7 @@ export interface RootRouteChildren {
   ApiProtocolosEstudioRascunhoRoute: typeof ApiProtocolosEstudioRascunhoRoute
   ApiProtocolosGerarIaRoute: typeof ApiProtocolosGerarIaRoute
   ApiProtocolosSincronizarRoute: typeof ApiProtocolosSincronizarRoute
+  ApiPublicCaptacaoMovelRoute: typeof ApiPublicCaptacaoMovelRoute
   ApiQuestionariosGerarIaRoute: typeof ApiQuestionariosGerarIaRoute
   ApiSignatureAuthenticateRoute: typeof ApiSignatureAuthenticateRoute
   ApiSignatureCredentialRoute: typeof ApiSignatureCredentialRoute
@@ -1339,6 +1430,9 @@ export interface RootRouteChildren {
   ApiWhatsappSegurancaRoute: typeof ApiWhatsappSegurancaRoute
   ApiDocumentosVerificacaoEmitirRoute: typeof ApiDocumentosVerificacaoEmitirRoute
   ApiDocumentosVerificacaoReservarRoute: typeof ApiDocumentosVerificacaoReservarRoute
+  ApiPublicAgendamentoClinicaRoute: typeof ApiPublicAgendamentoClinicaRoute
+  ApiPublicAgendamentoHorariosRoute: typeof ApiPublicAgendamentoHorariosRoute
+  ApiPublicAgendamentoReservarRoute: typeof ApiPublicAgendamentoReservarRoute
   ApiPublicCrmClinicasRoute: typeof ApiPublicCrmClinicasRouteWithChildren
   ApiPublicCrmPagamentosRoute: typeof ApiPublicCrmPagamentosRouteWithChildren
   ApiPublicCrmUsuariosRoute: typeof ApiPublicCrmUsuariosRouteWithChildren
@@ -1374,6 +1468,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/captar': {
+      id: '/captar'
+      path: '/captar'
+      fullPath: '/captar'
+      preLoaderRoute: typeof CaptarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -1402,6 +1503,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agendar/$token': {
+      id: '/agendar/$token'
+      path: '/agendar/$token'
+      fullPath: '/agendar/$token'
+      preLoaderRoute: typeof AgendarTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/analisar-exame': {
       id: '/api/analisar-exame'
       path: '/api/analisar-exame'
@@ -1428,6 +1536,13 @@ declare module '@tanstack/react-router' {
       path: '/api/assistente-medico-webhook'
       fullPath: '/api/assistente-medico-webhook'
       preLoaderRoute: typeof ApiAssistenteMedicoWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/captacao-movel': {
+      id: '/api/captacao-movel'
+      path: '/api/captacao-movel'
+      fullPath: '/api/captacao-movel'
+      preLoaderRoute: typeof ApiCaptacaoMovelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/chat-ia': {
@@ -1787,6 +1902,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiProtocolosSincronizarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/captacao-movel': {
+      id: '/api/public/captacao-movel'
+      path: '/api/public/captacao-movel'
+      fullPath: '/api/public/captacao-movel'
+      preLoaderRoute: typeof ApiPublicCaptacaoMovelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/questionarios/gerar-ia': {
       id: '/api/questionarios/gerar-ia'
       path: '/api/questionarios/gerar-ia'
@@ -1862,6 +1984,27 @@ declare module '@tanstack/react-router' {
       path: '/api/documentos/verificacao/reservar'
       fullPath: '/api/documentos/verificacao/reservar'
       preLoaderRoute: typeof ApiDocumentosVerificacaoReservarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/agendamento/clinica': {
+      id: '/api/public/agendamento/clinica'
+      path: '/api/public/agendamento/clinica'
+      fullPath: '/api/public/agendamento/clinica'
+      preLoaderRoute: typeof ApiPublicAgendamentoClinicaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/agendamento/horarios': {
+      id: '/api/public/agendamento/horarios'
+      path: '/api/public/agendamento/horarios'
+      fullPath: '/api/public/agendamento/horarios'
+      preLoaderRoute: typeof ApiPublicAgendamentoHorariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/agendamento/reservar': {
+      id: '/api/public/agendamento/reservar'
+      path: '/api/public/agendamento/reservar'
+      fullPath: '/api/public/agendamento/reservar'
+      preLoaderRoute: typeof ApiPublicAgendamentoReservarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/crm/clinicas': {
@@ -2136,15 +2279,18 @@ const ApiPublicCrmUsuariosRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CaptarRoute: CaptarRoute,
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
   PlanosRoute: PlanosRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  AgendarTokenRoute: AgendarTokenRoute,
   ApiAnalisarExameRoute: ApiAnalisarExameRoute,
   ApiAssistenteIaRoute: ApiAssistenteIaRoute,
   ApiAssistenteIaConversasRoute: ApiAssistenteIaConversasRoute,
   ApiAssistenteMedicoWebhookRoute: ApiAssistenteMedicoWebhookRoute,
+  ApiCaptacaoMovelRoute: ApiCaptacaoMovelRoute,
   ApiChatIaRoute: ApiChatIaRoute,
   ApiContratacaoRoute: ApiContratacaoRoute,
   ApiDailyRoomRoute: ApiDailyRoomRoute,
@@ -2199,6 +2345,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiProtocolosEstudioRascunhoRoute: ApiProtocolosEstudioRascunhoRoute,
   ApiProtocolosGerarIaRoute: ApiProtocolosGerarIaRoute,
   ApiProtocolosSincronizarRoute: ApiProtocolosSincronizarRoute,
+  ApiPublicCaptacaoMovelRoute: ApiPublicCaptacaoMovelRoute,
   ApiQuestionariosGerarIaRoute: ApiQuestionariosGerarIaRoute,
   ApiSignatureAuthenticateRoute: ApiSignatureAuthenticateRoute,
   ApiSignatureCredentialRoute: ApiSignatureCredentialRoute,
@@ -2210,6 +2357,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiWhatsappSegurancaRoute: ApiWhatsappSegurancaRoute,
   ApiDocumentosVerificacaoEmitirRoute: ApiDocumentosVerificacaoEmitirRoute,
   ApiDocumentosVerificacaoReservarRoute: ApiDocumentosVerificacaoReservarRoute,
+  ApiPublicAgendamentoClinicaRoute: ApiPublicAgendamentoClinicaRoute,
+  ApiPublicAgendamentoHorariosRoute: ApiPublicAgendamentoHorariosRoute,
+  ApiPublicAgendamentoReservarRoute: ApiPublicAgendamentoReservarRoute,
   ApiPublicCrmClinicasRoute: ApiPublicCrmClinicasRouteWithChildren,
   ApiPublicCrmPagamentosRoute: ApiPublicCrmPagamentosRouteWithChildren,
   ApiPublicCrmUsuariosRoute: ApiPublicCrmUsuariosRouteWithChildren,

@@ -34,7 +34,11 @@
     <script src="meu-plano.js?v=6" defer></script>
     <link rel="stylesheet" href="comunicacao-whatsapp.css?v=1" />
     <script src="comunicacao-whatsapp.js?v=1" defer></script>
+    <link rel="stylesheet" href="agendamento-online.css?v=1" />
+    <script src="agendamento-online.js?v=1" defer></script>
     <script src="conversas-pacientes.js?v=1" defer></script>
+    <link rel="stylesheet" href="captacao-smartphone.css?v=1" />
+    <script src="captacao-smartphone.js?v=1" defer></script>
     <script src="plano-gate.js?v=3" defer></script>
     <script>
       window.addEventListener("DOMContentLoaded", async () => {
@@ -3193,6 +3197,14 @@
                         <button class="btn sm" id="listen-btn" onclick="toggleListen()">
                           <i class="ti ti-microphone" id="lt-ico"></i> <span id="lt-lbl">Escutar</span>
                         </button>
+                        <button
+                          class="btn sm"
+                          id="movel-btn"
+                          onclick="window.captacaoMovel&&captacaoMovel.abrir()"
+                          title="Gravar pelo smartphone (QR code)"
+                        >
+                          <i class="ti ti-device-mobile"></i> Smartphone
+                        </button>
                         <div class="csep"></div>
                         <div
                           class="sug-grp"
@@ -4184,6 +4196,11 @@
                   <div class="cfg-card-title">WhatsApp dos pacientes</div>
                   <div class="cfg-card-desc">Conecte a API oficial da Meta, crie modelos de mensagem e configure avisos de consulta e envio de documentos.</div>
                 </div>
+                <div class="cfg-card" onclick="goScreen('agendamento-online')">
+                  <div class="cfg-ico"><i class="ti ti-calendar-share"></i></div>
+                  <div class="cfg-card-title">Agendamento online</div>
+                  <div class="cfg-card-desc">Gere o link para o paciente marcar consulta e defina os horários da clínica e dos médicos.</div>
+                </div>
               </div>
             </div>
             <div class="cfg-group">
@@ -4206,6 +4223,8 @@
           <div id="s-meu-plano" style="display:none"></div>
           <!-- SCREEN: WHATSAPP DOS PACIENTES (canal clínica ↔ paciente — comunicacao-whatsapp.js) -->
           <div id="s-whatsapp-pacientes" style="display:none"></div>
+          <!-- SCREEN: AGENDAMENTO ONLINE (link público do paciente — agendamento-online.js) -->
+          <div id="s-agendamento-online" style="display:none"></div>
 
           <!-- SCREEN: MINHA EQUIPE -->
           <div id="s-equipe" style="display:none"></div>
@@ -6705,13 +6724,13 @@ if(!telaPermitidaPapel(name)){showToast('Área disponível apenas para o médico
                                                                 const el=document.getElementById('s-'+s);
                                                                 if(el)el.style.display='none';
                                                               });
-                                                              ['conversas','protocolos','questionarios','faturamento','meu-plano','whatsapp-pacientes'].forEach(s=>{const el=document.getElementById('s-'+s);if(el)el.style.display='none';});
+                                                              ['conversas','protocolos','questionarios','faturamento','meu-plano','whatsapp-pacientes','agendamento-online'].forEach(s=>{const el=document.getElementById('s-'+s);if(el)el.style.display='none';});
                                                               const el=document.getElementById('s-'+name);
                                                               if(el)el.style.display=name==='patient-detail'?'flex':'block';
                                                               document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
                                                               const nav=document.getElementById('nav-'+name);
                                                               if(nav)nav.classList.add('active');
-                                                              const titles={atendimentos:'Atendimentos',patients:'Pacientes',conversas:'Conversas',agenda:'Agenda',receitas:'Receitas e Atestados',protocolos:'Protocolos',questionarios:'Questionário',faturamento:'Faturamento',indicadores:'Indicadores',secretaria:'Secretária digital',anamnese:'Gerador de Anamnese',copiloto:'Copiloto de consulta','base-conhecimento':'Base de conhecimento',configuracoes:'Configurações',equipe:'Minha equipe',clinica:'Minha clínica','meu-plano':'Meu plano','whatsapp-pacientes':'WhatsApp dos pacientes','mapa-familiar':'Mapa Familiar'};
+                                                              const titles={atendimentos:'Atendimentos',patients:'Pacientes',conversas:'Conversas',agenda:'Agenda',receitas:'Receitas e Atestados',protocolos:'Protocolos',questionarios:'Questionário',faturamento:'Faturamento',indicadores:'Indicadores',secretaria:'Secretária digital',anamnese:'Gerador de Anamnese',copiloto:'Copiloto de consulta','base-conhecimento':'Base de conhecimento',configuracoes:'Configurações',equipe:'Minha equipe',clinica:'Minha clínica','meu-plano':'Meu plano','whatsapp-pacientes':'WhatsApp dos pacientes','agendamento-online':'Agendamento online','mapa-familiar':'Mapa Familiar'};
                                                               const pt=document.getElementById('page-title');
                                                               pt.textContent=titles[name]||'Paciente';
                                                               pt.style.cursor='';
@@ -6732,6 +6751,7 @@ if(!telaPermitidaPapel(name)){showToast('Área disponível apenas para o médico
                                                               if(name==='faturamento'&&typeof initFaturamento==='function')initFaturamento();
                                                               if(name==='meu-plano'&&typeof initMeuPlano==='function')initMeuPlano();
                                                               if(name==='whatsapp-pacientes'&&typeof initWhatsappPacientes==='function')initWhatsappPacientes();
+                  if(name==='agendamento-online'&&typeof initAgendamentoOnline==='function')initAgendamentoOnline();
                                                               if(name!=='conversas'&&typeof pararConversas==='function')pararConversas();
                                                               if(name==='base-conhecimento'&&typeof initBaseConhecimento==='function')initBaseConhecimento();
                                                               if(['secretaria','anamnese','copiloto','base-conhecimento'].includes(name)){
@@ -10847,6 +10867,7 @@ showAtendList();
                                                               listening=false;aiPaused=false;
                                                               clearInterval(transcriptInterval);
                                                               if(dgLive.active || dgLive.starting){ dgLive.stop(); }
+                                                              if(window.captacaoMovel){ captacaoMovel.encerrar(true); }
                                                               bblCount=0;sugIdx=0;aiRespIdx=0;transcriptIdx=0;
                                                               transcriptLog=[];transcriptTimeline=[];pinnedBbls=[];bubblesVisible=true;
                                                               __transcricaoAvisoMostrado=false;
@@ -10912,6 +10933,8 @@ showAtendList();
                                                             }
 
                                                             function toggleListen(){
+                                                              // Captação vindo do smartphone: pausar/retomar a chamada (public/captacao-smartphone.js).
+                                                              if(window.captacaoMovel && captacaoMovel.ativo()){ captacaoMovel.alternarPausa(); return; }
                                                               const cfg = getCopilotoCfg();
                                                               if(!cfg.enabled){
                                                                 if(typeof toast==='function') toast('Ative o copiloto em Minhas IA\u0027s › Copiloto de consulta para iniciar a gravação.');
@@ -19100,15 +19123,23 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                dos pacientes). Define initConversas/renderConversas/cv*. */
 
                                                             /* ========== AGENDA ========== */
-                                                            const AG_DOCTORS=[
-                                                              {id:1,name:'Dr. Silva',color:'#2E7D32',specialty:'Cardiologia'},
-                                                              {id:2,name:'Dra. Santos',color:'#1976D2',specialty:'Pediatria'},
-                                                              {id:3,name:'Dr. Oliveira',color:'#D32F2F',specialty:'Ortopedia'},
-                                                              {id:4,name:'Dra. Costa',color:'#F57C00',specialty:'Dermatologia'},
-                                                              {id:5,name:'Dr. Ferreira',color:'#7B1FA2',specialty:'Neurologia'}
-                                                            ];
-                                                            const AG_SPECS=['Cardiologia','Pediatria','Ortopedia','Dermatologia','Neurologia'];
-                                                            let AG_APTS=[];
+                                                            // Médicos da clínica (agenda_medicos), os mesmos do link público de agendamento.
+                                                           const AG_DOCTORS=[];
+                                                           const AG_SPECS=[];
+                                                           async function loadAgDoctors(){
+                                                             try{
+                                                               await sb.rpc('agenda_online_preparar');
+                                                               const {data,error}=await sb.from('agenda_medicos').select('id,nome,especialidade')
+                                                                 .eq('clinica_id',clinicaId()).eq('ativo',true).order('responsavel',{ascending:false}).order('nome');
+                                                               if(error)throw error;
+                                                               AG_DOCTORS.length=0;AG_SPECS.length=0;
+                                                               (data||[]).forEach(m=>{
+                                                                 AG_DOCTORS.push({id:m.id,name:m.nome,color:agHashColor(m.id),specialty:m.especialidade||''});
+                                                                 if(m.especialidade&&!AG_SPECS.includes(m.especialidade))AG_SPECS.push(m.especialidade);
+                                                               });
+                                                             }catch(e){console.error('agenda_medicos',e);}
+                                                           }
+                                                           let AG_APTS=[];
                                                             let AGENDAMENTOS=[];
                                                             function agDoctorName(){
                                                               const md=(currentUser&&(currentUser.user_metadata||{}))||{};
@@ -19128,7 +19159,7 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                 duracao:r.duracao_min||30,
                                                                 horarioEntrada:r.horario_entrada||null,
                                                                 doctor:r.medico_nome||'Médico não informado',
-                                                                doctorId:r.id_medico||'sem-medico',
+                                                                doctorId:r.agenda_medico_id||r.id_medico||'sem-medico',
                                                                 date:d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),
                                                                 dateObj:d,
                                                                 time:pad(d.getHours())+':'+pad(d.getMinutes()),
@@ -19316,18 +19347,24 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                             function agGoToCurrentWeek(){if((AG_STATE.weekOffset||0)===0)return;AG_STATE.weekOffset=0;renderAgenda();}
                                                             function initAgenda(){
                                                               if(!AG_STATE.inited){
-                                                                const ds=document.getElementById('ag-doctor');
-                                                                AG_DOCTORS.forEach(d=>{const o=document.createElement('option');o.value=d.id;o.textContent=d.name;ds.appendChild(o);});
-                                                                const ss=document.getElementById('ag-spec');
-                                                                AG_SPECS.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;ss.appendChild(o);});
                                                                 document.addEventListener('click',e=>{
                                                                   if(!e.target.closest('.ag-card')&&!e.target.closest('.ag-menu')){AG_STATE.openMenu=null;renderAgenda();}
                                                                   if(!e.target.closest('#ag-adv')&&!e.target.closest('#ag-fbtn')){const a=document.getElementById('ag-adv');if(a)a.style.display='none';document.getElementById('ag-fbtn')?.classList.remove('active');}
                                                                 });
                                                                 AG_STATE.inited=true;
                                                               }
-                                                              renderAgenda();
-                                                              loadAgendamentos().then(renderAgenda);
+                                                              loadAgDoctors().then(agFillFilters).then(loadAgendamentos).then(renderAgenda);
+                                                            }
+                                                            function agFillFilters(){
+                                                              const ds=document.getElementById('ag-doctor');
+                                                              const ss=document.getElementById('ag-spec');
+                                                              const dv=ds.value,sv=ss.value;
+                                                              ds.querySelectorAll('option:not([value="all"])').forEach(o=>o.remove());
+                                                              ss.querySelectorAll('option:not([value="all"])').forEach(o=>o.remove());
+                                                              AG_DOCTORS.forEach(d=>{const o=document.createElement('option');o.value=d.id;o.textContent=d.name;ds.appendChild(o);});
+                                                              AG_SPECS.forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent=x;ss.appendChild(o);});
+                                                              ds.value=[...ds.options].some(o=>o.value===dv)?dv:'all';
+                                                              ss.value=[...ss.options].some(o=>o.value===sv)?sv:'all';
                                                             }
                                                             function setAgendaView(v){AG_STATE.view=v;document.querySelectorAll('.ag-views button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));renderAgenda();}
                                                             function agToggleAdv(e){e&&e.stopPropagation();const a=document.getElementById('ag-adv');const open=a.style.display==='none';a.style.display=open?'block':'none';document.getElementById('ag-fbtn').classList.toggle('active',open);}
@@ -19339,7 +19376,7 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               return AG_APTS.filter(a=>{
                                                                 if(a.hiddenFromGrid)return false; // cancelado/reagendado saem da grade
                                                                 const mq=!q||(a.patient||'').toLowerCase().includes(q)||(a.specialty||'').toLowerCase().includes(q)||(a.doctor||'').toLowerCase().includes(q);
-                                                                const md=doc==='all';
+                                                                const md=doc==='all'||String(a.doctorId)===doc;
                                                                 const ms=AG_STATE.spec==='all'||a.specialty===AG_STATE.spec;
                                                                 const mc=AG_STATE.conf==='all'||a.confirmation===AG_STATE.conf;
                                                                 return mq&&md&&ms&&mc;
@@ -19511,21 +19548,25 @@ const de=document.getElementById('np-end');if(de)de.value='';
 
                                                             function agmPopulateSelects(){
                                                               const ds=document.getElementById('lgm-medico');
-                                                              if(ds&&!ds.dataset.filled){
-                                                                ds.innerHTML='<option value="">Selecionar médico</option>'+AG_DOCTORS.map(d=>`<option value="${d.id}">${d.name} — ${d.specialty}</option>`).join('');
-                                                                ds.dataset.filled='1';
+                                                              if(ds){
+                                                                const atual=ds.value;
+                                                                ds.innerHTML='<option value="">Selecionar médico</option>';
+                                                                AG_DOCTORS.forEach(d=>{const o=document.createElement('option');o.value=d.id;o.textContent=d.specialty?d.name+' — '+d.specialty:d.name;ds.appendChild(o);});
+                                                                ds.value=atual||(AG_DOCTORS.length===1?AG_DOCTORS[0].id:'');
                                                               }
                                                               const es=document.getElementById('lgm-especialidade');
-                                                              if(es&&!es.dataset.filled){
-                                                                es.innerHTML='<option value="">Selecionar especialidade</option>'+AG_SPECS.map(s=>`<option value="${s}">${s}</option>`).join('');
-                                                                es.dataset.filled='1';
+                                                              if(es){
+                                                                const atual=es.value;
+                                                                es.innerHTML='<option value="">Selecionar especialidade</option>';
+                                                                AG_SPECS.forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent=x;es.appendChild(o);});
+                                                                es.value=atual;
                                                               }
                                                             }
 
                                                             function agmResetForm(){
                                                               AGM_STATE.selectedPatientId=null;AGM_STATE.duracao=30;AGM_STATE.tipo='Consulta';AGM_STATE.modalidade='presencial';
                                                               ['lgm-nome','lgm-cpf','lgm-tel','lgm-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-                                                              const medico=document.getElementById('lgm-medico');if(medico)medico.value='';
+                                                              const medico=document.getElementById('lgm-medico');if(medico)medico.value=AG_DOCTORS.length===1?AG_DOCTORS[0].id:'';
                                                               const spec=document.getElementById('lgm-especialidade');if(spec)spec.value='';
                                                               document.querySelectorAll('#lgm-duracao-group .lgm-chip').forEach(b=>b.classList.toggle('active',b.dataset.val==='30'));
                                                               document.querySelectorAll('#lgm-tipo-group .lgm-chip').forEach(b=>b.classList.toggle('active',b.dataset.val==='Consulta'));
@@ -19541,6 +19582,7 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                             }
 
                                                             function openNovoAgendamentoModal(preset){
+                                                              if(!AG_DOCTORS.length)loadAgDoctors().then(agmPopulateSelects);
                                                               agmPopulateSelects();
                                                               agmResetForm();
                                                               if(preset){
@@ -19640,7 +19682,7 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                             }
 
                                                             function agmOnMedicoChange(){
-                                                              const id=parseInt(document.getElementById('lgm-medico').value);
+                                                              const id=document.getElementById('lgm-medico').value;
                                                               const doc=AG_DOCTORS.find(d=>d.id===id);
                                                               if(doc)document.getElementById('lgm-especialidade').value=doc.specialty;
                                                             }
@@ -19686,10 +19728,10 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                               const nome=(document.getElementById('lgm-nome').value||'').trim();
                                                               const dia=document.getElementById('lgm-dia').value;
                                                               const hora=document.getElementById('lgm-hora').value;
-                                                              const medicoId=parseInt(document.getElementById('lgm-medico').value);
+                                                              const medicoId=document.getElementById('lgm-medico').value;
                                                               if(!nome){showToast&&showToast('Informe o nome do paciente','error');return;}
                                                               if(!dia||!hora){showToast&&showToast('Informe o dia e a hora do agendamento','error');return;}
-                                                              if(!medicoId){showToast&&showToast('Selecione o médico','error');return;}
+                                                              if(!medicoId&&AG_DOCTORS.length){showToast&&showToast('Selecione o médico','error');return;}
                                                               const doc=AG_DOCTORS.find(d=>d.id===medicoId);
                                                               const especialidade=document.getElementById('lgm-especialidade').value||(doc&&doc.specialty)||'';
                                                               const cpfDigits=(document.getElementById('lgm-cpf').value||'').replace(/\D/g,'');
@@ -19707,7 +19749,7 @@ const de=document.getElementById('np-end');if(de)de.value='';
                                                                 }
                                                                 const dataHora=new Date(dia+'T'+hora+':00').toISOString();
                                                                 const agPayload={
-                                                                  paciente_id:pacienteId,paciente_nome:nome,id_medico:clinicaId(),
+                                                                  paciente_id:pacienteId,paciente_nome:nome,id_medico:clinicaId(),agenda_medico_id:medicoId||null,
                                                                   data_hora:dataHora,duracao_min:AGM_STATE.duracao,status:'agendado',
                                                                   motivo:AGM_STATE.tipo+(especialidade?' — '+especialidade:''),origem:'secretaria',
                                                                   tipo:AGM_STATE.tipo,especialidade:especialidade,medico_nome:doc?doc.name:null,
