@@ -68,15 +68,23 @@ export const Route = createFileRoute("/api/public/captacao-movel")({
                 .select("status")
                 .maybeSingle();
               if (error) throw error;
-              return responder({ status: data?.status ?? "conectado" });
+              return responder({
+                status: data?.status ?? "conectado",
+                transcricao: await modoDaSessao(sessao.user_id),
+              });
             }
             // Recarregar a página no celular volta para a mesma chamada.
-            return responder({ status: sessao.status });
+            return responder({ status: sessao.status, transcricao: await modoDaSessao(sessao.user_id) });
           }
 
           if (sessao.status === "aguardando") return responder({ error: "nao_conectado" }, 409);
 
           if (body.acao === "deepgram") {
+            // Plano Basic (ou médico que escolheu a básica): o celular usa o
+            // reconhecimento de voz do próprio navegador, sem token do Deepgram.
+            if ((await modoDaSessao(sessao.user_id)) === "basica") {
+              return responder({ error: "transcricao_basica" }, 403);
+            }
             const { issueDeepgramToken } = await import("@/routes/api/deepgram-token");
             const res = await issueDeepgramToken();
             return new Response(res.body, { status: res.status, headers: SEM_CACHE });
@@ -114,3 +122,8 @@ export const Route = createFileRoute("/api/public/captacao-movel")({
     },
   },
 });
+
+async function modoDaSessao(userId: string) {
+  const { modoTranscricao } = await import("@/lib/transcricao/modo.server");
+  return modoTranscricao(userId);
+}

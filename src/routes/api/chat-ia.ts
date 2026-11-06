@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { analisarExameArquivo, type AnaliseExame } from "@/lib/exames/analise.server";
-import { getUserIdFromRequest } from "@/lib/signature/requestAuth.server";
+import { getUserFromRequest } from "@/lib/signature/requestAuth.server";
+import { chamarIA, provedorDoUsuario, type Esforco, type MensagemIA } from "@/lib/ia/provedor.server";
 
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -80,8 +81,6 @@ const IC_FIELD_META: Record<string, { label: string; tipo: "texto" | "numero" | 
   outros: { label: "Outras observações relevantes", tipo: "texto" },
 };
 
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3-flash-preview";
 
 const SYSTEM_CHAT = `Você é um copiloto clínico para médicos durante a consulta.
 Responda de forma curta, objetiva e profissional, em português do Brasil.
@@ -326,53 +325,25 @@ function parseJsonLoose(text: string): Record<string, unknown> {
   }
 }
 
-type GatewayOpts = {
-  /** Nível de raciocínio do Gemini; os tokens de "pensamento" são cobrados como saída. */
-  reasoningEffort?: "low" | "medium" | "high";
-};
-
-async function callGateway(messages: ChatMessage[], apiKey: string, opts: GatewayOpts = {}) {
-  const enviar = (extra: Record<string, unknown>) =>
-    fetch(GATEWAY_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": apiKey,
-        "X-Lovable-AIG-SDK": "raw",
-      },
-      body: JSON.stringify({ model: MODEL, messages, ...extra }),
-    });
-  let res = await enviar(opts.reasoningEffort ? { reasoning_effort: opts.reasoningEffort } : {});
-  // Se o gateway não aceitar o parâmetro de raciocínio, repete a chamada sem ele
-  // em vez de derrubar o copiloto.
-  if (res.status === 400 && opts.reasoningEffort) {
-    console.warn("[chat-ia] gateway recusou reasoning_effort:", await res.text());
-    res = await enviar({});
-  }
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Response(`AI gateway error ${res.status}: ${text}`, { status: res.status });
-  }
-  const data = (await res.json()) as {
-    choices?: { message?: { content?: string } }[];
-  };
-  return data.choices?.[0]?.message?.content ?? "";
-}
-
 export const Route = createFileRoute("/api/chat-ia")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         // Só usuários logados: cada chamada consome a chave de IA da conta, e o modo
         // "anamnese" aceita system prompt livre — aberto, viraria um proxy de LLM grátis.
-        const userId = await getUserIdFromRequest(request);
-        if (!userId) {
+        const usuario = await getUserFromRequest(request);
+        if (!usuario) {
           return Response.json({ error: "unauthorized" }, { status: 401 });
         }
+        const userId = usuario.id;
+        // Modelo escolhido pelo médico em Minhas IAs › Copiloto (Gemini ou Claude).
+        const provedor = provedorDoUsuario(usuario.metadata);
         const apiKey = process.env.LOVABLE_API_KEY;
         if (!apiKey) {
           return new Response("Missing LOVABLE_API_KEY", { status: 500 });
         }
+        const chamar = (messages: MensagemIA[], esforco?: Esforco) =>
+          chamarIA(provedor, messages, apiKey, esforco);
         let body: RequestBody;
         try {
           body = (await request.json()) as RequestBody;
@@ -393,7 +364,7 @@ export const Route = createFileRoute("/api/chat-ia")({
               null,
               2,
             );
-            const text = await callGateway(
+            const text = await chamar(
               [
                 { role: "system", content: SYSTEM_RESUMO },
                 {
@@ -401,7 +372,6 @@ export const Route = createFileRoute("/api/chat-ia")({
                   content: "Contexto do paciente em JSON (use só o que estiver presente):\n\n" + ctx,
                 },
               ],
-              apiKey,
             );
             return Response.json({ resumo: text });
           }
@@ -412,12 +382,11 @@ export const Route = createFileRoute("/api/chat-ia")({
             if (!sys || !usr) {
               return new Response("Missing system_prompt or user_content", { status: 400 });
             }
-            const text = await callGateway(
+            const text = await chamar(
               [
                 { role: "system", content: sys },
                 { role: "user", content: usr },
               ],
-              apiKey,
             );
             return Response.json({ reply: text });
           }
@@ -437,7 +406,7 @@ export const Route = createFileRoute("/api/chat-ia")({
               ctx.info_complementar = body.info_complementar ?? null;
               ctx.transcricao_completa = body.transcricao_completa ?? "";
             }
-            const text = await callGateway(
+            const text = await chamar(
               [
                 { role: "system", content: SYSTEM_COPILOTO },
                 {
@@ -449,8 +418,7 @@ export const Route = createFileRoute("/api/chat-ia")({
                     "Dados da consulta em JSON (use apenas o que estiver presente):\n\n" + JSON.stringify(ctx),
                 },
               ],
-              apiKey,
-              { reasoningEffort: "low" },
+              "low",
             );
             // tenta extrair JSON da resposta (modelo pode envolver em ```json)
             return Response.json(parseJsonLoose(text));
@@ -476,12 +444,11 @@ export const Route = createFileRoute("/api/chat-ia")({
               null,
               2,
             );
-            const text = await callGateway(
+            const text = await chamar(
               [
                 { role: "system", content: SYSTEM_EXTRAI_COMPLEMENTARES },
                 { role: "user", content: "Dados em JSON:\n\n" + ctx },
               ],
-              apiKey,
             );
             const parsed = parseJsonLoose(text);
             const alteracoes = Array.isArray(parsed.alteracoes) ? parsed.alteracoes : [];
@@ -566,7 +533,7 @@ export const Route = createFileRoute("/api/chat-ia")({
               (m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string",
             ),
           ];
-          const textoBruto = await callGateway(messages, apiKey);
+          const textoBruto = await chamar(messages, "medium");
           // A busca por palavra-chave não entende contexto — ela pode achar um trecho
           // "candidato" que na verdade não tem relação com a pergunta. Quem decide se o
           // conteúdo é realmente relevante é a própria IA, sinalizando isso com o

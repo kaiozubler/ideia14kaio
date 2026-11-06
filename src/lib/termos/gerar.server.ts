@@ -1,10 +1,11 @@
+import { GEMINI_MODEL } from "@/lib/ia/provedor.server";
 // IA dedicada à redação de termos de ciência (TCLE) a partir de uma instrução em
 // texto livre do médico. Mesmo padrão de src/lib/questionarios/gerar.server.ts:
 // chama o Lovable AI Gateway pedindo APENAS um JSON de saída, e o servidor
 // normaliza/valida o resultado antes de devolver para o cliente.
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3.6-flash";
+const MODEL = GEMINI_MODEL;
 
 export type TermoGerado = {
   titulo: string;

@@ -1,3 +1,4 @@
+import { GEMINI_MODEL } from "@/lib/ia/provedor.server";
 // IA dedicada à estruturação de questionários/formulários para pacientes a partir de
 // uma instrução em texto livre do médico.
 //
@@ -7,7 +8,7 @@
 // para popular o banco direto).
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3.6-flash";
+const MODEL = GEMINI_MODEL;
 
 export type PerguntaIA = {
   temp_id: string;

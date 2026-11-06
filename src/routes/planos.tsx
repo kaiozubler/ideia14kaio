@@ -38,6 +38,7 @@ import {
   TIERS_COPILOTO,
   TIERS_VIDEO,
   TIERS_WHATSAPP,
+  TEXTO_TRANSCRICAO,
   WHATSAPP_COMERCIAL,
   configuracaoDoPlano,
   configuracaoIgualAncora,
@@ -494,6 +495,7 @@ function PaginaPlanos() {
                       {plano.secretarias} usuário{plano.secretarias > 1 ? "s" : ""} de gestão
                     </ItemPlano>
                     <ItemPlano>{plano.copiloto} consultas de Copiloto</ItemPlano>
+                    <ItemPlano>{TEXTO_TRANSCRICAO[plano.transcricao]}</ItemPlano>
                     <ItemPlano>{plano.whatsapp.toLocaleString("pt-BR")} conversas de WhatsApp</ItemPlano>
                     <ItemPlano>
                       {plano.video ? `${plano.video.toLocaleString("pt-BR")} min de vídeo` : "Vídeo não incluído"}

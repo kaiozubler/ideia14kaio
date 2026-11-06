@@ -102,6 +102,12 @@ export const Route = createFileRoute("/api/deepgram-token")({
       GET: async ({ request }) => {
         const userId = await getUserIdFromRequest(request);
         if (!userId) return Response.json({ error: "unauthorized" }, { status: 401 });
+        // Transcrição avançada só nos planos Pro/Enterprise e se o médico não
+        // escolheu a básica; senão a tela usa o reconhecimento do navegador.
+        const { modoTranscricao } = await import("@/lib/transcricao/modo.server");
+        if ((await modoTranscricao(userId)) === "basica") {
+          return Response.json({ error: "transcricao_basica" }, { status: 403 });
+        }
         return issueDeepgramToken();
       },
     },

@@ -15,9 +15,9 @@
 // (e na função aplicar_agendamentos_assinatura, que também tem uma cópia).
 (function () {
   var PLANOS = [
-    { id: "basic", nome: "Basic", precoMensal: 149.9, medicos: 1, secretarias: 1, copiloto: 60, whatsapp: 500, video: 0 },
-    { id: "pro", nome: "Pro", precoMensal: 249.9, medicos: 1, secretarias: 1, copiloto: 200, whatsapp: 2000, video: 3000 },
-    { id: "enterprise", nome: "Enterprise", precoMensal: 649.9, medicos: 2, secretarias: 2, copiloto: 500, whatsapp: 5000, video: 10000 },
+    { id: "basic", nome: "Basic", precoMensal: 149.9, medicos: 1, secretarias: 1, copiloto: 60, whatsapp: 500, video: 0, transcricao: "basica" },
+    { id: "pro", nome: "Pro", precoMensal: 249.9, medicos: 1, secretarias: 1, copiloto: 200, whatsapp: 2000, video: 3000, transcricao: "avancada" },
+    { id: "enterprise", nome: "Enterprise", precoMensal: 649.9, medicos: 2, secretarias: 2, copiloto: 500, whatsapp: 5000, video: 10000, transcricao: "avancada" },
   ];
 
   var PACOTES_CREDITO = {
@@ -456,6 +456,7 @@
     return (
       "<ul><li>" + p.medicos + " médico(s) · " + p.secretarias + " usuário(s) de gestão</li>" +
       "<li>" + fmtNum(p.copiloto) + " consultas de Copiloto</li>" +
+      "<li>" + (p.transcricao === "avancada" ? "Conversas transcritas com mais precisão" : "Transcrição padrão das consultas") + "</li>" +
       "<li>" + fmtNum(p.whatsapp) + " conversas de WhatsApp</li>" +
       "<li>" + (p.video ? fmtNum(p.video) + " min de vídeo" : "Vídeo não incluído") + "</li></ul>"
     );

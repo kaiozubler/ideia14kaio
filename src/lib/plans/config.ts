@@ -41,6 +41,14 @@ export type PlanoBase = {
   copiloto: number;
   whatsapp: number;
   video: number;
+  /** Transcrição da consulta: "avancada" (Deepgram) ou "basica" (navegador). */
+  transcricao: "basica" | "avancada";
+};
+
+/** Como cada tipo de transcrição aparece para o cliente nos cartões de plano. */
+export const TEXTO_TRANSCRICAO: Record<PlanoBase["transcricao"], string> = {
+  basica: "Transcrição padrão das consultas",
+  avancada: "Conversas transcritas com mais precisão",
 };
 
 // ---------------------------------------------------------------------------
@@ -100,6 +108,7 @@ export const PLANOS_BASE: PlanoBase[] = [
     copiloto: 60,
     whatsapp: 500,
     video: 0,
+    transcricao: "basica",
   },
   {
     id: "pro",
@@ -112,6 +121,7 @@ export const PLANOS_BASE: PlanoBase[] = [
     copiloto: 200,
     whatsapp: 2000,
     video: 3000,
+    transcricao: "avancada",
   },
   {
     id: "enterprise",
@@ -124,6 +134,7 @@ export const PLANOS_BASE: PlanoBase[] = [
     copiloto: 500,
     whatsapp: 5000,
     video: 10000,
+    transcricao: "avancada",
   },
 ];
 

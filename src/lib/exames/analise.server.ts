@@ -1,9 +1,10 @@
+import { GEMINI_MODEL } from "@/lib/ia/provedor.server";
 // IA dedicada à análise de arquivos de exames.
 // Recebe o anexo (PDF ou imagem), extrai os dados de cadastro de CADA exame contido
 // no arquivo, confere a identidade do paciente e gera relatório com pontos de atenção.
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3-flash-preview";
+const MODEL = GEMINI_MODEL;
 
 export type AnexoExame = { nome?: string; mime?: string; base64?: string };
 

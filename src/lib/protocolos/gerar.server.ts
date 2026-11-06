@@ -1,3 +1,4 @@
+import { GEMINI_MODEL } from "@/lib/ia/provedor.server";
 // IA dedicada à estruturação de protocolos assistenciais a partir de um PDF
 // (PCDT, diretriz, artigo) e/ou instruções do médico.
 //
@@ -15,7 +16,7 @@
 // revisão humana, em vez de ser descartado em silêncio.
 
 export const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-export const MODEL = "google/gemini-3.6-flash";
+export const MODEL = GEMINI_MODEL;
 // PCDTs completos geram muitas ações (uma por fármaco, exame de monitorização
 // e alerta); o limite padrão do gateway truncava o JSON no meio.
 export const MAX_TOKENS = 32000;

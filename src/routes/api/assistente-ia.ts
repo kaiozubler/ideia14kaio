@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { analisarExameArquivo, type AnaliseExame } from "@/lib/exames/analise.server";
 import { mensagemErroGateway } from "@/lib/ai/erro-gateway";
 
+import { GEMINI_MODEL } from "@/lib/ia/provedor.server";
 type ChatMessage = {
   role: "system" | "user" | "assistant" | "tool";
   content: string | null;
@@ -45,7 +46,7 @@ export type RequestBody = {
 };
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3-flash-preview";
+const MODEL = GEMINI_MODEL;
 const TZ_OFFSET_MIN = -180; // America/Sao_Paulo
 
 const SYSTEM = `Você é o Assistente do MediCopilot, usado por médicos e secretárias FORA do contexto de uma consulta em andamento.
