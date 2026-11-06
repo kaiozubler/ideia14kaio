@@ -1,5 +1,6 @@
+import { GEMINI_MODEL } from "@/lib/ia/provedor.server";
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3-flash-preview";
+const MODEL = GEMINI_MODEL;
 
 const SYSTEM = `Você recebe trechos de texto extraídos de documentos/anotações de um médico,
 que serão usados como base de conhecimento para um chat de IA clínico.

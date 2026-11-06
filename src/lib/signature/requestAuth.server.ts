@@ -34,3 +34,25 @@ export async function getUserIdFromRequest(request: Request): Promise<string | n
     return null;
   }
 }
+
+/**
+ * Igual a getUserIdFromRequest, mas devolve também o user_metadata (preferências
+ * do usuário, como o modelo de IA escolhido) sem uma segunda ida ao Supabase.
+ */
+export async function getUserFromRequest(
+  request: Request,
+): Promise<{ id: string; metadata: Record<string, unknown> } | null> {
+  const auth = request.headers.get("authorization");
+  if (!auth?.startsWith("Bearer ")) return null;
+  const token = auth.slice(7);
+  if (!token) return null;
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin.auth.getUser(token);
+    if (error || !data.user) return null;
+    return { id: data.user.id, metadata: (data.user.user_metadata ?? {}) as Record<string, unknown> };
+  } catch (err) {
+    console.warn("[signature/auth] falha ao validar token:", err instanceof Error ? err.message : err);
+    return null;
+  }
+}

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 
+import { GEMINI_MODEL } from "@/lib/ia/provedor.server";
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
 type Body = {
@@ -14,7 +15,7 @@ type Body = {
 };
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3-flash-preview";
+const MODEL = GEMINI_MODEL;
 
 const SYSTEM = `Você é uma IA clínica especializada em ANÁLISE DE HISTÓRICO FAMILIAR, em português do Brasil.
 

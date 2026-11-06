@@ -6,8 +6,19 @@ import { ptBR } from "date-fns/locale";
 
 import { BotaoFlutuante } from "@/components/contratacao/BotaoFlutuante";
 import { LayoutContratacao } from "@/components/contratacao/LayoutContratacao";
-import { atualizarContratacaoRemota, garantirContratacaoRemota } from "@/lib/contratacao/api";
-import { atualizarPedido, lerPedido, type Pedido } from "@/lib/contratacao/pedido";
+import { CampoCupom } from "@/components/contratacao/CampoCupom";
+import { dataCobranca } from "@/lib/contratacao/datas";
+import {
+  aplicarCupomRemoto,
+  atualizarContratacaoRemota,
+  garantirContratacaoRemota,
+} from "@/lib/contratacao/api";
+import {
+  atualizarPedido,
+  lerPedido,
+  type CupomDoPedido,
+  type Pedido,
+} from "@/lib/contratacao/pedido";
 import {
   PERSONALIZADO,
   PLANOS_BASE,
@@ -19,7 +30,20 @@ import {
 
 export const Route = createFileRoute("/contratacao/confirmar")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Confirme seu plano | MediCopilot" }, { name: "description", content: "Revise o plano escolhido para sua clínica no MediCopilot." }, { property: "og:title", content: "Confirme seu plano | MediCopilot" }, { property: "og:description", content: "Revise o plano escolhido para sua clínica no MediCopilot." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({
+    meta: [
+      { title: "Confirme seu plano | MediCopilot" },
+      { name: "description", content: "Revise o plano escolhido para sua clínica no MediCopilot." },
+      { property: "og:title", content: "Confirme seu plano | MediCopilot" },
+      {
+        property: "og:description",
+        content: "Revise o plano escolhido para sua clínica no MediCopilot.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   component: PaginaConfirmar,
 });
 
@@ -31,6 +55,7 @@ function PaginaConfirmar() {
   const navigate = useNavigate();
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [diaCobranca, setDiaCobranca] = useState<number>(diaDeHojeLimitado());
+  const [avisoCupom, setAvisoCupom] = useState<string | null>(null);
 
   useEffect(() => {
     const atual = lerPedido();
@@ -46,20 +71,45 @@ function PaginaConfirmar() {
     // ela voltar pra /planos e trocar de plano, isso também re-sincroniza.
     const ancoraAtual = PLANOS_BASE.find((p) => p.id === atual.plano) ?? PLANO_PADRAO;
     const precoAtual = precoDaConfiguracao(atual.config, ancoraAtual);
-    garantirContratacaoRemota(atual, precoAtual).then(({ contratacaoId }) => {
+    garantirContratacaoRemota(atual, precoAtual).then(async ({ contratacaoId }) => {
       if (contratacaoId && contratacaoId !== atual.contratacaoId) {
         atualizarPedido({ contratacaoId });
         setPedido((p) => (p ? { ...p, contratacaoId } : p));
       }
+      // Plano ou ciclo podem ter mudado desde que o cupom foi aplicado: confere de novo.
+      if (contratacaoId && atual.cupom) {
+        const r = await aplicarCupomRemoto(contratacaoId, atual.cupom.codigo);
+        const cupom = "erro" in r ? undefined : (r.cupom ?? undefined);
+        if ("erro" in r) setAvisoCupom(`O cupom ${atual.cupom.codigo} foi removido: ${r.erro}`);
+        atualizarPedido({ cupom });
+        setPedido((p) => (p ? { ...p, cupom } : p));
+      }
     });
   }, [navigate]);
+
+  function trocarCupom(cupom: CupomDoPedido | null) {
+    setAvisoCupom(null);
+    atualizarPedido({ cupom: cupom ?? undefined });
+    setPedido((p) => (p ? { ...p, cupom: cupom ?? undefined } : p));
+  }
 
   if (!pedido) return null;
 
   const ancora = PLANOS_BASE.find((p) => p.id === pedido.plano) ?? PLANO_PADRAO;
   const precoMensal = precoDaConfiguracao(pedido.config, ancora);
-  const precoExibido = pedido.ciclo === "anual" ? precoAnualEquivalenteMensal(precoMensal) : precoMensal;
-  const proximaRenovacao = format(addYears(new Date(), 1), "d 'de' MMMM 'de' yyyy", { locale: ptBR });
+  const porMes = (v: number) => (pedido.ciclo === "anual" ? precoAnualEquivalenteMensal(v) : v);
+  const precoExibido = porMes(precoMensal);
+  const cupom = pedido.cupom;
+  const comDesconto =
+    cupom && cupom.descontoMensal > 0 ? porMes(cupom.precoMensalComDesconto) : null;
+  const hoje = new Date().toISOString().slice(0, 10);
+  const cobrancaAdiada =
+    cupom && !cupom.semCobranca && cupom.primeiraCobrancaEm > hoje
+      ? cupom.primeiraCobrancaEm
+      : null;
+  const proximaRenovacao = format(addYears(new Date(), 1), "d 'de' MMMM 'de' yyyy", {
+    locale: ptBR,
+  });
 
   async function avancar() {
     const novoDia = pedido!.ciclo === "mensal" ? diaCobranca : undefined;
@@ -76,8 +126,12 @@ function PaginaConfirmar() {
         ← Voltar para planos
       </Link>
 
-      <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-800 md:text-3xl">Confirme seu plano</h1>
-      <p className="mt-1 text-sm text-slate-500">Dá uma conferida antes de seguir para os próximos passos.</p>
+      <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-800 md:text-3xl">
+        Confirme seu plano
+      </h1>
+      <p className="mt-1 text-sm text-slate-500">
+        Dá uma conferida antes de seguir para os próximos passos.
+      </p>
 
       <div className="mt-5 grid gap-4 md:grid-cols-5">
         {/* Resumo */}
@@ -89,11 +143,26 @@ function PaginaConfirmar() {
           <h3 className="mt-1 text-lg font-bold text-slate-800">{ancora.nome}</h3>
 
           <div className="mt-3 space-y-1 text-sm text-slate-600">
-            <p>{pedido.config.medicos} médico{pedido.config.medicos !== 1 ? "s" : ""}</p>
-            <p>{pedido.config.secretarias} secretária{pedido.config.secretarias !== 1 ? "s" : ""} / gestão</p>
+            <p>
+              {pedido.config.medicos} médico{pedido.config.medicos !== 1 ? "s" : ""}
+            </p>
+            <p>
+              {pedido.config.secretarias} secretária{pedido.config.secretarias !== 1 ? "s" : ""} /
+              gestão
+            </p>
             <p>
               Copiloto ·{" "}
-              {pedido.config.copiloto === PERSONALIZADO ? "personalizado" : `${pedido.config.copiloto} consultas`}
+              {pedido.config.copiloto === PERSONALIZADO
+                ? "personalizado"
+                : `${pedido.config.copiloto} consultas`}
+            </p>
+            <p>
+              Copiloto ativo ·{" "}
+              {pedido.plano === "pro"
+                ? "incluído"
+                : pedido.plano === "enterprise" && pedido.config.copilotoAtivo
+                  ? "adicional contratado"
+                  : "não incluído (reativo)"}
             </p>
             <p>
               WhatsApp ·{" "}
@@ -112,10 +181,30 @@ function PaginaConfirmar() {
 
           <div className="my-4 h-px bg-slate-200/70" />
 
-          <p className="text-xs text-slate-400">Total {pedido.ciclo === "anual" ? "mensal (cobrado anual)" : "mensal"}</p>
-          <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold text-slate-800">{formatarPreco(precoExibido)}</span>
+          <p className="text-xs text-slate-400">
+            Total {pedido.ciclo === "anual" ? "mensal (cobrado anual)" : "mensal"}
+          </p>
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
+            {comDesconto !== null && (
+              <span className="text-sm text-slate-400 line-through">
+                {formatarPreco(precoExibido)}
+              </span>
+            )}
+            <span className="text-2xl font-bold text-slate-800">
+              {formatarPreco(comDesconto ?? precoExibido)}
+            </span>
             <span className="text-sm text-slate-400">/mês</span>
+          </div>
+          {comDesconto !== null && cupom?.meses != null && (
+            <p className="mt-0.5 text-xs text-slate-500">
+              Por {cupom.meses === 1 ? "1 mês" : `${cupom.meses} meses`}, depois{" "}
+              {formatarPreco(precoExibido)}/mês
+            </p>
+          )}
+
+          <div className="mt-4 space-y-2">
+            <CampoCupom contratacaoId={pedido.contratacaoId} cupom={cupom} onChange={trocarCupom} />
+            {avisoCupom && <p className="text-xs text-amber-700">{avisoCupom}</p>}
           </div>
         </div>
 
@@ -133,7 +222,9 @@ function PaginaConfirmar() {
             </div>
             <div>
               <h3 className="font-bold text-slate-800">Cartão de crédito</h3>
-              <p className="text-xs text-slate-400">Cobrança recorrente {pedido.ciclo === "anual" ? "anual" : "mensal"}</p>
+              <p className="text-xs text-slate-400">
+                Cobrança recorrente {pedido.ciclo === "anual" ? "anual" : "mensal"}
+              </p>
             </div>
           </div>
 
@@ -166,11 +257,29 @@ function PaginaConfirmar() {
             style={{ borderRadius: "16px" }}
             className="mt-4 border border-amber-200/70 bg-amber-50/70 p-3.5 text-sm text-amber-800"
           >
-            <strong>A primeira cobrança é feita agora</strong>, ao confirmar a assinatura.{" "}
-            {pedido.ciclo === "mensal" ? (
-              <>A partir do próximo ciclo, as cobranças passam a acontecer sempre no dia escolhido acima.</>
+            {cupom?.semCobranca ? (
+              <>
+                <strong>Sem cobrança:</strong> com o cupom {cupom.codigo}, você usa o MediCopilot
+                sem custo. Nosso time libera o acesso assim que você concluir.
+              </>
+            ) : cobrancaAdiada ? (
+              <>
+                <strong>A primeira cobrança será em {dataCobranca(cobrancaAdiada)}</strong>, graças
+                ao cupom {cupom!.codigo}. O cartão é cadastrado agora, mas nada é cobrado antes
+                dessa data.
+              </>
             ) : (
-              <>A próxima cobrança só acontece na renovação anual, em {proximaRenovacao}.</>
+              <>
+                <strong>A primeira cobrança é feita agora</strong>, ao confirmar a assinatura.{" "}
+                {pedido.ciclo === "mensal" ? (
+                  <>
+                    A partir do próximo ciclo, as cobranças passam a acontecer sempre no dia
+                    escolhido acima.
+                  </>
+                ) : (
+                  <>A próxima cobrança só acontece na renovação anual, em {proximaRenovacao}.</>
+                )}
+              </>
             )}
           </div>
         </div>

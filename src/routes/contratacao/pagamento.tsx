@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { CreditCard, Lock, ShieldCheck } from "lucide-react";
+import { CreditCard, Lock, ShieldCheck, Tag } from "lucide-react";
 
 import { BotaoFlutuante } from "@/components/contratacao/BotaoFlutuante";
 import { LayoutContratacao } from "@/components/contratacao/LayoutContratacao";
 import { atualizarContratacaoRemota } from "@/lib/contratacao/api";
+import { dataCobranca } from "@/lib/contratacao/datas";
 import { lerPedido, type Pedido } from "@/lib/contratacao/pedido";
 import {
   PERSONALIZADO,
@@ -18,7 +19,17 @@ import {
 
 export const Route = createFileRoute("/contratacao/pagamento")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Pagamento | MediCopilot" }, { name: "description", content: "Conclua o pagamento do seu plano MediCopilot." }, { property: "og:title", content: "Pagamento | MediCopilot" }, { property: "og:description", content: "Conclua o pagamento do seu plano MediCopilot." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({
+    meta: [
+      { title: "Pagamento | MediCopilot" },
+      { name: "description", content: "Conclua o pagamento do seu plano MediCopilot." },
+      { property: "og:title", content: "Pagamento | MediCopilot" },
+      { property: "og:description", content: "Conclua o pagamento do seu plano MediCopilot." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   component: PaginaPagamento,
 });
 
@@ -41,7 +52,8 @@ function PaginaPagamento() {
     // (ver callback em /api/asaas/checkout) — mostra um aviso amigável nesse caso.
     const params = new URLSearchParams(window.location.search);
     const asaas = params.get("asaas");
-    if (asaas === "cancelado") setErroAsaas("Pagamento cancelado. Pode tentar de novo quando quiser.");
+    if (asaas === "cancelado")
+      setErroAsaas("Pagamento cancelado. Pode tentar de novo quando quiser.");
     if (asaas === "expirado") setErroAsaas("O link de pagamento expirou. Gera um novo abaixo.");
   }, [navigate]);
 
@@ -49,7 +61,16 @@ function PaginaPagamento() {
 
   const ancora = PLANOS_BASE.find((p) => p.id === pedido.plano) ?? PLANO_PADRAO;
   const precoMensal = precoDaConfiguracao(pedido.config, ancora);
-  const precoExibido = pedido.ciclo === "anual" ? precoAnualEquivalenteMensal(precoMensal) : precoMensal;
+  const porMes = (v: number) => (pedido.ciclo === "anual" ? precoAnualEquivalenteMensal(v) : v);
+  const cupom = pedido.cupom;
+  const precoCheio = porMes(precoMensal);
+  const precoExibido =
+    cupom && cupom.descontoMensal > 0 ? porMes(cupom.precoMensalComDesconto) : precoCheio;
+  const hoje = new Date().toISOString().slice(0, 10);
+  const cobrancaAdiada =
+    cupom && !cupom.semCobranca && cupom.primeiraCobrancaEm > hoje
+      ? cupom.primeiraCobrancaEm
+      : null;
 
   const linkWhatsApp = (() => {
     const c = pedido.config;
@@ -75,9 +96,11 @@ function PaginaPagamento() {
       `Especialidade: ${d?.especialidade ?? ""}`,
       `Médicos: ${c.medicos} · Secretárias/Gestão: ${c.secretarias}`,
       `Copiloto: ${c.copiloto === PERSONALIZADO ? "personalizado" : c.copiloto}`,
+      `Copiloto ativo: ${pedido.plano === "pro" ? "incluído" : pedido.plano === "enterprise" && c.copilotoAtivo ? "adicional" : "não"}`,
       `WhatsApp (franquia): ${c.whatsapp === PERSONALIZADO ? "personalizado" : c.whatsapp}`,
       `Vídeo: ${c.video === PERSONALIZADO ? "personalizado" : c.video || "não incluído"}`,
       `Ciclo: ${pedido.ciclo}${pedido.diaCobranca ? ` · cobrança todo dia ${pedido.diaCobranca}` : ""}`,
+      ...(cupom ? [`Cupom: ${cupom.codigo} — ${cupom.texto}`] : []),
       `Total: ${formatarPreco(precoExibido)}/mês`,
     ].join("\n");
     return `https://wa.me/${WHATSAPP_COMERCIAL}?text=${encodeURIComponent(texto)}`;
@@ -85,7 +108,9 @@ function PaginaPagamento() {
 
   async function pagarComCartao() {
     if (!pedido!.contratacaoId) {
-      setErroAsaas("Não encontramos sua contratação salva. Volta pra etapa anterior e confirma de novo.");
+      setErroAsaas(
+        "Não encontramos sua contratação salva. Volta pra etapa anterior e confirma de novo.",
+      );
       return;
     }
     setCarregando(true);
@@ -97,7 +122,17 @@ function PaginaPagamento() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ contratacaoId: pedido!.contratacaoId }),
       });
-      const data = (await resp.json()) as { checkoutUrl?: string; error?: string; naoConfigurado?: boolean };
+      const data = (await resp.json()) as {
+        checkoutUrl?: string;
+        semCobranca?: boolean;
+        error?: string;
+        naoConfigurado?: boolean;
+      };
+      // Cupom de 100% vitalício: não há pagamento, a contratação já ficou confirmada.
+      if (resp.ok && data.semCobranca) {
+        navigate({ to: "/contratacao/conclusao" });
+        return;
+      }
       if (!resp.ok || !data.checkoutUrl) {
         setAsaasNaoConfigurado(!!data.naoConfigurado);
         setErroAsaas(
@@ -110,7 +145,9 @@ function PaginaPagamento() {
       }
       window.location.href = data.checkoutUrl;
     } catch {
-      setErroAsaas("Não conseguimos abrir o pagamento agora. Tenta de novo ou fala com a gente pelo WhatsApp.");
+      setErroAsaas(
+        "Não conseguimos abrir o pagamento agora. Tenta de novo ou fala com a gente pelo WhatsApp.",
+      );
       setCarregando(false);
     }
   }
@@ -125,11 +162,16 @@ function PaginaPagamento() {
 
   return (
     <LayoutContratacao etapaAtual="pagamento">
-      <Link to="/contratacao/termos" className="text-sm font-medium text-slate-500 hover:text-slate-700">
+      <Link
+        to="/contratacao/termos"
+        className="text-sm font-medium text-slate-500 hover:text-slate-700"
+      >
         ← Voltar
       </Link>
 
-      <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-800 md:text-3xl">Pagamento</h1>
+      <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-800 md:text-3xl">
+        Pagamento
+      </h1>
       <p className="mt-1 text-sm text-slate-500">Confira o total e finalize.</p>
 
       <div
@@ -146,14 +188,38 @@ function PaginaPagamento() {
             </div>
             <div>
               <h3 className="font-bold text-slate-800">Cartão de crédito</h3>
-              <p className="text-xs text-slate-400">Cobrança recorrente {pedido.ciclo === "anual" ? "anual" : "mensal"}</p>
+              <p className="text-xs text-slate-400">
+                Cobrança recorrente {pedido.ciclo === "anual" ? "anual" : "mensal"}
+              </p>
             </div>
           </div>
           <div className="text-right">
             <p className="text-xs text-slate-400">Total</p>
+            {precoExibido !== precoCheio && (
+              <p className="text-xs text-slate-400 line-through">{formatarPreco(precoCheio)}/mês</p>
+            )}
             <p className="text-lg font-bold text-slate-800">{formatarPreco(precoExibido)}/mês</p>
           </div>
         </div>
+
+        {cupom && (
+          <div
+            style={{ borderRadius: "16px" }}
+            className="mt-4 flex items-start gap-2.5 border border-emerald-200/80 bg-emerald-50/70 p-3 text-sm text-emerald-800"
+          >
+            <Tag className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+            <div>
+              <p>
+                Cupom <strong className="font-mono tracking-wide">{cupom.codigo}</strong>:{" "}
+                {cupom.texto}
+              </p>
+              {cupom.semCobranca && <p className="mt-0.5">Nada será cobrado — é só concluir.</p>}
+              {cobrancaAdiada && (
+                <p className="mt-0.5">Primeira cobrança em {dataCobranca(cobrancaAdiada)}.</p>
+              )}
+            </div>
+          </div>
+        )}
 
         <div
           style={{ borderRadius: "16px" }}
@@ -161,8 +227,8 @@ function PaginaPagamento() {
         >
           <Lock className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
           <p className="text-sm text-slate-600">
-            Ao continuar, você vai pra uma página segura do Asaas pra colocar os dados do cartão. A gente
-            nunca vê nem guarda esses dados.
+            Ao continuar, você vai pra uma página segura do Asaas pra colocar os dados do cartão. A
+            gente nunca vê nem guarda esses dados.
           </p>
         </div>
 
@@ -198,7 +264,15 @@ function PaginaPagamento() {
       </div>
 
       <BotaoFlutuante onClick={pagarComCartao} disabled={carregando}>
-        {carregando ? "Abrindo pagamento…" : "Pagar com cartão"}
+        {carregando
+          ? cupom?.semCobranca
+            ? "Concluindo…"
+            : "Abrindo pagamento…"
+          : cupom?.semCobranca
+            ? "Concluir contratação"
+            : cobrancaAdiada
+              ? "Cadastrar cartão"
+              : "Pagar com cartão"}
       </BotaoFlutuante>
     </LayoutContratacao>
   );

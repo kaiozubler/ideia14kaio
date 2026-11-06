@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { GEMINI_MODEL } from "@/lib/ia/provedor.server";
 // Proxy pro botão "Gerar com IA" do Studio de protocolos.
 //
 // Por que isso existe: chamar a IA direto do navegador exigiria colocar a
@@ -24,7 +25,7 @@ import { z } from "zod";
 // sessão logada — essa rota exige usuário autenticado).
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3.6-flash";
+const MODEL = GEMINI_MODEL;
 
 // ~14MB em base64 (~10MB de PDF real) -- generoso o bastante pra um
 // protocolo em PDF, sem deixar o payload crescer sem limite.

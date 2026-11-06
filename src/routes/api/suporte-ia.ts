@@ -9,6 +9,7 @@ import {
   formatarPreco,
 } from "@/lib/plans/config";
 
+import { GEMINI_MODEL } from "@/lib/ia/provedor.server";
 // Assistente de dúvidas do MediCopilot — hoje plugado no chat público da
 // tela de planos (/planos), pensado desde já pra ser reaproveitado como o
 // tira-dúvidas dos clientes DENTRO do app (logados), quando chegar a hora:
@@ -29,7 +30,7 @@ import {
 //   resto do app já usa (ver src/routes/api/assistente-ia.ts).
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3-flash-preview";
+const MODEL = GEMINI_MODEL;
 
 const BodySchema = z.object({
   messages: z

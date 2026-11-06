@@ -43,6 +43,34 @@ const DG_PARAMS = {
   vad_events: "true",
 };
 
+// Silêncio não vai para o Deepgram (cobrado por minuto de áudio): depois de
+// SILENCIO_MS abaixo de LIMIAR_VOZ_RMS (~ -48 dBFS) o envio pausa e só o
+// KeepAlive mantém a conexão; volta no primeiro sinal de voz.
+const LIMIAR_VOZ_RMS = 0.004;
+const SILENCIO_MS = 2000;
+
+type Reconhecedor = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onresult: ((ev: { resultIndex: number; results: ArrayLike<{ isFinal: boolean } & ArrayLike<{ transcript: string; confidence?: number }>> }) => void) | null;
+  onend: (() => void) | null;
+  onerror: ((ev: { error: string }) => void) | null;
+  onstart: (() => void) | null;
+};
+
+function criarReconhecedor(): Reconhecedor | null {
+  const w = window as unknown as {
+    SpeechRecognition?: new () => Reconhecedor;
+    webkitSpeechRecognition?: new () => Reconhecedor;
+  };
+  const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
+  return SR ? new SR() : null;
+}
+
 const MOTIVO_FIM: Record<string, string> = {
   computador: "A chamada foi encerrada no computador.",
   smartphone: "Você encerrou a chamada neste celular.",
@@ -95,7 +123,13 @@ function CaptarPage() {
     keepAlive?: ReturnType<typeof setInterval>;
     wakeLock?: { release: () => Promise<void> } | null;
     raf?: number;
+    /** Transcrição básica: reconhecimento de voz do navegador do celular. */
+    reconhecedor?: Reconhecedor;
+    /** Envio ao Deepgram pausado por silêncio (não pela pausa do computador). */
+    silencio?: boolean;
+    ultimaVoz?: number;
   }>({});
+  const modoRef = useRef<"avancada" | "basica">("avancada");
   const fila = useRef<string[]>([]);
   const parcialRef = useRef("");
   const picoRef = useRef(0);
@@ -111,6 +145,15 @@ function CaptarPage() {
     const m = midia.current;
     if (m.keepAlive) clearInterval(m.keepAlive);
     if (m.raf) cancelAnimationFrame(m.raf);
+    if (m.reconhecedor) {
+      const r = m.reconhecedor;
+      m.reconhecedor = undefined;
+      try {
+        r.abort();
+      } catch {
+        /* já parado */
+      }
+    }
     try {
       if (m.recorder && m.recorder.state !== "inactive") m.recorder.stop();
     } catch {
@@ -213,7 +256,89 @@ function CaptarPage() {
     return ws;
   }, []);
 
+  // Transcrição básica: o reconhecimento do navegador usa o microfone sozinho
+  // (abrir o microfone em paralelo atrapalha no Android), então não há medidor
+  // de nível real: o nível sobe quando chega texto.
+  const iniciarNavegador = useCallback(async () => {
+    const r = criarReconhecedor();
+    if (!r) {
+      throw new Error(
+        "Este navegador não tem reconhecimento de voz. Abra o link no Chrome (Android) ou no Safari (iPhone).",
+      );
+    }
+    r.lang = "pt-BR";
+    r.continuous = true;
+    r.interimResults = true;
+    r.onresult = (ev) => {
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        const res = ev.results[i];
+        const texto = (res[0]?.transcript ?? "").trim();
+        if (!texto) continue;
+        picoRef.current = Math.max(picoRef.current, 60);
+        setNivel(60);
+        if (res.isFinal) {
+          fila.current.push(texto);
+          if (typeof res[0]?.confidence === "number" && res[0].confidence > 0)
+            confiancaRef.current = Math.round(res[0].confidence * 100);
+          parcialRef.current = "";
+          setParcial("");
+          setFinais((f) => [...f.slice(-200), texto]);
+        } else {
+          parcialRef.current = texto;
+          setParcial(texto);
+        }
+      }
+    };
+    await new Promise<void>((resolve, reject) => {
+      const t = setTimeout(resolve, 4000);
+      r.onstart = () => {
+        clearTimeout(t);
+        resolve();
+      };
+      r.onerror = (e) => {
+        clearTimeout(t);
+        if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+          reject(Object.assign(new Error("negado"), { name: "NotAllowedError" }));
+        } else resolve();
+      };
+      try {
+        r.start();
+      } catch (err) {
+        clearTimeout(t);
+        reject(Object.assign(new Error("gesto"), { gesto: true, causa: err }));
+      }
+    });
+    r.onerror = null;
+    // O navegador encerra o reconhecimento de tempos em tempos: reinicia
+    // enquanto a chamada estiver captando.
+    r.onend = () => {
+      setNivel(0);
+      if (midia.current.reconhecedor !== r || faseRef.current !== "captando") return;
+      setTimeout(() => {
+        if (midia.current.reconhecedor === r && faseRef.current === "captando") {
+          try {
+            r.start();
+          } catch {
+            /* já rodando */
+          }
+        }
+      }, 250);
+    };
+    midia.current.reconhecedor = r;
+    try {
+      const wl = (
+        navigator as unknown as {
+          wakeLock?: { request: (t: string) => Promise<{ release: () => Promise<void> }> };
+        }
+      ).wakeLock;
+      if (wl) midia.current.wakeLock = await wl.request("screen");
+    } catch {
+      /* sem wake lock */
+    }
+  }, []);
+
   const iniciarCaptura = useCallback(async () => {
+    if (modoRef.current === "basica") return iniciarNavegador();
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 },
     });
@@ -252,6 +377,8 @@ function CaptarPage() {
       // Safari sem webm/opus: PCM 16 kHz direto do microfone.
       const proc = ctx.createScriptProcessor(4096, 1, 1);
       const passo = ctx.sampleRate / TAXA_PCM;
+      // Último bloco calado: enviado junto quando a voz volta, para não cortar o início da fala.
+      let anterior: ArrayBuffer | null = null;
       proc.onaudioprocess = (e) => {
         const w = midia.current.ws;
         if (w?.readyState !== WebSocket.OPEN || faseRef.current !== "captando") return;
@@ -266,6 +393,14 @@ function CaptarPage() {
           const v = Math.max(-1, Math.min(1, soma / Math.max(1, fim - ini)));
           saida[i] = v < 0 ? v * 0x8000 : v * 0x7fff;
         }
+        if (midia.current.silencio) {
+          anterior = saida.buffer;
+          return;
+        }
+        if (anterior) {
+          w.send(anterior);
+          anterior = null;
+        }
         w.send(saida.buffer);
       };
       fonteAudio.connect(proc);
@@ -276,7 +411,32 @@ function CaptarPage() {
     midia.current.keepAlive = setInterval(() => {
       const w = midia.current.ws;
       if (w?.readyState === WebSocket.OPEN) w.send(JSON.stringify({ type: "KeepAlive" }));
-    }, 8000);
+    }, 4000);
+
+    // Porteiro de silêncio: só age enquanto capta (a pausa do computador é outra).
+    const atualizarPorteiro = (rms: number) => {
+      const m = midia.current;
+      if (faseRef.current !== "captando") return;
+      const agora = Date.now();
+      if (rms >= LIMIAR_VOZ_RMS) {
+        m.ultimaVoz = agora;
+        if (m.silencio) {
+          m.silencio = false;
+          try {
+            if (m.recorder?.state === "paused") m.recorder.resume();
+          } catch {
+            /* sem gravador */
+          }
+        }
+      } else if (!m.silencio && agora - (m.ultimaVoz ?? agora) > SILENCIO_MS) {
+        m.silencio = true;
+        try {
+          if (m.recorder?.state === "recording") m.recorder.pause();
+        } catch {
+          /* sem gravador */
+        }
+      }
+    };
 
     // Medidor de nível
     const buf = new Float32Array(analyser.fftSize);
@@ -284,11 +444,15 @@ function CaptarPage() {
       analyser.getFloatTimeDomainData(buf);
       let s = 0;
       for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
-      const n = faseRef.current === "captando" ? nivelDoRms(Math.sqrt(s / buf.length)) : 0;
+      const rms = Math.sqrt(s / buf.length);
+      const n = faseRef.current === "captando" ? nivelDoRms(rms) : 0;
+      atualizarPorteiro(rms);
       picoRef.current = Math.max(picoRef.current, n);
       setNivel((anterior) => Math.round(anterior * 0.6 + n * 0.4));
       midia.current.raf = requestAnimationFrame(medir);
     };
+    midia.current.ultimaVoz = Date.now();
+    midia.current.silencio = false;
     medir();
 
     // Mantém a tela ligada: com ela apagada o navegador corta o microfone.
@@ -302,7 +466,7 @@ function CaptarPage() {
     } catch {
       /* sem wake lock */
     }
-  }, [abrirDeepgram]);
+  }, [abrirDeepgram, iniciarNavegador]);
 
   const comecar = useCallback(async () => {
     mudarFase("conectando");
@@ -343,6 +507,7 @@ function CaptarPage() {
         return mudarFase("erro");
       }
       if (st === "encerrado") return finalizar(r.json.encerrado_por as string);
+      if (r.json.transcricao === "basica") modoRef.current = "basica";
       void comecar();
     });
     return () => pararMidia();
@@ -379,18 +544,26 @@ function CaptarPage() {
           // Pausa o gravador (cortar pedaços do webm corromperia o fluxo).
           try {
             midia.current.recorder?.pause();
+            midia.current.reconhecedor?.stop();
           } catch {
             /* sem gravador */
           }
           setParcial("");
           parcialRef.current = "";
         } else if (st === "conectado" && faseRef.current === "pausado") {
+          midia.current.silencio = false;
+          midia.current.ultimaVoz = Date.now();
           try {
-            midia.current.recorder?.resume();
+            if (midia.current.recorder?.state === "paused") midia.current.recorder.resume();
           } catch {
             /* sem gravador */
           }
           mudarFase("captando");
+          try {
+            midia.current.reconhecedor?.start();
+          } catch {
+            /* já rodando */
+          }
         }
       } catch {
         fila.current.unshift(...lote);

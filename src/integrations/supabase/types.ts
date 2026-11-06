@@ -337,6 +337,7 @@ export type Database = {
       }
       assinaturas: {
         Row: {
+          copiloto_ativo: boolean
           asaas_customer_id: string | null
           asaas_subscription_id: string | null
           cancelamento_agendado_para: string | null
@@ -365,6 +366,7 @@ export type Database = {
           whatsapp: number
         }
         Insert: {
+          copiloto_ativo?: boolean
           asaas_customer_id?: string | null
           asaas_subscription_id?: string | null
           cancelamento_agendado_para?: string | null
@@ -393,6 +395,7 @@ export type Database = {
           whatsapp: number
         }
         Update: {
+          copiloto_ativo?: boolean
           asaas_customer_id?: string | null
           asaas_subscription_id?: string | null
           cancelamento_agendado_para?: string | null
@@ -1583,6 +1586,7 @@ export type Database = {
       }
       contratacoes: {
         Row: {
+          copiloto_ativo: boolean
           asaas_checkout_id: string | null
           asaas_customer_id: string | null
           asaas_subscription_id: string | null
@@ -1626,6 +1630,7 @@ export type Database = {
           whatsapp: number
         }
         Insert: {
+          copiloto_ativo?: boolean
           asaas_checkout_id?: string | null
           asaas_customer_id?: string | null
           asaas_subscription_id?: string | null
@@ -1669,6 +1674,7 @@ export type Database = {
           whatsapp: number
         }
         Update: {
+          copiloto_ativo?: boolean
           asaas_checkout_id?: string | null
           asaas_customer_id?: string | null
           asaas_subscription_id?: string | null

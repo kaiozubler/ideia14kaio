@@ -31,7 +31,7 @@
     <link rel="stylesheet" href="faturamento.css?v=3" />
     <script src="faturamento.js?v=3" defer></script>
     <link rel="stylesheet" href="meu-plano.css?v=6" />
-    <script src="meu-plano.js?v=6" defer></script>
+    <script src="meu-plano.js?v=9" defer></script>
     <link rel="stylesheet" href="comunicacao-whatsapp.css?v=1" />
     <script src="comunicacao-whatsapp.js?v=1" defer></script>
     <link rel="stylesheet" href="agendamento-online.css?v=1" />
@@ -3964,6 +3964,39 @@
                 </div>
               </div>
 
+              <!-- TRANSCRIÇÃO E IA DAS ANÁLISES -->
+              <div class="cop-card">
+                <div class="cop-card-hd">
+                  <div class="cop-ico-box sm" style="background:linear-gradient(135deg,#38bdf8,#0284c7)">
+                    <i class="ti ti-wave-sine"></i>
+                  </div>
+                  <div style="flex:1">
+                    <div class="cop-card-title">Transcrição e IA das análises</div>
+                    <div class="cop-card-desc">Como a consulta é transcrita e qual IA analisa e responde ao médico.</div>
+                  </div>
+                </div>
+                <div class="cop-card-body">
+                  <div class="cop-sep"></div>
+                  <div class="fld" style="margin:0">
+                    <label for="cop-transcricao" style="text-transform:uppercase;font-size:10.5px;letter-spacing:.5px">Transcrição da consulta</label>
+                    <select id="cop-transcricao" onchange="updateCopTranscricaoHint()">
+                      <option value="avancada">Avançada — conversas melhor compreendidas</option>
+                      <option value="basica">Básica — reconhecimento de voz do navegador</option>
+                    </select>
+                    <div id="cop-transcricao-hint" style="font-size:11px;color:var(--n400);margin-top:5px"></div>
+                  </div>
+                  <div class="cop-sep"></div>
+                  <div class="fld" style="margin:0">
+                    <label for="cop-ia" style="text-transform:uppercase;font-size:10.5px;letter-spacing:.5px">IA das análises e respostas</label>
+                    <select id="cop-ia" onchange="updateCopIaHint()">
+                      <option value="gemini">Gemini (Google)</option>
+                      <option value="claude">Claude (Anthropic)</option>
+                    </select>
+                    <div id="cop-ia-hint" style="font-size:11px;color:var(--n400);margin-top:5px"></div>
+                  </div>
+                </div>
+              </div>
+
               <!-- RECURSOS INTELIGENTES -->
               <div class="cop-card">
                 <div class="cop-card-hd">
@@ -6692,6 +6725,7 @@ const {error}=await sb.auth.signUp({email,password:pass,options:{data:{name_user
                                                             let copFirstRun=true;
                                                             let copBusy=false;
                                                             const AI_SUGGESTION_DISPLAY_INTERVAL_MS=5000;
+                                                            const COP_MIN_PALAVRAS_NOVAS=40; // ciclo automático do copiloto só com essa fala nova
                                                             let aiSuggestionQueue=[];
                                                             let aiSuggestionQueueTimer=null;
                                                             function getCopilotoCfg(){
@@ -6700,7 +6734,9 @@ const {error}=await sb.auth.signUp({email,password:pass,options:{data:{name_user
                                                                 enabled: cfg.enabled!==false,
                                                                 voz: cfg.voz!==false,
                                                                 vozAuto: cfg.vozAuto===true,
-                                                                tipo: cfg.tipo||'ativo',
+                                                                // Copiloto ativo só no Pro ou no Enterprise com o adicional (o servidor
+                                                                // também recusa o ciclo automático); fora disso vale o reativo.
+                                                                tipo: window.__copilotoAtivoLiberado===false ? 'reativo' : (cfg.tipo||'ativo'),
                                                                 freq: Number(cfg.freq)||480,
                                                                 perguntas: cfg.perguntas!==false,
                                                                 memoria: cfg.memoria!==false,
@@ -6891,9 +6927,30 @@ const tri=document.getElementById('cli-triagem');if(tri)tri.checked=CLINICA.tria
                                                             function updateCopTipoHint(){
                                                               const t=document.getElementById('cop-tipo');const h=document.getElementById('cop-tipo-hint');
                                                               if(!t||!h)return;
+                                                              const opAtivo=t.querySelector('option[value="ativo"]');
+                                                              const bloqueado=window.__copilotoAtivoLiberado===false;
+                                                              if(opAtivo){opAtivo.disabled=bloqueado;opAtivo.textContent=bloqueado?'Ativo — planos Pro e Enterprise':'Ativo';}
+                                                              if(bloqueado&&t.value==='ativo')t.value='reativo';
+                                                              if(bloqueado){
+                                                                h.innerHTML='O copiloto só responde quando o médico solicitar uma ação. O <strong>Copiloto ativo</strong> (a IA acompanha a consulta e traz sozinha perguntas, pontos de atenção e sugestões de conduta) faz parte do plano Pro e é adicional no Enterprise.';
+                                                                return;
+                                                              }
                                                               h.textContent=t.value==='ativo'
                                                                 ?'O copiloto traz sugestões e atualizações por conta própria durante a consulta.'
                                                                 :'O copiloto só responde quando o médico solicitar uma ação.';
+                                                            }
+                                                            // Lê se a conta pode usar o Copiloto ativo (plano Pro, ou Enterprise com o
+                                                            // adicional). Secretária/enfermagem não usam o copiloto. Falha = libera
+                                                            // (o servidor é quem bloqueia de fato).
+                                                            async function carregarPermissaoCopilotoAtivo(){
+                                                              try{
+                                                                const {data:u}=await sb.auth.getUser();
+                                                                if(!u||!u.user)return;
+                                                                const {data,error}=await sb.from('assinaturas').select('plano,copiloto_ativo').eq('medico_id',u.user.id).neq('status','cancelada').maybeSingle();
+                                                                if(error)return;
+                                                                window.__copilotoAtivoLiberado=!!data&&(data.plano==='pro'||(data.plano==='enterprise'&&!!data.copiloto_ativo));
+                                                              }catch(e){}
+                                                              updateCopTipoHint();
                                                             }
                                                             function updateCopEnabledState(){
                                                               const en=document.getElementById('cop-enabled');const body=document.getElementById('cop-geral-body');
@@ -6921,6 +6978,61 @@ const tri=document.getElementById('cli-triagem');if(tri)tri.checked=CLINICA.tria
                                                               updateCopTipoHint();updateCopEnabledState();
                                                               try{loadCopVoiceCfg();}catch(e){console.error('[copiloto-voz] ERRO inesperado ao chamar loadCopVoiceCfg:',e);}
                                                               loadCopWhatsappSecurity();
+                                                              loadCopTranscricaoIa();
+                                                              carregarPermissaoCopilotoAtivo();
+                                                            }
+                                                            // Transcrição e IA ficam em user_metadata (não no localStorage) porque o
+                                                            // servidor decide com elas: o token do Deepgram (só Pro/Enterprise e
+                                                            // não "básica") e o modelo que responde em /api/chat-ia.
+                                                            let _copPlanoTemAvancada=null;
+                                                            async function loadCopTranscricaoIa(){
+                                                              const tr=document.getElementById('cop-transcricao');const ia=document.getElementById('cop-ia');
+                                                              if(!tr||!ia)return;
+                                                              try{
+                                                                const {data:u}=await sb.auth.getUser();
+                                                                const meta=(u&&u.user&&u.user.user_metadata)||{};
+                                                                ia.value=meta.ia_analise==='claude'?'claude':'gemini';
+                                                                let plano=null;
+                                                                try{
+                                                                  const {data}=await sb.from('assinaturas').select('plano').eq('medico_id',u.user.id).neq('status','cancelada').maybeSingle();
+                                                                  plano=data&&data.plano;
+                                                                }catch(e){}
+                                                                _copPlanoTemAvancada=plano==='pro'||plano==='enterprise';
+                                                                tr.value=(_copPlanoTemAvancada&&meta.transcricao!=='basica')?'avancada':'basica';
+                                                                tr.disabled=!_copPlanoTemAvancada;
+                                                              }catch(e){console.warn('transcrição/IA',e);}
+                                                              updateCopTranscricaoHint();updateCopIaHint();
+                                                            }
+                                                            function updateCopTranscricaoHint(){
+                                                              const tr=document.getElementById('cop-transcricao');const h=document.getElementById('cop-transcricao-hint');
+                                                              if(!tr||!h)return;
+                                                              if(_copPlanoTemAvancada===false){
+                                                                h.innerHTML='Seu plano usa a transcrição básica. A <strong>transcrição avançada</strong> faz parte dos planos Pro e Enterprise. A básica usa o reconhecimento de voz do próprio navegador (no Chrome, o áudio é processado pelo Google) e funciona no Chrome, Edge e Safari.';
+                                                              }else if(tr.value==='basica'){
+                                                                h.textContent='Usa o reconhecimento de voz do próprio navegador (no Chrome, o áudio é processado pelo Google). Entende menos termos médicos e não transcreve a chamada de vídeo. Funciona no Chrome, Edge e Safari.';
+                                                              }else{
+                                                                h.textContent='Reconhece melhor termos médicos, nomes de medicamentos e mais de uma voz na sala, inclusive pelo smartphone e na chamada de vídeo.';
+                                                              }
+                                                            }
+                                                            function updateCopIaHint(){
+                                                              const ia=document.getElementById('cop-ia');const h=document.getElementById('cop-ia-hint');
+                                                              if(!ia||!h)return;
+                                                              h.textContent=ia.value==='claude'
+                                                                ?'Claude Sonnet 5.5 analisa a consulta e gera as sugestões, a anamnese e as respostas do chat.'
+                                                                :'Gemini 3.8 Flash analisa a consulta e gera as sugestões, a anamnese e as respostas do chat.';
+                                                            }
+                                                            async function saveCopTranscricaoIa(){
+                                                              const tr=document.getElementById('cop-transcricao');const ia=document.getElementById('cop-ia');
+                                                              if(!tr||!ia)return;
+                                                              const data={ia_analise:ia.value==='claude'?'claude':'gemini'};
+                                                              if(_copPlanoTemAvancada) data.transcricao=tr.value==='basica'?'basica':'avancada';
+                                                              try{
+                                                                const {error}=await sb.auth.updateUser({data});
+                                                                if(error)throw error;
+                                                              }catch(e){
+                                                                console.error('salvar transcrição/IA',e);
+                                                                if(typeof showToast==='function')showToast('Não foi possível salvar a transcrição/IA: '+(e.message||e),'error');
+                                                              }
                                                             }
                                                             function saveCopilotoCfg(){
                                                               const chk=id=>!!document.getElementById(id)?.checked;
@@ -6940,6 +7052,7 @@ const tri=document.getElementById('cli-triagem');if(tri)tri.checked=CLINICA.tria
                                                               localStorage.setItem('copilotoCfg',JSON.stringify(cfg));
                                                               applyCopilotoCfgToUI();
                                                               try{saveCopVoiceCfg();}catch(e){console.error('[copiloto-voz] ERRO inesperado ao chamar saveCopVoiceCfg:',e);}
+                                                              saveCopTranscricaoIa();
                                                               const chip=document.getElementById('cop-saved-chip');
                                                               if(chip){chip.style.display='inline-flex';setTimeout(()=>{chip.style.display='none';},2200);}
                                                               if(typeof showToast==='function')showToast('Configurações salvas','success');
@@ -7041,6 +7154,14 @@ const tri=document.getElementById('cli-triagem');if(tri)tri.checked=CLINICA.tria
                                                               }
                                                               const frequency=document.getElementById('cop-wa-frequency');
                                                               if(frequency&&['6','12','24','36'].includes(String(data.frequencia_horas)))frequency.value=String(data.frequencia_horas);
+                                                            }
+                                                            // /api/chat-ia e /api/deepgram-token exigem login: anexa o token da sessão.
+                                                            async function iaAuthFetch(url,init){
+                                                              const {data}=await sb.auth.getSession();
+                                                              const token=data?.session?.access_token||null;
+                                                              const opts=Object.assign({},init||{});
+                                                              opts.headers=Object.assign({},opts.headers||{},token?{Authorization:'Bearer '+token}:{});
+                                                              return fetch(url,opts);
                                                             }
                                                             async function getCopWhatsappToken(){
                                                               const {data}=await sb.auth.getSession();
@@ -9292,7 +9413,7 @@ if(ehMembroEquipe()&&name!=='cadastro'){name='cadastro';el=null;}
                                                               atendChatHistory.push({role:'user',content:txt});
                                                               appendAdvChat('assistant','...');
                                                               const loading=document.getElementById('adv-chat-log').lastChild;
-                                                              fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'chat',messages:atendChatHistory,resumo_prontuario:atendChatContext,user_id:(typeof currentUser!=='undefined'&&currentUser)?currentUser.id:null})})
+                                                              iaAuthFetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'chat',messages:atendChatHistory,resumo_prontuario:atendChatContext,user_id:(typeof currentUser!=='undefined'&&currentUser)?currentUser.id:null})})
                                                                 .then(r=>r.json()).then(async j=>{
                                                                   const raw=(j.reply||'').trim()||'(sem resposta)';
                                                                   const blocks=iaExtractJsonBlocks(raw);
@@ -9439,7 +9560,7 @@ if(ehMembroEquipe()&&name!=='cadastro'){name='cadastro';el=null;}
                                                               const userContent='Gere a resposta agora, seguindo estritamente as instruções acima. '
                                                                 +'Use apenas os dados já fornecidos no prompt do sistema; não invente nem complemente '
                                                                 +'com informações ausentes.';
-                                                              const r=await fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})});
+                                                              const r=await iaAuthFetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})});
                                                               if(!r.ok)throw new Error(await r.text());
                                                               const d=await r.json();
                                                               const txt=(d.reply||d.resumo||'').trim();
@@ -10477,7 +10598,7 @@ showAtendList();
                                         // novo algo que já aconteceu.
                                         const agendamentoJaFeito=(!opts||!opts.conteudoExtra)?(atendEmAndamento.agendamentoGerado||null):null;
                                         const receitaJaFeita=(!opts||!opts.conteudoExtra)?(atendEmAndamento.receitaGerada||null):null;
-                                        const res=await fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+                                        const res=await iaAuthFetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
                                           mode:'extrair_complementares',
                                           info_complementar_atual:infoAtual,
                                           cids_atuais:cidsAtuais,
@@ -10678,6 +10799,11 @@ showAtendList();
                                                             let __transcricaoAvisoMostrado=false; // evita repetir o aviso ao paciente a cada retomada
 
                                                             /* ========== DEEPGRAM LIVE TRANSCRIPTION ========== */
+                                                            // Silêncio não vai para o Deepgram (cobrado por minuto de áudio): depois de
+                                                            // DG_SILENCIO_MS sem voz o gravador pausa e só a conexão fica viva (KeepAlive);
+                                                            // volta a enviar assim que o nível passa de DG_LIMIAR_VOZ_RMS (~ -48 dBFS).
+                                                            const DG_LIMIAR_VOZ_RMS=0.004;
+                                                            const DG_SILENCIO_MS=2000;
                                                             const dgLive = {
                                                               ws: null,
                                                               mediaRecorder: null,
@@ -10690,10 +10816,63 @@ showAtendList();
                                                               starting: false,
                                                               active: false,
                                                               includeCall: false,
+                                                              vadCtx: null,
+                                                              ultimaVoz: 0,
+                                                              silencioPausou: false,
+                                                              pausadoPeloUsuario: false,
+                                                              nav: null,          // reconhecimento do navegador (transcrição básica)
+                                                              navAtivo: false,
+                                                              modo: null,         // 'avancada' (Deepgram) | 'basica' (navegador)
                                                               async fetchToken(){
-                                                                const r = await fetch('/api/deepgram-token', { method:'GET' });
+                                                                const r = await iaAuthFetch('/api/deepgram-token', { method:'GET' });
+                                                                if(r.status===403){
+                                                                  const j = await r.json().catch(()=>({}));
+                                                                  if(j && j.error==='transcricao_basica') return { basica:true };
+                                                                }
                                                                 if(!r.ok){ throw new Error('Token error '+r.status+': '+await r.text()); }
                                                                 return r.json();
+                                                              },
+                                                              // Transcrição básica: Web Speech API do navegador (Chrome/Edge/Safari).
+                                                              // O navegador encerra o reconhecimento sozinho de tempos em tempos;
+                                                              // enquanto a escuta estiver ativa, ele é reiniciado.
+                                                              async _startNavegador(){
+                                                                const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                                                                if(!SR) throw new Error('Este navegador não tem reconhecimento de voz. Use Chrome, Edge ou Safari.');
+                                                                const r = new SR();
+                                                                r.lang = 'pt-BR'; r.continuous = true; r.interimResults = true;
+                                                                r.onresult = (ev)=>{
+                                                                  for(let i=ev.resultIndex;i<ev.results.length;i++){
+                                                                    const res = ev.results[i];
+                                                                    const t = ((res[0] && res[0].transcript) || '').trim();
+                                                                    if(!t) continue;
+                                                                    if(res.isFinal){ this.removeInterim(); addTranscriptLine(t); }
+                                                                    else this.showInterim(t);
+                                                                  }
+                                                                };
+                                                                r.onend = ()=>{
+                                                                  if(this.nav===r && this.navAtivo && !this.pausadoPeloUsuario){
+                                                                    setTimeout(()=>{ if(this.nav===r && this.navAtivo && !this.pausadoPeloUsuario){ try{ r.start(); }catch{} } }, 250);
+                                                                  }
+                                                                };
+                                                                await new Promise((resolve, reject)=>{
+                                                                  const t = setTimeout(()=>resolve(), 4000);
+                                                                  r.onstart = ()=>{ clearTimeout(t); resolve(); };
+                                                                  r.onerror = (e)=>{
+                                                                    clearTimeout(t);
+                                                                    if(e.error==='not-allowed'||e.error==='service-not-allowed') reject(new Error('Microfone bloqueado para o reconhecimento de voz do navegador.'));
+                                                                    else resolve();
+                                                                  };
+                                                                  try{ r.start(); }catch(err){ clearTimeout(t); reject(err); }
+                                                                });
+                                                                r.onerror = (e)=>{
+                                                                  if(e.error==='not-allowed'||e.error==='service-not-allowed'){
+                                                                    addTranscriptLine('[ Reconhecimento de voz bloqueado pelo navegador ]');
+                                                                    this.stop();
+                                                                  }
+                                                                };
+                                                                this.nav = r; this.navAtivo = true; this.pausadoPeloUsuario = false;
+                                                                this.modo = 'basica'; this.active = true;
+                                                                addTranscriptLine('[ Transcrição básica (reconhecimento de voz do navegador) ]');
                                                               },
                                                               async _buildStream(includeCall){
                                                                 const mic = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true } });
@@ -10732,6 +10911,12 @@ showAtendList();
                                                                 this.starting = true;
                                                                 try{
                                                                   const tk = await this.fetchToken();
+                                                                  if(tk.basica){
+                                                                    if(includeCall) throw new Error('Transcrever a chamada exige a transcrição avançada (planos Pro e Enterprise).');
+                                                                    await this._startNavegador();
+                                                                    return;
+                                                                  }
+                                                                  this.modo = 'avancada';
                                                                   const access_token = tk.access_token;
                                                                   // grant => JWT (subprotocol 'bearer'); ephemeral_key => API key (subprotocol 'token')
                                                                   const subproto = tk.mode === 'grant' ? 'bearer' : 'token';
@@ -10772,13 +10957,51 @@ showAtendList();
                                                                     if(e.data && e.data.size > 0 && ws.readyState === 1){ ws.send(e.data); }
                                                                   };
                                                                   rec.start(250);
+                                                                  this.pausadoPeloUsuario = false;
+                                                                  this._iniciarPorteiroSilencio(stream, rec);
+                                                                  // Sem áudio por 10 s o Deepgram fecha a conexão: no silêncio só vai o KeepAlive.
                                                                   this.keepAliveTimer = setInterval(()=>{
                                                                     if(ws.readyState === 1) ws.send(JSON.stringify({ type:'KeepAlive' }));
-                                                                  }, 8000);
+                                                                  }, 4000);
                                                                   this.active = true;
                                                                 } finally {
                                                                   this.starting = false;
                                                                 }
+                                                              },
+                                                              // Mede o nível no próprio processamento de áudio (continua rodando com a aba
+                                                              // em segundo plano, ao contrário de timers). Se o contexto de áudio não
+                                                              // rodar, nada é pausado: na dúvida, transcreve tudo.
+                                                              _iniciarPorteiroSilencio(stream, rec){
+                                                                try{
+                                                                  const AC = window.AudioContext || window.webkitAudioContext;
+                                                                  const ctx = new AC();
+                                                                  this.vadCtx = ctx;
+                                                                  const fonte = ctx.createMediaStreamSource(stream);
+                                                                  const proc = ctx.createScriptProcessor(2048, 1, 1);
+                                                                  const mudo = ctx.createGain(); mudo.gain.value = 0;
+                                                                  fonte.connect(proc); proc.connect(mudo); mudo.connect(ctx.destination);
+                                                                  this.ultimaVoz = Date.now(); this.silencioPausou = false;
+                                                                  proc.onaudioprocess = (e)=>{
+                                                                    if(this.pausadoPeloUsuario || this.mediaRecorder !== rec) return;
+                                                                    const d = e.inputBuffer.getChannelData(0);
+                                                                    let soma = 0; for(let i=0;i<d.length;i++) soma += d[i]*d[i];
+                                                                    const agora = Date.now();
+                                                                    if(Math.sqrt(soma/d.length) >= DG_LIMIAR_VOZ_RMS){
+                                                                      this.ultimaVoz = agora;
+                                                                      if(this.silencioPausou){
+                                                                        this.silencioPausou = false;
+                                                                        try{ if(rec.state === 'paused') rec.resume(); }catch{}
+                                                                      }
+                                                                    }else if(!this.silencioPausou && rec.state === 'recording' && agora - this.ultimaVoz > DG_SILENCIO_MS){
+                                                                      this.silencioPausou = true;
+                                                                      try{ rec.pause(); }catch{}
+                                                                    }
+                                                                  };
+                                                                  if(ctx.state === 'suspended') ctx.resume().catch(()=>{});
+                                                                }catch(e){ console.warn('porteiro de silêncio indisponível', e); }
+                                                              },
+                                                              isPaused(){
+                                                                return !!((this.mediaRecorder || this.nav) && this.pausadoPeloUsuario);
                                                               },
                                                               showInterim(text){
                                                                 const content = document.getElementById('trans-content');
@@ -10800,17 +11023,24 @@ showAtendList();
                                                                 this.interimEl = null;
                                                               },
                                                               pause(){
+                                                                this.pausadoPeloUsuario = true;
+                                                                if(this.nav){ try{ this.nav.stop(); }catch{} return; }
                                                                 if(this.mediaRecorder && this.mediaRecorder.state === 'recording'){
                                                                   try{ this.mediaRecorder.pause(); }catch{}
                                                                 }
                                                               },
                                                               resume(){
+                                                                this.pausadoPeloUsuario = false;
+                                                                this.silencioPausou = false;
+                                                                this.ultimaVoz = Date.now();
+                                                                if(this.nav){ try{ this.nav.start(); }catch{} return; }
                                                                 if(this.mediaRecorder && this.mediaRecorder.state === 'paused'){
                                                                   try{ this.mediaRecorder.resume(); }catch{}
                                                                 }
                                                               },
                                                               async stop(){
                                                                 if(this.keepAliveTimer){ clearInterval(this.keepAliveTimer); this.keepAliveTimer=null; }
+                                                                if(this.nav){ this.navAtivo=false; try{ this.nav.stop(); }catch{} }
                                                                 try{
                                                                   if(this.mediaRecorder && this.mediaRecorder.state !== 'inactive') this.mediaRecorder.stop();
                                                                 }catch{}
@@ -10829,6 +11059,9 @@ showAtendList();
                                                                 if(this.micStream){ this.micStream.getTracks().forEach(t=>{ try{ t.stop(); }catch{} }); this.micStream=null; }
                                                                 if(this.displayStream){ this.displayStream.getTracks().forEach(t=>{ try{ t.stop(); }catch{} }); this.displayStream=null; }
                                                                 if(this.audioCtx){ try{ this.audioCtx.close(); }catch{} this.audioCtx=null; }
+                                                                if(this.vadCtx){ try{ this.vadCtx.close(); }catch{} this.vadCtx=null; }
+                                                                this.silencioPausou=false; this.pausadoPeloUsuario=false;
+                                                                this.nav=null; this.navAtivo=false; this.modo=null;
                                                                 this.mediaRecorder=null; this.ws=null; this.active=false; this.includeCall=false;
                                                                 const btn=document.getElementById('vc-transcribe');
                                                                 if(btn){ btn.innerHTML='<i class="ti ti-microphone-2"></i> Transcrever chamada'; btn.classList.remove('live'); }
@@ -10977,7 +11210,7 @@ showAtendList();
                                                                 const td=document.getElementById('tdot');if(td)td.classList.add('live');
                                                                 const lbl=document.getElementById('trans-lbl');if(lbl){lbl.textContent='Retomando transcrição...';lbl.className='trans-lbl live-lbl';}
                                                                 if(voiceAllowed){
-                                                                  if(dgLive.mediaRecorder && dgLive.mediaRecorder.state==='paused'){
+                                                                  if(dgLive.isPaused()){
                                                                     dgLive.resume();
                                                                   } else {
                                                                     dgLive.start().catch(err=>addTranscriptLine('[ Erro: '+err.message+' ]'));
@@ -11172,6 +11405,7 @@ showAtendList();
                                                             /* ========== COPILOTO ATIVO — LOOP ========== */
                                                             function startCopilotoLoop(){
                                                               stopCopilotoLoop();
+                                                              if(window.__copilotoAtivoLiberado===undefined) carregarPermissaoCopilotoAtivo();
                                                               const cfg=getCopilotoCfg();
                                                               if(!cfg.enabled || cfg.tipo!=='ativo') return;
                                                               const ms=Math.max(15,cfg.freq)*1000;
@@ -11188,14 +11422,19 @@ showAtendList();
                                                               const manual=!!(opts&&opts.manual);
                                                               const kind=(opts&&opts.kind)||null; // 'conduta' | 'duvida' | null
                                                               // pega o trecho novo da transcrição desde o último envio
-                                                              const novo=transcriptLog.slice(copTranscriptCursor).join('\n').trim();
-                                                              if(!manual && !novo) return; // nada novo para processar
+                                                              // Linhas do sistema ("[ Gravação retomada ]" etc.) não são fala e não
+                                                              // devem disparar uma chamada à IA.
+                                                              const novo=transcriptLog.slice(copTranscriptCursor)
+                                                                .filter(l=>!/^\s*\[.*\]\s*$/.test(l||'')).join('\n').trim();
+                                                              // Ciclo automático só com fala nova suficiente; o que não deu acumula
+                                                              // para o próximo ciclo (o cursor só anda quando a IA é chamada).
+                                                              if(!manual && novo.split(/\s+/).filter(Boolean).length<COP_MIN_PALAVRAS_NOVAS) return;
                                                               copBusy=true;
                                                               const cursorAtSend=transcriptLog.length;
                                                               try{
                                                                 const cfgCop=getCopilotoCfg();
                                                                 const primeiro=copFirstRun;
-                                                                const payload={mode:'copiloto', manual, solicitacao: kind||'geral', primeiro_processamento: copFirstRun, trecho_transcricao: novo, atualizar_memoria: cfgCop.memoria};
+                                                                const payload={mode:'copiloto', manual, solicitacao: kind||'geral', primeiro_processamento: copFirstRun, trecho_transcricao: novo};
                                                                 if(copFirstRun){
                                                                   // primeiro processamento: envia todo o contexto disponível
                                                                   let infoComp=null; try{infoComp=loadInfoComp();}catch{}
@@ -11207,16 +11446,23 @@ showAtendList();
                                                                 } else {
                                                                   payload.resumo_acumulado=copLastSummary||'';
                                                                 }
-                                                                const res=await fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+                                                                const res=await iaAuthFetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+                                                                if(res.status===403 && !manual){
+                                                                  // Plano sem Copiloto ativo: para o ciclo automático e avisa uma vez.
+                                                                  window.__copilotoAtivoLiberado=false;
+                                                                  stopCopilotoLoop();
+                                                                  queueAiPanelItem('ia','O Copiloto ativo faz parte do plano Pro (ou adicional no Enterprise). Neste plano, use os botões Conduta e Dúvida para pedir sugestões à IA.');
+                                                                  return;
+                                                                }
                                                                 if(!res.ok) throw new Error(await res.text());
                                                                 const data=await res.json();
                                                                 copTranscriptCursor=cursorAtSend;
                                                                 copFirstRun=false;
                                                                 if(data && typeof data==='object'){
                                                                   if(data.resumo_clinico) copLastSummary=data.resumo_clinico;
-                                                                  const perguntas=Array.isArray(data.perguntas_sugeridas)?data.perguntas_sugeridas:[];
-                                                                  const condutas=Array.isArray(data.condutas_sugeridas)?data.condutas_sugeridas:[];
-                                                                  const pontos=Array.isArray(data.pontos_atencao)?data.pontos_atencao:[];
+                                                                  const perguntas=Array.isArray(data.perguntas_sugeridas)?data.perguntas_sugeridas.slice(0,2):[];
+                                                                  const condutas=Array.isArray(data.condutas_sugeridas)?data.condutas_sugeridas.slice(0,1):[];
+                                                                  const pontos=Array.isArray(data.pontos_atencao)?data.pontos_atencao.slice(0,1):[];
                                                                   // Perguntas personalizadas no início do atendimento seguem a configuração do copiloto.
                                                                   const showPerg = (!kind || kind==='duvida') && (!primeiro || manual || cfgCop.perguntas);
                                                                   const showCond = !kind || kind==='conduta';
@@ -11317,7 +11563,7 @@ showAtendList();
                                                                 try{const{data}=await sb.from('consulta').select('*').eq('paciente_id',idPaciente).order('started_at',{ascending:false}).limit(10);atends=data||[];}catch(e){}
                                                                 try{const{data}=await sb.from('exames').select('*').eq('paciente_id',idPaciente).order('created_at',{ascending:false}).limit(20);exs=data||[];}catch(e){}
 
-                                                                const res=await fetch('/api/chat-ia',{
+                                                                const res=await iaAuthFetch('/api/chat-ia',{
                                                                   method:'POST',headers:{'Content-Type':'application/json'},
                                                                   body:JSON.stringify({mode:'resumo',paciente:pac,atendimentos:atends,exames:exs,info_complementar:loadInfoComp()})
                                                                 });
@@ -11778,7 +12024,7 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                                                               // O histórico enviado à IA vai com os atalhos ("/algo") já expandidos
                                                               // pro texto completo — aiChatHistory continua compacto (exibição).
                                                               const mensagensParaIA=await iaExpandirHistoricoAtalhos(aiChatHistory,'chat_ai');
-                                                              fetch('/api/chat-ia',{
+                                                              iaAuthFetch('/api/chat-ia',{
                                                                 method:'POST',
                                                                 headers:{'Content-Type':'application/json'},
                                                                 body:JSON.stringify(Object.assign({mode:'chat',messages:mensagensParaIA,resumo_prontuario:currentResumoProntuario||'',anexo:iaTakeAnexo('ai'),user_id:(typeof currentUser!=='undefined'&&currentUser)?currentUser.id:null},(function(){const p=iaExamePacienteCtx();return p?{paciente_nome:p.nome,paciente_cpf:p.cpf,paciente_nascimento:p.data_nascimento}:{};})()))
@@ -13293,7 +13539,7 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                               cfLoadSugestoes();
                                                             }
                                                             async function cfCallIaJson(systemPrompt,userContent){
-                                                              const r=await fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})});
+                                                              const r=await iaAuthFetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})});
                                                               if(!r.ok)throw new Error('IA '+r.status+': '+(await r.text()));
                                                               const d=await r.json();
                                                               const raw=(d.reply||d.resumo||'').trim();
@@ -14204,7 +14450,7 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                                     const ctxBlock=buildAnamneseContextBlock(sources);
                                                                     const systemPrompt=basePrompt+'\n\n---\n# CONTEXTO DISPONÍVEL\n\n'+(ctxBlock||'(nenhuma fonte de contexto selecionada)');
                                                                     const userContent='Gere a resposta agora, seguindo estritamente as instruções acima. Use apenas os dados já fornecidos no prompt do sistema; não invente nem complemente com informações ausentes.';
-                                                                    const r=await fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})});
+                                                                    const r=await iaAuthFetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})});
                                                                     if(!r.ok)throw new Error(await r.text());
                                                                     const d=await r.json();
                                                                     const txt=(d.reply||d.resumo||'').trim();
@@ -14275,7 +14521,7 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                                 +'Use apenas os dados já fornecidos no prompt do sistema; não invente nem complemente '
                                                                 +'com informações ausentes.';
                                                               window.__lastAnamnese='';
-                                                              fetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})})
+                                                              iaAuthFetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'anamnese',system_prompt:systemPrompt,user_content:userContent})})
                                                                 .then(r=>r.ok?r.json():r.text().then(t=>{throw new Error(t);}))
                                                                 .then(d=>{const t=(d.reply||d.resumo||'').trim()||'(sem resposta)';window.__lastAnamnese=t;txtEl.classList.add('rich');txtEl.innerHTML=mdToHtml(t);})
                                                                 .catch(e=>{txtEl.classList.remove('rich');txtEl.textContent='⚠️ Erro ao gerar anamnese: '+(e.message||e);});

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { getUserIdFromRequest } from "@/lib/signature/requestAuth.server";
 
 const DG = "https://api.deepgram.com/v1";
 
@@ -95,7 +96,20 @@ async function dg(path: string, apiKey: string, init?: RequestInit) {
 export const Route = createFileRoute("/api/deepgram-token")({
   server: {
     handlers: {
-      GET: async () => issueDeepgramToken(),
+      // Só usuários logados: cada token libera transcrição cobrada na conta Deepgram.
+      // O celular (/api/public/captacao-movel) e a extensão usam issueDeepgramToken
+      // pelas próprias rotas, com a autenticação delas.
+      GET: async ({ request }) => {
+        const userId = await getUserIdFromRequest(request);
+        if (!userId) return Response.json({ error: "unauthorized" }, { status: 401 });
+        // Transcrição avançada só nos planos Pro/Enterprise e se o médico não
+        // escolheu a básica; senão a tela usa o reconhecimento do navegador.
+        const { modoTranscricao } = await import("@/lib/transcricao/modo.server");
+        if ((await modoTranscricao(userId)) === "basica") {
+          return Response.json({ error: "transcricao_basica" }, { status: 403 });
+        }
+        return issueDeepgramToken();
+      },
     },
   },
 });

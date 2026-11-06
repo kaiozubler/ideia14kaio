@@ -57,6 +57,22 @@ export type Pedido = {
   termosAceitos?: boolean;
   /** id da linha em `contratacoes` no Supabase, uma vez criada (ver src/lib/contratacao/api.ts). */
   contratacaoId?: string;
+  /** Cupom conferido pelo servidor (/api/contratacao/cupom); só para exibir. */
+  cupom?: CupomDoPedido;
+};
+
+export type CupomDoPedido = {
+  codigo: string;
+  texto: string;
+  descontoMensal: number;
+  precoMensalComDesconto: number;
+  meses: number | null;
+  diasTeste: number;
+  bonificado: boolean;
+  semCobranca: boolean;
+  /** AAAA-MM-DD */
+  primeiraCobrancaEm: string;
+  valorPrimeiraCobranca: number;
 };
 
 const CHAVE = "medicopilot:pedido";

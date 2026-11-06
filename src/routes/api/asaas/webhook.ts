@@ -12,6 +12,8 @@ import { createFileRoute } from "@tanstack/react-router";
 //                                       /api/assinatura/comprar-creditos),
 //                                       dependendo de qual tabela tem esse
 //                                       asaas_checkout_id
+//   PAYMENT_CREATED                  -> acerta o valor da cobrança conforme o
+//                                       cupom da contratação (cupom_aplicado)
 //   PAYMENT_OVERDUE                  -> assinaturas.status = 'inadimplente'
 //   PAYMENT_CONFIRMED/RECEIVED       -> assinaturas.status = 'ativa' de novo
 //   PAYMENT_* (com payment.id)       -> asaas_cobrancas (histórico que o
@@ -32,7 +34,7 @@ import { createFileRoute } from "@tanstack/react-router";
 // é criada — ver aviso completo na resposta que acompanha este código.
 //
 // Configuração pendente no painel do Asaas: Webhooks -> eventos
-// CHECKOUT_CREATED/PAID/CANCELED/EXPIRED, PAYMENT_OVERDUE/CONFIRMED/
+// CHECKOUT_CREATED/PAID/CANCELED/EXPIRED, PAYMENT_CREATED/OVERDUE/CONFIRMED/
 // RECEIVED, SUBSCRIPTION_DELETED/INACTIVATED, apontando pra
 // {seu domínio}/api/asaas/webhook. Se definir um token lá, replique em
 // ASAAS_WEBHOOK_TOKEN.
@@ -110,7 +112,8 @@ export const Route = createFileRoute("/api/asaas/webhook")({
           return Response.json({ ok: true });
         }
 
-        const { supabaseAdmin: supabaseAdminTipado } = await import("@/integrations/supabase/client.server");
+        const { supabaseAdmin: supabaseAdminTipado } =
+          await import("@/integrations/supabase/client.server");
         // As tabelas assinaturas/creditos_adicionais/consumo_mensal ainda não constam no types.ts
         // gerado (só depois de rodar a migration + regenerar tipos) — remover este cast depois.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -121,7 +124,8 @@ export const Route = createFileRoute("/api/asaas/webhook")({
         if (checkoutId && corpo.event.startsWith("CHECKOUT_")) {
           let status: "confirmada" | "cancelada" | null = null;
           if (corpo.event === "CHECKOUT_PAID") status = "confirmada";
-          else if (corpo.event === "CHECKOUT_CANCELED" || corpo.event === "CHECKOUT_EXPIRED") status = "cancelada";
+          else if (corpo.event === "CHECKOUT_CANCELED" || corpo.event === "CHECKOUT_EXPIRED")
+            status = "cancelada";
 
           if (status) {
             const { data: contratacao } = await supabaseAdmin
@@ -131,17 +135,29 @@ export const Route = createFileRoute("/api/asaas/webhook")({
               .maybeSingle();
 
             if (contratacao) {
-              const updates: { status: "confirmada" | "cancelada"; pagamento_confirmado_em?: string } = { status };
-              if (status === "confirmada") updates.pagamento_confirmado_em = new Date().toISOString();
-              const { error } = await supabaseAdmin.from("contratacoes").update(updates).eq("id", contratacao.id);
-              if (error) console.error("[asaas:webhook] erro ao atualizar contratação:", error.message);
+              const updates: {
+                status: "confirmada" | "cancelada";
+                pagamento_confirmado_em?: string;
+              } = { status };
+              if (status === "confirmada")
+                updates.pagamento_confirmado_em = new Date().toISOString();
+              const { error } = await supabaseAdmin
+                .from("contratacoes")
+                .update(updates)
+                .eq("id", contratacao.id);
+              if (error)
+                console.error("[asaas:webhook] erro ao atualizar contratação:", error.message);
             } else {
               const statusCredito = status === "confirmada" ? "pago" : "cancelado";
               const { error } = await supabaseAdmin
                 .from("creditos_adicionais")
                 .update({ status: statusCredito })
                 .eq("asaas_checkout_id", checkoutId);
-              if (error) console.error("[asaas:webhook] erro ao atualizar créditos adicionais:", error.message);
+              if (error)
+                console.error(
+                  "[asaas:webhook] erro ao atualizar créditos adicionais:",
+                  error.message,
+                );
             }
           }
         }
@@ -152,15 +168,24 @@ export const Route = createFileRoute("/api/asaas/webhook")({
         }
         const subscriptionId = corpo.payment?.subscription ?? corpo.subscription?.id;
         if (subscriptionId) {
-          if (corpo.event === "PAYMENT_OVERDUE") {
+          if (corpo.event === "PAYMENT_CREATED" && corpo.payment) {
+            // Cobrança nova da assinatura: aplica o cupom (fim do desconto por N
+            // meses, fim do recurso extra). Ver src/lib/cupons/contratacao.server.ts.
+            const { ajustarCobrancaComCupom } = await import("@/lib/cupons/contratacao.server");
+            await ajustarCobrancaComCupom(supabaseAdmin, subscriptionId, corpo.payment);
+          } else if (corpo.event === "PAYMENT_OVERDUE") {
             const { error } = await supabaseAdmin
               .from("assinaturas")
               .update({
                 status: "inadimplente",
-                ultimo_erro_cobranca: { mensagem: "Cobrança em atraso — verifique a forma de pagamento.", em: new Date().toISOString() },
+                ultimo_erro_cobranca: {
+                  mensagem: "Cobrança em atraso — verifique a forma de pagamento.",
+                  em: new Date().toISOString(),
+                },
               })
               .eq("asaas_subscription_id", subscriptionId);
-            if (error) console.error("[asaas:webhook] erro ao marcar inadimplência:", error.message);
+            if (error)
+              console.error("[asaas:webhook] erro ao marcar inadimplência:", error.message);
           } else if (corpo.event === "PAYMENT_CONFIRMED" || corpo.event === "PAYMENT_RECEIVED") {
             const { error } = await supabaseAdmin
               .from("assinaturas")
@@ -168,7 +193,10 @@ export const Route = createFileRoute("/api/asaas/webhook")({
               .eq("asaas_subscription_id", subscriptionId)
               .eq("status", "inadimplente");
             if (error) console.error("[asaas:webhook] erro ao reativar assinatura:", error.message);
-          } else if (corpo.event === "SUBSCRIPTION_DELETED" || corpo.event === "SUBSCRIPTION_INACTIVATED") {
+          } else if (
+            corpo.event === "SUBSCRIPTION_DELETED" ||
+            corpo.event === "SUBSCRIPTION_INACTIVATED"
+          ) {
             // Cancelamento pedido pela tela Meu plano já agenda o fim do acesso
             // (cancelamento_agendado_para) — não antecipa aqui; só cancela na hora
             // o que foi removido por fora (painel do Asaas, etc.).

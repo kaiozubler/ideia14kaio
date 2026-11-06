@@ -15,9 +15,9 @@
 // (e na função aplicar_agendamentos_assinatura, que também tem uma cópia).
 (function () {
   var PLANOS = [
-    { id: "basic", nome: "Basic", precoMensal: 149.9, medicos: 1, secretarias: 1, copiloto: 60, whatsapp: 500, video: 0 },
-    { id: "pro", nome: "Pro", precoMensal: 249.9, medicos: 1, secretarias: 1, copiloto: 200, whatsapp: 2000, video: 3000 },
-    { id: "enterprise", nome: "Enterprise", precoMensal: 649.9, medicos: 2, secretarias: 2, copiloto: 500, whatsapp: 5000, video: 10000 },
+    { id: "basic", nome: "Basic", precoMensal: 149.9, medicos: 1, secretarias: 1, copiloto: 60, whatsapp: 500, video: 0, transcricao: "basica", copilotoAtivo: "indisponivel" },
+    { id: "pro", nome: "Pro", precoMensal: 249.9, medicos: 1, secretarias: 1, copiloto: 200, whatsapp: 2000, video: 3000, transcricao: "avancada", copilotoAtivo: "incluido" },
+    { id: "enterprise", nome: "Enterprise", precoMensal: 649.9, medicos: 2, secretarias: 2, copiloto: 500, whatsapp: 5000, video: 10000, transcricao: "avancada", copilotoAtivo: "opcional" },
   ];
 
   var PACOTES_CREDITO = {
@@ -456,13 +456,45 @@
     return (
       "<ul><li>" + p.medicos + " médico(s) · " + p.secretarias + " usuário(s) de gestão</li>" +
       "<li>" + fmtNum(p.copiloto) + " consultas de Copiloto</li>" +
+      '<li title="A IA acompanha a consulta e traz sozinha perguntas, pontos de atenção e sugestões de conduta. Sem ele, o Copiloto responde quando o médico pede.">' +
+      (p.copilotoAtivo === "incluido" ? "Copiloto ativo incluído"
+        : p.copilotoAtivo === "opcional" ? "Copiloto ativo opcional (+" + fmtPreco(precoAtivo(p.copiloto)) + "/mês)"
+        : "Copiloto reativo") + "</li>" +
+      "<li>" + (p.transcricao === "avancada" ? "Conversas transcritas com mais precisão" : "Transcrição padrão das consultas") + "</li>" +
       "<li>" + fmtNum(p.whatsapp) + " conversas de WhatsApp</li>" +
       "<li>" + (p.video ? fmtNum(p.video) + " min de vídeo" : "Vídeo não incluído") + "</li></ul>"
     );
   }
 
+  // Adicional de Copiloto ativo (Enterprise): R$ 0,30 por consulta da franquia
+  // (mesma conta de precoCopilotoAtivo em src/lib/plans/config.ts).
+  function precoAtivo(consultas) {
+    return consultas > 0 ? Math.round((consultas * 0.3 - 0.1) * 100) / 100 : 0;
+  }
+  var TEXTO_ATIVO =
+    "A IA acompanha a consulta e traz sozinha perguntas, pontos de atenção e sugestões de conduta a cada poucos minutos. Sem ele, o Copiloto responde quando o médico pede.";
+
+  function blocoCopilotoAtivo() {
+    var a = S.assinatura;
+    if (a.plano !== "enterprise") return "";
+    var ligado = !!a.copiloto_ativo;
+    var personalizada = Number(a.copiloto) < 0;
+    var bloqueado = !!cancelamentoAgendado() || !!a.plano_agendado;
+    return (
+      '<div class="mp-panel"><p class="mp-secao-titulo">Copiloto ativo</p>' +
+      '<p class="mp-nota" style="margin:-6px 0 12px">' + TEXTO_ATIVO + "</p>" +
+      "<p>" + (ligado ? "<strong>Contratado</strong> no seu plano." : "<strong>Não contratado</strong> — o Copiloto funciona no modo reativo.") + "</p>" +
+      (personalizada
+        ? '<p class="mp-nota">Sua franquia de Copiloto é personalizada: fale com nosso time para mudar o Copiloto ativo.</p>'
+        : '<button class="mp-btn ' + (ligado ? "" : "primary") + '" data-alternar-ativo="' + (ligado ? "0" : "1") + '"' + (bloqueado ? " disabled" : "") + ">" +
+          (ligado ? "Remover o Copiloto ativo" : "Adicionar o Copiloto ativo (+" + fmtPreco(precoAtivo(Number(a.copiloto))) + "/mês)") + "</button>") +
+      "</div>"
+    );
+  }
+
   function abaPlanos() {
     return (
+      blocoCopilotoAtivo() +
       '<div class="mp-panel"><p class="mp-secao-titulo">Mudar de plano</p>' +
       '<p class="mp-nota" style="margin:-6px 0 14px"><strong>Upgrade</strong> libera as franquias novas na hora. ' +
       "<strong>Downgrade</strong> entra na próxima cobrança — até lá você usa o que já pagou.</p>" +
@@ -798,22 +830,32 @@
   function modalTrocarPlano() {
     var a = S.assinatura;
     var p = planoPorId(S.modal.planoId);
-    var upgrade = p.precoMensal > Number(a.preco_mensal);
+    // No Enterprise, quem já tem o modo ativo (Pro ou adicional) continua com ele por padrão.
+    var opcionalAtivo = p.copilotoAtivo === "opcional";
+    var manterAtivo = opcionalAtivo && (a.plano === "pro" || !!a.copiloto_ativo);
+    var precoAlvo = p.precoMensal + (manterAtivo ? precoAtivo(p.copiloto) : 0);
+    var upgrade = precoAlvo > Number(a.preco_mensal);
     var proxima = proximaCobranca();
     var hoje = new Date().toISOString().slice(0, 10);
     var agenda = !upgrade && proxima && proxima > hoje;
     var texto = upgrade
-      ? "As novas franquias são liberadas agora. A partir da próxima fatura" + (proxima ? " (" + fmtData(proxima) + ")" : "") + " o valor passa a ser " + fmtPreco(p.precoMensal) + "/mês."
+      ? "As novas franquias são liberadas agora. A partir da próxima fatura" + (proxima ? " (" + fmtData(proxima) + ")" : "") + " o valor passa a ser " + fmtPreco(precoAlvo) + "/mês."
       : agenda
         ? "A mudança entra em " + fmtData(proxima) + ", na próxima cobrança. Até lá você continua com as franquias do plano atual, e pode desfazer o agendamento quando quiser."
         : "A mudança vale a partir de agora e a próxima fatura vem com o novo valor.";
     var perdas = [];
     if (p.medicos < a.medicos || p.secretarias < a.secretarias) perdas.push("menos licenças de usuário — remova o excedente em Minha equipe");
     if (p.video === 0 && a.video > 0) perdas.push("o plano " + p.nome + " não inclui vídeo/telemedicina");
+    if (p.copilotoAtivo === "indisponivel" && (a.plano === "pro" || a.copiloto_ativo))
+      perdas.push("o plano " + p.nome + " não tem o Copiloto ativo — o Copiloto passa a responder só quando o médico pede");
     return (
       "<h3>" + (upgrade ? "Upgrade" : "Downgrade") + " para " + p.nome + "</h3>" +
       comparacao(a, p) +
       "<p>" + texto + "</p>" +
+      (opcionalAtivo
+        ? '<label class="mp-nota" style="display:flex;gap:8px;align-items:flex-start;margin:0 0 14px"><input type="checkbox" id="mp-ativo-chk"' + (manterAtivo ? " checked" : "") + ">" +
+          "<span><strong>Copiloto ativo</strong> (+" + fmtPreco(precoAtivo(p.copiloto)) + "/mês) — " + TEXTO_ATIVO + "</span></label>"
+        : "") +
       (perdas.length ? '<div class="mp-alerta" style="margin:0 0 14px"><i class="ti ti-alert-triangle"></i><div>Atenção: ' + perdas.join("; ") + ".</div></div>" : "") +
       '<div class="mp-modal-actions"><button class="mp-btn primary" data-confirmar-trocar="' + p.id + '">' + (agenda ? "Agendar downgrade" : "Confirmar " + (upgrade ? "upgrade" : "troca")) + "</button>" +
       '<button class="mp-btn" data-fechar-modal>Voltar</button></div>'
@@ -1091,6 +1133,26 @@
       return;
     }
 
+    var alternarAtivo = e.target.closest("[data-alternar-ativo]");
+    if (alternarAtivo) {
+      var ligar = alternarAtivo.getAttribute("data-alternar-ativo") === "1";
+      var aviso = ligar
+        ? "Adicionar o Copiloto ativo por " + fmtPreco(precoAtivo(Number(S.assinatura.copiloto))) + "/mês? Ele vale a partir de agora e o valor entra na próxima fatura."
+        : "Remover o Copiloto ativo? O Copiloto passa a responder só quando o médico pede, e a próxima fatura vem sem o adicional.";
+      if (!window.confirm(aviso)) return;
+      alternarAtivo.disabled = true;
+      try {
+        await chamarApi("/api/assinatura/trocar-plano", { novoPlano: "enterprise", copilotoAtivo: ligar });
+        await carregar();
+        window.__copilotoAtivoLiberado = ligar;
+        avisar(ligar ? "Copiloto ativo adicionado." : "Copiloto ativo removido.");
+      } catch (err) {
+        alternarAtivo.disabled = false;
+        avisar(err.message || "Não foi possível alterar o Copiloto ativo.", "erro");
+      }
+      return;
+    }
+
     var desfazerBtn = e.target.closest("[data-desfazer-agendamento]");
     if (desfazerBtn) {
       desfazerBtn.disabled = true;
@@ -1111,7 +1173,10 @@
       confirmarTrocar.disabled = true;
       confirmarTrocar.textContent = "Processando…";
       try {
-        var r = await chamarApi("/api/assinatura/trocar-plano", { novoPlano: novoPlano });
+        var chkAtivo = document.getElementById("mp-ativo-chk");
+        var corpoTroca = { novoPlano: novoPlano };
+        if (chkAtivo) corpoTroca.copilotoAtivo = !!chkAtivo.checked;
+        var r = await chamarApi("/api/assinatura/trocar-plano", corpoTroca);
         S.modal = null;
         await carregar();
         var nome = planoPorId(novoPlano).nome;

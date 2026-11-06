@@ -15,7 +15,7 @@ export const Route = createFileRoute("/api/public/crm/contratacoes/$id/ativar")(
         const { data: c, error } = await db
           .from("contratacoes")
           .select(
-            "id, user_id, plano, medicos, secretarias, copiloto, whatsapp, video, ciclo, dia_cobranca, preco_mensal_calculado, asaas_customer_id, asaas_subscription_id",
+            "id, user_id, plano, medicos, secretarias, copiloto, copiloto_ativo, whatsapp, video, ciclo, dia_cobranca, preco_mensal_calculado, asaas_customer_id, asaas_subscription_id, cupom_aplicado",
           )
           .eq("id", id)
           .maybeSingle();
@@ -37,25 +37,36 @@ export const Route = createFileRoute("/api/public/crm/contratacoes/$id/ativar")(
           throw new ErroCrm(409, "já existe uma assinatura para esta contratação ou este médico");
 
         const { PLANOS_BASE, PLANO_PADRAO } = await import("@/lib/plans/config");
+        const { comBonus } = await import("@/lib/cupons/contratacao.server");
         const ancora = PLANOS_BASE.find((p) => p.id === c.plano) ?? PLANO_PADRAO;
+        const ciclo = c.ciclo === "anual" ? "anual" : "mensal";
         const { data: assinatura, error: insErr } = await db
           .from("assinaturas")
-          .insert({
-            medico_id: medico.id,
-            contratacao_id: c.id,
-            plano: c.plano,
-            medicos: c.medicos,
-            secretarias: c.secretarias,
-            copiloto: c.copiloto,
-            whatsapp: c.whatsapp,
-            video: c.video,
-            ciclo: c.ciclo,
-            dia_cobranca: c.dia_cobranca,
-            preco_mensal: c.preco_mensal_calculado ?? ancora.precoMensal,
-            status: "ativa",
-            asaas_customer_id: c.asaas_customer_id,
-            asaas_subscription_id: c.asaas_subscription_id,
-          })
+          .insert(
+            comBonus(
+              {
+                medico_id: medico.id,
+                contratacao_id: c.id,
+                plano: c.plano,
+                medicos: c.medicos,
+                secretarias: c.secretarias,
+                copiloto: c.copiloto,
+                copiloto_ativo:
+                  c.plano === "pro" || (c.plano === "enterprise" && !!c.copiloto_ativo),
+                whatsapp: c.whatsapp,
+                video: c.video,
+                ciclo: c.ciclo,
+                dia_cobranca: c.dia_cobranca,
+                preco_mensal: c.preco_mensal_calculado ?? ancora.precoMensal,
+                status: "ativa",
+                asaas_customer_id: c.asaas_customer_id,
+                asaas_subscription_id: c.asaas_subscription_id,
+                // Recurso extra do cupom (ex.: +5.000 conversas de WhatsApp) entra na franquia.
+              },
+              c.cupom_aplicado ?? null,
+              ciclo,
+            ),
+          )
           .select("id")
           .single();
         if (insErr) {

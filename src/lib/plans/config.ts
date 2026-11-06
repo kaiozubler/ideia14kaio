@@ -41,6 +41,41 @@ export type PlanoBase = {
   copiloto: number;
   whatsapp: number;
   video: number;
+  /** Transcrição da consulta: "avancada" (Deepgram) ou "basica" (navegador). */
+  transcricao: "basica" | "avancada";
+  /** Copiloto ativo: incluído no Pro, adicional opcional no Enterprise, fora do Basic. */
+  copilotoAtivo: "incluido" | "opcional" | "indisponivel";
+};
+
+// ---------------------------------------------------------------------------
+// Copiloto ativo — a IA acompanha a consulta e traz sugestões sozinha, a cada
+// poucos minutos. No modo reativo (todos os planos) ela só responde quando o
+// médico pede. No Enterprise o ativo é adicional, cobrado por consulta da
+// franquia de Copiloto configurada (o modo ativo faz chamadas extras de IA).
+// ---------------------------------------------------------------------------
+
+export const COPILOTO_ATIVO_TITULO = "Copiloto ativo";
+export const COPILOTO_ATIVO_DESCRICAO =
+  "A IA acompanha a consulta e traz sozinha perguntas, pontos de atenção e sugestões de conduta a cada poucos minutos. Sem ele, o Copiloto é reativo: responde quando o médico pede.";
+export const PRECO_COPILOTO_ATIVO_POR_CONSULTA = 0.3;
+
+/** Preço mensal do adicional para uma franquia de Copiloto (ex.: 500 → R$ 149,90). */
+export function precoCopilotoAtivo(consultasCopiloto: number): number {
+  if (consultasCopiloto <= 0) return 0;
+  return Math.round((consultasCopiloto * PRECO_COPILOTO_ATIVO_POR_CONSULTA - 0.1) * 100) / 100;
+}
+
+/** Se o modo ativo vale para uma assinatura (plano + adicional contratado). */
+export function copilotoAtivoLiberado(plano: string | null | undefined, adicional: boolean | null | undefined) {
+  const base = PLANOS_BASE.find((p) => p.id === plano);
+  if (!base) return false;
+  return base.copilotoAtivo === "incluido" || (base.copilotoAtivo === "opcional" && !!adicional);
+}
+
+/** Como cada tipo de transcrição aparece para o cliente nos cartões de plano. */
+export const TEXTO_TRANSCRICAO: Record<PlanoBase["transcricao"], string> = {
+  basica: "Transcrição padrão das consultas",
+  avancada: "Conversas transcritas com mais precisão",
 };
 
 // ---------------------------------------------------------------------------
@@ -100,6 +135,8 @@ export const PLANOS_BASE: PlanoBase[] = [
     copiloto: 60,
     whatsapp: 500,
     video: 0,
+    transcricao: "basica",
+    copilotoAtivo: "indisponivel",
   },
   {
     id: "pro",
@@ -112,6 +149,8 @@ export const PLANOS_BASE: PlanoBase[] = [
     copiloto: 200,
     whatsapp: 2000,
     video: 3000,
+    transcricao: "avancada",
+    copilotoAtivo: "incluido",
   },
   {
     id: "enterprise",
@@ -124,6 +163,8 @@ export const PLANOS_BASE: PlanoBase[] = [
     copiloto: 500,
     whatsapp: 5000,
     video: 10000,
+    transcricao: "avancada",
+    copilotoAtivo: "opcional",
   },
 ];
 
@@ -174,6 +215,8 @@ export type ConfiguracaoPlano = {
   copiloto: number;
   whatsapp: number;
   video: number;
+  /** Adicional de Copiloto ativo (só tem efeito/preço no Enterprise). */
+  copilotoAtivo?: boolean;
 };
 
 export function configuracaoDoPlano(plano: PlanoBase): ConfiguracaoPlano {
@@ -183,6 +226,7 @@ export function configuracaoDoPlano(plano: PlanoBase): ConfiguracaoPlano {
     copiloto: plano.copiloto,
     whatsapp: plano.whatsapp,
     video: plano.video,
+    copilotoAtivo: plano.copilotoAtivo === "incluido",
   };
 }
 
@@ -197,7 +241,8 @@ export function configuracaoIgualAncora(config: ConfiguracaoPlano, ancora: Plano
     config.secretarias === ancora.secretarias &&
     config.copiloto === ancora.copiloto &&
     config.whatsapp === ancora.whatsapp &&
-    config.video === ancora.video
+    config.video === ancora.video &&
+    !!config.copilotoAtivo === (ancora.copilotoAtivo === "incluido")
   );
 }
 
@@ -215,8 +260,15 @@ export function precoDaConfiguracao(
   const deltaCopiloto = precoDoTier(TIERS_COPILOTO, config.copiloto) - precoDoTier(TIERS_COPILOTO, ancora.copiloto);
   const deltaWhatsapp = precoDoTier(TIERS_WHATSAPP, config.whatsapp) - precoDoTier(TIERS_WHATSAPP, ancora.whatsapp);
   const deltaVideo = precoDoTier(TIERS_VIDEO, config.video) - precoDoTier(TIERS_VIDEO, ancora.video);
+  // Adicional do Copiloto ativo: só onde é opcional (Enterprise), proporcional à franquia.
+  const adicionalAtivo =
+    ancora.copilotoAtivo === "opcional" && config.copilotoAtivo && config.copiloto !== PERSONALIZADO
+      ? precoCopilotoAtivo(config.copiloto)
+      : 0;
 
-  return ancora.precoMensal + deltaMedicos + deltaSecretarias + deltaCopiloto + deltaWhatsapp + deltaVideo;
+  return (
+    ancora.precoMensal + deltaMedicos + deltaSecretarias + deltaCopiloto + deltaWhatsapp + deltaVideo + adicionalAtivo
+  );
 }
 
 export function precoAnualEquivalenteMensal(precoMensal: number): number {
@@ -258,3 +310,43 @@ export function pacotesCredito(recurso: "copiloto" | "whatsapp" | "video"): Paco
 
 // TODO: substituir pelo número real do WhatsApp comercial (formato DDI+DDD+número, só dígitos).
 export const WHATSAPP_COMERCIAL = "5511999999999";
+
+// ---------------------------------------------------------------------------
+// Validação e preço no servidor — a contratação nunca confia no preço que o
+// navegador manda: recalcula a partir do plano e da configuração.
+// ---------------------------------------------------------------------------
+
+/** Erro em português se a configuração não é uma combinação vendável daquele plano; null se ok. */
+export function erroDaConfiguracao(plano: PlanoBase, config: ConfiguracaoPlano): string | null {
+  const inteiro = (n: number) => Number.isInteger(n);
+  if (!inteiro(config.medicos) || config.medicos < plano.medicos || config.medicos > MAX_MEDICOS)
+    return "quantidade de médicos inválida para o plano";
+  if (!inteiro(config.secretarias) || config.secretarias < plano.secretarias || config.secretarias > MAX_SECRETARIAS)
+    return "quantidade de usuários de gestão inválida para o plano";
+  const franquia = (tiers: TierOption[], valor: number, minimo: number) =>
+    valor === PERSONALIZADO ? !!plano.personalizavel : tiers.some((t) => t.quantidade === valor) && valor >= minimo;
+  if (!franquia(TIERS_COPILOTO, config.copiloto, plano.copiloto)) return "franquia de Copiloto inválida para o plano";
+  if (!franquia(TIERS_WHATSAPP, config.whatsapp, plano.whatsapp)) return "franquia de WhatsApp inválida para o plano";
+  if (!franquia(TIERS_VIDEO, config.video, plano.video)) return "franquia de vídeo inválida para o plano";
+  return null;
+}
+
+/** Normaliza o adicional pelo plano: Pro sempre inclui, Basic nunca; Enterprise conforme pedido. */
+export function copilotoAtivoDaConfiguracao(plano: PlanoBase, pedido: boolean | null | undefined): boolean {
+  if (plano.copilotoAtivo === "incluido") return true;
+  if (plano.copilotoAtivo === "opcional") return !!pedido;
+  return false;
+}
+
+/** Preço mensal (sem desconto anual) calculado no servidor; null quando algum item é sob consulta. */
+export function precoMensalNoServidor(plano: PlanoBase, config: ConfiguracaoPlano): number | null {
+  if (possuiItemPersonalizado(config)) return null;
+  const normalizada = { ...config, copilotoAtivo: copilotoAtivoDaConfiguracao(plano, config.copilotoAtivo) };
+  return Math.round(precoDaConfiguracao(normalizada, plano) * 100) / 100;
+}
+
+/** Valor de cada cobrança recorrente: a mensalidade, ou 12 meses com o desconto anual. */
+export function valorDaCobranca(precoMensal: number, ciclo: "mensal" | "anual"): number {
+  if (ciclo === "mensal") return Math.round(precoMensal * 100) / 100;
+  return Math.round(precoAnualEquivalenteMensal(precoMensal) * 12 * 100) / 100;
+}

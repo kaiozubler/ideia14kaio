@@ -1,5 +1,5 @@
 import type { ConfiguracaoPlano, PlanoBaseId } from "@/lib/plans/config";
-import type { Contato, DadosCliente, Pedido } from "./pedido";
+import type { Contato, CupomDoPedido, DadosCliente, Pedido } from "./pedido";
 
 // Espelha o pedido (que já vive no sessionStorage — ver pedido.ts) na tabela
 // `contratacoes` do Supabase, via /api/contratacao. Nunca lança erro pra
@@ -56,7 +56,10 @@ type AtualizarPayload = Partial<{
   status: "em_andamento" | "aguardando_confirmacao" | "confirmada" | "cancelada";
 }>;
 
-export async function atualizarContratacaoRemota(id: string, patch: AtualizarPayload): Promise<void> {
+export async function atualizarContratacaoRemota(
+  id: string,
+  patch: AtualizarPayload,
+): Promise<void> {
   try {
     const { config, ...resto } = patch;
     await fetch("/api/contratacao", {
@@ -66,6 +69,32 @@ export async function atualizarContratacaoRemota(id: string, patch: AtualizarPay
     });
   } catch {
     // silencioso de propósito — ver comentário no topo do arquivo.
+  }
+}
+
+/**
+ * Aplica (ou remove, com codigo null) um cupom na contratação. Diferente das
+ * outras chamadas daqui, devolve o erro: o cliente precisa saber por que o
+ * cupom não vale.
+ */
+export async function aplicarCupomRemoto(
+  id: string,
+  codigo: string | null,
+): Promise<{ cupom: CupomDoPedido | null } | { erro: string }> {
+  try {
+    const resp = await fetch("/api/contratacao/cupom", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, codigo }),
+    });
+    const data = (await resp.json().catch(() => ({}))) as {
+      cupom?: CupomDoPedido | null;
+      error?: string;
+    };
+    if (!resp.ok) return { erro: data.error || "Não foi possível conferir o cupom agora." };
+    return { cupom: data.cupom ?? null };
+  } catch {
+    return { erro: "Não foi possível conferir o cupom agora. Confira sua conexão." };
   }
 }
 
