@@ -37,8 +37,8 @@
     <link rel="stylesheet" href="agendamento-online.css?v=1" />
     <script src="agendamento-online.js?v=1" defer></script>
     <script src="conversas-pacientes.js?v=1" defer></script>
-    <link rel="stylesheet" href="captacao-smartphone.css?v=1" />
-    <script src="captacao-smartphone.js?v=1" defer></script>
+    <link rel="stylesheet" href="captacao-smartphone.css?v=2" />
+    <script src="captacao-smartphone.js?v=2" defer></script>
     <script src="plano-gate.js?v=3" defer></script>
     <script>
       window.addEventListener("DOMContentLoaded", async () => {
@@ -559,6 +559,11 @@
                                                       .ai-ctrls{align-self:flex-start;padding:5px 8px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;border:0.5px solid rgba(255,255,255,.9);border-radius:12px;background:rgba(255,255,255,.7);backdrop-filter:blur(16px) saturate(180%);box-shadow:0 8px 22px -8px rgba(15,40,60,.22),0 2px 6px rgba(0,0,0,.06),inset 0 1px 0 rgba(255,255,255,.7)}
                                                       .ai-ctrls .csep{width:0.5px;height:16px;background:var(--n200)}
                                                       .ai-ctrls .btn{height:28px}
+                                                      .split-btn{position:relative;display:inline-flex}
+                                                      .split-menu{display:none;position:absolute;left:0;bottom:calc(100% + 6px);z-index:150;min-width:220px;max-width:calc(100vw - 16px);background:#fff;border:0.5px solid var(--n200);border-radius:var(--r8);box-shadow:0 -12px 32px rgba(0,0,0,.12);padding:5px}
+                                                      .split-menu.open{display:block}
+                                                      .split-menu .dm-item{white-space:nowrap;border-radius:6px;border-bottom:0}
+                                                      .split-menu .dm-item.live{color:#059669}
                                                       .ai-input-row{padding:6px 8px;display:flex;gap:5px;border-radius:14px;border:0.5px solid rgba(255,255,255,.9);background:rgba(255,255,255,.7);backdrop-filter:blur(16px) saturate(180%);box-shadow:0 8px 22px -8px rgba(15,40,60,.22),0 2px 6px rgba(0,0,0,.06),inset 0 1px 0 rgba(255,255,255,.7)}
                                                       .ai-inp{flex:1;border:none;border-radius:var(--r6);padding:6px 10px;font-family:var(--font);font-size:12px;color:var(--n700);outline:none;background:transparent}
                                                       .ai-inp:focus{background:rgba(255,255,255,.6)}
@@ -3194,17 +3199,38 @@
 
                     <div class="ai-bottom">
                       <div class="ai-ctrls">
-                        <button class="btn sm" id="listen-btn" onclick="toggleListen()">
-                          <i class="ti ti-microphone" id="lt-ico"></i> <span id="lt-lbl">Escutar</span>
-                        </button>
-                        <button
-                          class="btn sm"
-                          id="movel-btn"
-                          onclick="window.captacaoMovel&&captacaoMovel.abrir()"
-                          title="Gravar pelo smartphone (QR code)"
-                        >
-                          <i class="ti ti-device-mobile"></i> Smartphone
-                        </button>
+                        <div class="split-btn" id="listen-split-btn">
+                          <button
+                            class="btn sm"
+                            id="listen-btn"
+                            onclick="toggleListen()"
+                            style="border-top-right-radius:0;border-bottom-right-radius:0"
+                          >
+                            <i class="ti ti-microphone" id="lt-ico"></i> <span id="lt-lbl">Escutar</span>
+                          </button>
+                          <button
+                            class="btn sm split-caret"
+                            id="listen-caret"
+                            onclick="event.stopPropagation();toggleSplitMenu('listen-split-menu')"
+                            title="Mais opções de captação"
+                            style="border-top-left-radius:0;border-bottom-left-radius:0;border-left:1px solid rgba(148,163,184,.35);padding-left:8px;padding-right:8px"
+                          >
+                            <i class="ti ti-chevron-up" style="font-size:12px"></i>
+                          </button>
+                          <div class="split-menu" id="listen-split-menu">
+                            <div class="dm-item" onclick="closeSplitMenus();toggleListen()">
+                              <i class="ti ti-microphone"></i> Escutar por este computador
+                            </div>
+                            <div
+                              class="dm-item"
+                              id="movel-btn"
+                              onclick="closeSplitMenus();window.captacaoMovel&&captacaoMovel.abrir()"
+                              title="Gravar pelo smartphone (QR code)"
+                            >
+                              <i class="ti ti-device-mobile"></i> Gravar pelo smartphone
+                            </div>
+                          </div>
+                        </div>
                         <div class="csep"></div>
                         <div
                           class="sug-grp"
@@ -3262,7 +3288,7 @@
                         >
                           <i class="ti ti-stethoscope"></i> Conduta
                         </button>
-                        <div class="video-split-btn" id="video-split-btn" style="position:relative;display:inline-flex">
+                        <div class="video-split-btn split-btn" id="video-split-btn">
                           <button
                             class="btn sm primary"
                             onclick="openVideoCall()"
@@ -3273,17 +3299,13 @@
                           </button>
                           <button
                             class="btn sm primary"
-                            onclick="event.stopPropagation();toggleVideoCallMenu()"
+                            onclick="event.stopPropagation();toggleSplitMenu('video-call-menu')"
                             title="Mais opções da chamada de vídeo"
-                            style="background:linear-gradient(135deg,#60a5fa,#2563eb);border-color:rgba(37,99,235,.5);border-top-left-radius:0;border-bottom-left-radius:0;border-left:1px solid rgba(255,255,255,.35);padding-left:6px;padding-right:6px"
+                            style="background:linear-gradient(135deg,#60a5fa,#2563eb);border-color:rgba(37,99,235,.5);border-top-left-radius:0;border-bottom-left-radius:0;border-left:1px solid rgba(255,255,255,.35);padding-left:8px;padding-right:8px"
                           >
-                            <i class="ti ti-chevron-down" style="font-size:12px"></i>
+                            <i class="ti ti-chevron-up" style="font-size:12px"></i>
                           </button>
-                          <div
-                            class="dropdown-menu"
-                            id="video-call-menu"
-                            style="display:none;position:absolute;left:0;top:calc(100% + 6px);z-index:150;min-width:210px;background:#fff;border:0.5px solid var(--n200);border-radius:var(--r8);box-shadow:0 12px 32px rgba(0,0,0,.12);padding:5px"
-                          >
+                          <div class="split-menu" id="video-call-menu">
                             <div class="dm-item" onclick="closeVideoCallMenu();openVideoCall()">
                               <i class="ti ti-door-enter"></i> Acessar sala
                             </div>
@@ -20708,18 +20730,35 @@ let rxSelected = [];
                                                             }
 
                                                             /* ===== MENU DO BOTÃO "VÍDEO" (copiloto) ===== */
-                                                            function toggleVideoCallMenu(){
-                                                              const m=document.getElementById('video-call-menu');
-                                                              if(!m) return;
-                                                              m.style.display=(m.style.display==='block')?'none':'block';
+                                                            /* Menus dos botões divididos (Escutar, Vídeo): abrem para cima e
+                                                               ficam dentro da tela (deslocados para a esquerda se faltar espaço). */
+                                                            function closeSplitMenus(){
+                                                              document.querySelectorAll('.split-menu.open').forEach(m=>{
+                                                                m.classList.remove('open');m.style.left='';m.style.right='';
+                                                              });
                                                             }
+                                                            function toggleSplitMenu(id){
+                                                              const m=document.getElementById(id);
+                                                              if(!m) return;
+                                                              const abrir=!m.classList.contains('open');
+                                                              closeSplitMenus();
+                                                              if(!abrir) return;
+                                                              m.classList.add('open');
+                                                              const r=m.getBoundingClientRect();
+                                                              const margem=8;
+                                                              if(r.right>window.innerWidth-margem){
+                                                                m.style.left=Math.max(margem-r.left,window.innerWidth-margem-r.right)+'px';
+                                                              }
+                                                            }
+                                                            function toggleVideoCallMenu(){ toggleSplitMenu('video-call-menu'); }
                                                             function closeVideoCallMenu(){
                                                               const m=document.getElementById('video-call-menu');
-                                                              if(m) m.style.display='none';
+                                                              if(m && m.classList.contains('open')) closeSplitMenus();
                                                             }
                                                             document.addEventListener('click',e=>{
-                                                              if(!e.target.closest('#video-split-btn')) closeVideoCallMenu();
+                                                              if(!e.target.closest('.split-btn')) closeSplitMenus();
                                                             });
+                                                            document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSplitMenus(); });
                                                             // "Criar nova sala": ignora a sala em cache e o agendamento
                                                             // vinculado de propósito (ver openVideoCall), gerando uma sala
                                                             // avulsa nova para esta sessão. Não mexe no video_room_url salvo
