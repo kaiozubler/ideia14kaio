@@ -15,7 +15,8 @@ import {
 } from "@/lib/documentos/verificacao.server";
 
 // Libera o documento para a página /v/<codigo>: pelo token do QR code (k) ou
-// pelos 4 últimos dígitos do CPF do paciente (senha), com tentativas limitadas.
+// pelos 4 primeiros dígitos do CPF do paciente (senha; os documentos antigos
+// seguem com os 4 últimos), com tentativas limitadas.
 const BodySchema = z.object({
   codigo: z.string().max(20),
   k: z.string().max(100).optional(),

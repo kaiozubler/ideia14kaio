@@ -16,7 +16,7 @@ import {
 
 // Página PÚBLICA de verificação de documento (QR code impresso na receita).
 //  /v/<codigo>?k=<token>  → link autenticado do QR code, abre direto
-//  /v/<CODIG-O1234>       → link curto, pede os 4 últimos dígitos do CPF do paciente
+//  /v/<CODIG-O1234>       → link curto, pede os 4 primeiros dígitos do CPF do paciente
 // A identidade visual (nome, logo e cor) é a da clínica do médico que emitiu.
 export const Route = createFileRoute("/v/$codigo")({
   ssr: false,
@@ -90,7 +90,7 @@ const ERROS: Record<string, string> = {
   nao_emitido: "Este documento não foi concluído pela clínica e não pode ser verificado.",
   revogado: "Este documento foi cancelado pela clínica e não é mais válido.",
   bloqueado: "Muitas tentativas com senha incorreta. Aguarde 15 minutos e tente novamente.",
-  senha_invalida: "Senha incorreta. Use os 4 últimos dígitos do CPF do paciente.",
+  senha_invalida: "Senha incorreta. Use os 4 primeiros dígitos do CPF do paciente.",
   server_error: "Não foi possível verificar agora. Tente novamente em instantes.",
 };
 
@@ -166,7 +166,7 @@ function VerificarDocumento() {
 
   async function enviarSenha(e: React.FormEvent) {
     e.preventDefault();
-    if (!/^\d{4}$/.test(senha)) return setErro("Digite os 4 últimos dígitos do CPF do paciente.");
+    if (!/^\d{4}$/.test(senha)) return setErro("Digite os 4 primeiros dígitos do CPF do paciente.");
     setErro("");
     setEnviando(true);
     try {
@@ -202,7 +202,7 @@ function VerificarDocumento() {
 
         {carregando ? (
           <Vidro className="flex items-center justify-center gap-3 py-16 text-slate-500">
-            <Loader2 className="h-5 w-5 animate-spin" /> Verificando documento…
+            <Loader2 className="h-5 w-5 animate-spin" /> <span>Verificando documento…</span>
           </Vidro>
         ) : fatal ? (
           <Vidro className="flex flex-col items-center gap-3 py-14 text-center">
@@ -271,7 +271,7 @@ function FormSenha(props: {
         <div>
           <h2 className="text-xl font-semibold text-slate-800">Acesso protegido</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Para abrir o documento, digite os <b>4 últimos dígitos do CPF do paciente</b>.
+            Para abrir o documento, digite os <b>4 primeiros dígitos do CPF do paciente</b>.
           </p>
         </div>
         <input
@@ -282,7 +282,7 @@ function FormSenha(props: {
           value={props.senha}
           onChange={(e) => props.setSenha(e.target.value.replace(/\D/g, "").slice(0, 4))}
           placeholder="••••"
-          aria-label="4 últimos dígitos do CPF do paciente"
+          aria-label="4 primeiros dígitos do CPF do paciente"
           className="w-44 rounded-2xl border border-white/80 bg-white/80 px-4 py-3 text-center text-2xl font-semibold tracking-[0.5em] text-slate-800 outline-none focus:ring-2 focus:ring-emerald-400"
         />
         {props.erro && <p className="text-sm font-medium text-rose-600">{props.erro}</p>}
@@ -297,7 +297,7 @@ function FormSenha(props: {
           ) : (
             <ShieldCheck className="h-4 w-4" />
           )}
-          Verificar documento
+          <span>Verificar documento</span>
         </button>
       </form>
     </Vidro>
@@ -324,7 +324,7 @@ function DocumentoVerificado({ doc, cor }: { doc: Documento; cor: string }) {
   };
 
   const compartilhar = async () => {
-    const texto = `${d.titulo || "Documento"} — ${clinica.nome || ""}\nVerifique em ${d.urlCurta} (senha: 4 últimos dígitos do CPF do paciente)`;
+    const texto = `${d.titulo || "Documento"} — ${clinica.nome || ""}\nVerifique em ${d.urlCurta} (senha: 4 primeiros dígitos do CPF do paciente)`;
     try {
       const arquivo = pdf ? new File([pdf], nomeArquivo, { type: "application/pdf" }) : null;
       if (arquivo && navigator.canShare?.({ files: [arquivo] })) {

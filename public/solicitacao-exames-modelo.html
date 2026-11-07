@@ -130,13 +130,20 @@
         margin-bottom: 2px;
       }
 
+      /* O nome do paciente ocupa mais espaço e quebra linha em vez de vazar
+         para o campo vizinho (um <span> inline ignora overflow/ellipsis). */
+      .patient-field:first-child {
+        flex: 2.2;
+      }
+
       .patient-field .val {
+        display: block;
         font-size: 12.5px;
         font-weight: 600;
         color: #16201d;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        line-height: 1.3;
       }
 
       .rx-heading {

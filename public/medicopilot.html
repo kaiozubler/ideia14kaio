@@ -4776,9 +4776,6 @@
             <div class="fld"><label>Nome da mãe</label><input type="text" id="np-mae" /></div>
             <div class="fld"><label>Nome do pai</label><input type="text" id="np-pai" /></div>
             <div class="fld"><label>Naturalidade</label><input type="text" id="np-natural" placeholder="Município/UF de nascimento" /></div>
-            <div class="fld wide">
-              <label>Endereço</label><input type="text" id="np-end" placeholder="Rua, nº — Bairro, Cidade, UF" />
-            </div>
             <div class="fld">
               <label>Convênio</label
               ><select id="np-conv">
@@ -12392,8 +12389,24 @@ function iaAssistAbrirBaseConhecimento(nomes){
   const lista=Array.isArray(nomes)?nomes:[nomes];
   const foco=lista.length===1?lista[0]:null;
   if(typeof closeIaAssistModal==='function')closeIaAssistModal();
+  // O selo fica DENTRO do painel expandido (chat da consulta / copiloto), então o
+  // clique não passa pelo "clicar fora recolhe": sem recolher aqui, o body seguia
+  // com panel-expanded-active (overflow:hidden + véu escuro em z-index alto) na
+  // tela da base, cortando a topbar e travando a rolagem.
+  iaRecolherPaineisExpandidos();
   if(typeof goScreen==='function')goScreen('base-conhecimento');
-  if(typeof initBaseConhecimento==='function')initBaseConhecimento(foco);
+  // goScreen já inicializa a tela; só repete quando há uma base para destacar.
+  if(foco&&typeof initBaseConhecimento==='function')initBaseConhecimento(foco);
+}
+function iaRecolherPaineisExpandidos(){
+  const w=document.querySelector('#atend-novo-view .split-wrap');
+  if(w)w.classList.remove('exp-left','exp-right');
+  const card=document.getElementById('adv-ai-card');
+  if(card)card.classList.remove('adv-ai-expanded');
+  document.body.classList.remove('panel-expanded-active');
+  const li=document.getElementById('exp-left-icon');if(li)li.className='ti ti-arrows-diagonal';
+  const ri=document.getElementById('exp-right-icon');if(ri)ri.className='ti ti-arrows-diagonal';
+  const ai=document.getElementById('adv-ai-expand-icon');if(ai)ai.className='ti ti-arrows-diagonal';
 }
 function showIaAssistTyping(){
   const layer=document.getElementById('ia-assist-bubbles');if(!layer)return null;
@@ -14552,8 +14565,7 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                             }
                                                             function closeResumoPanel(){document.getElementById('resumo-panel').classList.remove('open');}
                                                             function copyResumo(){
-                                                              ['np-nome','np-cpf','np-dob','np-tel','np-email','np-sus','np-mae','np-pai','np-natural','np-cep','np-log','np-num','np-compl','np-bairro','np-cidade','np-uf'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-                                                                const npPais=document.getElementById('np-pais');if(npPais)npPais.value='Brasil';
+                                                              const txt=window.__lastAnamnese||document.getElementById('resumo-panel-text').textContent||RESUMO_TEXT;
                                                               navigator.clipboard.writeText(txt).catch(()=>{});
                                                               const btn=event.target.closest('button');
                                                               const orig=btn.innerHTML;btn.innerHTML='<i class="ti ti-check"></i> Copiado';
@@ -14648,7 +14660,8 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                               document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
                                                               const m=document.getElementById('m-'+name);if(m)m.style.display='flex';
                                                               if(name==='new-patient'){
-                                                                ['np-nome','np-cpf','np-dob','np-tel','np-email','np-sus','np-mae','np-pai','np-natural','np-end'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+                                                                ['np-nome','np-cpf','np-dob','np-tel','np-email','np-sus','np-mae','np-pai','np-natural','np-cep','np-log','np-num','np-compl','np-bairro','np-cidade','np-uf'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+                                                                const npPais=document.getElementById('np-pais');if(npPais)npPais.value='Brasil';
                                                                 ['np-conv','np-sexo','np-medico'].forEach(id=>{const el=document.getElementById(id);if(el)el.selectedIndex=0;});
                                                                 const g=document.getElementById('np-grupo');if(g){populateGrupoSelect(g);g.value='';}
                                                               }
@@ -16448,7 +16461,7 @@ let rxSelected = [];
                                                   // QR de verificação próprio do documento; sem ele, o QR fixo configurado na clínica (se houver).
                                                   const qrDataUrl = verificacao ? verificacao.qrDataUrl : qrClinica;
                                                   const verificacaoTexto = verificacao
-                                                    ? verificacao.urlImpressa + ' (senha: 4 últimos dígitos do CPF do paciente)'
+                                                    ? verificacao.urlImpressa + ' (senha: 4 primeiros dígitos do CPF do paciente)'
                                                     : (clinic.verificacao_url || 'validar.iti.gov.br');
                                                   const primaryColor = clinic.cor_primaria || '#0E6E5D';
 
@@ -16543,6 +16556,9 @@ let rxSelected = [];
                                                     }
                                                     if (!legalNote) holder.querySelectorAll('.legal-note').forEach(n => n.remove());
                                                     if (!patientSex) holder.querySelectorAll('.patient-sex').forEach(n => n.remove());
+                                                    // Faixa de endereço da receita comum: só aparece quando há endereço (atestados e
+                                                    // outros documentos do mesmo modelo não recebem patientAddress).
+                                                    if (!patientAddress) holder.querySelectorAll('.patient-address').forEach(n => n.remove());
 
                                                     // Aguarda fontes e imagens carregarem (agora todas data URI, sem risco de CORS)
                                                     try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
@@ -16631,7 +16647,7 @@ let rxSelected = [];
                                                     const qr = verificacao && verificacao.qrDataUrl ? `
                                                         <div class="sig-main" style="font-size:9.5px;color:#5b6660;line-height:1.5">
                                                           Confira a autenticidade em <b style="color:#16201d">${_rxEsc(verificacao.urlImpressa)}</b><br>
-                                                          Senha: 4 últimos dígitos do CPF do paciente
+                                                          Senha: 4 primeiros dígitos do CPF do paciente
                                                         </div>
                                                         <div class="qr-field">
                                                           <span class="eyebrow">Verificação</span>
@@ -16652,7 +16668,7 @@ let rxSelected = [];
                                                 /* ── VERIFICAÇÃO PÚBLICA (QR code) ────────────────────────────────────
                                                    Antes de renderizar, reserva um registro em /api/documentos/verificacao
                                                    e gera o QR com o link autenticado (/v/<codigo>?k=...). O link curto
-                                                   impresso abre com os 4 últimos dígitos do CPF do paciente. Depois do
+                                                   impresso abre com os 4 primeiros dígitos do CPF do paciente. Depois do
                                                    PDF final (assinado ou não), _rxEmitirVerificacao envia o arquivo para
                                                    o servidor guardar a cópia e ler a assinatura. Qualquer falha aqui só
                                                    deixa o documento sem QR — nunca impede a emissão. */
@@ -18187,7 +18203,7 @@ let rxSelected = [];
                                                   // QR de verificação próprio do documento; sem ele, o QR fixo configurado na clínica (se houver).
                                                   const qrDataUrl = verificacao ? verificacao.qrDataUrl : qrClinica;
                                                   const verificacaoTexto = verificacao
-                                                    ? verificacao.urlImpressa + ' (senha: 4 últimos dígitos do CPF do paciente)'
+                                                    ? verificacao.urlImpressa + ' (senha: 4 primeiros dígitos do CPF do paciente)'
                                                     : (clinic.verificacao_url || 'validar.iti.gov.br');
                                                   const primaryColor = clinic.cor_primaria || '#0E6E5D';
 
@@ -18932,7 +18948,10 @@ let rxSelected = [];
                                                                 mae:val('np-mae')||null,
                                                                 pai:val('np-pai')||null,
                                                                 naturalidade:val('np-natural')||null,
-                                                                endereco:val('np-end')||null,
+                                                                // Endereço só pelos campos estruturados (CEP/ViaCEP); o texto
+                                                                // concatenado segue o mesmo formato da ficha do paciente.
+                                                                ...(a=>({cep:a.cep||null,logradouro:a.logradouro||null,numero:a.numero||null,complemento:a.complemento||null,
+                                                                  bairro:a.bairro||null,cidade:a.cidade||null,uf:a.uf||null,endereco:buildEnderecoConcat(a)}))(readEnderecoFields('np-')),
                                                                 convenio:val('np-conv')||'Particular',
                                                                 sexo:val('np-sexo')||null,
                                                                 medico:val('np-medico')||null,
@@ -19262,7 +19281,6 @@ let rxSelected = [];
                                                               document.getElementById('d-email').value='';document.getElementById('d-cpf').value='';document.getElementById('d-mae').value='';
                                                               document.getElementById('d-pai').value='';document.getElementById('d-natural').value='';document.getElementById('d-end').value='';
                                                               document.getElementById('d-nasc').value='';document.getElementById('d-sus').value='';
-const de=document.getElementById('np-end');if(de)de.value='';
                                                               const cv=document.getElementById('d-conv');if(cv)cv.value='Particular';
                                                               const sx=document.getElementById('d-sexo');if(sx)sx.value='Feminino';
                                                               const ms=document.getElementById('d-medico');if(ms)ms.value='';
