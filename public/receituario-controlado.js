@@ -277,7 +277,7 @@
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   const enderecoDoPaciente = (p) => {
-    const partes = [p.logradouro, p.numero, p.bairro, p.cidade, p.uf].filter(Boolean).join(', ');
+    const partes = [p.logradouro, p.numero, p.complemento, p.bairro, p.cidade, p.uf].filter(Boolean).join(', ');
     const end = partes || p.endereco || p.end || '';
     return end === '—' ? '' : end;
   };

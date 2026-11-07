@@ -10,6 +10,7 @@ import {
   montarClinica,
   origemPublica,
   sha256Hex,
+  senhaDoCpf,
   formatarCodigo,
 } from "@/lib/documentos/verificacao.server";
 
@@ -54,10 +55,10 @@ export const Route = createFileRoute("/api/documentos/verificacao/reservar")({
           const clinica = await montarClinica(userId, body.clinica ?? {});
           const id = crypto.randomUUID();
           const token = gerarToken();
-          const ultimos4 = body.pacienteCpf.replace(/\D/g, "").slice(-4);
+          const senha = senhaDoCpf(body.pacienteCpf);
           const [tokenHash, senhaHash] = await Promise.all([
             sha256Hex(token),
-            hashSenha(id, ultimos4),
+            hashSenha(id, senha),
           ]);
 
           // Colisão de código é improvável (32^10); tenta de novo algumas vezes por garantia.

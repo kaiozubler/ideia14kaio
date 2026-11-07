@@ -20,7 +20,6 @@
 
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const sbc = () => window.sb || window.__sb;
-  const fmtTok = (n) => (n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(n || 0));
   const estimarTokens = (txt) => Math.max(1, Math.round((txt || "").length / 4));
   const uid = () => "t" + Math.random().toString(36).slice(2, 9);
 
@@ -53,7 +52,7 @@
     if (!silent) { S.loading = true; render(); }
     const [{ data: bases, error: e1 }, { data: atalhos, error: e2 }] = await Promise.all([
       sb.from("base_conhecimento")
-        .select("id,nome,descricao,tags,ias,ativo,created_at,base_conhecimento_itens(id,tipo,nome_original,tokens_estimados,status)")
+        .select("id,nome,descricao,tags,ias,ativo,created_at,base_conhecimento_itens(id,tipo,nome_original,status,created_at)")
         .order("created_at", { ascending: false }),
       sb.from("prompt_comandos").select("id,atalho,texto_completo,ias,created_at").order("created_at", { ascending: false }),
     ]);
@@ -152,9 +151,13 @@
     }
   }
 
-  async function excluirItem(id) {
+  // Um arquivo/texto vira vários itens (trechos) no banco; a tela mostra e
+  // exclui o envio inteiro.
+  async function excluirItem(idsCsv) {
     const sb = sbc(); if (!sb) return;
-    const { error } = await sb.from("base_conhecimento_itens").delete().eq("id", id);
+    const ids = String(idsCsv || "").split(",").filter(Boolean);
+    if (!ids.length) return;
+    const { error } = await sb.from("base_conhecimento_itens").delete().in("id", ids);
     if (error) { console.error(error.message); return; }
     await load();
   }
@@ -194,9 +197,26 @@
   function tagPill(t) { return `<span class="bk-tag">#${esc(t)}</span>`; }
   function iaPill(id) { return `<span class="bk-tag ${IA_CLASS[id]}"><i class="ti ${IA_ICON[id]}"></i> ${IA_LABEL[id]}</span>`; }
 
+  // Agrupa os trechos de um mesmo envio (mesmo tipo, nome e horário de
+  // inserção — todos entram num único insert) num só arquivo/texto. Tokens e
+  // a divisão em trechos são detalhes internos da busca, não do médico.
+  function agruparEnvios(itens) {
+    const grupos = new Map();
+    for (const i of itens) {
+      const chave = [i.tipo, i.nome_original || "", i.created_at || i.id].join("|");
+      const g = grupos.get(chave);
+      if (g) {
+        g.ids.push(i.id);
+        if (i.status === "processando" || (i.status === "erro" && g.status !== "processando")) g.status = i.status;
+      } else {
+        grupos.set(chave, { ids: [i.id], tipo: i.tipo, nome: i.nome_original, status: i.status });
+      }
+    }
+    return Array.from(grupos.values());
+  }
+
   function baseCardHtml(b) {
-    const itens = b.base_conhecimento_itens || [];
-    const totalTok = itens.reduce((s, i) => s + (i.tokens_estimados || 0), 0);
+    const itens = agruparEnvios(b.base_conhecimento_itens || []);
     const open = S.expandedBaseId === b.id;
     return `
       <div class="cop-card">
@@ -214,7 +234,7 @@
               <div class="bk-tags">
                 ${(b.tags || []).map(tagPill).join("")}
                 ${(b.ias || []).map(iaPill).join("")}
-                <span class="bk-tag">~${fmtTok(totalTok)} tokens · ${itens.length} item(ns)</span>
+                <span class="bk-tag">${itens.length} ${itens.length === 1 ? "conteúdo" : "conteúdos"}</span>
               </div>
             </div>
           </div>
@@ -236,13 +256,12 @@
           <div class="bk-item-row">
             <div style="display:flex;align-items:center;gap:8px;min-width:0">
               <i class="ti ${i.tipo === "arquivo" ? "ti-file-text" : "ti-align-left"}"></i>
-              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(i.nome_original || "Sem título")}</span>
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(i.nome || "Sem título")}</span>
               ${i.status === "processando" ? '<span class="bk-tag" style="white-space:nowrap"><i class="ti ti-loader-2"></i> processando…</span>' : ""}
               ${i.status === "erro" ? '<span class="bk-tag" style="white-space:nowrap;color:#b45309">erro ao processar</span>' : ""}
             </div>
             <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
-              <span class="bk-item-tok">~${fmtTok(i.tokens_estimados)} tok</span>
-              <button class="bk-icon-btn" data-del-item="${i.id}"><i class="ti ti-trash" style="font-size:13px"></i></button>
+              <button class="bk-icon-btn" data-del-item="${i.ids.join(",")}" title="Excluir"><i class="ti ti-trash" style="font-size:13px"></i></button>
             </div>
           </div>`).join("")}
       </div>
@@ -277,7 +296,7 @@
         </div>
         <div class="bk-field"><label>Descrição</label>
           <textarea class="bk-textarea" id="bk-nb-desc" rows="2" placeholder="Do que se trata... (deixe em branco pra IA sugerir a partir do 1º arquivo)">${esc(S.novaBaseCampos.descricao)}</textarea>
-          <div class="bk-hint">Sempre enviada à IA (poucos tokens) pra ela saber que essa base existe.</div>
+          <div class="bk-hint">Sempre enviada à IA pra ela saber que essa base existe.</div>
         </div>
         <div class="bk-field"><label>Tags (separadas por vírgula)</label>
           <input class="bk-input" id="bk-nb-tags" placeholder="cardiologia, protocolo" value="${esc(S.novaBaseCampos.tags)}" />
@@ -295,7 +314,6 @@
                     <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.nome)}</span>
                   </div>
                   <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
-                    <span class="bk-item-tok">~${fmtTok(estimarTokens(a.conteudo))} tok</span>
                     <button class="bk-icon-btn" data-del-newbase-anexo="${a.id}"><i class="ti ti-trash" style="font-size:13px"></i></button>
                   </div>
                 </div>`).join("")}

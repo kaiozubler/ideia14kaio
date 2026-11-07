@@ -10,7 +10,7 @@
 //     própria cópia, calcula o SHA-256 e extrai do PDF o registro da
 //     assinatura ICP-Brasil — nada disso vem do navegador.
 //  3. A página pública /v/<codigo> libera o documento com o token do QR
-//     (?k=) ou, pelo link curto, com os 4 últimos dígitos do CPF do paciente.
+//     (?k=) ou, pelo link curto, com os 4 primeiros dígitos do CPF do paciente.
 //
 // Só os hashes do token e da senha ficam no banco. Como a senha tem apenas
 // 10 mil combinações, as tentativas são limitadas por código (ver
@@ -66,8 +66,23 @@ export async function sha256Hex(data: Uint8Array | string): Promise<string> {
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-export function hashSenha(verificacaoId: string, ultimos4: string) {
+/**
+ * Senha do link curto: os 4 PRIMEIROS dígitos do CPF do paciente. O prefixo
+ * "inicio:" separa estes hashes dos documentos emitidos antes da troca, que
+ * guardaram `${id}:<4 últimos>` e continuam abrindo com os 4 últimos (é o que
+ * está impresso neles) — ver conferirSenha.
+ */
+export function hashSenha(verificacaoId: string, primeiros4: string) {
+  return sha256Hex(`${verificacaoId}:inicio:${primeiros4}`);
+}
+
+function hashSenhaLegada(verificacaoId: string, ultimos4: string) {
   return sha256Hex(`${verificacaoId}:${ultimos4}`);
+}
+
+/** Os 4 dígitos usados como senha do link curto. */
+export function senhaDoCpf(cpf: string): string {
+  return cpf.replace(/\D/g, "").slice(0, 4);
 }
 
 export function iguaisTempoConstante(a: string, b: string): boolean {
@@ -98,14 +113,14 @@ export function ipDaRequisicao(request: Request): string | null {
 }
 
 /**
- * Confere os 4 últimos dígitos do CPF respeitando LIMITE_TENTATIVAS.
+ * Confere a senha (4 dígitos do CPF) respeitando LIMITE_TENTATIVAS.
  * A tentativa é inserida antes da contagem: com N requisições simultâneas,
  * a k-ésima a gravar enxerga pelo menos k tentativas, então no máximo `max`
  * delas chegam a comparar a senha dentro da janela.
  */
 export async function conferirSenha(
   registro: { id: string; senha_hash: string },
-  ultimos4: string,
+  senha: string,
   ip: string | null,
 ): Promise<"ok" | "invalida" | "bloqueado"> {
   const sb = await admin();
@@ -128,7 +143,16 @@ export async function conferirSenha(
     if ((count ?? 0) > limite.max) return "bloqueado";
   }
 
-  const ok = iguaisTempoConstante(await hashSenha(registro.id, ultimos4), registro.senha_hash);
+  // Um registro tem só um formato de hash, então a conferência dupla não
+  // amplia as combinações aceitas: novos documentos só abrem com os 4
+  // primeiros dígitos, os antigos só com os 4 últimos.
+  const [atual, legada] = await Promise.all([
+    hashSenha(registro.id, senha),
+    hashSenhaLegada(registro.id, senha),
+  ]);
+  const ok =
+    iguaisTempoConstante(atual, registro.senha_hash) ||
+    iguaisTempoConstante(legada, registro.senha_hash);
   if (ok) {
     await sb
       .from("documentos_verificacao_tentativas")

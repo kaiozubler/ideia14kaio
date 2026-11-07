@@ -123,7 +123,7 @@
   const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 
   // O PDF só sai com CPF válido: a verificação por QR (/v/<codigo>) usa os 4
-  // últimos dígitos como senha e a reserva não acontece sem os 11 dígitos.
+  // primeiros dígitos como senha e a reserva não acontece sem os 11 dígitos.
   function cpfValido(v) {
     const c = String(v || "").replace(/\D/g, "");
     if (c.length !== 11 || /^(\d)\1+$/.test(c)) return false;
