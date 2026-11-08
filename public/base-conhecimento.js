@@ -382,9 +382,250 @@
       </div>`;
   }
 
+  /* ---------- PESQUISA ---------- */
+  // Cada fonte é buscada e desenhada no seu próprio bloco (#bk-res-<id>), então
+  // um bloco que demora (IA, PubMed) não segura os outros nem a tela.
+  const FONTES = [
+    { id: "ia", nome: "Conhecimento da IA", icon: "ti-sparkles" },
+    { id: "base", nome: "Base de conhecimento", icon: "ti-book-2" },
+    { id: "pubmed", nome: "PubMed", icon: "ti-microscope" },
+  ];
+  const FONTES_KEY = "bk-pesquisa-fontes";
+  function fontesSalvas() {
+    try {
+      const v = JSON.parse(localStorage.getItem(FONTES_KEY) || "null");
+      if (Array.isArray(v)) return v.filter((f) => FONTES.some((x) => x.id === f));
+    } catch (_) { /* sem storage: usa o padrão */ }
+    return FONTES.map((f) => f.id);
+  }
+  const P = { q: "", fontes: fontesSalvas(), ativa: false, blocos: {}, tok: {}, n: 0, iaExpandida: false };
+
+  async function authFetch(url, init) {
+    if (typeof window.iaAuthFetch === "function") return window.iaAuthFetch(url, init);
+    const sb = sbc();
+    const { data } = sb ? await sb.auth.getSession() : { data: null };
+    const token = data && data.session ? data.session.access_token : null;
+    const opts = Object.assign({}, init || {});
+    opts.headers = Object.assign({}, opts.headers || {}, token ? { Authorization: "Bearer " + token } : {});
+    return fetch(url, opts);
+  }
+
+  async function buscarFonte(f) {
+    const tok = (P.tok[f] = ++P.n);
+    P.blocos[f] = { estado: "carregando" };
+    renderBloco(f);
+    const url = { ia: "/api/pesquisa/ia", base: "/api/pesquisa/base", pubmed: "/api/pesquisa/pubmed" }[f];
+    const body = f === "ia" ? { q: P.q, usar_base: P.fontes.includes("base") } : { q: P.q };
+    let bloco;
+    try {
+      const res = await authFetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const dados = await res.json().catch(() => ({}));
+      bloco = res.ok ? { estado: "ok", dados } : { estado: "erro", erro: dados.error || "HTTP " + res.status };
+    } catch (err) {
+      bloco = { estado: "erro", erro: err && err.message ? err.message : "falha de rede" };
+    }
+    // Resposta de uma busca antiga, ou de uma fonte desmarcada no meio do caminho.
+    if (P.tok[f] !== tok || !P.fontes.includes(f)) return;
+    P.blocos[f] = bloco;
+    renderBloco(f);
+  }
+
+  function pesquisar() {
+    const inp = document.getElementById("bk-search-input");
+    const q = ((inp && inp.value) || "").trim();
+    if (q.length < 2) { notify("Digite ao menos 2 caracteres para pesquisar"); return; }
+    if (!P.fontes.length) { abrirOpcoes(true); notify("Selecione ao menos uma fonte de dados"); return; }
+    P.q = q; P.ativa = true; P.blocos = {}; P.iaExpandida = false;
+    abrirOpcoes(false);
+    if (inp) inp.blur();
+    render();
+    for (const f of P.fontes) buscarFonte(f);
+  }
+
+  function alternarFonte(f, marcada) {
+    P.fontes = FONTES.map((x) => x.id).filter((id) => (id === f ? marcada : P.fontes.includes(id)));
+    try { localStorage.setItem(FONTES_KEY, JSON.stringify(P.fontes)); } catch (_) { /* opcional */ }
+    if (!marcada) { delete P.blocos[f]; P.tok[f] = ++P.n; }
+    if (P.ativa) {
+      renderPesquisa();
+      if (marcada) buscarFonte(f);
+    }
+  }
+
+  function abrirOpcoes(abrir) {
+    const o = document.getElementById("bk-search-opts");
+    if (o) o.hidden = !abrir;
+    const s = document.getElementById("bk-search");
+    if (s) s.classList.toggle("open", !!abrir);
+  }
+
+  function pesquisaShellHtml() {
+    return `
+      <div class="bk-search" id="bk-search">
+        <div class="bk-search-bar">
+          <i class="ti ti-search bk-search-ico"></i>
+          <input id="bk-search-input" class="bk-search-input" type="search" autocomplete="off"
+            placeholder="Pesquise na IA, nas suas bases e no PubMed" aria-label="Pesquisar" />
+          <button class="bk-search-btn" data-pesq-buscar="1" title="Pesquisar"><i class="ti ti-arrow-right"></i></button>
+        </div>
+        <div class="bk-search-opts" id="bk-search-opts" hidden>
+          <div class="bk-search-opts-label">Fonte dos dados</div>
+          <div class="bk-fontes" id="bk-fontes"></div>
+          <div class="bk-hint" style="margin-top:8px">Os resultados aparecem agrupados por fonte. A visão geral da IA usa também a sua base de conhecimento quando ela está marcada.</div>
+        </div>
+      </div>
+      <div id="bk-search-voltar"></div>`;
+  }
+
+  function fontesHtml() {
+    return FONTES.map((f) => {
+      const on = P.fontes.includes(f.id);
+      return `<label class="bk-fonte ${on ? "on" : ""}">
+        <input type="checkbox" data-pesq-fonte="${f.id}" ${on ? "checked" : ""} />
+        <i class="ti ${on ? "ti-square-check-filled" : "ti-square"} bk-fonte-check"></i>
+        <i class="ti ${f.icon}"></i> ${f.nome}
+      </label>`;
+    }).join("");
+  }
+
+  function renderPesquisa() {
+    const fontesEl = document.getElementById("bk-fontes");
+    if (fontesEl) fontesEl.innerHTML = fontesHtml();
+    const voltar = document.getElementById("bk-search-voltar");
+    if (voltar) {
+      voltar.innerHTML = !P.ativa && P.q
+        ? `<button class="bk-btn-ghost bk-voltar" data-pesq-voltar="1"><i class="ti ti-arrow-left"></i> Voltar aos resultados de “${esc(P.q)}”</button>`
+        : "";
+    }
+    const res = document.getElementById("bk-res");
+    const main = document.getElementById("bk-main");
+    if (main) main.style.display = P.ativa ? "none" : "";
+    if (!res) return;
+    if (!P.ativa) { res.innerHTML = ""; return; }
+    const ordem = FONTES.filter((f) => P.fontes.includes(f.id));
+    res.innerHTML = `
+      <div class="bk-res-hd">
+        <span>Resultados para <strong>“${esc(P.q)}”</strong></span>
+        <button class="bk-btn-ghost" data-pesq-fechar="1"><i class="ti ti-x"></i> Fechar pesquisa</button>
+      </div>
+      ${ordem.length ? ordem.map((f) => `<section class="bk-res-bloco" id="bk-res-${f.id}"></section>`).join("")
+        : '<div class="bk-empty">Nenhuma fonte selecionada. Clique no campo de pesquisa e marque ao menos uma fonte.</div>'}`;
+    for (const f of ordem) renderBloco(f.id);
+  }
+
+  function skeleton(linhas) {
+    return `<div class="bk-skel">${Array.from({ length: linhas }, (_, i) => `<span style="width:${[92, 78, 85, 64, 70][i % 5]}%"></span>`).join("")}</div>`;
+  }
+
+  function erroHtml(f, msg) {
+    return `<div class="bk-res-erro"><i class="ti ti-alert-triangle"></i> ${esc(msg)}
+      <button class="bk-btn-ghost" data-pesq-retry="${f}"><i class="ti ti-refresh"></i> Tentar de novo</button></div>`;
+  }
+
+  function md(t) {
+    if (typeof window.mdToHtml === "function") return window.mdToHtml(t);
+    return "<p>" + esc(t).replace(/\n/g, "<br>") + "</p>";
+  }
+
+  function renderBloco(f) {
+    const el = document.getElementById("bk-res-" + f);
+    if (!el) return;
+    const b = P.blocos[f] || { estado: "carregando" };
+    const fonte = FONTES.find((x) => x.id === f);
+
+    if (f === "ia") {
+      let corpo;
+      if (b.estado === "carregando") corpo = skeleton(4);
+      else if (b.estado === "erro") corpo = erroHtml(f, "Não foi possível gerar a visão geral da IA agora.");
+      else if (!(b.dados.resumo || "").trim()) corpo = '<div class="bk-empty">A IA não retornou uma resposta para esta pesquisa.</div>';
+      else {
+        const bases = (b.dados.bases || []).map((n) =>
+          `<span class="bk-fonte-badge bk-fonte-badge-click" data-pesq-base-nome="${esc(n)}"><i class="ti ti-book-2"></i> ${esc(n)}</span>`).join(" ");
+        corpo = `
+          <div class="bk-ia-txt ${P.iaExpandida ? "" : "clamp"}">${md(b.dados.resumo)}</div>
+          <button class="bk-ia-mais" data-pesq-ia-mais="1" hidden>${P.iaExpandida ? "Mostrar menos" : "Mostrar mais"} <i class="ti ti-chevron-${P.iaExpandida ? "up" : "down"}"></i></button>
+          ${bases ? `<div class="bk-ia-bases">Com base em: ${bases}</div>` : ""}
+          <div class="bk-ia-aviso">A IA pode cometer erros. Confira as fontes antes de usar na conduta.</div>`;
+      }
+      el.className = "bk-res-bloco bk-ia";
+      el.innerHTML = `<div class="bk-ia-hd"><i class="ti ti-sparkles"></i> Visão geral criada por IA</div>${corpo}`;
+      // "Mostrar mais" só quando o texto realmente passa do limite.
+      const txt = el.querySelector(".bk-ia-txt"); const mais = el.querySelector(".bk-ia-mais");
+      const corta = !!txt && txt.scrollHeight > txt.clientHeight + 4;
+      if (txt) txt.classList.toggle("corta", corta);
+      if (mais && (P.iaExpandida || corta)) mais.hidden = false;
+      return;
+    }
+
+    const d = b.dados || {};
+    const itens = d.resultados || [];
+    let corpo;
+    if (b.estado === "carregando") corpo = [0, 1, 2].map(() => `<div class="bk-res-item">${skeleton(3)}</div>`).join("");
+    else if (b.estado === "erro") corpo = erroHtml(f, f === "pubmed" ? "O PubMed não respondeu agora." : "Não foi possível pesquisar nas suas bases.");
+    else if (!itens.length) corpo = `<div class="bk-empty">Nada encontrado ${f === "base" ? "nas suas bases" : "no PubMed"} para esta pesquisa.</div>`;
+    else if (f === "base") {
+      corpo = itens.map((r) => `
+        <div class="bk-res-item">
+          <div class="bk-res-src"><i class="ti ${r.tipo === "base" ? "ti-book-2" : r.tipo === "arquivo" ? "ti-file-text" : "ti-align-left"}"></i> ${esc(r.base_nome)}</div>
+          <a class="bk-res-tit" href="#" data-pesq-abrir-base="${esc(r.base_id)}">${esc(r.titulo)}</a>
+          <div class="bk-res-desc">${esc(r.descricao)}</div>
+        </div>`).join("");
+    } else {
+      corpo = itens.map((r) => `
+        <div class="bk-res-item">
+          <div class="bk-res-src"><i class="ti ti-microscope"></i> ${esc([r.revista, r.ano].filter(Boolean).join(" · ") || "PubMed")} <span class="bk-res-pmid">PMID ${esc(r.pmid)}</span></div>
+          <a class="bk-res-tit" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">${esc(r.titulo)}</a>
+          ${r.autores ? `<div class="bk-res-aut">${esc(r.autores)}</div>` : ""}
+          <div class="bk-res-desc">${esc(r.descricao)}</div>
+        </div>`).join("");
+    }
+    let rodape = "";
+    if (f === "pubmed" && b.estado === "ok" && d.consulta) {
+      const link = "https://pubmed.ncbi.nlm.nih.gov/?term=" + encodeURIComponent(d.consulta);
+      rodape = `<div class="bk-res-rod">
+        ${d.consulta !== P.q ? `<span>Pesquisado em inglês como: <em>${esc(d.consulta)}</em></span>` : "<span></span>"}
+        ${itens.length ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer">Ver ${d.total > itens.length ? "todos os " + Number(d.total).toLocaleString("pt-BR") + " resultados" : "no PubMed"} <i class="ti ti-external-link"></i></a>` : ""}
+      </div>`;
+    }
+    const contagem = b.estado === "ok" && itens.length ? `<span class="bk-res-n">${itens.length}</span>` : "";
+    const carregando = b.estado === "carregando" ? '<i class="ti ti-loader-2 bk-spin"></i>' : "";
+    el.className = "bk-res-bloco";
+    el.innerHTML = `
+      <div class="bk-res-fonte"><i class="ti ${fonte.icon}"></i> ${fonte.nome} ${contagem} ${carregando}</div>
+      <div class="bk-res-lista">${corpo}</div>${rodape}`;
+  }
+
+  function focarBase(id) {
+    const alvo = S.bases.find((b) => b.id === id);
+    if (!alvo) { notify("Base não encontrada"); return; }
+    P.ativa = false;
+    S.tab = "bases";
+    S.expandedBaseId = alvo.id;
+    render();
+    requestAnimationFrame(() => {
+      const toggle = document.querySelector(`[data-toggle-base="${alvo.id}"]`);
+      const card = toggle && toggle.closest(".cop-card");
+      if (!card) return;
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+      card.classList.add("bk-highlight");
+      setTimeout(() => card.classList.remove("bk-highlight"), 1600);
+    });
+  }
+
   function render() {
     const el = document.getElementById("s-base-conhecimento"); if (!el) return;
-    const header = `
+    // O topo (com o campo de pesquisa e os blocos de resultado) é montado uma
+    // vez só; render() redesenha apenas #bk-main, para não apagar o que o
+    // médico está digitando nem os blocos que ainda estão carregando.
+    if (!document.getElementById("bk-main")) {
+      el.innerHTML = `${headerHtml()}${pesquisaShellHtml()}<div id="bk-res"></div><div id="bk-main"></div>`;
+    }
+    renderPesquisa();
+    renderMain();
+  }
+
+  function headerHtml() {
+    return `
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
         <div class="cop-ico-box" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)"><i class="ti ti-database"></i></div>
         <div>
@@ -401,7 +642,12 @@
             ela usa conhecimento geral e avisa que <strong>não é uma base local</strong>.
           </div>
         </div>
-      </div>
+      </div>`;
+  }
+
+  function renderMain() {
+    const main = document.getElementById("bk-main"); if (!main) return;
+    const header = `
       <div class="bk-tabs">
         <button class="bk-tab ${S.tab === "bases" ? "active" : ""}" data-tab="bases"><i class="ti ti-book-2"></i> Bases de conhecimento</button>
         <button class="bk-tab ${S.tab === "atalhos" ? "active" : ""}" data-tab="atalhos"><i class="ti ti-bolt"></i> Atalhos de comando</button>
@@ -421,7 +667,7 @@
         ${S.creatingAtalho ? novoAtalhoFormHtml() : '<button class="bk-dashed bk-wrap-full" data-newatalho="1"><i class="ti ti-plus"></i> Novo atalho de comando</button>'}
       </div>`;
     }
-    el.innerHTML = header + body;
+    main.innerHTML = header + body;
   }
 
   /* ---------- EVENTS ---------- */
@@ -438,6 +684,30 @@
   document.addEventListener("click", (e) => {
     const root = document.getElementById("s-base-conhecimento");
     if (!root || root.style.display === "none") return;
+
+    if (e.target.closest("#bk-search-input")) { abrirOpcoes(true); return; }
+    if (!e.target.closest("#bk-search")) abrirOpcoes(false);
+    if (e.target.closest("[data-pesq-buscar]")) { pesquisar(); return; }
+    if (e.target.closest("[data-pesq-fechar]")) { P.ativa = false; return render(); }
+    if (e.target.closest("[data-pesq-voltar]")) {
+      P.ativa = true;
+      const inp = document.getElementById("bk-search-input");
+      if (inp) inp.value = P.q;
+      render();
+      return;
+    }
+    const retry = e.target.closest("[data-pesq-retry]");
+    if (retry) { buscarFonte(retry.dataset.pesqRetry); return; }
+    if (e.target.closest("[data-pesq-ia-mais]")) { P.iaExpandida = !P.iaExpandida; renderBloco("ia"); return; }
+    const abrirBase = e.target.closest("[data-pesq-abrir-base]");
+    if (abrirBase) { e.preventDefault(); focarBase(abrirBase.dataset.pesqAbrirBase); return; }
+    const baseNome = e.target.closest("[data-pesq-base-nome]");
+    if (baseNome) {
+      const nome = baseNome.dataset.pesqBaseNome.trim().toLowerCase();
+      const alvo = S.bases.find((b) => (b.nome || "").trim().toLowerCase() === nome);
+      if (alvo) focarBase(alvo.id);
+      return;
+    }
 
     const tabBtn = e.target.closest("[data-tab]");
     if (tabBtn) { S.tab = tabBtn.dataset.tab; return render(); }
@@ -613,7 +883,20 @@
     throw new Error("Formatos aceitos hoje: .pdf, .txt, .md");
   }
 
+  document.addEventListener("keydown", (e) => {
+    if (e.target && e.target.id === "bk-search-input") {
+      if (e.key === "Enter") { e.preventDefault(); pesquisar(); }
+      else if (e.key === "Escape") abrirOpcoes(false);
+    }
+  });
+  document.addEventListener("focusin", (e) => {
+    if (e.target && e.target.id === "bk-search-input") abrirOpcoes(true);
+  });
+
   document.addEventListener("change", (e) => {
+    const fonte = e.target.closest && e.target.closest("[data-pesq-fonte]");
+    if (fonte) { alternarFonte(fonte.dataset.pesqFonte, fonte.checked); if (!P.ativa) renderPesquisa(); return; }
+
     const nfi = e.target.closest("[data-newbase-fileinput]");
     if (nfi) {
       const file = nfi.files && nfi.files[0];
@@ -651,15 +934,6 @@
     S.pendingFocusNome = null;
     const alvo = S.bases.find((b) => (b.nome || "").trim().toLowerCase() === String(nome).trim().toLowerCase());
     if (!alvo) return;
-    S.expandedBaseId = alvo.id;
-    render();
-    requestAnimationFrame(() => {
-      const toggle = document.querySelector(`[data-toggle-base="${alvo.id}"]`);
-      const card = toggle && toggle.closest(".cop-card");
-      if (!card) return;
-      card.scrollIntoView({ behavior: "smooth", block: "center" });
-      card.classList.add("bk-highlight");
-      setTimeout(() => card.classList.remove("bk-highlight"), 1600);
-    });
+    focarBase(alvo.id);
   }
 })();

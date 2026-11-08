@@ -66,6 +66,9 @@ import { Route as ApiIaGerarFluxoRouteImport } from './routes/api/ia/gerar-fluxo
 import { Route as ApiMedicamentosBuscarRouteImport } from './routes/api/medicamentos/buscar'
 import { Route as ApiMedicamentosSimplificarApresentacoesRouteImport } from './routes/api/medicamentos/simplificar-apresentacoes'
 import { Route as ApiPacientesMigrarRouteImport } from './routes/api/pacientes/migrar'
+import { Route as ApiPesquisaBaseRouteImport } from './routes/api/pesquisa/base'
+import { Route as ApiPesquisaIaRouteImport } from './routes/api/pesquisa/ia'
+import { Route as ApiPesquisaPubmedRouteImport } from './routes/api/pesquisa/pubmed'
 import { Route as ApiProtocolosAvaliarExameRouteImport } from './routes/api/protocolos/avaliar-exame'
 import { Route as ApiProtocolosDecidirRouteImport } from './routes/api/protocolos/decidir'
 import { Route as ApiProtocolosEstudioGerarIaRouteImport } from './routes/api/protocolos/estudio-gerar-ia'
@@ -417,6 +420,21 @@ const ApiMedicamentosSimplificarApresentacoesRoute =
 const ApiPacientesMigrarRoute = ApiPacientesMigrarRouteImport.update({
   id: '/api/pacientes/migrar',
   path: '/api/pacientes/migrar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPesquisaBaseRoute = ApiPesquisaBaseRouteImport.update({
+  id: '/api/pesquisa/base',
+  path: '/api/pesquisa/base',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPesquisaIaRoute = ApiPesquisaIaRouteImport.update({
+  id: '/api/pesquisa/ia',
+  path: '/api/pesquisa/ia',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPesquisaPubmedRoute = ApiPesquisaPubmedRouteImport.update({
+  id: '/api/pesquisa/pubmed',
+  path: '/api/pesquisa/pubmed',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiProtocolosAvaliarExameRoute =
@@ -778,6 +796,9 @@ export interface FileRoutesByFullPath {
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
   '/api/pacientes/migrar': typeof ApiPacientesMigrarRoute
+  '/api/pesquisa/base': typeof ApiPesquisaBaseRoute
+  '/api/pesquisa/ia': typeof ApiPesquisaIaRoute
+  '/api/pesquisa/pubmed': typeof ApiPesquisaPubmedRoute
   '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
   '/api/protocolos/decidir': typeof ApiProtocolosDecidirRoute
   '/api/protocolos/estudio-gerar-ia': typeof ApiProtocolosEstudioGerarIaRoute
@@ -891,6 +912,9 @@ export interface FileRoutesByTo {
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
   '/api/pacientes/migrar': typeof ApiPacientesMigrarRoute
+  '/api/pesquisa/base': typeof ApiPesquisaBaseRoute
+  '/api/pesquisa/ia': typeof ApiPesquisaIaRoute
+  '/api/pesquisa/pubmed': typeof ApiPesquisaPubmedRoute
   '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
   '/api/protocolos/decidir': typeof ApiProtocolosDecidirRoute
   '/api/protocolos/estudio-gerar-ia': typeof ApiProtocolosEstudioGerarIaRoute
@@ -1005,6 +1029,9 @@ export interface FileRoutesById {
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
   '/api/pacientes/migrar': typeof ApiPacientesMigrarRoute
+  '/api/pesquisa/base': typeof ApiPesquisaBaseRoute
+  '/api/pesquisa/ia': typeof ApiPesquisaIaRoute
+  '/api/pesquisa/pubmed': typeof ApiPesquisaPubmedRoute
   '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
   '/api/protocolos/decidir': typeof ApiProtocolosDecidirRoute
   '/api/protocolos/estudio-gerar-ia': typeof ApiProtocolosEstudioGerarIaRoute
@@ -1120,6 +1147,9 @@ export interface FileRouteTypes {
     | '/api/medicamentos/buscar'
     | '/api/medicamentos/simplificar-apresentacoes'
     | '/api/pacientes/migrar'
+    | '/api/pesquisa/base'
+    | '/api/pesquisa/ia'
+    | '/api/pesquisa/pubmed'
     | '/api/protocolos/avaliar-exame'
     | '/api/protocolos/decidir'
     | '/api/protocolos/estudio-gerar-ia'
@@ -1233,6 +1263,9 @@ export interface FileRouteTypes {
     | '/api/medicamentos/buscar'
     | '/api/medicamentos/simplificar-apresentacoes'
     | '/api/pacientes/migrar'
+    | '/api/pesquisa/base'
+    | '/api/pesquisa/ia'
+    | '/api/pesquisa/pubmed'
     | '/api/protocolos/avaliar-exame'
     | '/api/protocolos/decidir'
     | '/api/protocolos/estudio-gerar-ia'
@@ -1346,6 +1379,9 @@ export interface FileRouteTypes {
     | '/api/medicamentos/buscar'
     | '/api/medicamentos/simplificar-apresentacoes'
     | '/api/pacientes/migrar'
+    | '/api/pesquisa/base'
+    | '/api/pesquisa/ia'
+    | '/api/pesquisa/pubmed'
     | '/api/protocolos/avaliar-exame'
     | '/api/protocolos/decidir'
     | '/api/protocolos/estudio-gerar-ia'
@@ -1459,6 +1495,9 @@ export interface RootRouteChildren {
   ApiMedicamentosBuscarRoute: typeof ApiMedicamentosBuscarRoute
   ApiMedicamentosSimplificarApresentacoesRoute: typeof ApiMedicamentosSimplificarApresentacoesRoute
   ApiPacientesMigrarRoute: typeof ApiPacientesMigrarRoute
+  ApiPesquisaBaseRoute: typeof ApiPesquisaBaseRoute
+  ApiPesquisaIaRoute: typeof ApiPesquisaIaRoute
+  ApiPesquisaPubmedRoute: typeof ApiPesquisaPubmedRoute
   ApiProtocolosAvaliarExameRoute: typeof ApiProtocolosAvaliarExameRoute
   ApiProtocolosDecidirRoute: typeof ApiProtocolosDecidirRoute
   ApiProtocolosEstudioGerarIaRoute: typeof ApiProtocolosEstudioGerarIaRoute
@@ -1908,6 +1947,27 @@ declare module '@tanstack/react-router' {
       path: '/api/pacientes/migrar'
       fullPath: '/api/pacientes/migrar'
       preLoaderRoute: typeof ApiPacientesMigrarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/pesquisa/base': {
+      id: '/api/pesquisa/base'
+      path: '/api/pesquisa/base'
+      fullPath: '/api/pesquisa/base'
+      preLoaderRoute: typeof ApiPesquisaBaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/pesquisa/ia': {
+      id: '/api/pesquisa/ia'
+      path: '/api/pesquisa/ia'
+      fullPath: '/api/pesquisa/ia'
+      preLoaderRoute: typeof ApiPesquisaIaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/pesquisa/pubmed': {
+      id: '/api/pesquisa/pubmed'
+      path: '/api/pesquisa/pubmed'
+      fullPath: '/api/pesquisa/pubmed'
+      preLoaderRoute: typeof ApiPesquisaPubmedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/protocolos/avaliar-exame': {
@@ -2439,6 +2499,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMedicamentosSimplificarApresentacoesRoute:
     ApiMedicamentosSimplificarApresentacoesRoute,
   ApiPacientesMigrarRoute: ApiPacientesMigrarRoute,
+  ApiPesquisaBaseRoute: ApiPesquisaBaseRoute,
+  ApiPesquisaIaRoute: ApiPesquisaIaRoute,
+  ApiPesquisaPubmedRoute: ApiPesquisaPubmedRoute,
   ApiProtocolosAvaliarExameRoute: ApiProtocolosAvaliarExameRoute,
   ApiProtocolosDecidirRoute: ApiProtocolosDecidirRoute,
   ApiProtocolosEstudioGerarIaRoute: ApiProtocolosEstudioGerarIaRoute,

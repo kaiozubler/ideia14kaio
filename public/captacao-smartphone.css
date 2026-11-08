@@ -206,10 +206,10 @@
   height: 5px;
 }
 
-/* Botão "Smartphone" ao lado de Escutar */
-#movel-btn.live {
+/* Opção "Gravar pelo smartphone" no menu do Escutar */
+#movel-btn.live,
+#listen-caret.live {
   color: #059669;
-  border-color: rgba(16, 185, 129, 0.5);
 }
 
 @media (max-width: 520px) {

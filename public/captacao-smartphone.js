@@ -333,6 +333,8 @@
     var vivo = S.status === "conectado" || S.status === "pausado";
     var btn = document.getElementById("movel-btn");
     if (btn) btn.classList.toggle("live", vivo);
+    var caret = document.getElementById("listen-caret");
+    if (caret) caret.classList.toggle("live", vivo);
     var mini = medidorTransBar();
     if (mini) {
       mini.style.display = vivo ? "inline-flex" : "none";
