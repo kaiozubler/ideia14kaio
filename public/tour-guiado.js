@@ -120,6 +120,7 @@
     ]},
     'base-conhecimento':{nome:'Base de conhecimento',pronto:'#s-base-conhecimento .bk-tabs',passos:[
       {titulo:'Base de conhecimento',texto:'Materiais próprios que as IAs consultam ao responder.'},
+      {alvo:'#bk-search',titulo:'Pesquisa',texto:'Pesquise ao mesmo tempo na IA, nas suas bases e na literatura médica (PubMed, Cochrane, SciELO e outras). Clique no campo para escolher as fontes.'},
       {alvo:'#s-base-conhecimento .bk-tabs',titulo:'Bases e atalhos',texto:'Bases guardam documentos; atalhos são comandos de voz personalizados.'},
       {alvo:'#s-base-conhecimento [data-newbase]',titulo:'Nova base',texto:'Envie PDF, TXT ou cole texto e escolha quais IAs podem usá-la.'}
     ]},

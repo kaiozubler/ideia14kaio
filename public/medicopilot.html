@@ -253,7 +253,7 @@
 
                                                       /* EQUIPE (secretária/enfermagem): só agenda, kanban e cadastro do paciente */
                                                       body.papel-equipe #nav-conversas,body.papel-equipe #nav-receitas,body.papel-equipe #nav-protocolos,body.papel-equipe #nav-questionarios,
-                                                      body.papel-equipe #nav-faturamento,body.papel-equipe #nav-indicadores,body.papel-equipe #nav-mapa-familiar,body.papel-equipe #grp-ia,
+                                                      body.papel-equipe #nav-faturamento,body.papel-equipe #nav-indicadores,body.papel-equipe #nav-mapa-familiar,body.papel-equipe #nav-base-conhecimento,body.papel-equipe #grp-ia,
                                                       body.papel-equipe #global-atend-chip,body.papel-equipe #global-save-chip,body.papel-equipe .ia-assist-launcher,
                                                       body.papel-equipe #tabs-row .tab:not(:first-child),body.papel-equipe .pth-actions,body.papel-equipe #pth-video-banner,
                                                       body.papel-equipe .so-medico,body.papel-equipe #bulk-bar{display:none!important}
@@ -2228,7 +2228,7 @@
     <link rel="stylesheet" href="tema-escuro.css?v=2" />
     <script src="tema-escuro.js?v=2"></script>
     <link rel="stylesheet" href="tour-guiado.css?v=1" />
-    <script src="tour-guiado.js?v=1"></script>
+    <script src="tour-guiado.js?v=2"></script>
   </head>
   <body>
     <div id="toast" class="toast"></div>
@@ -2323,6 +2323,9 @@
           <div class="sb-item" id="nav-mapa-familiar" onclick="goScreen('mapa-familiar')">
             <i class="ti ti-affiliate"></i><span class="sb-lbl">Mapa Familiar</span>
           </div>
+          <div class="sb-item" id="nav-base-conhecimento" onclick="goScreen('base-conhecimento')">
+            <i class="ti ti-database"></i><span class="sb-lbl">Base de conhecimento</span>
+          </div>
           <div class="sb-group" id="grp-ia">
             <div class="sb-item" onclick="toggleIAGroup()">
               <i class="ti ti-robot"></i><span class="sb-lbl">Minhas IA's</span
@@ -2337,9 +2340,6 @@
               </div>
               <div class="sb-item" id="nav-copiloto" onclick="goScreen('copiloto')">
                 <i class="ti ti-stethoscope"></i><span class="sb-lbl">Copiloto de consulta</span>
-              </div>
-              <div class="sb-item" id="nav-base-conhecimento" onclick="goScreen('base-conhecimento')">
-                <i class="ti ti-database"></i><span class="sb-lbl">Base de conhecimento</span>
               </div>
             </div>
           </div>
@@ -6809,7 +6809,7 @@ if(!telaPermitidaPapel(name)){showToast('Área disponível apenas para o médico
                   if(name==='agendamento-online'&&typeof initAgendamentoOnline==='function')initAgendamentoOnline();
                                                               if(name!=='conversas'&&typeof pararConversas==='function')pararConversas();
                                                               if(name==='base-conhecimento'&&typeof initBaseConhecimento==='function')initBaseConhecimento();
-                                                              if(['secretaria','anamnese','copiloto','base-conhecimento'].includes(name)){
+                                                              if(['secretaria','anamnese','copiloto'].includes(name)){
                                                                 const g=document.getElementById('grp-ia');if(g)g.classList.add('open');
                                                               }
                                                               MCTour.aoEntrarNaTela(name);
