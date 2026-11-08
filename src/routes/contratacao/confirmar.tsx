@@ -203,7 +203,12 @@ function PaginaConfirmar() {
           )}
 
           <div className="mt-4 space-y-2">
-            <CampoCupom contratacaoId={pedido.contratacaoId} cupom={cupom} onChange={trocarCupom} />
+            <CampoCupom
+              cupom={cupom}
+              onChange={trocarCupom}
+              pronto={!!pedido.contratacaoId}
+              aplicar={(codigo) => aplicarCupomRemoto(pedido.contratacaoId!, codigo)}
+            />
             {avisoCupom && <p className="text-xs text-amber-700">{avisoCupom}</p>}
           </div>
         </div>

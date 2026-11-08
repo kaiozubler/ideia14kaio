@@ -77,15 +77,29 @@ export async function atualizarContratacaoRemota(
  * outras chamadas daqui, devolve o erro: o cliente precisa saber por que o
  * cupom não vale.
  */
-export async function aplicarCupomRemoto(
-  id: string,
-  codigo: string | null,
-): Promise<{ cupom: CupomDoPedido | null } | { erro: string }> {
+export function aplicarCupomRemoto(id: string, codigo: string | null): Promise<RespostaCupom> {
+  return chamarCupom({ id, codigo });
+}
+
+/** Só confere o cupom para um plano ainda não salvo (página /planos). Não grava nada. */
+export function previaCupomRemoto(
+  pedido: { plano: PlanoBaseId; config: ConfiguracaoPlano; ciclo: "mensal" | "anual" },
+  codigo: string,
+): Promise<RespostaCupom> {
+  return chamarCupom({
+    previa: { plano: pedido.plano, ...pedido.config, ciclo: pedido.ciclo },
+    codigo,
+  });
+}
+
+export type RespostaCupom = { cupom: CupomDoPedido | null } | { erro: string };
+
+async function chamarCupom(corpo: unknown): Promise<RespostaCupom> {
   try {
     const resp = await fetch("/api/contratacao/cupom", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, codigo }),
+      body: JSON.stringify(corpo),
     });
     const data = (await resp.json().catch(() => ({}))) as {
       cupom?: CupomDoPedido | null;

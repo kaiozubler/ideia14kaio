@@ -25,8 +25,10 @@ import {
   Workflow,
 } from "lucide-react";
 
+import { CampoCupom } from "@/components/contratacao/CampoCupom";
 import { ChatSuporte } from "@/components/suporte/ChatSuporte";
-import { salvarPedido } from "@/lib/contratacao/pedido";
+import { previaCupomRemoto } from "@/lib/contratacao/api";
+import { salvarPedido, type CupomDoPedido } from "@/lib/contratacao/pedido";
 import {
   COPILOTO_ATIVO_DESCRICAO,
   COPILOTO_ATIVO_TITULO,
@@ -264,6 +266,51 @@ function PaginaPlanos() {
   const precoMensal = precoDaConfiguracao(config, ancora);
   const precoExibido = ciclo === "anual" ? precoAnualEquivalenteMensal(precoMensal) : precoMensal;
 
+  // Cupom: conferido no servidor contra o plano montado aqui; ao mudar plano,
+  // franquias ou ciclo, é conferido de novo (e sai, com aviso, se não valer mais).
+  // Também chega por link: /planos?cupom=PRO20.
+  const [cupom, setCupom] = useState<CupomDoPedido | undefined>();
+  const [avisoCupom, setAvisoCupom] = useState<string | null>(null);
+  const codigoCupom = useRef<string | null>(null);
+  useEffect(() => {
+    const doLink = new URLSearchParams(window.location.search).get("cupom")?.trim();
+    if (doLink) codigoCupom.current = doLink.toUpperCase();
+  }, []);
+  useEffect(() => {
+    const codigo = codigoCupom.current;
+    if (!codigo || possuiItemPersonalizado(config)) return;
+    let cancelado = false;
+    const t = setTimeout(async () => {
+      const r = await previaCupomRemoto({ plano: ancoraId, config, ciclo }, codigo);
+      if (cancelado) return;
+      if ("erro" in r) {
+        codigoCupom.current = null;
+        setCupom(undefined);
+        setAvisoCupom(`O cupom ${codigo} saiu: ${r.erro}`);
+      } else {
+        setCupom(r.cupom ?? undefined);
+      }
+    }, 350);
+    return () => {
+      cancelado = true;
+      clearTimeout(t);
+    };
+  }, [ancoraId, config, ciclo]);
+
+  function trocarCupom(novo: CupomDoPedido | null) {
+    codigoCupom.current = novo?.codigo ?? null;
+    setAvisoCupom(null);
+    setCupom(novo ?? undefined);
+  }
+
+  const cupomValendo = cupom && !possuiItemPersonalizado(config) ? cupom : undefined;
+  const precoComCupom =
+    cupomValendo && cupomValendo.descontoMensal > 0
+      ? ciclo === "anual"
+        ? precoAnualEquivalenteMensal(cupomValendo.precoMensalComDesconto)
+        : cupomValendo.precoMensalComDesconto
+      : null;
+
   function precoDoPlanoExibido(plano: (typeof PLANOS_BASE)[number]): number {
     return ciclo === "anual" ? precoAnualEquivalenteMensal(plano.precoMensal) : plano.precoMensal;
   }
@@ -349,7 +396,8 @@ function PaginaPlanos() {
           diferenca: precoAlvoExibido - precoExibido,
           beneficios,
           aoConfirmar: () => {
-            salvarPedido({ plano: planoProximo.id, config: novoConfig, ciclo });
+            // O cupom vai junto e é conferido de novo para o plano novo em "Confirme seu plano".
+            salvarPedido({ plano: planoProximo.id, config: novoConfig, ciclo, cupom: cupomValendo });
             setAncoraId(planoProximo.id);
             setConfig(novoConfig);
             setModal(null);
@@ -367,7 +415,7 @@ function PaginaPlanos() {
   }
 
   function confirmarPagamento() {
-    salvarPedido({ plano: ancora.id, config, ciclo });
+    salvarPedido({ plano: ancora.id, config, ciclo, cupom: cupomValendo });
     navigate({ to: "/contratacao/confirmar" });
   }
 
@@ -723,15 +771,40 @@ function PaginaPlanos() {
                 <p className="text-xs text-slate-400">
                   Total {ciclo === "anual" ? "mensal (cobrado anual)" : "mensal"}
                 </p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-slate-800">{formatarPreco(precoExibido)}</span>
+                <div className="flex flex-wrap items-baseline gap-x-2">
+                  {precoComCupom !== null && (
+                    <span className="text-base text-slate-400 line-through">{formatarPreco(precoExibido)}</span>
+                  )}
+                  <span className="text-3xl font-bold text-slate-800">
+                    {formatarPreco(precoComCupom ?? precoExibido)}
+                  </span>
                   <span className="text-sm text-slate-400">/mês</span>
                 </div>
-                {ciclo === "anual" && (
+                {precoComCupom !== null && cupomValendo?.meses != null && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    Por {cupomValendo.meses === 1 ? "1 mês" : `${cupomValendo.meses} meses`}, depois{" "}
+                    {formatarPreco(precoExibido)}/mês
+                  </p>
+                )}
+                {ciclo === "anual" && precoComCupom === null && (
                   <p className="mt-1 text-xs text-emerald-600">
                     {formatarPreco(precoExibido * 12)}/ano · economia de {Math.round(DESCONTO_ANUAL * 100)}%
                   </p>
                 )}
+
+                <div className="mt-4 space-y-2">
+                  <CampoCupom
+                    sempreAberto
+                    cupom={cupomValendo}
+                    onChange={trocarCupom}
+                    aplicar={async (codigo) =>
+                      codigo === null
+                        ? { cupom: null }
+                        : previaCupomRemoto({ plano: ancoraId, config, ciclo }, codigo)
+                    }
+                  />
+                  {avisoCupom && <p className="text-xs text-amber-700">{avisoCupom}</p>}
+                </div>
               </>
             )}
 
@@ -838,7 +911,10 @@ function PaginaPlanos() {
               <span className="font-bold text-slate-800">Sob consulta</span>
             ) : (
               <>
-                <span className="font-bold text-slate-800">{formatarPreco(precoExibido)}</span>
+                {precoComCupom !== null && (
+                  <span className="mr-1.5 text-slate-400 line-through">{formatarPreco(precoExibido)}</span>
+                )}
+                <span className="font-bold text-slate-800">{formatarPreco(precoComCupom ?? precoExibido)}</span>
                 <span className="text-slate-400">/mês</span>
               </>
             )}
