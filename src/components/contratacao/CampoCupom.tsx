@@ -1,35 +1,44 @@
 import { useState } from "react";
 import { Loader2, Tag, X } from "lucide-react";
 
-import { aplicarCupomRemoto } from "@/lib/contratacao/api";
+import type { RespostaCupom } from "@/lib/contratacao/api";
 import type { CupomDoPedido } from "@/lib/contratacao/pedido";
 
-/** "Tem um cupom?" — confere no servidor e mostra o benefício aplicado. */
+/**
+ * Campo de cupom: confere no servidor (por `aplicar`) e mostra o benefício.
+ * `aplicar(null)` remove o cupom. Em /planos o campo já vem aberto; em
+ * "Confirme seu plano" fica atrás do link "Tem um cupom de desconto?".
+ */
 export function CampoCupom({
-  contratacaoId,
   cupom,
   onChange,
+  aplicar,
+  pronto = true,
+  sempreAberto = false,
 }: {
-  contratacaoId: string | undefined;
   cupom: CupomDoPedido | undefined;
   onChange: (cupom: CupomDoPedido | null) => void;
+  aplicar: (codigo: string | null) => Promise<RespostaCupom>;
+  /** false enquanto ainda não dá para conferir (ex.: contratação sendo criada). */
+  pronto?: boolean;
+  sempreAberto?: boolean;
 }) {
-  const [aberto, setAberto] = useState(false);
+  const [aberto, setAberto] = useState(sempreAberto);
   const [codigo, setCodigo] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
   async function enviar(novo: string | null) {
-    if (!contratacaoId) return;
+    if (!pronto) return;
     setEnviando(true);
     setErro(null);
-    const r = await aplicarCupomRemoto(contratacaoId, novo);
+    const r = await aplicar(novo);
     setEnviando(false);
     if ("erro" in r) return setErro(r.erro);
     onChange(r.cupom);
     if (r.cupom) {
       setCodigo("");
-      setAberto(false);
+      setAberto(sempreAberto);
     }
   }
 
@@ -80,9 +89,19 @@ export function CampoCupom({
       }}
       className="space-y-1.5"
     >
+      {sempreAberto && (
+        <label
+          htmlFor="campo-cupom"
+          className="flex items-center gap-1.5 text-xs font-semibold text-slate-500"
+        >
+          <Tag className="h-3.5 w-3.5" />
+          Cupom de desconto
+        </label>
+      )}
       <div className="flex gap-2">
         <input
-          autoFocus
+          id="campo-cupom"
+          autoFocus={!sempreAberto}
           value={codigo}
           onChange={(e) => setCodigo(e.target.value.toUpperCase().replace(/\s/g, ""))}
           placeholder="Digite o cupom"
@@ -93,7 +112,7 @@ export function CampoCupom({
         />
         <button
           type="submit"
-          disabled={!codigo.trim() || enviando || !contratacaoId}
+          disabled={!codigo.trim() || enviando || !pronto}
           style={{ borderRadius: "14px" }}
           className="bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
         >
@@ -101,7 +120,7 @@ export function CampoCupom({
         </button>
       </div>
       {erro && <p className="text-xs text-rose-600">{erro}</p>}
-      {!contratacaoId && <p className="text-xs text-slate-400">Preparando sua contratação…</p>}
+      {!pronto && <p className="text-xs text-slate-400">Preparando sua contratação…</p>}
     </form>
   );
 }
