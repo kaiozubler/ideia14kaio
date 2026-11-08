@@ -47,12 +47,34 @@ async function json<T>(url: string): Promise<T> {
 }
 
 /** Busca em inglês e, sem resultado, de novo com o texto original. */
+// A consulta em inglês sai na sintaxe do PubMed ("Migraine Disorders"[MeSH]).
+// Europe PMC aceita, mas os marcadores derrubam os resultados; o
+// ClinicalTrials.gov recusa com erro 400. Para essas fontes, só os termos e
+// os operadores AND/OR/NOT ficam.
+export function semMarcadoresPubmed(c: string): string {
+  return c
+    .replace(/\[[^\]]*\]/g, " ")
+    .replace(/\(\s*\)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Só as palavras, sem aspas, parênteses nem operadores: a última tentativa. */
+export function soPalavras(c: string): string {
+  return semMarcadoresPubmed(c)
+    .replace(/["()]/g, " ")
+    .replace(/\b(AND|OR|NOT)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 async function comConsultaEmIngles(
   q: string,
   buscar: (consulta: string) => Promise<Omit<RespostaFonte, "consulta">>,
+  adaptar: (consulta: string) => string = (c) => c,
 ): Promise<RespostaFonte> {
   const ingles = await consultaEmIngles(q);
-  let consulta = ingles || q;
+  let consulta = ingles ? adaptar(ingles) || q : q;
   let r = await buscar(consulta);
   if (!r.resultados.length && ingles && ingles !== q) {
     consulta = q;
@@ -132,49 +154,53 @@ function autoresCurtos(s: string | undefined) {
 }
 
 async function europepmc(q: string): Promise<RespostaFonte> {
-  return comConsultaEmIngles(q, async (consulta) => {
-    const d = await json<EuropePmc>(
-      `https://www.ebi.ac.uk/europepmc/webservices/rest/search?${new URLSearchParams({
-        query: consulta,
-        format: "json",
-        resultType: "core",
-        pageSize: String(LIMITE),
-      })}`,
-    );
-    const resultados = (d.resultList?.result ?? []).map((r): ResultadoExterno => {
-      const url = `https://europepmc.org/article/${r.source}/${r.id}`;
-      const preprint =
-        r.source === "PPR" || (r.pubTypeList?.pubType ?? []).some((t) => /preprint/i.test(t));
-      const selos = [
-        ...(r.isOpenAccess === "Y" ? ["Texto completo aberto"] : []),
-        ...(preprint ? ["Preprint (sem revisão por pares)"] : []),
-      ];
+  return comConsultaEmIngles(
+    q,
+    async (consulta) => {
+      const d = await json<EuropePmc>(
+        `https://www.ebi.ac.uk/europepmc/webservices/rest/search?${new URLSearchParams({
+          query: consulta,
+          format: "json",
+          resultType: "core",
+          pageSize: String(LIMITE),
+        })}`,
+      );
+      const resultados = (d.resultList?.result ?? []).map((r): ResultadoExterno => {
+        const url = `https://europepmc.org/article/${r.source}/${r.id}`;
+        const preprint =
+          r.source === "PPR" || (r.pubTypeList?.pubType ?? []).some((t) => /preprint/i.test(t));
+        const selos = [
+          ...(r.isOpenAccess === "Y" ? ["Texto completo aberto"] : []),
+          ...(preprint ? ["Preprint (sem revisão por pares)"] : []),
+        ];
+        return {
+          id: `${r.source}:${r.id}`,
+          codigo: r.pmid ? `PMID ${r.pmid}` : r.pmcid || r.id,
+          titulo: textoXml(r.title) || "(sem título)",
+          descricao: textoXml(r.abstractText).slice(0, 900) || "Resumo não disponível.",
+          origem: [r.journalInfo?.journal?.title || r.bookOrReportDetails?.publisher, r.pubYear]
+            .filter(Boolean)
+            .join(" · "),
+          autores: autoresCurtos(r.authorString),
+          url,
+          links: [
+            { rotulo: "Europe PMC", url },
+            ...(r.pmid
+              ? [{ rotulo: "PubMed", url: `https://pubmed.ncbi.nlm.nih.gov/${r.pmid}/` }]
+              : []),
+            ...(r.doi ? [{ rotulo: "Artigo (DOI)", url: `https://doi.org/${r.doi}` }] : []),
+          ],
+          selos,
+        };
+      });
       return {
-        id: `${r.source}:${r.id}`,
-        codigo: r.pmid ? `PMID ${r.pmid}` : r.pmcid || r.id,
-        titulo: textoXml(r.title) || "(sem título)",
-        descricao: textoXml(r.abstractText).slice(0, 900) || "Resumo não disponível.",
-        origem: [r.journalInfo?.journal?.title || r.bookOrReportDetails?.publisher, r.pubYear]
-          .filter(Boolean)
-          .join(" · "),
-        autores: autoresCurtos(r.authorString),
-        url,
-        links: [
-          { rotulo: "Europe PMC", url },
-          ...(r.pmid
-            ? [{ rotulo: "PubMed", url: `https://pubmed.ncbi.nlm.nih.gov/${r.pmid}/` }]
-            : []),
-          ...(r.doi ? [{ rotulo: "Artigo (DOI)", url: `https://doi.org/${r.doi}` }] : []),
-        ],
-        selos,
+        total: d.hitCount ?? resultados.length,
+        resultados,
+        ver_todos: `https://europepmc.org/search?query=${encodeURIComponent(consulta)}`,
       };
-    });
-    return {
-      total: d.hitCount ?? resultados.length,
-      resultados,
-      ver_todos: `https://europepmc.org/search?query=${encodeURIComponent(consulta)}`,
-    };
-  });
+    },
+    semMarcadoresPubmed,
+  );
 }
 
 /* ---------- SciELO Brasil ---------- */
@@ -280,52 +306,71 @@ const FASE: Record<string, string> = {
 };
 
 async function clinicaltrials(q: string): Promise<RespostaFonte> {
-  return comConsultaEmIngles(q, async (consulta) => {
-    const d = await json<CtGov>(
+  const buscar = (termo: string) =>
+    json<CtGov>(
       `https://clinicaltrials.gov/api/v2/studies?${new URLSearchParams({
-        "query.term": consulta,
+        "query.term": termo,
         pageSize: String(LIMITE),
         countTotal: "true",
         fields:
           "NCTId,BriefTitle,OverallStatus,StartDate,BriefSummary,LeadSponsorName,Phase,StudyType,LocationCountry",
       })}`,
     );
-    const resultados = (d.studies ?? []).map((s): ResultadoExterno => {
-      const p = s.protocolSection ?? {};
-      const nct = p.identificationModule?.nctId ?? "";
-      const url = `https://clinicaltrials.gov/study/${nct}`;
-      const fases = (p.designModule?.phases ?? [])
-        .map((f) => FASE[f])
-        .filter(Boolean)
-        .join("/");
-      const tipo =
-        p.designModule?.studyType === "OBSERVATIONAL" ? "Observacional" : "Intervencional";
-      const noBrasil = (p.contactsLocationsModule?.locations ?? []).some(
-        (l) => l.country === "Brazil",
-      );
-      const status = p.statusModule?.overallStatus ?? "UNKNOWN";
-      return {
-        id: nct,
-        codigo: nct,
-        titulo: p.identificationModule?.briefTitle || nct,
-        descricao:
-          (p.descriptionModule?.briefSummary ?? "").replace(/\s+/g, " ").trim().slice(0, 900) ||
-          "Resumo não disponível.",
-        origem: [tipo, fases, p.sponsorCollaboratorsModule?.leadSponsor?.name]
+  return comConsultaEmIngles(
+    q,
+    async (consulta) => {
+      let d: CtGov;
+      try {
+        d = await buscar(consulta);
+      } catch (err) {
+        // A sintaxe do ClinicalTrials.gov é mais restrita que a do PubMed: se ainda
+        // assim recusar a consulta, busca só pelas palavras.
+        const simples = soPalavras(consulta);
+        if (!simples || simples === consulta) throw err;
+        console.warn(
+          "[pesquisa/clinicaltrials] consulta recusada, tentando só as palavras:",
+          consulta,
+        );
+        d = await buscar(simples);
+      }
+      const resultados = (d.studies ?? []).map((s): ResultadoExterno => {
+        const p = s.protocolSection ?? {};
+        const nct = p.identificationModule?.nctId ?? "";
+        const url = `https://clinicaltrials.gov/study/${nct}`;
+        const fases = (p.designModule?.phases ?? [])
+          .map((f) => FASE[f])
           .filter(Boolean)
-          .join(" · "),
-        autores: "",
-        url,
-        links: [{ rotulo: "ClinicalTrials.gov", url }],
-        selos: [STATUS[status] ?? status, ...(noBrasil ? ["Centro no Brasil"] : [])],
+          .join("/");
+        const tipo =
+          p.designModule?.studyType === "OBSERVATIONAL" ? "Observacional" : "Intervencional";
+        const noBrasil = (p.contactsLocationsModule?.locations ?? []).some(
+          (l) => l.country === "Brazil",
+        );
+        const status = p.statusModule?.overallStatus ?? "UNKNOWN";
+        return {
+          id: nct,
+          codigo: nct,
+          titulo: p.identificationModule?.briefTitle || nct,
+          descricao:
+            (p.descriptionModule?.briefSummary ?? "").replace(/\s+/g, " ").trim().slice(0, 900) ||
+            "Resumo não disponível.",
+          origem: [tipo, fases, p.sponsorCollaboratorsModule?.leadSponsor?.name]
+            .filter(Boolean)
+            .join(" · "),
+          autores: "",
+          url,
+          links: [{ rotulo: "ClinicalTrials.gov", url }],
+          selos: [STATUS[status] ?? status, ...(noBrasil ? ["Centro no Brasil"] : [])],
+        };
+      });
+      return {
+        total: d.totalCount ?? resultados.length,
+        resultados,
+        ver_todos: `https://clinicaltrials.gov/search?term=${encodeURIComponent(consulta)}`,
       };
-    });
-    return {
-      total: d.totalCount ?? resultados.length,
-      resultados,
-      ver_todos: `https://clinicaltrials.gov/search?term=${encodeURIComponent(consulta)}`,
-    };
-  });
+    },
+    semMarcadoresPubmed,
+  );
 }
 
 export function pesquisarFonte(fonte: FonteExterna, q: string): Promise<RespostaFonte> {
