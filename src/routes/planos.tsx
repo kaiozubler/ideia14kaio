@@ -63,6 +63,10 @@ import {
 
 export const Route = createFileRoute("/planos")({
   ssr: false,
+  // `origem=cadastro` chega do app logo depois que a conta é criada: a conta
+  // nasce no FREE, então o card dele aparece como o plano atual, já marcado.
+  validateSearch: (search: Record<string, unknown>): { origem?: "cadastro" } =>
+    search.origem === "cadastro" ? { origem: "cadastro" } : {},
   head: () => ({
     meta: [
       { title: "Planos e preços | MediCopilot" },
@@ -232,15 +236,27 @@ function listarBeneficiosExtras(atual: ConfiguracaoPlano, alvo: (typeof PLANOS_B
   return itens;
 }
 
+/** Plano de entrada, fora de PLANOS_BASE porque não passa por contratação nem tem preço no servidor. */
+const ITENS_GRATUITO_INCLUIDOS = ["Receitas", "Atestados"];
+const ITENS_GRATUITO_FORA = [
+  "Prontuário, agenda e pacientes",
+  "Copiloto de IA e transcrição",
+  "WhatsApp, vídeo e equipe",
+];
+const URL_APP = "/medicopilot.html";
+
 function PaginaPlanos() {
   const navigate = useNavigate();
+  const { origem } = Route.useSearch();
+  const vemDoCadastro = origem === "cadastro";
+  const [gratuitoSelecionado, setGratuitoSelecionado] = useState(vemDoCadastro);
 
   const [ancoraId, setAncoraId] = useState<PlanoBaseId>("pro");
   const [config, setConfig] = useState<ConfiguracaoPlano>(
     configuracaoDoPlano(PLANOS_BASE.find((p) => p.id === "pro") ?? PLANO_PADRAO),
   );
   const [ciclo, setCiclo] = useState<Ciclo>("mensal");
-  const [jaEscolheu, setJaEscolheu] = useState(true);
+  const [jaEscolheu, setJaEscolheu] = useState(!vemDoCadastro);
   const [rolado, setRolado] = useState(false);
   const [modal, setModal] = useState<SugestaoPlano | null>(null);
 
@@ -320,6 +336,7 @@ function PaginaPlanos() {
     if (!plano) return;
     setAncoraId(id);
     setConfig(configuracaoDoPlano(plano));
+    setGratuitoSelecionado(false);
     setJaEscolheu(true);
     setModal(null);
     // Rola até o detalhamento da configuração escolhida.
@@ -329,6 +346,7 @@ function PaginaPlanos() {
   }
 
   function atualizarConfig(mudanca: Partial<ConfiguracaoPlano>) {
+    setGratuitoSelecionado(false);
     setJaEscolheu(true);
     const novo = { ...config, ...mudanca };
     setConfig(novo);
@@ -470,11 +488,18 @@ function PaginaPlanos() {
       <div className="relative mx-auto max-w-6xl px-4 pb-44 pt-14 md:px-8 md:pt-20">
         {/* Cabeçalho */}
         <div className="mx-auto max-w-2xl text-center">
+          {vemDoCadastro && (
+            <span className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+              <Check className="h-3.5 w-3.5" /> Conta criada
+            </span>
+          )}
           <h1 className="text-3xl font-bold tracking-tight text-slate-800 md:text-4xl">
-            Escolha o plano ideal para sua clínica
+            {vemDoCadastro ? "Você está no plano FREE" : "Escolha o plano ideal para sua clínica"}
           </h1>
           <p className="mt-3 text-slate-500">
-            Comece com o essencial e personalize conforme sua necessidade.
+            {vemDoCadastro
+              ? "Nele você cria receitas e atestados. Quer o sistema completo? Escolha um plano abaixo — ou continue no FREE e mude quando quiser."
+              : "Comece com o essencial e personalize conforme sua necessidade."}
           </p>
 
           <div className="mt-6 inline-flex items-center gap-1 rounded-full border border-white/80 bg-white/60 p-1 shadow-sm backdrop-blur-xl">
@@ -495,9 +520,14 @@ function PaginaPlanos() {
           <p className="mb-5 text-center text-xs font-semibold uppercase tracking-wider text-slate-400">
             Escolha como começar
           </p>
-          <div className="grid gap-5 md:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+            <CartaoGratuito
+              atual={vemDoCadastro}
+              selecionado={gratuitoSelecionado}
+              onEscolher={() => window.location.assign(vemDoCadastro ? URL_APP : `${URL_APP}?cadastro=1`)}
+            />
             {PLANOS_BASE.map((plano, indice) => {
-              const ativo = ancoraId === plano.id;
+              const ativo = !gratuitoSelecionado && ancoraId === plano.id;
               const planoComparacao = indice > 0 ? PLANOS_BASE[indice - 1] : plano;
               const preco =
                 ciclo === "anual" ? precoAnualEquivalenteMensal(plano.precoMensal) : plano.precoMensal;
@@ -723,7 +753,9 @@ function PaginaPlanos() {
             style={{ borderRadius: "32px" }}
             className="border border-white/80 bg-white/70 p-6 shadow-xl shadow-slate-200/50 backdrop-blur-xl lg:sticky lg:top-6"
           >
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Seu plano</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              {gratuitoSelecionado ? "Sugestão para você" : "Seu plano"}
+            </p>
             <div className="mt-1 flex items-center gap-2">
               <h3 className="text-xl font-bold text-slate-800">{ancora.nome}</h3>
               {ajustado && (
@@ -904,7 +936,8 @@ function PaginaPlanos() {
         ].join(" ")}
       >
         <div
-          className="pointer-events-auto flex items-center gap-4 rounded-full border border-white/80 bg-white/80 py-2.5 pl-6 pr-2.5 shadow-2xl shadow-slate-300/50 backdrop-blur-xl"
+          aria-hidden={!jaEscolheu}
+          className={`${jaEscolheu ? "pointer-events-auto" : "invisible"} flex items-center gap-4 rounded-full border border-white/80 bg-white/80 py-2.5 pl-6 pr-2.5 shadow-2xl shadow-slate-300/50 backdrop-blur-xl`}
         >
           <div className="text-sm">
             {precisaCotacao ? (
@@ -1001,6 +1034,68 @@ function PaginaPlanos() {
 // ---------------------------------------------------------------------------
 // Subcomponentes
 // ---------------------------------------------------------------------------
+
+function CartaoGratuito({
+  atual,
+  selecionado,
+  onEscolher,
+}: {
+  atual: boolean;
+  selecionado: boolean;
+  onEscolher: () => void;
+}) {
+  return (
+    <div
+      style={{ borderRadius: "32px" }}
+      aria-current={atual ? "true" : undefined}
+      className={[
+        "relative flex flex-col p-7 backdrop-blur-xl",
+        "border border-white/80 bg-white/60 shadow-xl shadow-slate-200/40",
+        selecionado ? "ring-2 ring-emerald-400 ring-offset-2 ring-offset-transparent" : "",
+      ].join(" ")}
+    >
+      {atual && (
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-white shadow">
+          Seu plano atual
+        </span>
+      )}
+
+      <h3 className="text-lg font-bold text-slate-800">FREE</h3>
+      <p className="mt-1 text-sm text-slate-500">Apenas criação de receitas e atestados.</p>
+
+      <div className="mt-5">
+        <div className="flex items-baseline gap-1">
+          <span className="text-3xl font-bold text-slate-800">{formatarPreco(0)}</span>
+          <span className="text-sm text-slate-400">/mês</span>
+        </div>
+        <span className="text-xs font-medium text-slate-400">sem cartão, sem prazo</span>
+      </div>
+
+      <ul className="mt-5 flex-1 space-y-2 text-sm text-slate-600">
+        {ITENS_GRATUITO_INCLUIDOS.map((item) => (
+          <ItemPlano key={item}>{item}</ItemPlano>
+        ))}
+        {ITENS_GRATUITO_FORA.map((item) => (
+          <ItemPlano key={item} icone="neutro">
+            <span className="text-slate-400">{item}</span>
+          </ItemPlano>
+        ))}
+      </ul>
+
+      <button
+        onClick={onEscolher}
+        className={[
+          "mt-6 rounded-2xl px-4 py-3 text-sm font-semibold transition-colors",
+          atual
+            ? "border border-slate-200 bg-white/80 text-slate-700 hover:bg-white"
+            : "bg-slate-800 text-white hover:bg-slate-900",
+        ].join(" ")}
+      >
+        {atual ? "Continuar no FREE" : "Começar grátis"}
+      </button>
+    </div>
+  );
+}
 
 function Blobs() {
   return (

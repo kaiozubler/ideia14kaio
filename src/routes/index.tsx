@@ -17,7 +17,9 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   useEffect(() => {
-    window.location.replace("/medicopilot.html");
+    // Mantém ?code= / #access_token= do link de confirmação de e-mail, senão o
+    // app abre deslogado e a conta nova não passa pela tela de planos.
+    window.location.replace(`/medicopilot.html${window.location.search}${window.location.hash}`);
   }, []);
 
   return null;
