@@ -46,7 +46,10 @@
           <button id="hist-clear" class="link-btn">Limpar todo o histórico</button>
         </div>
       </aside>
-      <div id="ctx" class="ctx">Contexto da tela: <span id="ctx-info">lendo…</span></div>
+      <div class="ctx-row">
+        <div id="ctx" class="ctx">Contexto da tela: <span id="ctx-info">lendo…</span></div>
+        <button id="ch-fill" class="fill-btn" type="button" title="A IA sugere valores para os campos desta página a partir da conversa e dos dados do médico/paciente. Você revisa antes de aplicar. Se houver texto na caixa de mensagem, ele vira uma instrução para o preenchimento.">✨ Preencher tela</button>
+      </div>
       <div id="msgs" class="msgs"></div>
       <div class="chips" id="ch-chips">
         <button class="chip" type="button" data-prompt="Agendar um paciente">📅 Agendar paciente</button>

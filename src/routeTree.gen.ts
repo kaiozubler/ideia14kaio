@@ -101,6 +101,7 @@ import { Route as ApiPublicDocumentosAbrirRouteImport } from './routes/api/publi
 import { Route as ApiPublicDocumentosIdentidadeRouteImport } from './routes/api/public/documentos/identidade'
 import { Route as ApiPublicExtensaoChatRouteImport } from './routes/api/public/extensao/chat'
 import { Route as ApiPublicExtensaoDeepgramTokenRouteImport } from './routes/api/public/extensao/deepgram-token'
+import { Route as ApiPublicExtensaoPreencherRouteImport } from './routes/api/public/extensao/preencher'
 import { Route as ApiPublicFormulariosCodigoRouteImport } from './routes/api/public/formularios/codigo'
 import { Route as ApiPublicFormulariosPublicoRouteImport } from './routes/api/public/formularios/publico'
 import { Route as ApiPublicFormulariosResponderRouteImport } from './routes/api/public/formularios/responder'
@@ -613,6 +614,12 @@ const ApiPublicExtensaoDeepgramTokenRoute =
     path: '/api/public/extensao/deepgram-token',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicExtensaoPreencherRoute =
+  ApiPublicExtensaoPreencherRouteImport.update({
+    id: '/api/public/extensao/preencher',
+    path: '/api/public/extensao/preencher',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicFormulariosCodigoRoute =
   ApiPublicFormulariosCodigoRouteImport.update({
     id: '/api/public/formularios/codigo',
@@ -837,6 +844,7 @@ export interface FileRoutesByFullPath {
   '/api/public/documentos/identidade': typeof ApiPublicDocumentosIdentidadeRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
+  '/api/public/extensao/preencher': typeof ApiPublicExtensaoPreencherRoute
   '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
   '/api/public/formularios/publico': typeof ApiPublicFormulariosPublicoRoute
   '/api/public/formularios/responder': typeof ApiPublicFormulariosResponderRoute
@@ -954,6 +962,7 @@ export interface FileRoutesByTo {
   '/api/public/documentos/identidade': typeof ApiPublicDocumentosIdentidadeRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
+  '/api/public/extensao/preencher': typeof ApiPublicExtensaoPreencherRoute
   '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
   '/api/public/formularios/publico': typeof ApiPublicFormulariosPublicoRoute
   '/api/public/formularios/responder': typeof ApiPublicFormulariosResponderRoute
@@ -1072,6 +1081,7 @@ export interface FileRoutesById {
   '/api/public/documentos/identidade': typeof ApiPublicDocumentosIdentidadeRoute
   '/api/public/extensao/chat': typeof ApiPublicExtensaoChatRoute
   '/api/public/extensao/deepgram-token': typeof ApiPublicExtensaoDeepgramTokenRoute
+  '/api/public/extensao/preencher': typeof ApiPublicExtensaoPreencherRoute
   '/api/public/formularios/codigo': typeof ApiPublicFormulariosCodigoRoute
   '/api/public/formularios/publico': typeof ApiPublicFormulariosPublicoRoute
   '/api/public/formularios/responder': typeof ApiPublicFormulariosResponderRoute
@@ -1191,6 +1201,7 @@ export interface FileRouteTypes {
     | '/api/public/documentos/identidade'
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
+    | '/api/public/extensao/preencher'
     | '/api/public/formularios/codigo'
     | '/api/public/formularios/publico'
     | '/api/public/formularios/responder'
@@ -1308,6 +1319,7 @@ export interface FileRouteTypes {
     | '/api/public/documentos/identidade'
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
+    | '/api/public/extensao/preencher'
     | '/api/public/formularios/codigo'
     | '/api/public/formularios/publico'
     | '/api/public/formularios/responder'
@@ -1425,6 +1437,7 @@ export interface FileRouteTypes {
     | '/api/public/documentos/identidade'
     | '/api/public/extensao/chat'
     | '/api/public/extensao/deepgram-token'
+    | '/api/public/extensao/preencher'
     | '/api/public/formularios/codigo'
     | '/api/public/formularios/publico'
     | '/api/public/formularios/responder'
@@ -1542,6 +1555,7 @@ export interface RootRouteChildren {
   ApiPublicDocumentosIdentidadeRoute: typeof ApiPublicDocumentosIdentidadeRoute
   ApiPublicExtensaoChatRoute: typeof ApiPublicExtensaoChatRoute
   ApiPublicExtensaoDeepgramTokenRoute: typeof ApiPublicExtensaoDeepgramTokenRoute
+  ApiPublicExtensaoPreencherRoute: typeof ApiPublicExtensaoPreencherRoute
   ApiPublicFormulariosCodigoRoute: typeof ApiPublicFormulariosCodigoRoute
   ApiPublicFormulariosPublicoRoute: typeof ApiPublicFormulariosPublicoRoute
   ApiPublicFormulariosResponderRoute: typeof ApiPublicFormulariosResponderRoute
@@ -2207,6 +2221,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensaoDeepgramTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/extensao/preencher': {
+      id: '/api/public/extensao/preencher'
+      path: '/api/public/extensao/preencher'
+      fullPath: '/api/public/extensao/preencher'
+      preLoaderRoute: typeof ApiPublicExtensaoPreencherRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/formularios/codigo': {
       id: '/api/public/formularios/codigo'
       path: '/api/public/formularios/codigo'
@@ -2554,6 +2575,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicDocumentosIdentidadeRoute: ApiPublicDocumentosIdentidadeRoute,
   ApiPublicExtensaoChatRoute: ApiPublicExtensaoChatRoute,
   ApiPublicExtensaoDeepgramTokenRoute: ApiPublicExtensaoDeepgramTokenRoute,
+  ApiPublicExtensaoPreencherRoute: ApiPublicExtensaoPreencherRoute,
   ApiPublicFormulariosCodigoRoute: ApiPublicFormulariosCodigoRoute,
   ApiPublicFormulariosPublicoRoute: ApiPublicFormulariosPublicoRoute,
   ApiPublicFormulariosResponderRoute: ApiPublicFormulariosResponderRoute,
