@@ -1,4 +1,4 @@
-/* Painel lateral: captura o conteúdo da tela ativa (somente leitura) e conversa
+/* Painel lateral: captura o conteúdo da tela ativa, preenche seus campos (após revisão do médico) e conversa
    com o assistente de IA do MediCopilot, que acessa o banco do sistema. */
 (() => {
   const { APP_URL, SUPABASE_URL, SUPABASE_KEY } = window.MC_CONFIG;
@@ -502,6 +502,306 @@
     },
   };
 
+  /* ---------- preenchimento da tela ----------
+     1) mapearCampos roda em cada frame da aba e marca os campos editáveis
+        visíveis com data-mc-campo; 2) o servidor devolve um valor sugerido
+        por campo; 3) o médico revisa e só então aplicarValores escreve na
+        página. Nada é enviado/submetido: o formulário continua nas mãos dele. */
+  function mapearCampos() {
+    const clean = (t) => (t || "").replace(/\s+/g, " ").trim();
+    const SENSIVEL = /senha|password|\bpin\b|token|captcha|cart[aã]o|card|cvv|cvc/i;
+    document.querySelectorAll("[data-mc-campo]").forEach((el) => {
+      el.removeAttribute("data-mc-campo");
+      el.removeAttribute("data-mc-opcao");
+    });
+    const visivel = (el) => {
+      const r = el.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && cs.display !== "none";
+    };
+    const rotuloDe = (el) => {
+      const porId = (ids) =>
+        clean((ids || "").split(/\s+/).map((id) => document.getElementById(id)?.innerText || "").join(" "));
+      let t =
+        clean(el.labels?.[0]?.innerText) ||
+        clean(el.getAttribute("aria-label")) ||
+        porId(el.getAttribute("aria-labelledby")) ||
+        clean(el.closest("label")?.innerText) ||
+        clean(el.getAttribute("title")) ||
+        clean(el.getAttribute("placeholder"));
+      if (!t) {
+        // Formulários sem <label>: texto logo antes do campo ou célula vizinha.
+        let p = el.previousElementSibling;
+        while (p && !clean(p.innerText)) p = p.previousElementSibling;
+        t = clean(p?.innerText);
+      }
+      if (!t) {
+        const td = el.closest("td");
+        t = clean(td?.previousElementSibling?.innerText);
+      }
+      return (t || clean(el.name) || clean(el.id) || "campo").slice(0, 200);
+    };
+
+    const campos = [];
+    let n = 0;
+    const radios = new Map();
+    const els = document.querySelectorAll('input, textarea, select, [contenteditable="true"], [contenteditable=""]');
+    for (const el of els) {
+      if (campos.length >= 120) break;
+      if (el.disabled || el.readOnly || !visivel(el)) continue;
+      const tag = el.tagName;
+      const tipo = tag === "INPUT" ? (el.type || "text").toLowerCase() : tag === "SELECT" ? "select" : tag === "TEXTAREA" ? "textarea" : "richtext";
+      if (["password", "hidden", "file", "submit", "button", "reset", "image", "range", "color"].includes(tipo)) continue;
+      if (el.getAttribute("autocomplete")?.startsWith("cc-")) continue;
+      if (tipo === "radio") {
+        const chave = el.name || "r" + n;
+        let g = radios.get(chave);
+        if (!g) {
+          const grupo = el.closest("fieldset");
+          g = {
+            id: "c" + n++,
+            rotulo: (clean(grupo?.querySelector("legend")?.innerText) || clean(el.name) || "opção").slice(0, 200),
+            tipo: "radio",
+            opcoes: [],
+            valor_atual: "",
+          };
+          radios.set(chave, g);
+          campos.push(g);
+        }
+        const op = rotuloDe(el);
+        if (g.opcoes.length >= 300) continue;
+        el.setAttribute("data-mc-campo", g.id);
+        el.setAttribute("data-mc-opcao", op);
+        g.opcoes.push(op);
+        if (el.checked) g.valor_atual = op;
+        continue;
+      }
+      const rotulo = rotuloDe(el);
+      if (SENSIVEL.test(rotulo) && !(/sus|cns|sa[uú]de|conv[eê]nio|plano|carteirinha|benefici[aá]rio/i.test(rotulo) && !/senha|password|cvv|cvc|token|captcha/i.test(rotulo))) continue;
+      const id = "c" + n++;
+      el.setAttribute("data-mc-campo", id);
+      const campo = { id, rotulo, tipo, obrigatorio: !!el.required };
+      if (tipo === "select") {
+        campo.opcoes = [...el.options].map((o) => clean(o.text).slice(0, 200)).filter(Boolean).slice(0, 300);
+        campo.valor_atual = clean(el.options[el.selectedIndex]?.text);
+      } else if (tipo === "checkbox") {
+        campo.valor_atual = el.checked ? "true" : "false";
+      } else if (tipo === "richtext") {
+        campo.valor_atual = clean(el.innerText).slice(0, 2000);
+      } else {
+        campo.valor_atual = String(el.value || "").slice(0, 2000);
+      }
+      campos.push(campo);
+    }
+    return campos;
+  }
+
+  function aplicarValores(itens) {
+    const anteriores = [];
+    const marcar = (el) => {
+      const antes = el.style.outline;
+      el.style.outline = "2px solid #10b981";
+      setTimeout(() => (el.style.outline = antes), 2500);
+    };
+    const disparar = (el) => {
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+    // Setter nativo: frameworks (React, Vue, Angular) ignoram el.value = x.
+    const setValor = (el, v) => {
+      const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : el.tagName === "SELECT" ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
+      Object.getOwnPropertyDescriptor(proto, "value").set.call(el, v);
+    };
+    for (const { id, valor } of itens) {
+      const els = [...document.querySelectorAll(`[data-mc-campo="${CSS.escape(id)}"]`)];
+      const el = els[0];
+      if (!el) continue;
+      try {
+        if (el.type === "radio") {
+          const atual = els.find((r) => r.checked);
+          const alvo = els.find((r) => r.getAttribute("data-mc-opcao") === valor);
+          if (!alvo) continue;
+          anteriores.push({ id, valor: atual?.getAttribute("data-mc-opcao") || "" });
+          if (!alvo.checked) alvo.click();
+          marcar(alvo);
+        } else if (el.type === "checkbox") {
+          anteriores.push({ id, valor: el.checked ? "true" : "false" });
+          if (el.checked !== (valor === "true")) el.click();
+          marcar(el);
+        } else if (el.tagName === "SELECT") {
+          const op = [...el.options].find((o) => o.text.replace(/\s+/g, " ").trim() === valor || o.value === valor);
+          if (!op) continue;
+          anteriores.push({ id, valor: el.options[el.selectedIndex]?.text.replace(/\s+/g, " ").trim() || "" });
+          setValor(el, op.value);
+          disparar(el);
+          marcar(el);
+        } else if (el.isContentEditable) {
+          anteriores.push({ id, valor: el.innerText });
+          el.focus();
+          document.execCommand("selectAll", false);
+          if (!document.execCommand("insertText", false, valor)) el.innerText = valor;
+          marcar(el);
+        } else {
+          anteriores.push({ id, valor: el.value });
+          el.focus();
+          setValor(el, valor);
+          disparar(el);
+          el.blur();
+          marcar(el);
+        }
+      } catch {}
+    }
+    return anteriores;
+  }
+
+  // Campos de todos os frames da aba, com id "<frameId>:<id local>".
+  async function camposDaAba(tabId) {
+    const res = await chrome.scripting.executeScript({ target: { tabId, allFrames: true }, func: mapearCampos });
+    const campos = [];
+    for (const r of res || []) {
+      for (const c of r.result || []) {
+        if (campos.length >= 150) break;
+        campos.push({ ...c, id: `${r.frameId}:${c.id}` });
+      }
+    }
+    return campos;
+  }
+
+  async function aplicarNaAba(tabId, itens) {
+    const porFrame = new Map();
+    for (const it of itens) {
+      const [frame, ...resto] = it.id.split(":");
+      const lista = porFrame.get(Number(frame)) || [];
+      lista.push({ id: resto.join(":"), valor: it.valor });
+      porFrame.set(Number(frame), lista);
+    }
+    const anteriores = [];
+    for (const [frameId, lista] of porFrame) {
+      try {
+        const [r] = await chrome.scripting.executeScript({ target: { tabId, frameIds: [frameId] }, func: aplicarValores, args: [lista] });
+        for (const a of r?.result || []) anteriores.push({ id: `${frameId}:${a.id}`, valor: a.valor });
+      } catch {}
+    }
+    return anteriores;
+  }
+
+  function cardRevisao(tabId, campos, sugestoes, pacienteIdentificado) {
+    const porId = new Map(campos.map((c) => [c.id, c]));
+    const div = document.createElement("div");
+    div.className = "bubble ia attachment";
+    const head = document.createElement("div");
+    head.className = "attachment-head";
+    head.innerHTML =
+      `<span class="attachment-icon">✨</span><div><div class="attachment-title">${sugestoes.length} campo(s) para preencher</div>` +
+      `<div class="attachment-sub">${pacienteIdentificado ? "Paciente encontrado no cadastro pelo CPF da tela." : "Paciente não identificado no cadastro — usei a conversa e a tela."} Revise antes de aplicar.</div></div>`;
+    div.appendChild(head);
+    const ul = document.createElement("ul");
+    ul.className = "fill-list";
+    sugestoes.forEach((s, i) => {
+      const li = document.createElement("li");
+      li.className = "fill-item";
+      const campo = porId.get(s.id);
+      li.innerHTML =
+        `<input type="checkbox" checked data-i="${i}" />` +
+        `<div><b>${escHtml(campo?.rotulo || s.id)}${campo?.valor_atual ? " (substitui: " + escHtml(campo.valor_atual.slice(0, 40)) + ")" : ""}</b>` +
+        `<span>${escHtml(s.valor)}</span></div>`;
+      ul.appendChild(li);
+    });
+    div.appendChild(ul);
+    const row = document.createElement("div");
+    row.className = "attachment-actions";
+    const aplicar = document.createElement("button");
+    aplicar.className = "attachment-btn";
+    aplicar.textContent = "Preencher selecionados";
+    const cancelar = document.createElement("button");
+    cancelar.className = "attachment-btn";
+    cancelar.textContent = "Descartar";
+    row.append(aplicar, cancelar);
+    div.appendChild(row);
+
+    cancelar.onclick = () => div.remove();
+    aplicar.onclick = async () => {
+      const escolhidos = [...ul.querySelectorAll("input:checked")].map((c) => sugestoes[Number(c.dataset.i)]);
+      if (!escolhidos.length) return;
+      aplicar.disabled = cancelar.disabled = true;
+      const anteriores = await aplicarNaAba(tabId, escolhidos);
+      ul.querySelectorAll("input").forEach((c) => (c.disabled = true));
+      row.innerHTML = "";
+      const ok = document.createElement("div");
+      ok.className = "attachment-sub";
+      ok.textContent =
+        anteriores.length === escolhidos.length
+          ? `✓ ${anteriores.length} campo(s) preenchido(s). Confira e salve na página.`
+          : `✓ ${anteriores.length} de ${escolhidos.length} campo(s) preenchido(s) — a página mudou desde a leitura; os demais não foram encontrados.`;
+      row.appendChild(ok);
+      if (anteriores.length) {
+        const desfazer = document.createElement("button");
+        desfazer.className = "attachment-btn";
+        desfazer.textContent = "Desfazer";
+        desfazer.onclick = async () => {
+          desfazer.disabled = true;
+          await aplicarNaAba(tabId, anteriores);
+          ok.textContent = "Valores anteriores restaurados.";
+          desfazer.remove();
+        };
+        row.appendChild(desfazer);
+      }
+    };
+    $("msgs").appendChild(div);
+    $("msgs").scrollTop = $("msgs").scrollHeight;
+  }
+
+  async function preencherTela() {
+    const token = await MC_AUTH.token();
+    if (!token) return showAuth("Sessão expirada. Entre novamente.");
+    const btn = $("ch-fill");
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) return;
+    const instrucao = $("ch-inp").value.trim();
+    if (instrucao) {
+      $("ch-inp").value = "";
+      autoResizeComposer();
+      bubble("user", "✨ Preencher a tela: " + instrucao);
+    }
+    btn.disabled = true;
+    const pending = bubble("assistant", "Lendo os campos da página…");
+    try {
+      let campos;
+      try {
+        campos = await camposDaAba(tab.id);
+      } catch {
+        return setBubbleText(pending, "Não consigo preencher esta aba (páginas internas do navegador e da loja de extensões são bloqueadas pelo Chrome).");
+      }
+      if (!campos.length) return setBubbleText(pending, "Não encontrei campos editáveis visíveis nesta página.");
+      setBubbleText(pending, `Encontrei ${campos.length} campo(s). Pensando no que preencher…`);
+      contexto = await lerTela();
+      const res = await fetch(`${APP_URL}/api/public/extensao/preencher`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ campos, messages: history.slice(-20), contexto_tela: contexto, instrucao: instrucao || undefined }),
+      });
+      if (res.status === 401) {
+        await MC_AUTH.clear();
+        return showAuth("Sessão expirada. Entre novamente.");
+      }
+      if (!(res.headers.get("content-type") || "").includes("application/json")) {
+        return setBubbleText(pending, "O preenchimento ainda não está disponível na versão publicada do app (" + APP_URL + ").");
+      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Falha na requisição");
+      const sugestoes = data.sugestoes || [];
+      if (!sugestoes.length) {
+        return setBubbleText(pending, "Não encontrei informação suficiente na conversa ou no cadastro para preencher estes campos. Converse sobre o paciente ou escreva uma instrução e tente de novo.");
+      }
+      pending.remove();
+      cardRevisao(tab.id, campos, sugestoes, !!data.paciente_identificado);
+    } catch (e) {
+      setBubbleText(pending, "Erro ao preparar o preenchimento: " + (e?.message || e));
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   /* ---------- envio ---------- */
   async function send(text) {
     const token = await MC_AUTH.token();
@@ -683,6 +983,7 @@
     showAuth("Você saiu da extensão.");
   };
   $("ch-mic").onclick = () => dgMic.toggle();
+  $("ch-fill").onclick = preencherTela;
   $("ch-chips").querySelectorAll(".chip").forEach((btn) => {
     btn.addEventListener("click", () => quickPrompt(btn.dataset.prompt));
   });

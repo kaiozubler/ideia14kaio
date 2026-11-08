@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
   "name": "MediCopilot — Assistente IA",
-  "version": "1.0.0",
-  "description": "Assistente clínico do MediCopilot: analisa os dados da tela e conversa com o assistente de IA do seu app.",
+  "version": "1.1.0",
+  "description": "Assistente clínico do MediCopilot: analisa e preenche os dados da tela e conversa com o assistente de IA do seu app.",
   "permissions": ["storage", "sidePanel", "scripting", "tabs", "audioCapture"],
   "host_permissions": ["<all_urls>"],
-  "version_name": "1.0.1",
+  "version_name": "1.1.0",
   "action": {
     "default_title": "Assistente MediCopilot",
     "default_icon": { "48": "icon.png", "128": "icon.png" }
