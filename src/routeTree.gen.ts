@@ -69,6 +69,7 @@ import { Route as ApiPacientesMigrarRouteImport } from './routes/api/pacientes/m
 import { Route as ApiPesquisaBaseRouteImport } from './routes/api/pesquisa/base'
 import { Route as ApiPesquisaIaRouteImport } from './routes/api/pesquisa/ia'
 import { Route as ApiPesquisaPubmedRouteImport } from './routes/api/pesquisa/pubmed'
+import { Route as ApiPesquisaTraduzirRouteImport } from './routes/api/pesquisa/traduzir'
 import { Route as ApiProtocolosAvaliarExameRouteImport } from './routes/api/protocolos/avaliar-exame'
 import { Route as ApiProtocolosDecidirRouteImport } from './routes/api/protocolos/decidir'
 import { Route as ApiProtocolosEstudioGerarIaRouteImport } from './routes/api/protocolos/estudio-gerar-ia'
@@ -437,6 +438,11 @@ const ApiPesquisaPubmedRoute = ApiPesquisaPubmedRouteImport.update({
   path: '/api/pesquisa/pubmed',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPesquisaTraduzirRoute = ApiPesquisaTraduzirRouteImport.update({
+  id: '/api/pesquisa/traduzir',
+  path: '/api/pesquisa/traduzir',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiProtocolosAvaliarExameRoute =
   ApiProtocolosAvaliarExameRouteImport.update({
     id: '/api/protocolos/avaliar-exame',
@@ -799,6 +805,7 @@ export interface FileRoutesByFullPath {
   '/api/pesquisa/base': typeof ApiPesquisaBaseRoute
   '/api/pesquisa/ia': typeof ApiPesquisaIaRoute
   '/api/pesquisa/pubmed': typeof ApiPesquisaPubmedRoute
+  '/api/pesquisa/traduzir': typeof ApiPesquisaTraduzirRoute
   '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
   '/api/protocolos/decidir': typeof ApiProtocolosDecidirRoute
   '/api/protocolos/estudio-gerar-ia': typeof ApiProtocolosEstudioGerarIaRoute
@@ -915,6 +922,7 @@ export interface FileRoutesByTo {
   '/api/pesquisa/base': typeof ApiPesquisaBaseRoute
   '/api/pesquisa/ia': typeof ApiPesquisaIaRoute
   '/api/pesquisa/pubmed': typeof ApiPesquisaPubmedRoute
+  '/api/pesquisa/traduzir': typeof ApiPesquisaTraduzirRoute
   '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
   '/api/protocolos/decidir': typeof ApiProtocolosDecidirRoute
   '/api/protocolos/estudio-gerar-ia': typeof ApiProtocolosEstudioGerarIaRoute
@@ -1032,6 +1040,7 @@ export interface FileRoutesById {
   '/api/pesquisa/base': typeof ApiPesquisaBaseRoute
   '/api/pesquisa/ia': typeof ApiPesquisaIaRoute
   '/api/pesquisa/pubmed': typeof ApiPesquisaPubmedRoute
+  '/api/pesquisa/traduzir': typeof ApiPesquisaTraduzirRoute
   '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
   '/api/protocolos/decidir': typeof ApiProtocolosDecidirRoute
   '/api/protocolos/estudio-gerar-ia': typeof ApiProtocolosEstudioGerarIaRoute
@@ -1150,6 +1159,7 @@ export interface FileRouteTypes {
     | '/api/pesquisa/base'
     | '/api/pesquisa/ia'
     | '/api/pesquisa/pubmed'
+    | '/api/pesquisa/traduzir'
     | '/api/protocolos/avaliar-exame'
     | '/api/protocolos/decidir'
     | '/api/protocolos/estudio-gerar-ia'
@@ -1266,6 +1276,7 @@ export interface FileRouteTypes {
     | '/api/pesquisa/base'
     | '/api/pesquisa/ia'
     | '/api/pesquisa/pubmed'
+    | '/api/pesquisa/traduzir'
     | '/api/protocolos/avaliar-exame'
     | '/api/protocolos/decidir'
     | '/api/protocolos/estudio-gerar-ia'
@@ -1382,6 +1393,7 @@ export interface FileRouteTypes {
     | '/api/pesquisa/base'
     | '/api/pesquisa/ia'
     | '/api/pesquisa/pubmed'
+    | '/api/pesquisa/traduzir'
     | '/api/protocolos/avaliar-exame'
     | '/api/protocolos/decidir'
     | '/api/protocolos/estudio-gerar-ia'
@@ -1498,6 +1510,7 @@ export interface RootRouteChildren {
   ApiPesquisaBaseRoute: typeof ApiPesquisaBaseRoute
   ApiPesquisaIaRoute: typeof ApiPesquisaIaRoute
   ApiPesquisaPubmedRoute: typeof ApiPesquisaPubmedRoute
+  ApiPesquisaTraduzirRoute: typeof ApiPesquisaTraduzirRoute
   ApiProtocolosAvaliarExameRoute: typeof ApiProtocolosAvaliarExameRoute
   ApiProtocolosDecidirRoute: typeof ApiProtocolosDecidirRoute
   ApiProtocolosEstudioGerarIaRoute: typeof ApiProtocolosEstudioGerarIaRoute
@@ -1968,6 +1981,13 @@ declare module '@tanstack/react-router' {
       path: '/api/pesquisa/pubmed'
       fullPath: '/api/pesquisa/pubmed'
       preLoaderRoute: typeof ApiPesquisaPubmedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/pesquisa/traduzir': {
+      id: '/api/pesquisa/traduzir'
+      path: '/api/pesquisa/traduzir'
+      fullPath: '/api/pesquisa/traduzir'
+      preLoaderRoute: typeof ApiPesquisaTraduzirRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/protocolos/avaliar-exame': {
@@ -2502,6 +2522,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPesquisaBaseRoute: ApiPesquisaBaseRoute,
   ApiPesquisaIaRoute: ApiPesquisaIaRoute,
   ApiPesquisaPubmedRoute: ApiPesquisaPubmedRoute,
+  ApiPesquisaTraduzirRoute: ApiPesquisaTraduzirRoute,
   ApiProtocolosAvaliarExameRoute: ApiProtocolosAvaliarExameRoute,
   ApiProtocolosDecidirRoute: ApiProtocolosDecidirRoute,
   ApiProtocolosEstudioGerarIaRoute: ApiProtocolosEstudioGerarIaRoute,

@@ -10,6 +10,10 @@ export type ArtigoPubmed = {
   ano: string;
   autores: string;
   url: string;
+  /** Link do DOI (editora) e do espelho Europe PMC: alternativas quando a
+   * verificação anti-robô do PubMed bloqueia o navegador do médico. */
+  doi: string | null;
+  europepmc: string;
 };
 
 function params(extra: Record<string, string>) {
@@ -59,6 +63,13 @@ function artigoDoXml(xml: string): ArtigoPubmed | null {
         : textoXml(primeiro(m[1], /<CollectiveName>([\s\S]*?)<\/CollectiveName>/));
     })
     .filter(Boolean);
+  // O DOI do próprio artigo: ELocationID ou o ArticleIdList que vem antes da
+  // lista de referências (que traz os DOIs dos artigos citados).
+  const doi =
+    textoXml(primeiro(xml, /<ELocationID[^>]*EIdType="doi"[^>]*>([\s\S]*?)<\/ELocationID>/)) ||
+    textoXml(
+      primeiro(xml.split(/<ReferenceList/)[0], /<ArticleId IdType="doi">([\s\S]*?)<\/ArticleId>/),
+    );
   const autores = nomes.length > 3 ? `${nomes.slice(0, 3).join(", ")} et al.` : nomes.join(", ");
   return {
     pmid,
@@ -68,6 +79,8 @@ function artigoDoXml(xml: string): ArtigoPubmed | null {
     ano,
     autores,
     url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
+    doi: doi ? `https://doi.org/${doi}` : null,
+    europepmc: `https://europepmc.org/article/MED/${pmid}`,
   };
 }
 
