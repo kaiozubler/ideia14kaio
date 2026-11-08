@@ -1599,6 +1599,8 @@ export type Database = {
           copiloto: number
           copiloto_ativo: boolean
           created_at: string
+          cupom_aplicado: Json | null
+          cupom_id: string | null
           dia_cobranca: number | null
           documento: string | null
           especialidade: string | null
@@ -1643,6 +1645,8 @@ export type Database = {
           copiloto: number
           copiloto_ativo?: boolean
           created_at?: string
+          cupom_aplicado?: Json | null
+          cupom_id?: string | null
           dia_cobranca?: number | null
           documento?: string | null
           especialidade?: string | null
@@ -1687,6 +1691,8 @@ export type Database = {
           copiloto?: number
           copiloto_ativo?: boolean
           created_at?: string
+          cupom_aplicado?: Json | null
+          cupom_id?: string | null
           dia_cobranca?: number | null
           documento?: string | null
           especialidade?: string | null
@@ -1717,7 +1723,15 @@ export type Database = {
           video?: number
           whatsapp?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contratacoes_cupom_id_fkey"
+            columns: ["cupom_id"]
+            isOneToOne: false
+            referencedRelation: "cupons"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       creditos_adicionais: {
         Row: {
@@ -1787,6 +1801,63 @@ export type Database = {
           criado_em?: string
           id?: string
           payload?: Json
+        }
+        Relationships: []
+      }
+      cupons: {
+        Row: {
+          ativo: boolean
+          ciclo: string | null
+          codigo: string
+          created_at: string
+          criado_por: string
+          descricao: string | null
+          duracao_meses: number | null
+          id: string
+          limite_usos: number | null
+          planos: string[]
+          recurso: string | null
+          tipo: string
+          updated_at: string
+          valido_ate: string | null
+          valido_de: string | null
+          valor: number
+        }
+        Insert: {
+          ativo?: boolean
+          ciclo?: string | null
+          codigo: string
+          created_at?: string
+          criado_por: string
+          descricao?: string | null
+          duracao_meses?: number | null
+          id?: string
+          limite_usos?: number | null
+          planos?: string[]
+          recurso?: string | null
+          tipo: string
+          updated_at?: string
+          valido_ate?: string | null
+          valido_de?: string | null
+          valor: number
+        }
+        Update: {
+          ativo?: boolean
+          ciclo?: string | null
+          codigo?: string
+          created_at?: string
+          criado_por?: string
+          descricao?: string | null
+          duracao_meses?: number | null
+          id?: string
+          limite_usos?: number | null
+          planos?: string[]
+          recurso?: string | null
+          tipo?: string
+          updated_at?: string
+          valido_ate?: string | null
+          valido_de?: string | null
+          valor?: number
         }
         Relationships: []
       }
