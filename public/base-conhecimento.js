@@ -388,7 +388,7 @@
   const FONTES = [
     { id: "ia", nome: "Conhecimento da IA", icon: "ti-sparkles" },
     { id: "base", nome: "Base de conhecimento", icon: "ti-book-2" },
-    { id: "pubmed", nome: "PubMed", icon: "ti-microscope" },
+    { id: "pubmed", nome: "PubMed", icon: "ti-microscope", idioma: "en" },
   ];
   const FONTES_KEY = "bk-pesquisa-fontes";
   function fontesSalvas() {
@@ -571,13 +571,19 @@
           <div class="bk-res-desc">${esc(r.descricao)}</div>
         </div>`).join("");
     } else {
-      corpo = itens.map((r) => `
+      const mapa = b.traduzido && b.traducao && b.traducao.mapa ? b.traducao.mapa : null;
+      corpo = itens.map((r) => {
+        const t = mapa && mapa[idDoItem(r)];
+        const ext = (href, txt) => href ? `<a href="${esc(href)}" target="_blank" rel="noopener">${txt}</a>` : "";
+        return `
         <div class="bk-res-item">
           <div class="bk-res-src"><i class="ti ti-microscope"></i> ${esc([r.revista, r.ano].filter(Boolean).join(" · ") || "PubMed")} <span class="bk-res-pmid">PMID ${esc(r.pmid)}</span></div>
-          <a class="bk-res-tit" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">${esc(r.titulo)}</a>
+          <a class="bk-res-tit" href="${esc(r.url)}" target="_blank" rel="noopener" ${t ? `title="${esc(r.titulo)}"` : ""}>${esc(t ? t.titulo : r.titulo)}</a>
           ${r.autores ? `<div class="bk-res-aut">${esc(r.autores)}</div>` : ""}
-          <div class="bk-res-desc">${esc(r.descricao)}</div>
-        </div>`).join("");
+          <div class="bk-res-desc">${esc(t ? t.descricao : r.descricao)}</div>
+          <div class="bk-res-links">${[ext(r.url, "PubMed"), ext(r.doi, "Artigo (DOI)"), ext(r.europepmc, "Europe PMC")].filter(Boolean).join('<span aria-hidden="true">·</span>')}</div>
+        </div>`;
+      }).join("");
     }
     let rodape = "";
     if (f === "pubmed" && b.estado === "ok" && d.consulta) {
@@ -589,10 +595,50 @@
     }
     const contagem = b.estado === "ok" && itens.length ? `<span class="bk-res-n">${itens.length}</span>` : "";
     const carregando = b.estado === "carregando" ? '<i class="ti ti-loader-2 bk-spin"></i>' : "";
+    let traduzir = "";
+    if (fonte.idioma === "en" && b.estado === "ok" && itens.length) {
+      const tr = b.traducao && b.traducao.estado;
+      traduzir = tr === "carregando"
+        ? '<span class="bk-traduzir carregando"><i class="ti ti-loader-2 bk-spin"></i> Traduzindo…</span>'
+        : `<button class="bk-traduzir" data-pesq-traduzir="${f}"><i class="ti ti-language"></i> ${b.traduzido ? "Ver original em inglês" : "Traduzir para português"}</button>`;
+      if (b.traduzido) traduzir = '<span class="bk-traduzido-tag">Tradução automática</span>' + traduzir;
+    }
     el.className = "bk-res-bloco";
     el.innerHTML = `
-      <div class="bk-res-fonte"><i class="ti ${fonte.icon}"></i> ${fonte.nome} ${contagem} ${carregando}</div>
+      <div class="bk-res-fonte"><i class="ti ${fonte.icon}"></i> ${fonte.nome} ${contagem} ${carregando}<span class="bk-res-fonte-acoes">${traduzir}</span></div>
       <div class="bk-res-lista">${corpo}</div>${rodape}`;
+  }
+
+  // Tradução dos resultados de portais em inglês: uma chamada para o bloco
+  // inteiro; o original fica guardado para alternar sem nova chamada.
+  const idDoItem = (r) => String(r.id || r.pmid);
+  async function traduzirBloco(f) {
+    const b = P.blocos[f];
+    if (!b || b.estado !== "ok") return;
+    if (b.traducao && b.traducao.estado === "ok") { b.traduzido = !b.traduzido; renderBloco(f); return; }
+    if (b.traducao && b.traducao.estado === "carregando") return;
+    b.traducao = { estado: "carregando" };
+    renderBloco(f);
+    const itens = (b.dados.resultados || []).slice(0, 10).map((r) => ({
+      id: idDoItem(r), titulo: String(r.titulo || "").slice(0, 600), descricao: String(r.descricao || "").slice(0, 1200),
+    }));
+    let traducao;
+    try {
+      const res = await authFetch("/api/pesquisa/traduzir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itens }) });
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok || !Array.isArray(dados.traducoes)) throw new Error(dados.error || "HTTP " + res.status);
+      const mapa = {};
+      for (const t of dados.traducoes) mapa[t.id] = t;
+      traducao = { estado: "ok", mapa };
+    } catch (err) {
+      console.error("[base-conhecimento] erro ao traduzir:", err);
+      traducao = { estado: "erro" };
+      notify("Não foi possível traduzir agora. Tente de novo.");
+    }
+    if (P.blocos[f] !== b) return; // nova busca ou fonte desmarcada
+    b.traducao = traducao;
+    b.traduzido = traducao.estado === "ok";
+    renderBloco(f);
   }
 
   function focarBase(id) {
@@ -696,6 +742,8 @@
       render();
       return;
     }
+    const trad = e.target.closest("[data-pesq-traduzir]");
+    if (trad) { traduzirBloco(trad.dataset.pesqTraduzir); return; }
     const retry = e.target.closest("[data-pesq-retry]");
     if (retry) { buscarFonte(retry.dataset.pesqRetry); return; }
     if (e.target.closest("[data-pesq-ia-mais]")) { P.iaExpandida = !P.iaExpandida; renderBloco("ia"); return; }
