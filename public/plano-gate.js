@@ -58,7 +58,7 @@
     bg.innerHTML =
       '<div class="mp-modal">' +
       "<h3>Recurso do plano pago</h3>" +
-      "<p>Essa área faz parte dos planos Basic, Pro ou Enterprise. Seu plano atual é o Free, com acesso a Receitas e Atestados.</p>" +
+      "<p>Essa área faz parte dos planos Basic, Pro ou Enterprise. Seu plano atual é o FREE, com acesso a Receitas e Atestados.</p>" +
       '<div class="mp-modal-actions">' +
       '<button class="mp-btn primary" id="pg-ver-planos">Ver planos e fazer upgrade</button>' +
       '<button class="mp-btn" id="pg-fechar">Fechar</button>' +
