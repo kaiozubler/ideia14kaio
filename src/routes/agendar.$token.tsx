@@ -12,6 +12,7 @@ import {
   Stethoscope,
   UserRound,
 } from "lucide-react";
+import { OBSERVACOES_MAX } from "@/lib/agendamento/disponibilidade";
 
 // Página PÚBLICA de agendamento (link gerado em Configurações › Agendamento
 // online). A lista de médicos e os horários vêm de /api/public/agendamento/*,
@@ -226,7 +227,7 @@ function AgendarPage() {
   const [recarregar, setRecarregar] = useState(0);
   const [data, setData] = useState<string | null>(null);
   const [horario, setHorario] = useState<Horario | null>(null);
-  const [form, setForm] = useState({ nome: "", cpf: "", telefone: "", email: "" });
+  const [form, setForm] = useState({ nome: "", cpf: "", telefone: "", email: "", observacoes: "" });
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
   const [confirmado, setConfirmado] = useState(false);
@@ -558,6 +559,22 @@ function AgendarPage() {
                           value={form.email}
                           onChange={(e) => setForm({ ...form, email: e.target.value })}
                         />
+                      </label>
+                      <label className="text-sm font-medium text-slate-600">
+                        Objetivo da consulta ou informações para a clínica (opcional)
+                        <textarea
+                          rows={3}
+                          maxLength={OBSERVACOES_MAX}
+                          placeholder="Ex.: primeira consulta, retorno para mostrar exames, preciso de atestado…"
+                          className={`${inputCls} mt-1 resize-y`}
+                          value={form.observacoes}
+                          onChange={(e) =>
+                            setForm({ ...form, observacoes: e.target.value.replace(/[<>]/g, "") })
+                          }
+                        />
+                        <span className="mt-1 block text-right text-xs font-normal text-slate-400">
+                          {form.observacoes.length}/{OBSERVACOES_MAX}
+                        </span>
                       </label>
                       <p className="text-xs text-slate-500">
                         Seus dados serão usados por {clinica.nome} para registrar e confirmar esta

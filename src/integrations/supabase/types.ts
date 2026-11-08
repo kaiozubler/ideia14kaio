@@ -5251,6 +5251,7 @@ export type Database = {
           p_ip_hash: string
           p_medico_id: string
           p_nome: string
+          p_observacoes?: string
           p_telefone: string
           p_token: string
         }

@@ -65,6 +65,7 @@
 .ak-menu-btn:hover{background:#f1f5f9;color:#334155}
 .ak-rows{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:8px;font-size:10.5px;color:#64748b}
 .ak-rows .ti{font-size:12px;margin-right:3px;vertical-align:-1px}
+.ak-rows .ak-obs{flex-basis:100%;color:#475569;font-style:italic;overflow-wrap:anywhere}
 .ak-badges{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:8px}
 .ak-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;font-variant-numeric:tabular-nums}
 .ak-badge .ti{font-size:11px}
