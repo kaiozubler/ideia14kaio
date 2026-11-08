@@ -67,8 +67,8 @@ import { Route as ApiMedicamentosBuscarRouteImport } from './routes/api/medicame
 import { Route as ApiMedicamentosSimplificarApresentacoesRouteImport } from './routes/api/medicamentos/simplificar-apresentacoes'
 import { Route as ApiPacientesMigrarRouteImport } from './routes/api/pacientes/migrar'
 import { Route as ApiPesquisaBaseRouteImport } from './routes/api/pesquisa/base'
+import { Route as ApiPesquisaFonteRouteImport } from './routes/api/pesquisa/fonte'
 import { Route as ApiPesquisaIaRouteImport } from './routes/api/pesquisa/ia'
-import { Route as ApiPesquisaPubmedRouteImport } from './routes/api/pesquisa/pubmed'
 import { Route as ApiPesquisaTraduzirRouteImport } from './routes/api/pesquisa/traduzir'
 import { Route as ApiProtocolosAvaliarExameRouteImport } from './routes/api/protocolos/avaliar-exame'
 import { Route as ApiProtocolosDecidirRouteImport } from './routes/api/protocolos/decidir'
@@ -428,14 +428,14 @@ const ApiPesquisaBaseRoute = ApiPesquisaBaseRouteImport.update({
   path: '/api/pesquisa/base',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPesquisaFonteRoute = ApiPesquisaFonteRouteImport.update({
+  id: '/api/pesquisa/fonte',
+  path: '/api/pesquisa/fonte',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPesquisaIaRoute = ApiPesquisaIaRouteImport.update({
   id: '/api/pesquisa/ia',
   path: '/api/pesquisa/ia',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPesquisaPubmedRoute = ApiPesquisaPubmedRouteImport.update({
-  id: '/api/pesquisa/pubmed',
-  path: '/api/pesquisa/pubmed',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPesquisaTraduzirRoute = ApiPesquisaTraduzirRouteImport.update({
@@ -803,8 +803,8 @@ export interface FileRoutesByFullPath {
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
   '/api/pacientes/migrar': typeof ApiPacientesMigrarRoute
   '/api/pesquisa/base': typeof ApiPesquisaBaseRoute
+  '/api/pesquisa/fonte': typeof ApiPesquisaFonteRoute
   '/api/pesquisa/ia': typeof ApiPesquisaIaRoute
-  '/api/pesquisa/pubmed': typeof ApiPesquisaPubmedRoute
   '/api/pesquisa/traduzir': typeof ApiPesquisaTraduzirRoute
   '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
   '/api/protocolos/decidir': typeof ApiProtocolosDecidirRoute
@@ -920,8 +920,8 @@ export interface FileRoutesByTo {
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
   '/api/pacientes/migrar': typeof ApiPacientesMigrarRoute
   '/api/pesquisa/base': typeof ApiPesquisaBaseRoute
+  '/api/pesquisa/fonte': typeof ApiPesquisaFonteRoute
   '/api/pesquisa/ia': typeof ApiPesquisaIaRoute
-  '/api/pesquisa/pubmed': typeof ApiPesquisaPubmedRoute
   '/api/pesquisa/traduzir': typeof ApiPesquisaTraduzirRoute
   '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
   '/api/protocolos/decidir': typeof ApiProtocolosDecidirRoute
@@ -1038,8 +1038,8 @@ export interface FileRoutesById {
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
   '/api/pacientes/migrar': typeof ApiPacientesMigrarRoute
   '/api/pesquisa/base': typeof ApiPesquisaBaseRoute
+  '/api/pesquisa/fonte': typeof ApiPesquisaFonteRoute
   '/api/pesquisa/ia': typeof ApiPesquisaIaRoute
-  '/api/pesquisa/pubmed': typeof ApiPesquisaPubmedRoute
   '/api/pesquisa/traduzir': typeof ApiPesquisaTraduzirRoute
   '/api/protocolos/avaliar-exame': typeof ApiProtocolosAvaliarExameRoute
   '/api/protocolos/decidir': typeof ApiProtocolosDecidirRoute
@@ -1157,8 +1157,8 @@ export interface FileRouteTypes {
     | '/api/medicamentos/simplificar-apresentacoes'
     | '/api/pacientes/migrar'
     | '/api/pesquisa/base'
+    | '/api/pesquisa/fonte'
     | '/api/pesquisa/ia'
-    | '/api/pesquisa/pubmed'
     | '/api/pesquisa/traduzir'
     | '/api/protocolos/avaliar-exame'
     | '/api/protocolos/decidir'
@@ -1274,8 +1274,8 @@ export interface FileRouteTypes {
     | '/api/medicamentos/simplificar-apresentacoes'
     | '/api/pacientes/migrar'
     | '/api/pesquisa/base'
+    | '/api/pesquisa/fonte'
     | '/api/pesquisa/ia'
-    | '/api/pesquisa/pubmed'
     | '/api/pesquisa/traduzir'
     | '/api/protocolos/avaliar-exame'
     | '/api/protocolos/decidir'
@@ -1391,8 +1391,8 @@ export interface FileRouteTypes {
     | '/api/medicamentos/simplificar-apresentacoes'
     | '/api/pacientes/migrar'
     | '/api/pesquisa/base'
+    | '/api/pesquisa/fonte'
     | '/api/pesquisa/ia'
-    | '/api/pesquisa/pubmed'
     | '/api/pesquisa/traduzir'
     | '/api/protocolos/avaliar-exame'
     | '/api/protocolos/decidir'
@@ -1508,8 +1508,8 @@ export interface RootRouteChildren {
   ApiMedicamentosSimplificarApresentacoesRoute: typeof ApiMedicamentosSimplificarApresentacoesRoute
   ApiPacientesMigrarRoute: typeof ApiPacientesMigrarRoute
   ApiPesquisaBaseRoute: typeof ApiPesquisaBaseRoute
+  ApiPesquisaFonteRoute: typeof ApiPesquisaFonteRoute
   ApiPesquisaIaRoute: typeof ApiPesquisaIaRoute
-  ApiPesquisaPubmedRoute: typeof ApiPesquisaPubmedRoute
   ApiPesquisaTraduzirRoute: typeof ApiPesquisaTraduzirRoute
   ApiProtocolosAvaliarExameRoute: typeof ApiProtocolosAvaliarExameRoute
   ApiProtocolosDecidirRoute: typeof ApiProtocolosDecidirRoute
@@ -1969,18 +1969,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPesquisaBaseRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/pesquisa/fonte': {
+      id: '/api/pesquisa/fonte'
+      path: '/api/pesquisa/fonte'
+      fullPath: '/api/pesquisa/fonte'
+      preLoaderRoute: typeof ApiPesquisaFonteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/pesquisa/ia': {
       id: '/api/pesquisa/ia'
       path: '/api/pesquisa/ia'
       fullPath: '/api/pesquisa/ia'
       preLoaderRoute: typeof ApiPesquisaIaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/pesquisa/pubmed': {
-      id: '/api/pesquisa/pubmed'
-      path: '/api/pesquisa/pubmed'
-      fullPath: '/api/pesquisa/pubmed'
-      preLoaderRoute: typeof ApiPesquisaPubmedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/pesquisa/traduzir': {
@@ -2520,8 +2520,8 @@ const rootRouteChildren: RootRouteChildren = {
     ApiMedicamentosSimplificarApresentacoesRoute,
   ApiPacientesMigrarRoute: ApiPacientesMigrarRoute,
   ApiPesquisaBaseRoute: ApiPesquisaBaseRoute,
+  ApiPesquisaFonteRoute: ApiPesquisaFonteRoute,
   ApiPesquisaIaRoute: ApiPesquisaIaRoute,
-  ApiPesquisaPubmedRoute: ApiPesquisaPubmedRoute,
   ApiPesquisaTraduzirRoute: ApiPesquisaTraduzirRoute,
   ApiProtocolosAvaliarExameRoute: ApiProtocolosAvaliarExameRoute,
   ApiProtocolosDecidirRoute: ApiProtocolosDecidirRoute,

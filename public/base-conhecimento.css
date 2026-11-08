@@ -93,7 +93,9 @@
 .bk-search-opts{position:absolute;left:0;right:0;top:calc(100% + 8px);padding:14px 16px;background:#fff;border:0.5px solid var(--n150);border-radius:18px;box-shadow:0 12px 32px rgba(15,23,42,.12)}
 .bk-search-opts[hidden]{display:none}
 .bk-search-opts-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--n400);margin-bottom:8px;font-weight:600}
-.bk-fontes{display:flex;gap:8px;flex-wrap:wrap}
+.bk-fontes{display:flex;flex-direction:column;gap:10px}
+.bk-fontes-grupo-nome{font-size:11px;color:var(--n500);font-weight:600;margin-bottom:6px}
+.bk-fontes-lista{display:flex;gap:8px;flex-wrap:wrap}
 .bk-fonte{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:999px;font-size:12px;font-weight:600;border:0.5px solid var(--n150);background:rgba(255,255,255,.7);color:var(--n500);cursor:pointer;user-select:none}
 .bk-fonte input{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
 .bk-fonte.on{background:#f5f3ff;border-color:#ddd6fe;color:#7c3aed}
@@ -151,3 +153,11 @@
 .bk-res-links{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;font-size:11.5px;color:var(--n400)}
 .bk-res-links a{color:#7c3aed;text-decoration:none;font-weight:600}
 .bk-res-links a:hover{text-decoration:underline}
+
+/* Selos dos resultados externos (status do estudo, Brasil, preprint…). */
+.bk-res-origem{overflow:hidden;text-overflow:ellipsis}
+.bk-selos{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+.bk-selo{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(148,163,184,.14);color:var(--n500)}
+.bk-selo.br{background:#ecfdf5;color:#047857}
+.bk-selo.ok{background:#eff6ff;color:#1d4ed8}
+.bk-selo.aviso{background:#fffbeb;color:#92400e}
