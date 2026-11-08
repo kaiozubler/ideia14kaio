@@ -385,10 +385,17 @@
   /* ---------- PESQUISA ---------- */
   // Cada fonte é buscada e desenhada no seu próprio bloco (#bk-res-<id>), então
   // um bloco que demora (IA, PubMed) não segura os outros nem a tela.
+  // `externa`: buscada em /api/pesquisa/fonte e desenhada pelo bloco genérico.
+  // `idioma`: idioma esperado dos resultados (null = misto, detectado por item).
+  // `padrao`: marcada para quem nunca mexeu no seletor.
   const FONTES = [
-    { id: "ia", nome: "Conhecimento da IA", icon: "ti-sparkles" },
-    { id: "base", nome: "Base de conhecimento", icon: "ti-book-2" },
-    { id: "pubmed", nome: "PubMed", icon: "ti-microscope", idioma: "en" },
+    { id: "ia", nome: "Conhecimento da IA", icon: "ti-sparkles", grupo: "Suas fontes", padrao: true },
+    { id: "base", nome: "Base de conhecimento", icon: "ti-book-2", grupo: "Suas fontes", padrao: true },
+    { id: "pubmed", nome: "PubMed", icon: "ti-microscope", grupo: "Literatura científica", externa: true, idioma: "en", padrao: true },
+    { id: "cochrane", nome: "Cochrane (revisões sistemáticas)", icon: "ti-scale", grupo: "Literatura científica", externa: true, idioma: "en", padrao: true },
+    { id: "scielo", nome: "SciELO Brasil", icon: "ti-books", grupo: "Literatura científica", externa: true, idioma: null, padrao: true },
+    { id: "europepmc", nome: "Europe PMC", icon: "ti-world", grupo: "Literatura científica", externa: true, idioma: "en", padrao: false },
+    { id: "clinicaltrials", nome: "ClinicalTrials.gov", icon: "ti-flask", grupo: "Estudos clínicos", externa: true, idioma: "en", padrao: false },
   ];
   const FONTES_KEY = "bk-pesquisa-fontes";
   function fontesSalvas() {
@@ -396,7 +403,7 @@
       const v = JSON.parse(localStorage.getItem(FONTES_KEY) || "null");
       if (Array.isArray(v)) return v.filter((f) => FONTES.some((x) => x.id === f));
     } catch (_) { /* sem storage: usa o padrão */ }
-    return FONTES.map((f) => f.id);
+    return FONTES.filter((f) => f.padrao).map((f) => f.id);
   }
   const P = { q: "", fontes: fontesSalvas(), ativa: false, blocos: {}, tok: {}, n: 0, iaExpandida: false };
 
@@ -414,8 +421,9 @@
     const tok = (P.tok[f] = ++P.n);
     P.blocos[f] = { estado: "carregando" };
     renderBloco(f);
-    const url = { ia: "/api/pesquisa/ia", base: "/api/pesquisa/base", pubmed: "/api/pesquisa/pubmed" }[f];
-    const body = f === "ia" ? { q: P.q, usar_base: P.fontes.includes("base") } : { q: P.q };
+    const externa = FONTES.some((x) => x.id === f && x.externa);
+    const url = externa ? "/api/pesquisa/fonte" : f === "ia" ? "/api/pesquisa/ia" : "/api/pesquisa/base";
+    const body = externa ? { fonte: f, q: P.q } : f === "ia" ? { q: P.q, usar_base: P.fontes.includes("base") } : { q: P.q };
     let bloco;
     try {
       const res = await authFetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -465,7 +473,7 @@
         <div class="bk-search-bar">
           <i class="ti ti-search bk-search-ico"></i>
           <input id="bk-search-input" class="bk-search-input" type="search" autocomplete="off"
-            placeholder="Pesquise na IA, nas suas bases e no PubMed" aria-label="Pesquisar" />
+            placeholder="Pesquise na IA, nas suas bases e na literatura médica" aria-label="Pesquisar" />
           <button class="bk-search-btn" data-pesq-buscar="1" title="Pesquisar"><i class="ti ti-arrow-right"></i></button>
         </div>
         <div class="bk-search-opts" id="bk-search-opts" hidden>
@@ -478,14 +486,19 @@
   }
 
   function fontesHtml() {
-    return FONTES.map((f) => {
-      const on = P.fontes.includes(f.id);
-      return `<label class="bk-fonte ${on ? "on" : ""}">
-        <input type="checkbox" data-pesq-fonte="${f.id}" ${on ? "checked" : ""} />
-        <i class="ti ${on ? "ti-square-check-filled" : "ti-square"} bk-fonte-check"></i>
-        <i class="ti ${f.icon}"></i> ${f.nome}
-      </label>`;
-    }).join("");
+    const grupos = Array.from(new Set(FONTES.map((f) => f.grupo)));
+    return grupos.map((g) => `
+      <div class="bk-fontes-grupo">
+        <div class="bk-fontes-grupo-nome">${esc(g)}</div>
+        <div class="bk-fontes-lista">${FONTES.filter((f) => f.grupo === g).map((f) => {
+          const on = P.fontes.includes(f.id);
+          return `<label class="bk-fonte ${on ? "on" : ""}">
+            <input type="checkbox" data-pesq-fonte="${f.id}" ${on ? "checked" : ""} />
+            <i class="ti ${on ? "ti-square-check-filled" : "ti-square"} bk-fonte-check"></i>
+            <i class="ti ${f.icon}"></i> ${f.nome}
+          </label>`;
+        }).join("")}</div>
+      </div>`).join("");
   }
 
   function renderPesquisa() {
@@ -559,10 +572,11 @@
 
     const d = b.dados || {};
     const itens = d.resultados || [];
+    const ondeVazio = f === "base" ? "nas suas bases" : "em " + fonte.nome;
     let corpo;
     if (b.estado === "carregando") corpo = [0, 1, 2].map(() => `<div class="bk-res-item">${skeleton(3)}</div>`).join("");
-    else if (b.estado === "erro") corpo = erroHtml(f, f === "pubmed" ? "O PubMed não respondeu agora." : "Não foi possível pesquisar nas suas bases.");
-    else if (!itens.length) corpo = `<div class="bk-empty">Nada encontrado ${f === "base" ? "nas suas bases" : "no PubMed"} para esta pesquisa.</div>`;
+    else if (b.estado === "erro") corpo = erroHtml(f, f === "base" ? "Não foi possível pesquisar nas suas bases." : fonte.nome + " não respondeu agora.");
+    else if (!itens.length) corpo = `<div class="bk-empty">Nada encontrado ${ondeVazio} para esta pesquisa.</div>`;
     else if (f === "base") {
       corpo = itens.map((r) => `
         <div class="bk-res-item">
@@ -573,35 +587,37 @@
     } else {
       const mapa = b.traduzido && b.traducao && b.traducao.mapa ? b.traducao.mapa : null;
       corpo = itens.map((r) => {
-        const t = mapa && mapa[idDoItem(r)];
-        const ext = (href, txt) => href ? `<a href="${esc(href)}" target="_blank" rel="noopener">${txt}</a>` : "";
+        const t = mapa && mapa[r.id];
+        const links = (r.links || []).map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.rotulo)}</a>`).join('<span aria-hidden="true">·</span>');
+        const selos = (r.selos || []).map((x) => `<span class="bk-selo ${/Brasil/.test(x) ? "br" : /Recrutando/.test(x) ? "ok" : /Preprint/.test(x) ? "aviso" : ""}">${esc(x)}</span>`).join("");
         return `
         <div class="bk-res-item">
-          <div class="bk-res-src"><i class="ti ti-microscope"></i> ${esc([r.revista, r.ano].filter(Boolean).join(" · ") || "PubMed")} <span class="bk-res-pmid">PMID ${esc(r.pmid)}</span></div>
+          <div class="bk-res-src"><i class="ti ${fonte.icon}"></i> <span class="bk-res-origem">${esc(r.origem || fonte.nome)}</span>${r.codigo ? ` <span class="bk-res-pmid">${esc(r.codigo)}</span>` : ""}</div>
           <a class="bk-res-tit" href="${esc(r.url)}" target="_blank" rel="noopener" ${t ? `title="${esc(r.titulo)}"` : ""}>${esc(t ? t.titulo : r.titulo)}</a>
           ${r.autores ? `<div class="bk-res-aut">${esc(r.autores)}</div>` : ""}
+          ${selos ? `<div class="bk-selos">${selos}</div>` : ""}
           <div class="bk-res-desc">${esc(t ? t.descricao : r.descricao)}</div>
-          <div class="bk-res-links">${[ext(r.url, "PubMed"), ext(r.doi, "Artigo (DOI)"), ext(r.europepmc, "Europe PMC")].filter(Boolean).join('<span aria-hidden="true">·</span>')}</div>
+          ${links ? `<div class="bk-res-links">${links}</div>` : ""}
         </div>`;
       }).join("");
     }
     let rodape = "";
-    if (f === "pubmed" && b.estado === "ok" && d.consulta) {
-      const link = "https://pubmed.ncbi.nlm.nih.gov/?term=" + encodeURIComponent(d.consulta);
+    if (fonte.externa && b.estado === "ok" && (d.consulta || d.ver_todos)) {
+      const todos = d.total > itens.length ? "Ver todos os " + Number(d.total).toLocaleString("pt-BR") + " resultados" : "Ver em " + fonte.nome;
       rodape = `<div class="bk-res-rod">
-        ${d.consulta !== P.q ? `<span>Pesquisado em inglês como: <em>${esc(d.consulta)}</em></span>` : "<span></span>"}
-        ${itens.length ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer">Ver ${d.total > itens.length ? "todos os " + Number(d.total).toLocaleString("pt-BR") + " resultados" : "no PubMed"} <i class="ti ti-external-link"></i></a>` : ""}
+        ${d.consulta && d.consulta !== P.q ? `<span>Pesquisado em inglês como: <em>${esc(d.consulta)}</em></span>` : "<span></span>"}
+        ${itens.length && d.ver_todos ? `<a href="${esc(d.ver_todos)}" target="_blank" rel="noopener">${todos} <i class="ti ti-external-link"></i></a>` : ""}
       </div>`;
     }
     const contagem = b.estado === "ok" && itens.length ? `<span class="bk-res-n">${itens.length}</span>` : "";
     const carregando = b.estado === "carregando" ? '<i class="ti ti-loader-2 bk-spin"></i>' : "";
     let traduzir = "";
-    if (fonte.idioma === "en" && b.estado === "ok" && itens.length) {
+    if (fonte.externa && b.estado === "ok" && itens.length) {
       const tr = b.traducao && b.traducao.estado;
       traduzir = tr === "carregando"
         ? '<span class="bk-traduzir carregando"><i class="ti ti-loader-2 bk-spin"></i> Traduzindo…</span>'
-        : `<button class="bk-traduzir" data-pesq-traduzir="${f}"><i class="ti ti-language"></i> ${b.traduzido ? "Ver original em inglês" : "Traduzir para português"}</button>`;
-      if (b.traduzido) traduzir = '<span class="bk-traduzido-tag">Tradução automática</span>' + traduzir;
+        : `<button class="bk-traduzir" data-pesq-traduzir="${f}"><i class="ti ti-language"></i> ${b.traduzido ? "Ver original" : "Traduzir para português"}</button>`;
+      if (b.traduzido) traduzir = `<span class="bk-traduzido-tag">${{ navegador: "Traduzido pelo navegador", misto: "Traduzido pelo navegador e por IA" }[b.traducao.via] || "Traduzido por IA"}</span>` + traduzir;
     }
     el.className = "bk-res-bloco";
     el.innerHTML = `
@@ -609,27 +625,100 @@
       <div class="bk-res-lista">${corpo}</div>${rodape}`;
   }
 
-  // Tradução dos resultados de portais em inglês: uma chamada para o bloco
-  // inteiro; o original fica guardado para alternar sem nova chamada.
-  const idDoItem = (r) => String(r.id || r.pmid);
+  // Tradução dos resultados das fontes externas. Primeiro o tradutor embutido
+  // do navegador (Translator API do Chrome: roda no computador, sem custo);
+  // o que ele não traduzir vai para /api/pesquisa/traduzir (Gemini). Uma
+  // chamada por bloco; o original fica guardado para alternar sem nova chamada.
+  // A API do navegador pode ficar sem responder (modelo baixando, aba em
+  // segundo plano); toda etapa tem limite e, estourado, cai no Gemini.
+  const comLimite = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("tempo esgotado")), ms))]);
+  const tradutores = {};
+  async function tradutorDoNavegador(origem) {
+    if (!("Translator" in self) || !origem || origem === "pt") return null;
+    if (!tradutores[origem]) {
+      tradutores[origem] = (async () => {
+        const disp = await comLimite(self.Translator.availability({ sourceLanguage: origem, targetLanguage: "pt" }), 3000);
+        if (disp === "unavailable") return null;
+        return comLimite(self.Translator.create({ sourceLanguage: origem, targetLanguage: "pt" }), disp === "available" ? 5000 : 15000);
+      })().catch((err) => { console.warn("[base-conhecimento] tradutor do navegador indisponível:", err); return null; });
+    }
+    const t = await tradutores[origem];
+    if (!t) delete tradutores[origem]; // tenta de novo numa próxima vez (ex.: modelo ainda baixando)
+    return t;
+  }
+
+  let detector = null;
+  async function idiomaDe(texto, padrao) {
+    if ("LanguageDetector" in self) {
+      try {
+        if (!detector) detector = comLimite(self.LanguageDetector.create(), 3000);
+        const [melhor] = await comLimite((await detector).detect(texto), 2000);
+        if (melhor && melhor.confidence > 0.6) return melhor.detectedLanguage.split("-")[0];
+      } catch (_) { detector = null; }
+    }
+    if (padrao) return padrao;
+    // Sem detector: contagem simples de palavras típicas de cada idioma.
+    const t = " " + texto.toLowerCase().replace(/[^a-zà-ÿ\s]/g, " ") + " ";
+    const conta = (ws) => ws.reduce((n, w) => n + (t.split(" " + w + " ").length - 1), 0);
+    const pt = conta(["de", "da", "do", "das", "dos", "em", "para", "com", "não", "uma", "os", "as", "foi", "são"]);
+    const es = conta(["el", "los", "las", "del", "con", "para", "una", "fue", "son", "y"]);
+    const en = conta(["the", "of", "and", "in", "with", "for", "was", "were", "is", "to"]);
+    if (en > pt && en > es) return "en";
+    if (es > pt) return "es";
+    return "pt";
+  }
+
+  async function traduzirNoNavegador(itens) {
+    const mapa = {}; const pendentes = []; const falhou = new Set();
+    for (const it of itens) {
+      const tradutor = falhou.has(it.idioma) ? null : await tradutorDoNavegador(it.idioma);
+      if (!tradutor) falhou.add(it.idioma);
+      if (!tradutor) { pendentes.push(it); continue; }
+      try {
+        const [titulo, descricao] = await comLimite(Promise.all([tradutor.translate(it.titulo), tradutor.translate(it.descricao)]), 10000);
+        mapa[it.id] = { id: it.id, titulo, descricao };
+      } catch (err) {
+        console.warn("[base-conhecimento] tradução no navegador falhou:", err);
+        falhou.add(it.idioma);
+        pendentes.push(it);
+      }
+    }
+    return { mapa, pendentes };
+  }
+
   async function traduzirBloco(f) {
     const b = P.blocos[f];
     if (!b || b.estado !== "ok") return;
     if (b.traducao && b.traducao.estado === "ok") { b.traduzido = !b.traduzido; renderBloco(f); return; }
     if (b.traducao && b.traducao.estado === "carregando") return;
+    const fonte = FONTES.find((x) => x.id === f);
     b.traducao = { estado: "carregando" };
     renderBloco(f);
-    const itens = (b.dados.resultados || []).slice(0, 10).map((r) => ({
-      id: idDoItem(r), titulo: String(r.titulo || "").slice(0, 600), descricao: String(r.descricao || "").slice(0, 1200),
-    }));
     let traducao;
     try {
-      const res = await authFetch("/api/pesquisa/traduzir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itens }) });
-      const dados = await res.json().catch(() => ({}));
-      if (!res.ok || !Array.isArray(dados.traducoes)) throw new Error(dados.error || "HTTP " + res.status);
-      const mapa = {};
-      for (const t of dados.traducoes) mapa[t.id] = t;
-      traducao = { estado: "ok", mapa };
+      const todos = await Promise.all((b.dados.resultados || []).slice(0, 10).map(async (r) => ({
+        id: String(r.id), titulo: String(r.titulo || "").slice(0, 600), descricao: String(r.descricao || "").slice(0, 1200),
+        idioma: await idiomaDe(`${r.titulo} ${r.descricao}`, fonte.idioma),
+      })));
+      const itens = todos.filter((it) => it.idioma !== "pt");
+      if (!itens.length) {
+        traducao = { estado: "nada" };
+        notify("Estes resultados já estão em português.");
+      } else {
+        const { mapa, pendentes } = await traduzirNoNavegador(itens);
+        let via = pendentes.length < itens.length ? "navegador" : "ia";
+        if (pendentes.length) {
+          const res = await authFetch("/api/pesquisa/traduzir", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ itens: pendentes.map(({ id, titulo, descricao }) => ({ id, titulo, descricao })) }),
+          });
+          const dados = await res.json().catch(() => ({}));
+          if (!res.ok || !Array.isArray(dados.traducoes)) throw new Error(dados.error || "HTTP " + res.status);
+          for (const t of dados.traducoes) mapa[t.id] = t;
+          if (via === "navegador") via = "misto";
+        }
+        traducao = { estado: "ok", mapa, via };
+      }
     } catch (err) {
       console.error("[base-conhecimento] erro ao traduzir:", err);
       traducao = { estado: "erro" };

@@ -23,7 +23,7 @@ function params(extra: Record<string, string>) {
 }
 
 const ENTIDADES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
-function textoXml(s: string | undefined): string {
+export function textoXml(s: string | undefined): string {
   return (s ?? "")
     .replace(/<[^>]+>/g, "")
     .replace(/&(#x[0-9a-f]+|#\d+|\w+);/gi, (m, e: string) => {
@@ -84,11 +84,11 @@ function artigoDoXml(xml: string): ArtigoPubmed | null {
   };
 }
 
-async function comTempo(url: string, ms: number) {
+export async function comTempo(url: string, ms: number, init?: RequestInit) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
   try {
-    return await fetch(url, { signal: ctrl.signal });
+    return await fetch(url, { ...init, signal: ctrl.signal });
   } finally {
     clearTimeout(t);
   }
