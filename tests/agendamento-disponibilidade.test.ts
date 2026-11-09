@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   calcularHorariosLivres,
+  confirmacaoTrocaValida,
   cpfValido,
   especialidadePublica,
   nomeValido,
@@ -137,4 +138,12 @@ test("observações são opcionais, limitadas e sem marcação", () => {
   assert.equal(observacoesValidas("a".repeat(500)), true);
   assert.equal(observacoesValidas("a".repeat(501)), false);
   assert.equal(observacoesValidas("<script>alert(1)</script>"), false);
+});
+
+test("trocar o link exige a frase exata", () => {
+  assert.equal(confirmacaoTrocaValida("TROCAR LINK"), true);
+  assert.equal(confirmacaoTrocaValida("  trocar link "), true);
+  assert.equal(confirmacaoTrocaValida("trocar"), false);
+  assert.equal(confirmacaoTrocaValida(""), false);
+  assert.equal(confirmacaoTrocaValida(undefined), false);
 });

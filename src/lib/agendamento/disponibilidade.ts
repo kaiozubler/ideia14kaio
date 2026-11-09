@@ -129,6 +129,17 @@ export function observacoesValidas(valor: string | null | undefined) {
   return texto.length <= OBSERVACOES_MAX && !/[<>]/.test(texto);
 }
 
+export const FRASE_TROCA_LINK = "TROCAR LINK";
+
+/** Frase digitada para gerar um novo link (sem diferenciar maiúsculas). */
+export function confirmacaoTrocaValida(valor: string | null | undefined) {
+  return (
+    String(valor ?? "")
+      .trim()
+      .toUpperCase() === FRASE_TROCA_LINK
+  );
+}
+
 /** Res. CFM 2.336/2023: especialidade só é anunciada junto do RQE. */
 export function especialidadePublica(especialidade: string | null, rqe: string | null) {
   const esp = especialidade?.trim();

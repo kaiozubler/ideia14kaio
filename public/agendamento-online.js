@@ -32,8 +32,16 @@
   function toast(msg, tipo) {
     if (typeof window.showToast === "function") window.showToast(msg, tipo);
   }
+  // O link vai para pacientes sem conta: aponta sempre para o site publicado,
+  // porque os domínios de edição/preview do Lovable exigem login (mesma regra
+  // de publicOrigin em questionarios.js).
+  var SITE_PUBLICO = "https://medicopilot.lovable.app";
+  function origemPublica() {
+    var o = location.origin || "";
+    return /lovableproject\.com|lovable\.dev|id-preview--|--?dev\.lovable\.app|localhost|127\.0\.0\.1/i.test(o) ? SITE_PUBLICO : o;
+  }
   function linkPublico() {
-    return cfg ? location.origin + "/agendar/" + cfg.token : "";
+    return cfg ? origemPublica() + "/agendar/" + cfg.token : "";
   }
   function copiaGrade(g) {
     return JSON.parse(JSON.stringify(g || {}));
@@ -230,14 +238,111 @@
     }
   }
 
+  var FRASE_TROCA = "TROCAR LINK";
+  var ERROS_TROCA = {
+    senha_incorreta: "Senha incorreta.",
+    senha_obrigatoria: "Informe sua senha.",
+    email_incorreto: "O e-mail não é o desta conta.",
+    confirmacao_invalida: "Digite " + FRASE_TROCA + " para confirmar.",
+    somente_medico: "Só o médico responsável pode gerar um novo link.",
+  };
+
+  // Troca do link: aviso de que todos os links anteriores param, frase de
+  // confirmação e senha (ou e-mail, em conta só do Google). A senha é
+  // conferida no servidor, em /api/agendamento/novo-link.
   async function novoLink() {
-    if (!confirm("Gerar um novo link? O link atual deixa de funcionar na hora.")) return;
-    var res = await window.sb.rpc("agenda_online_novo_link");
-    if (res.error) return toast("Não foi possível gerar o link: " + res.error.message, "error");
-    cfg.token = res.data;
-    render();
-    toast("Novo link gerado", "success");
+    var sess = await window.sb.auth.getSession();
+    var user = sess.data && sess.data.session ? sess.data.session.user : null;
+    if (!user) return toast("Sessão expirada. Entre de novo.", "error");
+    var temSenha =
+      (user.identities || []).some(function (i) {
+        return i.provider === "email";
+      }) || ((user.app_metadata || {}).providers || []).indexOf("email") >= 0;
+
+    var fundo = document.createElement("div");
+    fundo.className = "ao-modal-fundo";
+    fundo.innerHTML =
+      '<div class="ao-modal" role="dialog" aria-modal="true" aria-labelledby="ao-troca-titulo">' +
+      '<h2 id="ao-troca-titulo"><i class="ti ti-alert-triangle"></i> Gerar um novo link?</h2>' +
+      '<div class="ao-alerta"><b>Todos os links anteriores param de funcionar na hora.</b> ' +
+      "Quem abrir o link antigo — no site da clínica, no Instagram, em mensagens já enviadas — verá que o agendamento está indisponível. " +
+      "Você vai precisar trocar o link em todos esses lugares. As consultas já marcadas continuam valendo.</div>" +
+      '<p class="ao-ajuda">Para só pausar o agendamento, desligue a chave <b>Ativo</b> em vez de trocar o link.</p>' +
+      '<label class="ao-check"><input type="checkbox" id="ao-troca-ciente" /> Entendo que o link atual vai parar de funcionar.</label>' +
+      '<label class="ao-campo"><span>Digite <b>' + FRASE_TROCA + '</b> para confirmar</span><input class="ao-input" id="ao-troca-frase" autocomplete="off" /></label>' +
+      (temSenha
+        ? '<label class="ao-campo">Sua senha<input class="ao-input" type="password" id="ao-troca-senha" autocomplete="current-password" /></label>'
+        : '<label class="ao-campo">Sua conta entra pelo Google. Digite o e-mail da conta<input class="ao-input" type="email" id="ao-troca-email" autocomplete="off" /></label>') +
+      '<p class="ao-erro" id="ao-troca-erro" hidden></p>' +
+      '<div class="ao-modal-acoes"><button class="ao-btn" id="ao-troca-cancelar">Cancelar</button>' +
+      '<button class="ao-btn perigo" id="ao-troca-ok" disabled><i class="ti ti-refresh"></i> Gerar novo link</button></div>' +
+      "</div>";
+    document.body.appendChild(fundo);
+
+    var $ = function (id) {
+      return fundo.querySelector("#" + id);
+    };
+    var segredo = temSenha ? $("ao-troca-senha") : $("ao-troca-email");
+    function fechar() {
+      fundo.remove();
+      document.removeEventListener("keydown", aoTeclar);
+    }
+    function aoTeclar(e) {
+      if (e.key === "Escape") fechar();
+    }
+    function pronto() {
+      return $("ao-troca-ciente").checked && $("ao-troca-frase").value.trim().toUpperCase() === FRASE_TROCA && segredo.value.trim() !== "";
+    }
+    function atualizar() {
+      $("ao-troca-ok").disabled = !pronto();
+    }
+    ["ao-troca-ciente", "ao-troca-frase"].forEach(function (id) {
+      $(id).addEventListener("input", atualizar);
+      $(id).addEventListener("change", atualizar);
+    });
+    segredo.addEventListener("input", atualizar);
+    document.addEventListener("keydown", aoTeclar);
+    fundo.addEventListener("click", function (e) {
+      if (e.target === fundo) fechar();
+    });
+    $("ao-troca-cancelar").addEventListener("click", fechar);
+    $("ao-troca-ciente").focus();
+
+    $("ao-troca-ok").addEventListener("click", async function () {
+      if (!pronto()) return;
+      var botao = $("ao-troca-ok");
+      var erro = $("ao-troca-erro");
+      botao.disabled = true;
+      botao.innerHTML = '<i class="ti ti-loader-2"></i> Gerando…';
+      erro.hidden = true;
+      try {
+        var r = await fetch("/api/agendamento/novo-link", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + sess.data.session.access_token },
+          body: JSON.stringify({
+            confirmacao: $("ao-troca-frase").value,
+            senha: temSenha ? segredo.value : undefined,
+            email: temSenha ? undefined : segredo.value,
+          }),
+        });
+        var json = await r.json().catch(function () {
+          return {};
+        });
+        if (!r.ok) throw new Error(ERROS_TROCA[json.error] || "Não foi possível gerar o link. Tente de novo.");
+        cfg.token = json.token;
+        fechar();
+        render();
+        toast("Novo link gerado. Atualize o link onde ele estiver divulgado.", "success");
+      } catch (e) {
+        erro.textContent = e.message;
+        erro.hidden = false;
+        botao.innerHTML = '<i class="ti ti-refresh"></i> Gerar novo link';
+        atualizar();
+        if (temSenha) segredo.select();
+      }
+    });
   }
+
 
   // Devolve a mensagem do primeiro problema, ou null se a grade pode ser gravada.
   function erroNaGrade(grade, rotulo) {

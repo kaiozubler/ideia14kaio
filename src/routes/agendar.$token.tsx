@@ -51,6 +51,8 @@ const inputCls =
 const ERROS: Record<string, string> = {
   horario_ocupado: "Esse horário acabou de ser ocupado. Escolha outro.",
   horario_indisponivel: "Esse horário não está mais disponível. Escolha outro.",
+  limite_periodo:
+    "Você já fez 3 agendamentos nas últimas 8 horas. Aguarde um pouco ou fale com a clínica.",
   limite_cpf:
     "Este CPF já tem consultas marcadas por este link. Fale com a clínica para agendar outra.",
   muitas_tentativas: "Muitas tentativas em pouco tempo. Aguarde um pouco ou fale com a clínica.",

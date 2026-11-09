@@ -26,6 +26,7 @@ const STATUS_ERRO: Record<string, number> = {
   horario_indisponivel: 409,
   horario_ocupado: 409,
   limite_cpf: 429,
+  limite_periodo: 429,
   muitas_tentativas: 429,
 };
 
