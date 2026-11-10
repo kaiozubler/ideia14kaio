@@ -39,6 +39,7 @@ import { Route as FFormIdRouteImport } from './routes/f.$formId'
 import { Route as TTermoIdRouteImport } from './routes/t.$termoId'
 import { Route as VCodigoRouteImport } from './routes/v.$codigo'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
+import { Route as ApiAgendamentoNovoLinkRouteImport } from './routes/api/agendamento/novo-link'
 import { Route as ApiAsaasCheckoutRouteImport } from './routes/api/asaas/checkout'
 import { Route as ApiAsaasWebhookRouteImport } from './routes/api/asaas/webhook'
 import { Route as ApiAssinaturaAtualizarCartaoRouteImport } from './routes/api/assinatura/atualizar-cartao'
@@ -278,6 +279,11 @@ const VCodigoRoute = VCodigoRouteImport.update({
 const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   id: '/.lovable/oauth/consent',
   path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgendamentoNovoLinkRoute = ApiAgendamentoNovoLinkRouteImport.update({
+  id: '/api/agendamento/novo-link',
+  path: '/api/agendamento/novo-link',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAsaasCheckoutRoute = ApiAsaasCheckoutRouteImport.update({
@@ -788,6 +794,7 @@ export interface FileRoutesByFullPath {
   '/t/$termoId': typeof TTermoIdRoute
   '/v/$codigo': typeof VCodigoRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/api/agendamento/novo-link': typeof ApiAgendamentoNovoLinkRoute
   '/api/asaas/checkout': typeof ApiAsaasCheckoutRoute
   '/api/asaas/webhook': typeof ApiAsaasWebhookRoute
   '/api/assinatura/atualizar-cartao': typeof ApiAssinaturaAtualizarCartaoRoute
@@ -907,6 +914,7 @@ export interface FileRoutesByTo {
   '/t/$termoId': typeof TTermoIdRoute
   '/v/$codigo': typeof VCodigoRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/api/agendamento/novo-link': typeof ApiAgendamentoNovoLinkRoute
   '/api/asaas/checkout': typeof ApiAsaasCheckoutRoute
   '/api/asaas/webhook': typeof ApiAsaasWebhookRoute
   '/api/assinatura/atualizar-cartao': typeof ApiAssinaturaAtualizarCartaoRoute
@@ -1027,6 +1035,7 @@ export interface FileRoutesById {
   '/t/$termoId': typeof TTermoIdRoute
   '/v/$codigo': typeof VCodigoRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/api/agendamento/novo-link': typeof ApiAgendamentoNovoLinkRoute
   '/api/asaas/checkout': typeof ApiAsaasCheckoutRoute
   '/api/asaas/webhook': typeof ApiAsaasWebhookRoute
   '/api/assinatura/atualizar-cartao': typeof ApiAssinaturaAtualizarCartaoRoute
@@ -1148,6 +1157,7 @@ export interface FileRouteTypes {
     | '/t/$termoId'
     | '/v/$codigo'
     | '/.lovable/oauth/consent'
+    | '/api/agendamento/novo-link'
     | '/api/asaas/checkout'
     | '/api/asaas/webhook'
     | '/api/assinatura/atualizar-cartao'
@@ -1267,6 +1277,7 @@ export interface FileRouteTypes {
     | '/t/$termoId'
     | '/v/$codigo'
     | '/.lovable/oauth/consent'
+    | '/api/agendamento/novo-link'
     | '/api/asaas/checkout'
     | '/api/asaas/webhook'
     | '/api/assinatura/atualizar-cartao'
@@ -1386,6 +1397,7 @@ export interface FileRouteTypes {
     | '/t/$termoId'
     | '/v/$codigo'
     | '/.lovable/oauth/consent'
+    | '/api/agendamento/novo-link'
     | '/api/asaas/checkout'
     | '/api/asaas/webhook'
     | '/api/assinatura/atualizar-cartao'
@@ -1506,6 +1518,7 @@ export interface RootRouteChildren {
   TTermoIdRoute: typeof TTermoIdRoute
   VCodigoRoute: typeof VCodigoRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
+  ApiAgendamentoNovoLinkRoute: typeof ApiAgendamentoNovoLinkRoute
   ApiAsaasCheckoutRoute: typeof ApiAsaasCheckoutRoute
   ApiAsaasWebhookRoute: typeof ApiAsaasWebhookRoute
   ApiAssinaturaAtualizarCartaoRoute: typeof ApiAssinaturaAtualizarCartaoRoute
@@ -1798,6 +1811,13 @@ declare module '@tanstack/react-router' {
       path: '/.lovable/oauth/consent'
       fullPath: '/.lovable/oauth/consent'
       preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agendamento/novo-link': {
+      id: '/api/agendamento/novo-link'
+      path: '/api/agendamento/novo-link'
+      fullPath: '/api/agendamento/novo-link'
+      preLoaderRoute: typeof ApiAgendamentoNovoLinkRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/asaas/checkout': {
@@ -2531,6 +2551,7 @@ const rootRouteChildren: RootRouteChildren = {
   TTermoIdRoute: TTermoIdRoute,
   VCodigoRoute: VCodigoRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
+  ApiAgendamentoNovoLinkRoute: ApiAgendamentoNovoLinkRoute,
   ApiAsaasCheckoutRoute: ApiAsaasCheckoutRoute,
   ApiAsaasWebhookRoute: ApiAsaasWebhookRoute,
   ApiAssinaturaAtualizarCartaoRoute: ApiAssinaturaAtualizarCartaoRoute,

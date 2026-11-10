@@ -440,6 +440,8 @@
     if (c.risco) badges.push('<span class="ak-badge risco" style="--rc:' + RISCOS[c.risco].cor + '"><span class="dot"></span>' + RISCOS[c.risco].label + "</span>");
     if (c.lanc && Number(c.lanc.valor) > 0)
       badges.push('<span class="ak-money ' + (c.lanc.pago ? "paid" : "due") + '">' + dinheiro(c.lanc.valor) + (c.lanc.pago ? " · pago" : " · em aberto") + "</span>");
+    const obs = c.ag && c.ag.observacoes;
+    if (obs) linhas.push('<span class="ak-obs" title="' + esc(obs) + '"><i class="ti ti-message"></i>' + esc(obs.length > 60 ? obs.slice(0, 60) + "…" : obs) + "</span>");
     const acao = e.atalho && acaoDisponivel(e.atalho, c) ? e.atalho : "";
     const cta = acao
       ? '<button class="ak-cta" onclick="event.stopPropagation();AK.acao(\'' + acao + "','" + c.key + '\')"><i class="ti ' + ACOES[acao].icon + '"></i>' + ACOES[acao].label + "</button>"

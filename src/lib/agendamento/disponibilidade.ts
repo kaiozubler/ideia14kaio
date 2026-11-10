@@ -121,6 +121,25 @@ export function telefoneValido(valor: string) {
   return /^[\d\s()+-]{10,30}$/.test(valor.trim()) && /^\d{10,13}$/.test(valor.replace(/\D/g, ""));
 }
 
+export const OBSERVACOES_MAX = 500;
+
+/** Texto livre opcional do paciente: vazio vira null; não aceita marcação (ver nomeValido). */
+export function observacoesValidas(valor: string | null | undefined) {
+  const texto = String(valor ?? "").trim();
+  return texto.length <= OBSERVACOES_MAX && !/[<>]/.test(texto);
+}
+
+export const FRASE_TROCA_LINK = "TROCAR LINK";
+
+/** Frase digitada para gerar um novo link (sem diferenciar maiúsculas). */
+export function confirmacaoTrocaValida(valor: string | null | undefined) {
+  return (
+    String(valor ?? "")
+      .trim()
+      .toUpperCase() === FRASE_TROCA_LINK
+  );
+}
+
 /** Res. CFM 2.336/2023: especialidade só é anunciada junto do RQE. */
 export function especialidadePublica(especialidade: string | null, rqe: string | null) {
   const esp = especialidade?.trim();

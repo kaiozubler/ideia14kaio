@@ -1,6 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { cpfValido, nomeValido, telefoneValido } from "@/lib/agendamento/disponibilidade";
+import {
+  cpfValido,
+  nomeValido,
+  observacoesValidas,
+  telefoneValido,
+} from "@/lib/agendamento/disponibilidade";
 
 // Reserva feita pelo paciente no link /agendar/{token}. O horário enviado pelo
 // navegador é conferido contra a grade calculada aqui, e o conflito é decidido
@@ -13,6 +18,7 @@ const BodySchema = z.object({
   cpf: z.string().trim().max(20).refine(cpfValido),
   telefone: z.string().trim().refine(telefoneValido),
   email: z.union([z.string().trim().email().max(255), z.literal("")]).optional(),
+  observacoes: z.string().trim().refine(observacoesValidas).optional(),
 });
 
 const STATUS_ERRO: Record<string, number> = {
@@ -20,6 +26,7 @@ const STATUS_ERRO: Record<string, number> = {
   horario_indisponivel: 409,
   horario_ocupado: 409,
   limite_cpf: 429,
+  limite_periodo: 429,
   muitas_tentativas: 429,
 };
 
@@ -68,6 +75,7 @@ export const Route = createFileRoute("/api/public/agendamento/reservar")({
             p_telefone: body.telefone,
             p_email: body.email || null,
             p_ip_hash: await hashIp(ipDaRequisicao(request)),
+            p_observacoes: body.observacoes || null,
           });
           if (error) throw error;
           if (data?.erro)

@@ -4,9 +4,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   calcularHorariosLivres,
+  confirmacaoTrocaValida,
   cpfValido,
   especialidadePublica,
   nomeValido,
+  observacoesValidas,
   statusLiberaHorario,
   telefoneValido,
   type GradeSemanal,
@@ -127,4 +129,21 @@ test("nome e telefone não aceitam marcação, pois vão para telas que montam H
   assert.equal(telefoneValido("+55 31 99999-9999"), true);
   assert.equal(telefoneValido("<b>31999999999</b>"), false);
   assert.equal(telefoneValido("123"), false);
+});
+
+test("observações são opcionais, limitadas e sem marcação", () => {
+  assert.equal(observacoesValidas(undefined), true);
+  assert.equal(observacoesValidas(""), true);
+  assert.equal(observacoesValidas("Retorno para mostrar exames de sangue."), true);
+  assert.equal(observacoesValidas("a".repeat(500)), true);
+  assert.equal(observacoesValidas("a".repeat(501)), false);
+  assert.equal(observacoesValidas("<script>alert(1)</script>"), false);
+});
+
+test("trocar o link exige a frase exata", () => {
+  assert.equal(confirmacaoTrocaValida("TROCAR LINK"), true);
+  assert.equal(confirmacaoTrocaValida("  trocar link "), true);
+  assert.equal(confirmacaoTrocaValida("trocar"), false);
+  assert.equal(confirmacaoTrocaValida(""), false);
+  assert.equal(confirmacaoTrocaValida(undefined), false);
 });

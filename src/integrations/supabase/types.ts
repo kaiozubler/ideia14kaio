@@ -5241,7 +5241,6 @@ export type Database = {
     }
     Functions: {
       acesso_bloqueado: { Args: { uid: string }; Returns: boolean }
-      agenda_online_novo_link: { Args: never; Returns: string }
       agenda_online_preparar: { Args: never; Returns: undefined }
       agenda_publica_reservar: {
         Args: {
@@ -5251,6 +5250,7 @@ export type Database = {
           p_ip_hash: string
           p_medico_id: string
           p_nome: string
+          p_observacoes?: string
           p_telefone: string
           p_token: string
         }

@@ -16,8 +16,8 @@
     <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
     <script src="https://unpkg.com/@daily-co/daily-js"></script>
     <link rel="stylesheet" href="equipe.css" />
-    <link rel="stylesheet" href="atendimentos-kanban.css?v=3" />
-    <script src="atendimentos-kanban.js?v=3" defer></script>
+    <link rel="stylesheet" href="atendimentos-kanban.css?v=4" />
+    <script src="atendimentos-kanban.js?v=4" defer></script>
     <link rel="stylesheet" href="paciente-protocolos.css" />
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="integra-bry-connect.js" defer></script>
@@ -1116,6 +1116,7 @@
                                                       .ag-tt-name{font-size:13px;font-weight:700;color:#0f172a}
                                                       .ag-tt-time{font-size:11px;color:#64748b;white-space:nowrap;flex-shrink:0}
                                                       .ag-tt-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;color:#475569;font-size:11.5px}
+                                                      .ag-tt-row.ag-tt-obs{align-items:flex-start;white-space:pre-wrap;overflow-wrap:anywhere}
                                                       .ag-tt-row i{font-size:12px;color:#94a3b8;flex-shrink:0;width:14px;text-align:center}
                                                       .ag-tt-status{display:inline-block;margin-top:6px;padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:700}
                                                       .ag-tt-status-desc{margin-top:5px;color:#64748b;font-size:10.5px;line-height:1.55}
@@ -19500,7 +19501,7 @@ let rxSelected = [];
                                                                 paciente_id:r.paciente_id||null,
                                                                 patient:(pac&&pac.name)||r.paciente_nome||'Paciente',
                                                                 specialty:r.especialidade||'',
-                                                                motivo:r.motivo||'',
+                                                                motivo:r.motivo||'',observacoes:r.observacoes||'',
                                                                 duracao:r.duracao_min||30,
                                                                 horarioEntrada:r.horario_entrada||null,
                                                                 doctor:r.medico_nome||'Médico não informado',
@@ -19635,6 +19636,8 @@ let rxSelected = [];
                                                               if(a.isRescheduled)lines.push('Este agendamento é resultado de uma remarcação.');
                                                               return `<div class="ag-tt-habit">${lines.join('<br>')}</div>`;
                                                             }
+                                                            // Observações vêm também do link público: sempre escapadas.
+                                                            function agEsc(t){return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
                                                             function agTooltipHtml(a){
                                                               const key=a.confirmation;
                                                               const meta=AG_STATUS_META[key]||{label:key,color:'#64748b',bg:'#e2e8f0',desc:''};
@@ -19645,6 +19648,7 @@ let rxSelected = [];
                                                                 <div class="ag-tt-row"><i class="ti ti-stethoscope"></i> ${a.doctor}</div>
                                                                 ${a.specialty?`<div class="ag-tt-row"><i class="ti ti-heartbeat"></i> ${a.specialty}</div>`:''}
                                                                 ${a.motivo?`<div class="ag-tt-row"><i class="ti ti-notes"></i> ${a.motivo}</div>`:''}
+                                                                                     ${a.observacoes?`<div class="ag-tt-row ag-tt-obs"><i class="ti ti-message"></i> ${agEsc(a.observacoes)}</div>`:''}
                                                                 <div class="ag-tt-status" style="color:${meta.color};background:${meta.bg}">${meta.label}</div>
                                                                 <div class="ag-tt-status-desc">${meta.desc}</div>
                                                                 ${agPatientHabitsHtml(a)}`;
