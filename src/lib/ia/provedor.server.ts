@@ -14,6 +14,8 @@ export const GEMINI_MODEL = "google/gemini-3.8-flash";
 /** ID anterior, usado só se o gateway recusar o atual (ver chamarGemini). */
 const GEMINI_MODEL_RESERVA = "google/gemini-3.6-flash";
 export const CLAUDE_MODEL = "claude-sonnet-5-5";
+/** Voz das respostas (/api/ia/fala), pelo mesmo gateway em /v1/audio/speech. */
+export const GEMINI_TTS_MODEL = "google/gemini-2.5-flash-tts";
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
