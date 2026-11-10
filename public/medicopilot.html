@@ -7664,7 +7664,7 @@ const tri=document.getElementById('cli-triagem');if(tri)tri.checked=CLINICA.tria
                                                               try{
                                                                 const contexto=getTranscriptWindowText(Math.round(COP_VOICE_WINDOW_MS/1000)+2,Date.now());
                                                                 const mensagens=[{role:'user',content:'[Comando de voz automático — a palavra-chave "'+kwLabel+'" foi detectada durante a consulta. Ação configurada pelo médico para esse gatilho: "'+label+'". Interprete a fala abaixo — se o médico pediu algo mais completo (ex.: agendar para uma data específica, receita de um medicamento específico), gere o documento correspondente; caso contrário, responda à pergunta/pesquisa/análise solicitada.]\n'+(contexto||'(sem fala recente registrada)')}];
-                                                                const res=await fetch('/api/assistente-ia',{
+                                                                const res=await iaAuthFetch('/api/assistente-ia',{
                                                                   method:'POST',headers:{'Content-Type':'application/json'},
                                                                   body:JSON.stringify({
                                                                     mode:'assistente_global',
@@ -11432,7 +11432,7 @@ showAtendList();
                                                                   return;
                                                                 }
                                                                 const mensagens=[{role:'user',content:'[Comando de voz captado durante a consulta — identifique e execute imediatamente a ação solicitada]\n'+comando}];
-                                                                const res=await fetch('/api/assistente-ia',{
+                                                                const res=await iaAuthFetch('/api/assistente-ia',{
                                                                   method:'POST',headers:{'Content-Type':'application/json'},
                                                                   body:JSON.stringify({
                                                                     mode:'assistente_global',
@@ -12225,7 +12225,7 @@ function iaAssistStartNewChat(){
 async function iaAssistLoadTopics(){
   const uid=iaAssistUserId();if(!uid)return;
   try{
-    const r=await fetch('/api/assistente-ia-conversas',{
+    const r=await iaAuthFetch('/api/assistente-ia-conversas',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({action:'listar',user_id:uid})
     });
@@ -12255,7 +12255,7 @@ function iaAssistRenderTopics(){
 async function iaAssistLoadConversa(id){
   const uid=iaAssistUserId();if(!uid)return;
   try{
-    const r=await fetch('/api/assistente-ia-conversas',{
+    const r=await iaAuthFetch('/api/assistente-ia-conversas',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({action:'obter',user_id:uid,conversa_id:id})
     });
@@ -12277,7 +12277,7 @@ async function iaAssistToggleFavorito(id,favorito){
   if(item)item.favorito=favorito; // otimista
   iaAssistRenderTopics();
   try{
-    await fetch('/api/assistente-ia-conversas',{
+    await iaAuthFetch('/api/assistente-ia-conversas',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({action:'favoritar',user_id:uid,conversa_id:id,favorito})
     });
@@ -12523,7 +12523,7 @@ async function sendIaAssistMsg(){
     // histórico só que compacto — é o que fica salvo/exibido, pra o atalho
     // continuar aparecendo curto ao reabrir a conversa depois.
     const mensagensParaIA=await iaExpandirHistoricoAtalhos(iaAssistHistory,'assistente_ai');
-    const r=await fetch('/api/assistente-ia',{
+    const r=await iaAuthFetch('/api/assistente-ia',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({mode:'assistente_global',messages:mensagensParaIA,messages_exibicao:iaAssistHistory,user_id:iaAssistUserId(),conversa_id:iaAssistConversaId,anexo:iaTakeAnexo('assist')})
@@ -13289,7 +13289,7 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                     try{
                       const {kind,...dados}=att;
                       const mensagens=[{role:'user',content:'[Reprocessamento solicitado pelo médico — revise e, se necessário, corrija/melhore os dados abaixo deste documento gerado durante a consulta, mantendo a mesma estrutura]\n'+JSON.stringify(dados)}];
-                      const res=await fetch('/api/assistente-ia',{
+                      const res=await iaAuthFetch('/api/assistente-ia',{
                         method:'POST',headers:{'Content-Type':'application/json'},
                         body:JSON.stringify({
                           mode:'assistente_global',

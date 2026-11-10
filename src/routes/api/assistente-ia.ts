@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { analisarExameArquivo, type AnaliseExame } from "@/lib/exames/analise.server";
 import { mensagemErroGateway } from "@/lib/ai/erro-gateway";
+import { getUserIdFromRequest } from "@/lib/signature/requestAuth.server";
 
 import { GEMINI_MODEL } from "@/lib/ia/provedor.server";
 type ChatMessage = {
@@ -2234,13 +2235,28 @@ export const Route = createFileRoute("/api/assistente-ia")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // O assistente consulta o banco com supabaseAdmin e age em nome do
+        // médico (gera documentos, agenda, envia WhatsApp), então a identidade
+        // vem SEMPRE do token validado, nunca do corpo. Sem o header, o
+        // middleware de acesso suspenso de src/start.ts também não enxergaria
+        // quem está chamando.
+        const userId = await getUserIdFromRequest(request);
+        if (!userId) return new Response("Não autenticado", { status: 401 });
+
         let body: RequestBody;
         try {
           body = (await request.json()) as RequestBody;
         } catch {
           return new Response("Invalid JSON", { status: 400 });
         }
-        return handleAssistente(body);
+        return handleAssistente({
+          ...body,
+          // O canal "paciente" (acesso restrito do WhatsApp do paciente) só
+          // é montado pelo webhook no servidor; pela rota do app é sempre interno.
+          canal: "interno",
+          user_id: userId,
+          paciente_telefone: null,
+        });
       },
     },
   },
