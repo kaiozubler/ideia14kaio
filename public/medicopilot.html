@@ -39,6 +39,7 @@
     <script src="conversas-pacientes.js?v=1" defer></script>
     <link rel="stylesheet" href="captacao-smartphone.css?v=2" />
     <script src="captacao-smartphone.js?v=2" defer></script>
+    <script src="assistente-voz.js?v=1" defer></script>
     <script src="plano-gate.js?v=4" defer></script>
     <script>
       window.addEventListener("DOMContentLoaded", async () => {
@@ -2236,6 +2237,7 @@
     <link rel="stylesheet" href="tema-escuro.css?v=2" />
     <script src="tema-escuro.js?v=2"></script>
     <link rel="stylesheet" href="tour-guiado.css?v=1" />
+    <link rel="stylesheet" href="assistente-voz.css?v=1" />
     <script src="tour-guiado.js?v=2"></script>
   </head>
   <body>
@@ -4461,6 +4463,10 @@
             <div class="ia-assist-body" id="ia-assist-bubbles"></div>
             <div class="ia-assist-bottom">
               <div class="ia-assist-chips" id="ia-assist-chips">
+                <button class="ia-assist-chip ia-voz-vivo" id="ia-voz-vivo" type="button" title="Conversar com a IA por voz" onclick="IaVoz.alternarVivo()">
+                  <span class="ia-voz-orb" aria-hidden="true"><i></i><i></i><i></i></span>
+                  <span class="ia-voz-rotulo" id="ia-voz-rotulo">Conversar ao vivo</span>
+                </button>
                 <button class="ia-assist-chip" onclick="iaAssistQuickPrompt('Agendar um paciente')">
                   <i class="ti ti-calendar-plus"></i> Agendar paciente
                 </button>
@@ -4499,7 +4505,10 @@
                 >
                   <i class="ti ti-paperclip"></i>
                 </button>
-                <button class="ai-sbtn" onclick="sendIaAssistMsg()"><i class="ti ti-send"></i></button>
+                <button class="ai-sbtn ia-voz-mic" id="ia-voz-mic" type="button" title="Gravar e transcrever" onclick="IaVoz.alternarDitado()">
+                  <i class="ti ti-microphone"></i>
+                </button>
+                <button class="ai-sbtn" id="ia-assist-send" onclick="sendIaAssistMsg()"><i class="ti ti-send"></i></button>
               </div>
             </div>
           </div>
@@ -12210,6 +12219,7 @@ function openIaAssistModal(){
   setTimeout(()=>{const inp=document.getElementById('ia-assist-inp');if(inp)inp.focus();},50);
 }
 function closeIaAssistModal(){
+  if(window.IaVoz)IaVoz.parar();
   document.getElementById('ia-assist-modal').classList.remove('open');
 }
 function iaAssistStartNewChat(){
@@ -12509,13 +12519,14 @@ function removeIaAssistTyping(id){
 }
 
 async function sendIaAssistMsg(){
-  const inp=document.getElementById('ia-assist-inp');if(!inp||!inp.value.trim())return;
+  if(window.IaVoz&&!iaAssistBusy)IaVoz.aoEnviar();
+  const inp=document.getElementById('ia-assist-inp');if(!inp||!inp.value.trim()){if(window.IaVoz)IaVoz.aoTerminar();return;}
   if(iaAssistBusy)return;
   const userText=inp.value.trim();inp.value='';
   spawnIaAssistBubble('usr',userText);
   iaAssistHistory.push({role:'user',content:userText});
   iaAssistBusy=true;
-  const btn=document.querySelector('#ia-assist-modal .ai-sbtn');
+  const btn=document.getElementById('ia-assist-send');
   if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>';}
   const typingId=showIaAssistTyping();
   try{
@@ -12535,6 +12546,7 @@ async function sendIaAssistMsg(){
     iaAssistHistory.push({role:'assistant',content:reply});
     removeIaAssistTyping(typingId);
     spawnIaAssistBubble('ia',reply,d.fonte_base_conhecimento);
+    if(window.IaVoz)IaVoz.aoResponder(reply);
 if(d.action){
   iaAssistExecuteAction(d.action);
 }else if(/receita|atestado|declara[cç][aã]o/i.test(reply)&&/(gerad[ao]|criad[ao]|pronto|sucesso)/i.test(reply)){
@@ -12549,6 +12561,7 @@ if(d.action){
   }finally{
     iaAssistBusy=false;
     if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-send"></i>';}
+    if(window.IaVoz)IaVoz.aoTerminar();
   }
 }
 

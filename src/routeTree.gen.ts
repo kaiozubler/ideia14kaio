@@ -63,7 +63,7 @@ import { Route as ApiComunicacaoEnviarRouteImport } from './routes/api/comunicac
 import { Route as ApiComunicacaoMidiaRouteImport } from './routes/api/comunicacao/midia'
 import { Route as ApiComunicacaoModelosRouteImport } from './routes/api/comunicacao/modelos'
 import { Route as ApiContratacaoCupomRouteImport } from './routes/api/contratacao.cupom'
-import { Route as ApiDevTesteVozRouteImport } from './routes/api/dev/teste-voz'
+import { Route as ApiIaFalaRouteImport } from './routes/api/ia/fala'
 import { Route as ApiIaGerarFluxoRouteImport } from './routes/api/ia/gerar-fluxo'
 import { Route as ApiMedicamentosBuscarRouteImport } from './routes/api/medicamentos/buscar'
 import { Route as ApiMedicamentosSimplificarApresentacoesRouteImport } from './routes/api/medicamentos/simplificar-apresentacoes'
@@ -410,9 +410,9 @@ const ApiContratacaoCupomRoute = ApiContratacaoCupomRouteImport.update({
   path: '/cupom',
   getParentRoute: () => ApiContratacaoRoute,
 } as any)
-const ApiDevTesteVozRoute = ApiDevTesteVozRouteImport.update({
-  id: '/api/dev/teste-voz',
-  path: '/api/dev/teste-voz',
+const ApiIaFalaRoute = ApiIaFalaRouteImport.update({
+  id: '/api/ia/fala',
+  path: '/api/ia/fala',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiIaGerarFluxoRoute = ApiIaGerarFluxoRouteImport.update({
@@ -818,7 +818,7 @@ export interface FileRoutesByFullPath {
   '/api/comunicacao/midia': typeof ApiComunicacaoMidiaRoute
   '/api/comunicacao/modelos': typeof ApiComunicacaoModelosRoute
   '/api/contratacao/cupom': typeof ApiContratacaoCupomRoute
-  '/api/dev/teste-voz': typeof ApiDevTesteVozRoute
+  '/api/ia/fala': typeof ApiIaFalaRoute
   '/api/ia/gerar-fluxo': typeof ApiIaGerarFluxoRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
@@ -938,7 +938,7 @@ export interface FileRoutesByTo {
   '/api/comunicacao/midia': typeof ApiComunicacaoMidiaRoute
   '/api/comunicacao/modelos': typeof ApiComunicacaoModelosRoute
   '/api/contratacao/cupom': typeof ApiContratacaoCupomRoute
-  '/api/dev/teste-voz': typeof ApiDevTesteVozRoute
+  '/api/ia/fala': typeof ApiIaFalaRoute
   '/api/ia/gerar-fluxo': typeof ApiIaGerarFluxoRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
@@ -1059,7 +1059,7 @@ export interface FileRoutesById {
   '/api/comunicacao/midia': typeof ApiComunicacaoMidiaRoute
   '/api/comunicacao/modelos': typeof ApiComunicacaoModelosRoute
   '/api/contratacao/cupom': typeof ApiContratacaoCupomRoute
-  '/api/dev/teste-voz': typeof ApiDevTesteVozRoute
+  '/api/ia/fala': typeof ApiIaFalaRoute
   '/api/ia/gerar-fluxo': typeof ApiIaGerarFluxoRoute
   '/api/medicamentos/buscar': typeof ApiMedicamentosBuscarRoute
   '/api/medicamentos/simplificar-apresentacoes': typeof ApiMedicamentosSimplificarApresentacoesRoute
@@ -1181,7 +1181,7 @@ export interface FileRouteTypes {
     | '/api/comunicacao/midia'
     | '/api/comunicacao/modelos'
     | '/api/contratacao/cupom'
-    | '/api/dev/teste-voz'
+    | '/api/ia/fala'
     | '/api/ia/gerar-fluxo'
     | '/api/medicamentos/buscar'
     | '/api/medicamentos/simplificar-apresentacoes'
@@ -1301,7 +1301,7 @@ export interface FileRouteTypes {
     | '/api/comunicacao/midia'
     | '/api/comunicacao/modelos'
     | '/api/contratacao/cupom'
-    | '/api/dev/teste-voz'
+    | '/api/ia/fala'
     | '/api/ia/gerar-fluxo'
     | '/api/medicamentos/buscar'
     | '/api/medicamentos/simplificar-apresentacoes'
@@ -1421,7 +1421,7 @@ export interface FileRouteTypes {
     | '/api/comunicacao/midia'
     | '/api/comunicacao/modelos'
     | '/api/contratacao/cupom'
-    | '/api/dev/teste-voz'
+    | '/api/ia/fala'
     | '/api/ia/gerar-fluxo'
     | '/api/medicamentos/buscar'
     | '/api/medicamentos/simplificar-apresentacoes'
@@ -1541,7 +1541,7 @@ export interface RootRouteChildren {
   ApiComunicacaoEnviarRoute: typeof ApiComunicacaoEnviarRoute
   ApiComunicacaoMidiaRoute: typeof ApiComunicacaoMidiaRoute
   ApiComunicacaoModelosRoute: typeof ApiComunicacaoModelosRoute
-  ApiDevTesteVozRoute: typeof ApiDevTesteVozRoute
+  ApiIaFalaRoute: typeof ApiIaFalaRoute
   ApiIaGerarFluxoRoute: typeof ApiIaGerarFluxoRoute
   ApiMedicamentosBuscarRoute: typeof ApiMedicamentosBuscarRoute
   ApiMedicamentosSimplificarApresentacoesRoute: typeof ApiMedicamentosSimplificarApresentacoesRoute
@@ -1981,11 +1981,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiContratacaoCupomRouteImport
       parentRoute: typeof ApiContratacaoRoute
     }
-    '/api/dev/teste-voz': {
-      id: '/api/dev/teste-voz'
-      path: '/api/dev/teste-voz'
-      fullPath: '/api/dev/teste-voz'
-      preLoaderRoute: typeof ApiDevTesteVozRouteImport
+    '/api/ia/fala': {
+      id: '/api/ia/fala'
+      path: '/api/ia/fala'
+      fullPath: '/api/ia/fala'
+      preLoaderRoute: typeof ApiIaFalaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/ia/gerar-fluxo': {
@@ -2576,7 +2576,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiComunicacaoEnviarRoute: ApiComunicacaoEnviarRoute,
   ApiComunicacaoMidiaRoute: ApiComunicacaoMidiaRoute,
   ApiComunicacaoModelosRoute: ApiComunicacaoModelosRoute,
-  ApiDevTesteVozRoute: ApiDevTesteVozRoute,
+  ApiIaFalaRoute: ApiIaFalaRoute,
   ApiIaGerarFluxoRoute: ApiIaGerarFluxoRoute,
   ApiMedicamentosBuscarRoute: ApiMedicamentosBuscarRoute,
   ApiMedicamentosSimplificarApresentacoesRoute:
