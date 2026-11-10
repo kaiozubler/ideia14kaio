@@ -62,8 +62,13 @@ export const Route = createFileRoute("/api/dev/teste-voz")({
         const casos = ((await request.json()) as Record<string, unknown>[]).slice(0, 4);
         const resultados = [];
         for (const c of casos) {
-          const input = String(c.input ?? "").slice(0, 400);
-          resultados.push(await medir({ ...c, input }, apiKey));
+          // O gateway repassa o corpo ao Google no formato nativo do Gemini
+          // (contents/generationConfig); o tamanho é limitado pelo JSON inteiro.
+          if (JSON.stringify(c).length > 1500) {
+            resultados.push({ corpo: c, erro: "corpo grande demais para o teste" });
+            continue;
+          }
+          resultados.push(await medir(c, apiKey));
         }
         return Response.json({ tem_chave: true, resultados });
       },
