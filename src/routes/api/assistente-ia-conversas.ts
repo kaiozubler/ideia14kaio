@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { getUserIdFromRequest } from "@/lib/signature/requestAuth.server";
 
 type Body = {
   action?: "listar" | "obter" | "favoritar";
@@ -13,15 +14,17 @@ export const Route = createFileRoute("/api/assistente-ia-conversas")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // As conversas trazem dados de pacientes e são lidas com supabaseAdmin,
+        // então o dono vem do token validado, nunca de body.user_id.
+        const medicoId = await getUserIdFromRequest(request);
+        if (!medicoId) return new Response("Não autenticado", { status: 401 });
+
         let body: Body;
         try {
           body = (await request.json()) as Body;
         } catch {
           return new Response("Invalid JSON", { status: 400 });
         }
-
-        const medicoId = body.user_id || null;
-        if (!medicoId) return new Response("Usuário não identificado", { status: 401 });
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
