@@ -98,6 +98,7 @@ import { Route as ApiPublicCrmClinicasRouteImport } from './routes/api/public/cr
 import { Route as ApiPublicCrmCuponsRouteImport } from './routes/api/public/crm/cupons'
 import { Route as ApiPublicCrmHealthRouteImport } from './routes/api/public/crm/health'
 import { Route as ApiPublicCrmPagamentosRouteImport } from './routes/api/public/crm/pagamentos'
+import { Route as ApiPublicCrmPipeRouteImport } from './routes/api/public/crm/pipe'
 import { Route as ApiPublicCrmUsuariosRouteImport } from './routes/api/public/crm/usuarios'
 import { Route as ApiPublicDocumentosAbrirRouteImport } from './routes/api/public/documentos/abrir'
 import { Route as ApiPublicDocumentosIdentidadeRouteImport } from './routes/api/public/documentos/identidade'
@@ -121,6 +122,7 @@ import { Route as ApiSignatureIntegraBryPscsRouteImport } from './routes/api/sig
 import { Route as ApiSignatureIntegraBrySignRouteImport } from './routes/api/signature/integra-bry/sign'
 import { Route as ApiPublicCrmClinicasIdRouteImport } from './routes/api/public/crm/clinicas.$id'
 import { Route as ApiPublicCrmCuponsIdRouteImport } from './routes/api/public/crm/cupons.$id'
+import { Route as ApiPublicCrmPipeIdRouteImport } from './routes/api/public/crm/pipe.$id'
 import { Route as ApiPublicCrmUsuariosIdRouteImport } from './routes/api/public/crm/usuarios.$id'
 import { Route as ApiPublicWebhooksWhatsappClinicaChaveRouteImport } from './routes/api/public/webhooks/whatsapp-clinica/$chave'
 import { Route as ApiPublicCrmClinicasIdAcessoRouteImport } from './routes/api/public/crm/clinicas.$id.acesso'
@@ -598,6 +600,11 @@ const ApiPublicCrmPagamentosRoute = ApiPublicCrmPagamentosRouteImport.update({
   path: '/api/public/crm/pagamentos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCrmPipeRoute = ApiPublicCrmPipeRouteImport.update({
+  id: '/api/public/crm/pipe',
+  path: '/api/public/crm/pipe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCrmUsuariosRoute = ApiPublicCrmUsuariosRouteImport.update({
   id: '/api/public/crm/usuarios',
   path: '/api/public/crm/usuarios',
@@ -727,6 +734,11 @@ const ApiPublicCrmCuponsIdRoute = ApiPublicCrmCuponsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiPublicCrmCuponsRoute,
 } as any)
+const ApiPublicCrmPipeIdRoute = ApiPublicCrmPipeIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiPublicCrmPipeRoute,
+} as any)
 const ApiPublicCrmUsuariosIdRoute = ApiPublicCrmUsuariosIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -853,6 +865,7 @@ export interface FileRoutesByFullPath {
   '/api/public/crm/cupons': typeof ApiPublicCrmCuponsRouteWithChildren
   '/api/public/crm/health': typeof ApiPublicCrmHealthRoute
   '/api/public/crm/pagamentos': typeof ApiPublicCrmPagamentosRouteWithChildren
+  '/api/public/crm/pipe': typeof ApiPublicCrmPipeRouteWithChildren
   '/api/public/crm/usuarios': typeof ApiPublicCrmUsuariosRouteWithChildren
   '/api/public/documentos/abrir': typeof ApiPublicDocumentosAbrirRoute
   '/api/public/documentos/identidade': typeof ApiPublicDocumentosIdentidadeRoute
@@ -876,6 +889,7 @@ export interface FileRoutesByFullPath {
   '/api/signature/integra-bry/sign': typeof ApiSignatureIntegraBrySignRoute
   '/api/public/crm/clinicas/$id': typeof ApiPublicCrmClinicasIdRouteWithChildren
   '/api/public/crm/cupons/$id': typeof ApiPublicCrmCuponsIdRoute
+  '/api/public/crm/pipe/$id': typeof ApiPublicCrmPipeIdRoute
   '/api/public/crm/usuarios/$id': typeof ApiPublicCrmUsuariosIdRouteWithChildren
   '/api/public/webhooks/whatsapp-clinica/$chave': typeof ApiPublicWebhooksWhatsappClinicaChaveRoute
   '/api/public/crm/clinicas/$id/acesso': typeof ApiPublicCrmClinicasIdAcessoRoute
@@ -973,6 +987,7 @@ export interface FileRoutesByTo {
   '/api/public/crm/cupons': typeof ApiPublicCrmCuponsRouteWithChildren
   '/api/public/crm/health': typeof ApiPublicCrmHealthRoute
   '/api/public/crm/pagamentos': typeof ApiPublicCrmPagamentosRouteWithChildren
+  '/api/public/crm/pipe': typeof ApiPublicCrmPipeRouteWithChildren
   '/api/public/crm/usuarios': typeof ApiPublicCrmUsuariosRouteWithChildren
   '/api/public/documentos/abrir': typeof ApiPublicDocumentosAbrirRoute
   '/api/public/documentos/identidade': typeof ApiPublicDocumentosIdentidadeRoute
@@ -996,6 +1011,7 @@ export interface FileRoutesByTo {
   '/api/signature/integra-bry/sign': typeof ApiSignatureIntegraBrySignRoute
   '/api/public/crm/clinicas/$id': typeof ApiPublicCrmClinicasIdRouteWithChildren
   '/api/public/crm/cupons/$id': typeof ApiPublicCrmCuponsIdRoute
+  '/api/public/crm/pipe/$id': typeof ApiPublicCrmPipeIdRoute
   '/api/public/crm/usuarios/$id': typeof ApiPublicCrmUsuariosIdRouteWithChildren
   '/api/public/webhooks/whatsapp-clinica/$chave': typeof ApiPublicWebhooksWhatsappClinicaChaveRoute
   '/api/public/crm/clinicas/$id/acesso': typeof ApiPublicCrmClinicasIdAcessoRoute
@@ -1094,6 +1110,7 @@ export interface FileRoutesById {
   '/api/public/crm/cupons': typeof ApiPublicCrmCuponsRouteWithChildren
   '/api/public/crm/health': typeof ApiPublicCrmHealthRoute
   '/api/public/crm/pagamentos': typeof ApiPublicCrmPagamentosRouteWithChildren
+  '/api/public/crm/pipe': typeof ApiPublicCrmPipeRouteWithChildren
   '/api/public/crm/usuarios': typeof ApiPublicCrmUsuariosRouteWithChildren
   '/api/public/documentos/abrir': typeof ApiPublicDocumentosAbrirRoute
   '/api/public/documentos/identidade': typeof ApiPublicDocumentosIdentidadeRoute
@@ -1117,6 +1134,7 @@ export interface FileRoutesById {
   '/api/signature/integra-bry/sign': typeof ApiSignatureIntegraBrySignRoute
   '/api/public/crm/clinicas/$id': typeof ApiPublicCrmClinicasIdRouteWithChildren
   '/api/public/crm/cupons/$id': typeof ApiPublicCrmCuponsIdRoute
+  '/api/public/crm/pipe/$id': typeof ApiPublicCrmPipeIdRoute
   '/api/public/crm/usuarios/$id': typeof ApiPublicCrmUsuariosIdRouteWithChildren
   '/api/public/webhooks/whatsapp-clinica/$chave': typeof ApiPublicWebhooksWhatsappClinicaChaveRoute
   '/api/public/crm/clinicas/$id/acesso': typeof ApiPublicCrmClinicasIdAcessoRoute
@@ -1216,6 +1234,7 @@ export interface FileRouteTypes {
     | '/api/public/crm/cupons'
     | '/api/public/crm/health'
     | '/api/public/crm/pagamentos'
+    | '/api/public/crm/pipe'
     | '/api/public/crm/usuarios'
     | '/api/public/documentos/abrir'
     | '/api/public/documentos/identidade'
@@ -1239,6 +1258,7 @@ export interface FileRouteTypes {
     | '/api/signature/integra-bry/sign'
     | '/api/public/crm/clinicas/$id'
     | '/api/public/crm/cupons/$id'
+    | '/api/public/crm/pipe/$id'
     | '/api/public/crm/usuarios/$id'
     | '/api/public/webhooks/whatsapp-clinica/$chave'
     | '/api/public/crm/clinicas/$id/acesso'
@@ -1336,6 +1356,7 @@ export interface FileRouteTypes {
     | '/api/public/crm/cupons'
     | '/api/public/crm/health'
     | '/api/public/crm/pagamentos'
+    | '/api/public/crm/pipe'
     | '/api/public/crm/usuarios'
     | '/api/public/documentos/abrir'
     | '/api/public/documentos/identidade'
@@ -1359,6 +1380,7 @@ export interface FileRouteTypes {
     | '/api/signature/integra-bry/sign'
     | '/api/public/crm/clinicas/$id'
     | '/api/public/crm/cupons/$id'
+    | '/api/public/crm/pipe/$id'
     | '/api/public/crm/usuarios/$id'
     | '/api/public/webhooks/whatsapp-clinica/$chave'
     | '/api/public/crm/clinicas/$id/acesso'
@@ -1456,6 +1478,7 @@ export interface FileRouteTypes {
     | '/api/public/crm/cupons'
     | '/api/public/crm/health'
     | '/api/public/crm/pagamentos'
+    | '/api/public/crm/pipe'
     | '/api/public/crm/usuarios'
     | '/api/public/documentos/abrir'
     | '/api/public/documentos/identidade'
@@ -1479,6 +1502,7 @@ export interface FileRouteTypes {
     | '/api/signature/integra-bry/sign'
     | '/api/public/crm/clinicas/$id'
     | '/api/public/crm/cupons/$id'
+    | '/api/public/crm/pipe/$id'
     | '/api/public/crm/usuarios/$id'
     | '/api/public/webhooks/whatsapp-clinica/$chave'
     | '/api/public/crm/clinicas/$id/acesso'
@@ -1576,6 +1600,7 @@ export interface RootRouteChildren {
   ApiPublicCrmCuponsRoute: typeof ApiPublicCrmCuponsRouteWithChildren
   ApiPublicCrmHealthRoute: typeof ApiPublicCrmHealthRoute
   ApiPublicCrmPagamentosRoute: typeof ApiPublicCrmPagamentosRouteWithChildren
+  ApiPublicCrmPipeRoute: typeof ApiPublicCrmPipeRouteWithChildren
   ApiPublicCrmUsuariosRoute: typeof ApiPublicCrmUsuariosRouteWithChildren
   ApiPublicDocumentosAbrirRoute: typeof ApiPublicDocumentosAbrirRoute
   ApiPublicDocumentosIdentidadeRoute: typeof ApiPublicDocumentosIdentidadeRoute
@@ -2226,6 +2251,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCrmPagamentosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/crm/pipe': {
+      id: '/api/public/crm/pipe'
+      path: '/api/public/crm/pipe'
+      fullPath: '/api/public/crm/pipe'
+      preLoaderRoute: typeof ApiPublicCrmPipeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/crm/usuarios': {
       id: '/api/public/crm/usuarios'
       path: '/api/public/crm/usuarios'
@@ -2387,6 +2419,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCrmCuponsIdRouteImport
       parentRoute: typeof ApiPublicCrmCuponsRoute
     }
+    '/api/public/crm/pipe/$id': {
+      id: '/api/public/crm/pipe/$id'
+      path: '/$id'
+      fullPath: '/api/public/crm/pipe/$id'
+      preLoaderRoute: typeof ApiPublicCrmPipeIdRouteImport
+      parentRoute: typeof ApiPublicCrmPipeRoute
+    }
     '/api/public/crm/usuarios/$id': {
       id: '/api/public/crm/usuarios/$id'
       path: '/$id'
@@ -2493,6 +2532,17 @@ const ApiPublicCrmPagamentosRouteWithChildren =
   ApiPublicCrmPagamentosRoute._addFileChildren(
     ApiPublicCrmPagamentosRouteChildren,
   )
+
+interface ApiPublicCrmPipeRouteChildren {
+  ApiPublicCrmPipeIdRoute: typeof ApiPublicCrmPipeIdRoute
+}
+
+const ApiPublicCrmPipeRouteChildren: ApiPublicCrmPipeRouteChildren = {
+  ApiPublicCrmPipeIdRoute: ApiPublicCrmPipeIdRoute,
+}
+
+const ApiPublicCrmPipeRouteWithChildren =
+  ApiPublicCrmPipeRoute._addFileChildren(ApiPublicCrmPipeRouteChildren)
 
 interface ApiPublicCrmUsuariosIdRouteChildren {
   ApiPublicCrmUsuariosIdAcessoRoute: typeof ApiPublicCrmUsuariosIdAcessoRoute
@@ -2612,6 +2662,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCrmCuponsRoute: ApiPublicCrmCuponsRouteWithChildren,
   ApiPublicCrmHealthRoute: ApiPublicCrmHealthRoute,
   ApiPublicCrmPagamentosRoute: ApiPublicCrmPagamentosRouteWithChildren,
+  ApiPublicCrmPipeRoute: ApiPublicCrmPipeRouteWithChildren,
   ApiPublicCrmUsuariosRoute: ApiPublicCrmUsuariosRouteWithChildren,
   ApiPublicDocumentosAbrirRoute: ApiPublicDocumentosAbrirRoute,
   ApiPublicDocumentosIdentidadeRoute: ApiPublicDocumentosIdentidadeRoute,
