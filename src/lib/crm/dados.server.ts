@@ -4,7 +4,13 @@
 
 import type { User } from "@supabase/supabase-js";
 import { esquecerBloqueios } from "@/lib/auth/bloqueio.server";
-import { ErroCrm, nomeDaClinica, type RepoAcessos, type RepoPagamentos } from "@/lib/crm/ponte";
+import {
+  ErroCrm,
+  nomeDaClinica,
+  statusDaCobranca,
+  type RepoAcessos,
+  type RepoPagamentos,
+} from "@/lib/crm/ponte";
 import type { Db } from "@/lib/crm/rota.server";
 
 export type Usuario = {
@@ -30,6 +36,26 @@ export type Pagamento = {
   data: string | null;
   origem: "manual" | "asaas";
   observacao: string | null;
+  vencimento: string | null;
+  valor_liquido: number | null;
+  valor_estornado: number;
+  asaas_payment_id: string | null;
+  fatura_url: string | null;
+  estornos: Estorno[];
+};
+
+export type Estorno = {
+  id: string;
+  pagamento_id: string;
+  clinica_id: string | null;
+  clinica_nome: string | null;
+  origem: "manual" | "asaas";
+  valor: number;
+  data: string;
+  motivo: string | null;
+  status: "solicitado" | "concluido" | "falhou";
+  erro: string | null;
+  autor: string | null;
 };
 
 type Membro = {
@@ -63,10 +89,21 @@ export type AssinaturaRow = {
   medicos: number;
   secretarias: number;
   cancelamento_agendado_para: string | null;
+  cancelamento_solicitado_em: string | null;
+  cancelamento_motivo: string | null;
+  cancelamento_reversivel: boolean;
+  cancelada_em: string | null;
+  cancelado_por: string | null;
+  asaas_customer_id: string | null;
+  asaas_subscription_id: string | null;
+  asaas_sincronizado_em: string | null;
   ultimo_erro_cobranca: { em?: string } | null;
   updated_at: string;
   created_at: string;
 };
+
+export const COLUNAS_ASSINATURA =
+  "id, medico_id, contratacao_id, plano, ciclo, status, preco_mensal, proxima_cobranca, medicos, secretarias, cancelamento_agendado_para, cancelamento_solicitado_em, cancelamento_motivo, cancelamento_reversivel, cancelada_em, cancelado_por, asaas_customer_id, asaas_subscription_id, asaas_sincronizado_em, ultimo_erro_cobranca";
 
 function falha(tabela: string, error: { message: string } | null) {
   if (error) throw new Error(`${tabela}: ${error.message}`);
@@ -117,9 +154,7 @@ export async function carregarBase(db: Db): Promise<Base> {
     db.from("acessos_bloqueados").select("user_id, motivo"),
     db
       .from("assinaturas")
-      .select(
-        "id, medico_id, contratacao_id, plano, ciclo, status, preco_mensal, proxima_cobranca, medicos, secretarias, cancelamento_agendado_para, ultimo_erro_cobranca, updated_at, created_at",
-      )
+      .select(`${COLUNAS_ASSINATURA}, updated_at, created_at`)
       .order("created_at", { ascending: false }),
   ]);
   falha("clinica_membros", membros.error);
@@ -262,9 +297,18 @@ export function repoPagamentos(db: Db): RepoPagamentos {
       return data ?? null;
     },
     async atualizarStatus(id, status, estornoMotivo) {
+      const { data: atual } = await db
+        .from("pagamentos_manuais")
+        .select("valor")
+        .eq("id", id)
+        .maybeSingle();
       const { error } = await db
         .from("pagamentos_manuais")
-        .update({ status, estorno_motivo: estornoMotivo })
+        .update({
+          status,
+          estorno_motivo: estornoMotivo,
+          ...(status === "estornado" && atual ? { valor_estornado: atual.valor } : {}),
+        })
         .eq("id", id);
       falha("pagamentos_manuais", error);
     },
@@ -276,6 +320,7 @@ type ManualRow = {
   id: string;
   medico_id: string;
   valor: number;
+  valor_estornado: number | null;
   status: string;
   metodo: string;
   referencia: string | null;
@@ -287,13 +332,68 @@ type AsaasRow = {
   asaas_payment_id: string;
   medico_id: string | null;
   valor: number | null;
+  valor_liquido: number | null;
+  valor_estornado: number | null;
   status: string | null;
   metodo: string | null;
   vencimento: string | null;
   pago_em: string | null;
+  fatura_url: string | null;
+  descricao: string | null;
+};
+type EstornoRow = {
+  id: string;
+  origem: "manual" | "asaas";
+  pagamento_id: string;
+  medico_id: string | null;
+  valor: number;
+  motivo: string | null;
+  status: "solicitado" | "concluido" | "falhou";
+  erro: string | null;
+  autor: string | null;
+  criado_em: string;
+  concluido_em: string | null;
 };
 
-/** Manuais + cobranças do Asaas registradas, mais recentes primeiro. */
+const COLUNAS_ESTORNO =
+  "id, origem, pagamento_id, medico_id, valor, motivo, status, erro, autor, criado_em, concluido_em";
+
+function montarEstorno(base: Base, e: EstornoRow): Estorno {
+  return {
+    id: e.id,
+    pagamento_id: e.pagamento_id,
+    clinica_id: e.medico_id,
+    clinica_nome: e.medico_id ? nomeClinicaDe(base, e.medico_id) : null,
+    origem: e.origem,
+    valor: Number(e.valor),
+    data: (e.concluido_em ?? e.criado_em).slice(0, 10),
+    motivo: e.motivo,
+    status: e.status,
+    erro: e.erro,
+    autor: e.autor,
+  };
+}
+
+/** Estornos mais recentes primeiro (da clínica ou de todas). */
+export async function listarEstornos(
+  db: Db,
+  base: Base,
+  opcoes: { clinicaId?: string; pagamentoIds?: string[]; limite: number },
+): Promise<Estorno[]> {
+  if (opcoes.pagamentoIds && !opcoes.pagamentoIds.length) return [];
+  let q = db
+    .from("pagamentos_estornos")
+    .select(COLUNAS_ESTORNO)
+    .order("criado_em", { ascending: false })
+    .limit(opcoes.limite);
+  if (opcoes.clinicaId) q = q.eq("medico_id", opcoes.clinicaId);
+  if (opcoes.pagamentoIds) q = q.in("pagamento_id", opcoes.pagamentoIds);
+  const { data, error } = await q;
+  falha("pagamentos_estornos", error);
+  return ((data ?? []) as EstornoRow[]).map((e) => montarEstorno(base, e));
+}
+
+/** Manuais + cobranças do Asaas registradas, mais recentes primeiro, com os estornos de cada um. */
 export async function listarPagamentos(
   db: Db,
   base: Base,
@@ -301,13 +401,17 @@ export async function listarPagamentos(
 ): Promise<Pagamento[]> {
   let manuais = db
     .from("pagamentos_manuais")
-    .select("id, medico_id, valor, status, metodo, referencia, data, observacao, estorno_motivo")
+    .select(
+      "id, medico_id, valor, valor_estornado, status, metodo, referencia, data, observacao, estorno_motivo",
+    )
     .order("data", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(opcoes.limite);
   let asaas = db
     .from("asaas_cobrancas")
-    .select("asaas_payment_id, medico_id, valor, status, metodo, vencimento, pago_em")
+    .select(
+      "asaas_payment_id, medico_id, valor, valor_liquido, valor_estornado, status, metodo, vencimento, pago_em, fatura_url, descricao",
+    )
     .order("atualizado_em", { ascending: false })
     .limit(opcoes.limite);
   if (opcoes.clinicaId) {
@@ -319,36 +423,150 @@ export async function listarPagamentos(
   falha("asaas_cobrancas", a.error);
 
   const lista: Pagamento[] = [
-    ...((m.data ?? []) as ManualRow[]).map((p) => ({
-      id: p.id,
-      clinica_id: p.medico_id,
-      clinica_nome: nomeClinicaDe(base, p.medico_id),
-      valor: Number(p.valor),
-      status: p.status,
-      metodo: p.metodo,
-      referencia: p.referencia,
-      data: p.data,
-      origem: "manual" as const,
-      observacao:
-        p.status === "estornado" && p.estorno_motivo
-          ? [p.observacao, `Estorno: ${p.estorno_motivo}`].filter(Boolean).join(" — ")
-          : p.observacao,
-    })),
-    ...((a.data ?? []) as AsaasRow[]).map((p) => ({
-      id: p.asaas_payment_id,
-      clinica_id: p.medico_id,
-      clinica_nome: p.medico_id ? nomeClinicaDe(base, p.medico_id) : null,
-      valor: p.valor == null ? null : Number(p.valor),
-      status: p.status,
-      metodo: p.metodo,
-      referencia: p.asaas_payment_id,
-      data: p.pago_em ?? p.vencimento,
-      origem: "asaas" as const,
-      observacao: null,
-    })),
+    ...((m.data ?? []) as ManualRow[]).map((p) => {
+      const valor = Number(p.valor);
+      // Estornos antigos (rota pagamentos/:id/status) não gravavam o valor.
+      const estornado =
+        p.status === "estornado"
+          ? Math.max(Number(p.valor_estornado ?? 0), valor)
+          : Number(p.valor_estornado ?? 0);
+      return {
+        id: p.id,
+        clinica_id: p.medico_id,
+        clinica_nome: nomeClinicaDe(base, p.medico_id),
+        valor,
+        status: p.status,
+        metodo: p.metodo,
+        referencia: p.referencia,
+        data: p.data,
+        origem: "manual" as const,
+        observacao:
+          p.status === "estornado" && p.estorno_motivo
+            ? [p.observacao, `Estorno: ${p.estorno_motivo}`].filter(Boolean).join(" — ")
+            : p.observacao,
+        vencimento: p.data,
+        valor_liquido: null,
+        valor_estornado: estornado,
+        asaas_payment_id: null,
+        fatura_url: null,
+        estornos: [] as Estorno[],
+      };
+    }),
+    ...((a.data ?? []) as AsaasRow[]).map((p) => {
+      const valor = p.valor == null ? null : Number(p.valor);
+      const estornado = Number(p.valor_estornado ?? 0);
+      return {
+        id: p.asaas_payment_id,
+        clinica_id: p.medico_id,
+        clinica_nome: p.medico_id ? nomeClinicaDe(base, p.medico_id) : null,
+        valor,
+        status: statusDaCobranca(p.status, valor, estornado),
+        metodo: p.metodo?.toLowerCase().replace("credit_card", "cartao") ?? null,
+        referencia: p.descricao ?? p.asaas_payment_id,
+        data: p.pago_em ?? p.vencimento,
+        origem: "asaas" as const,
+        observacao: null,
+        vencimento: p.vencimento,
+        valor_liquido: p.valor_liquido == null ? null : Number(p.valor_liquido),
+        valor_estornado: estornado,
+        asaas_payment_id: p.asaas_payment_id,
+        fatura_url: p.fatura_url,
+        estornos: [] as Estorno[],
+      };
+    }),
   ];
   lista.sort((x, y) => String(y.data ?? "").localeCompare(String(x.data ?? "")));
-  return lista.slice(0, opcoes.limite);
+  const pagina = lista.slice(0, opcoes.limite);
+
+  const estornos = await listarEstornos(db, base, {
+    pagamentoIds: pagina.filter((p) => p.valor_estornado > 0).map((p) => p.id),
+    limite: 1000,
+  });
+  const porPagamento = new Map<string, Estorno[]>();
+  for (const e of estornos) {
+    const l = porPagamento.get(e.pagamento_id) ?? [];
+    l.push(e);
+    porPagamento.set(e.pagamento_id, l);
+  }
+  for (const p of pagina) p.estornos = porPagamento.get(p.id) ?? [];
+  return pagina;
+}
+
+/** Assinatura no formato da ponte (GET clinicas/:id). */
+export function assinaturaParaCrm(a: AssinaturaRow) {
+  return {
+    id: a.id,
+    plano: a.plano,
+    ciclo: a.ciclo,
+    status: a.status,
+    preco_mensal: Number(a.preco_mensal),
+    inicio: a.created_at?.slice(0, 10) ?? null,
+    proxima_cobranca: a.proxima_cobranca,
+    medicos: a.medicos,
+    secretarias: a.secretarias,
+    cancelamento_agendado_para: a.status === "cancelada" ? null : a.cancelamento_agendado_para,
+    cancelamento_reversivel: a.cancelamento_reversivel,
+    cancelada_em:
+      a.cancelada_em ?? (a.status === "cancelada" ? (a.cancelamento_agendado_para ?? null) : null),
+    cancelamento_motivo: a.cancelamento_motivo,
+    cancelado_por: a.cancelado_por ?? (a.cancelamento_solicitado_em ? "cliente" : null),
+    asaas_customer_id: a.asaas_customer_id,
+    asaas_subscription_id: a.asaas_subscription_id,
+    asaas_sincronizado_em: a.asaas_sincronizado_em,
+  };
+}
+
+/** Assinaturas com cancelamento agendado ou cancelada nos últimos 90 dias. */
+export function cancelamentosRecentes(base: Base, hoje = new Date()) {
+  const limite = new Date(hoje.getTime() - 90 * 86_400_000).toISOString().slice(0, 10);
+  return base.assinaturas
+    .filter((a) => a.cancelamento_agendado_para || a.status === "cancelada")
+    .map((a) => {
+      const crm = assinaturaParaCrm(a);
+      return {
+        assinatura_id: a.id,
+        clinica_id: a.medico_id,
+        clinica_nome: nomeClinicaDe(base, a.medico_id),
+        plano: a.plano,
+        preco_mensal: Number(a.preco_mensal),
+        agendado_para: crm.cancelamento_agendado_para,
+        cancelada_em: crm.cancelada_em ?? (a.status === "cancelada" ? a.updated_at : null),
+        motivo: a.cancelamento_motivo,
+        cancelado_por: crm.cancelado_por,
+      };
+    })
+    .filter((c) => c.agendado_para || String(c.cancelada_em ?? "").slice(0, 10) >= limite);
+}
+
+/** Corpo de GET clinicas/:id (também devolvido pela sincronização com o Asaas). */
+export async function detalheClinica(db: Db, id: string) {
+  const base = await carregarBase(db);
+  const dono = base.usuarios.get(id);
+  if (!dono || base.membroPorUser.has(id)) throw new ErroCrm(404, "clínica não encontrada");
+  const config = base.configs.get(id);
+  const bloqueio = base.bloqueios.get(id);
+  const a = assinaturaDe(base, id);
+  return {
+    clinica: {
+      id,
+      fantasia: config?.fantasia ?? null,
+      razao_social: config?.razao_social ?? null,
+      cnpj_cpf: config?.cnpj_cpf ?? null,
+      email: config?.email ?? dono.email ?? null,
+      telefone: config?.telefone ?? null,
+      cidade: config?.cidade ?? null,
+      uf: config?.uf ?? null,
+      acesso_bloqueado: !!bloqueio,
+      bloqueio_motivo: bloqueio?.motivo ?? null,
+    },
+    medico: montarUsuario(base, dono),
+    membros: membrosComLogin(base, id)
+      .map((uid) => base.usuarios.get(uid))
+      .filter((u) => !!u)
+      .map((u) => montarUsuario(base, u)),
+    assinatura: a ? assinaturaParaCrm(a) : null,
+    pagamentos: await listarPagamentos(db, base, { clinicaId: id, limite: 200 }),
+  };
 }
 
 export async function exigirClinica(db: Db, id: string): Promise<User> {

@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  cancelamentosRecentes,
   carregarBase,
+  listarEstornos,
   exigirClinica,
   listarPagamentos,
   nomeClinicaDe,
@@ -53,7 +55,10 @@ export const Route = createFileRoute("/api/public/crm/pagamentos")({
               c.preco_mensal_calculado == null ? null : Number(c.preco_mensal_calculado),
           }));
 
-        return { pagamentos, inadimplentes, contratacoes_pendentes };
+        const estornos = await listarEstornos(db, base, { limite: 200 });
+        const cancelamentos = cancelamentosRecentes(base);
+
+        return { pagamentos, inadimplentes, contratacoes_pendentes, estornos, cancelamentos };
       }),
 
       POST: rotaCrm(async ({ request, db, ator, auditar }) => {

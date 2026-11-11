@@ -152,3 +152,124 @@ export function nomeDaClinica(
 ): string | null {
   return config?.fantasia?.trim() || config?.razao_social?.trim() || nomeMedico || null;
 }
+
+// ---------------------------------------------------------------------------
+// Financeiro (contrato v2): status, estorno e cancelamento
+// ---------------------------------------------------------------------------
+
+/** Id de pagamento na ponte: uuid (manual) ou id de cobrança do Asaas (pay_...). */
+export const PagamentoIdSchema = z.union([
+  IdSchema,
+  z.string().regex(/^pay_[A-Za-z0-9]{1,64}$/, "id de pagamento inválido"),
+]);
+
+export const EstornoSchema = z.object({
+  /** Ausente = estorna o que ainda resta do pagamento. */
+  valor: z.coerce.number().positive().max(10_000_000).optional(),
+  motivo: textoOuNulo(500),
+});
+
+export const CancelarAssinaturaSchema = z.object({
+  quando: z.enum(["fim_do_ciclo", "agora"]),
+  motivo: textoOuNulo(200),
+  observacao: textoOuNulo(2000),
+  cancelar_pendentes: z.boolean().optional().default(false),
+});
+
+const DO_ASAAS: Record<string, string> = {
+  PENDING: "pendente",
+  AWAITING_RISK_ANALYSIS: "pendente",
+  OVERDUE: "vencido",
+  CONFIRMED: "confirmado",
+  RECEIVED: "recebido",
+  RECEIVED_IN_CASH: "recebido",
+  REFUND_REQUESTED: "estorno_solicitado",
+  REFUND_IN_PROGRESS: "estorno_solicitado",
+  CHARGEBACK_REQUESTED: "estorno_solicitado",
+  CHARGEBACK_DISPUTE: "estorno_solicitado",
+  AWAITING_CHARGEBACK_REVERSAL: "estorno_solicitado",
+  REFUNDED: "estornado",
+  DELETED: "cancelado",
+};
+
+const centavos = (v: number) => Math.round(v * 100);
+
+/**
+ * Status em português de uma cobrança, levando em conta o que já foi
+ * estornado (inclusive estornos ainda em andamento no Asaas).
+ */
+export function statusDaCobranca(
+  status: string | null,
+  valor: number | null,
+  estornado: number,
+): string {
+  const base = status ? (DO_ASAAS[status] ?? status.toLowerCase()) : "pendente";
+  const v = centavos(valor ?? 0);
+  const e = centavos(estornado);
+  if (e <= 0) return base;
+  if (v > 0 && e < v) return "estorno_parcial";
+  return base === "estornado" ? "estornado" : "estorno_solicitado";
+}
+
+const PAGOS = new Set(["confirmado", "recebido", "estorno_parcial"]);
+
+/**
+ * Quanto estornar de um pagamento. `estornado` soma os estornos que não
+ * falharam (concluídos e em andamento), para o mesmo valor não ser pedido
+ * duas vezes enquanto o Asaas processa.
+ */
+export function valorDoEstorno(
+  pagamento: { valor: number; estornado: number; status: string },
+  pedido: number | undefined,
+): { valor: number; total: boolean } {
+  if (!PAGOS.has(pagamento.status))
+    throw new ErroCrm(409, `só dá para estornar pagamento recebido (status: ${pagamento.status})`);
+  const restante = centavos(pagamento.valor) - centavos(pagamento.estornado);
+  if (restante <= 0) throw new ErroCrm(409, "este pagamento já foi estornado por inteiro");
+  const quer = pedido === undefined ? restante : centavos(pedido);
+  if (quer <= 0) throw new ErroCrm(400, "valor do estorno precisa ser maior que zero");
+  if (quer > restante)
+    throw new ErroCrm(
+      400,
+      `o estorno passa do valor que resta (R$ ${(restante / 100).toFixed(2)})`,
+    );
+  return { valor: quer / 100, total: quer === restante };
+}
+
+function diaAnterior(iso: string): string {
+  const d = new Date(`${iso}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+export type PlanoCancelamento =
+  | { imediato: true }
+  | { imediato: false; agendadoPara: string; endDate: string };
+
+/**
+ * Como cancelar. No fim do ciclo, a assinatura do Asaas ganha `endDate` no
+ * dia anterior à próxima cobrança (para ela não ser gerada) e o acesso vai
+ * até essa próxima cobrança.
+ */
+export function planoDeCancelamento(
+  a: { status: string; proxima_cobranca: string | null; cancelamento_agendado_para: string | null },
+  quando: "fim_do_ciclo" | "agora",
+  hoje: string,
+): PlanoCancelamento {
+  if (a.status === "cancelada") throw new ErroCrm(409, "a assinatura já está cancelada");
+  if (quando === "agora") return { imediato: true };
+  if (a.cancelamento_agendado_para)
+    throw new ErroCrm(409, `o cancelamento já está agendado para ${a.cancelamento_agendado_para}`);
+  if (a.status !== "ativa")
+    throw new ErroCrm(409, "assinatura inadimplente não tem período pago a manter: cancele agora");
+  if (!a.proxima_cobranca || a.proxima_cobranca <= hoje)
+    throw new ErroCrm(
+      409,
+      "sem próxima cobrança futura conhecida: sincronize com o Asaas ou cancele agora",
+    );
+  return {
+    imediato: false,
+    agendadoPara: a.proxima_cobranca,
+    endDate: diaAnterior(a.proxima_cobranca),
+  };
+}
