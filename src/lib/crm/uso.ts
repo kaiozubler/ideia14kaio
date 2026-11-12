@@ -277,7 +277,9 @@ export function riscoDeChurn(
     ["consultas", 5, 20, 10],
     ["agendamentos", 5, 10, 5],
   ];
-  for (const [m, base, forte, leve] of quedas) {
+  // Sem nenhum acesso no período, o alerta de "sem acesso" já diz tudo.
+  const parado = semAcesso == null || semAcesso >= dias;
+  for (const [m, base, forte, leve] of parado ? [] : quedas) {
     const x = comp[m];
     if (x.anterior < base || x.variacao == null || x.variacao > -0.3) continue;
     const grave = x.variacao <= -0.5;

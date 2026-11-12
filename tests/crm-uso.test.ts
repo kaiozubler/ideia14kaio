@@ -122,6 +122,19 @@ test("sem acesso há 20 dias e nunca acessou", () => {
   const a = r.clinicas.find((c) => c.clinica_id === "a")!;
   assert.equal(a.dias_sem_acesso, 20);
   assert.ok(a.alertas.some((x) => x.titulo === "Sem acesso há 20 dias" && x.gravidade === "alta"));
+  // Parada há mais que o período: sem alertas repetidos de queda.
+  const r2 = calcularUso({
+    hoje: HOJE,
+    dias: 7,
+    historicoDias: 180,
+    clinicas: [clinica("a")],
+    usuarios: acessos("a", somarDias(HOJE, -8), 7),
+    atividade: consultas("a", somarDias(HOJE, -8), 7, 3),
+  });
+  assert.deepEqual(
+    r2.clinicas[0].alertas.map((x) => x.titulo),
+    ["Sem acesso há 8 dias", "Usa poucas licenças"],
+  );
   const n = r.clinicas.find((c) => c.clinica_id === "n")!;
   assert.ok(n.alertas.some((x) => x.titulo === "Nunca acessou"));
   // Conta com menos de 7 dias ainda não alerta.
