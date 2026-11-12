@@ -145,6 +145,12 @@ export type Base = {
 };
 
 export async function carregarBase(db: Db): Promise<Base> {
+  // Cancelamentos e trocas de plano cuja data chegou, antes de ler as assinaturas.
+  const { error: erroAgendamentos } = await db.rpc("aplicar_agendamentos_assinaturas", {
+    p_medico_id: null,
+  });
+  if (erroAgendamentos)
+    console.error("[crm] erro ao aplicar agendamentos de assinatura:", erroAgendamentos.message);
   const [usuarios, membros, configs, bloqueios, assinaturas] = await Promise.all([
     listarUsuariosAuth(db),
     db.from("clinica_membros").select("clinica_id, user_id, nome, email, papel, status"),

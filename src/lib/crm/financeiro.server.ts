@@ -4,6 +4,7 @@
 
 import { AsaasApiError, AsaasNaoConfiguradoError, asaasFetch } from "@/lib/asaas/client.server";
 import { linhaDaCobranca, type PaymentAsaas } from "@/lib/asaas/cobrancas";
+import { vincularCobrancasSemClinica } from "@/lib/asaas/vinculo.server";
 import {
   COLUNAS_ASSINATURA,
   type AssinaturaRow,
@@ -399,9 +400,11 @@ export async function sincronizarComAsaas(db: Db, a: AssinaturaRow) {
     }
   }
 
-  const filtro = sub
-    ? `subscription=${encodeURIComponent(sub)}`
-    : `customer=${encodeURIComponent(a.asaas_customer_id as string)}`;
+  const cliente = (mudancas.asaas_customer_id as string | undefined) ?? a.asaas_customer_id;
+  // Pelo cliente vêm também as cobranças avulsas (créditos adicionais).
+  const filtro = cliente
+    ? `customer=${encodeURIComponent(cliente)}`
+    : `subscription=${encodeURIComponent(sub as string)}`;
   const cobrancas = (await cobrancasDoAsaas(filtro)).filter(
     (p): p is PaymentAsaas & { id: string } => !!p.id,
   );
@@ -418,6 +421,12 @@ export async function sincronizarComAsaas(db: Db, a: AssinaturaRow) {
 
   const { error } = await db.from("assinaturas").update(mudancas).eq("id", a.id);
   falha("assinaturas", error);
+  await vincularCobrancasSemClinica(db, {
+    id: a.id,
+    medico_id: a.medico_id,
+    asaas_subscription_id: sub,
+    asaas_customer_id: cliente,
+  });
   if (
     a.status === "inadimplente" &&
     !cobrancas.some((p) => p.status === "OVERDUE" && !p.deleted) &&

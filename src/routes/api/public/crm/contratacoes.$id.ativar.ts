@@ -1,5 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { listarUsuariosAuth, repoAcessos } from "@/lib/crm/dados.server";
+import {
+  COLUNAS_ASSINATURA,
+  listarUsuariosAuth,
+  repoAcessos,
+  type AssinaturaRow,
+} from "@/lib/crm/dados.server";
+import { sincronizarComAsaas } from "@/lib/crm/financeiro.server";
 import { AtivarContratacaoSchema, ErroCrm, IdSchema, definirAcessoClinica } from "@/lib/crm/ponte";
 import { corpo, rotaCrm, validar } from "@/lib/crm/rota.server";
 
@@ -67,7 +73,7 @@ export const Route = createFileRoute("/api/public/crm/contratacoes/$id/ativar")(
               ciclo,
             ),
           )
-          .select("id")
+          .select(`${COLUNAS_ASSINATURA}, updated_at, created_at`)
           .single();
         if (insErr) {
           if (insErr.code === "23505") throw new ErroCrm(409, "este médico já tem uma assinatura");
@@ -78,12 +84,25 @@ export const Route = createFileRoute("/api/public/crm/contratacoes/$id/ativar")(
         // Assinatura paga reabre o acesso da clínica toda, se o CRM a tinha suspendido.
         await definirAcessoClinica(repoAcessos(db), medico.id, false, null, ator);
 
+        // Traz do Asaas a próxima cobrança e as cobranças que chegaram antes da
+        // ativação (e ficaram sem clínica). Falha aqui não desfaz a ativação.
+        let aviso: string | null = null;
+        if (assinatura.asaas_subscription_id || assinatura.asaas_customer_id) {
+          try {
+            await sincronizarComAsaas(db, assinatura as AssinaturaRow);
+          } catch (err) {
+            aviso = `Ativada, mas não sincronizou com o Asaas: ${err instanceof Error ? err.message : String(err)}`;
+            console.error("[crm] ativar:", aviso);
+          }
+        }
+
         await auditar("contratacao.ativar", id, {
           medico_id: medico.id,
           medico_email,
           assinatura_id: assinatura.id,
+          aviso,
         });
-        return { ok: true, assinatura_id: assinatura.id };
+        return { ok: true, assinatura_id: assinatura.id, aviso };
       }),
     },
   },

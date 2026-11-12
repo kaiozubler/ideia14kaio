@@ -53,29 +53,26 @@ type EventoAsaas = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = any;
 
-/** Guarda a cobrança recorrente para o Zubler CRM (/api/public/crm/pagamentos). Falha aqui não reenvia o evento. */
+/** Guarda a cobrança para o Zubler CRM (/api/public/crm/pagamentos). Falha aqui não reenvia o evento. */
 async function registrarCobranca(
   db: Db,
   evento: string,
   payment: NonNullable<EventoAsaas["payment"]>,
 ) {
   if (!payment.id) return;
-  let medicoId: string | null = null;
-  let assinaturaId: string | null = null;
-  if (payment.subscription) {
-    const { data } = await db
-      .from("assinaturas")
-      .select("id, medico_id")
-      .eq("asaas_subscription_id", payment.subscription)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    medicoId = data?.medico_id ?? null;
-    assinaturaId = data?.id ?? null;
+  const { vinculoDaCobranca } = await import("@/lib/asaas/vinculo.server");
+  const vinculo = await vinculoDaCobranca(db, payment);
+  const linha: Record<string, unknown> = linhaDaCobranca(
+    { ...payment, id: payment.id },
+    vinculo,
+    evento,
+  );
+  // Sem clínica achada, não apaga o vínculo que a sincronização ou a ativação já gravou.
+  if (!vinculo.medicoId) {
+    delete linha.medico_id;
+    delete linha.assinatura_id;
   }
-  const { error } = await db
-    .from("asaas_cobrancas")
-    .upsert(linhaDaCobranca({ ...payment, id: payment.id }, { medicoId, assinaturaId }, evento));
+  const { error } = await db.from("asaas_cobrancas").upsert(linha);
   if (error) console.error("[asaas:webhook] erro ao registrar cobrança:", error.message);
 }
 
@@ -197,6 +194,29 @@ export const Route = createFileRoute("/api/asaas/webhook")({
             if (error) console.error("[asaas:webhook] erro ao cancelar assinatura:", error.message);
           }
         }
+
+        // A próxima cobrança muda quando o Asaas gera, recebe ou apaga uma cobrança.
+        if (
+          subscriptionId &&
+          [
+            "PAYMENT_CREATED",
+            "PAYMENT_CONFIRMED",
+            "PAYMENT_RECEIVED",
+            "PAYMENT_DELETED",
+            "PAYMENT_RESTORED",
+          ].includes(corpo.event)
+        ) {
+          const { atualizarProximaCobranca } = await import("@/lib/asaas/vinculo.server");
+          await atualizarProximaCobranca(supabaseAdmin, subscriptionId);
+        }
+
+        // Cancelamentos e trocas de plano cuja data chegou (sem depender do login do cliente).
+        const { error: erroAgendamentos } = await supabaseAdmin.rpc(
+          "aplicar_agendamentos_assinaturas",
+          { p_medico_id: null },
+        );
+        if (erroAgendamentos)
+          console.error("[asaas:webhook] erro ao aplicar agendamentos:", erroAgendamentos.message);
 
         return Response.json({ ok: true });
       },

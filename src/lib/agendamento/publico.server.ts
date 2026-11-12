@@ -49,6 +49,10 @@ export async function configDoLink(token: string): Promise<Config | null> {
         .select("id")
         .eq("medico_id", cfg.clinica_id)
         .neq("status", "cancelada")
+        // Cancelamento agendado cuja data já chegou conta como cancelada.
+        .or(
+          `cancelamento_agendado_para.is.null,cancelamento_agendado_para.gt.${new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10)}`,
+        )
         .limit(1)
         .maybeSingle(),
     ]);

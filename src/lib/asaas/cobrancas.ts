@@ -27,6 +27,7 @@ export function linhaDaCobranca(
   return {
     asaas_payment_id: payment.id,
     asaas_subscription_id: payment.subscription ?? null,
+    asaas_customer_id: payment.customer ?? null,
     medico_id: vinculo.medicoId,
     assinatura_id: vinculo.assinaturaId,
     valor: payment.value ?? null,
