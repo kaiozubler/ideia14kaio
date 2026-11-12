@@ -2239,6 +2239,7 @@
     <link rel="stylesheet" href="tour-guiado.css?v=1" />
     <link rel="stylesheet" href="assistente-voz.css?v=1" />
     <script src="tour-guiado.js?v=2"></script>
+    <script src="uso-registro.js?v=1"></script>
   </head>
   <body>
     <div id="toast" class="toast"></div>
@@ -6734,6 +6735,7 @@ const {error}=await sb.auth.signUp({email,password:pass,options:{data:{name_user
                                                             if(CLINICA.papel==='inativo'){mostrarAcessoDesativado();return;}
                                                             if(await sugerirPlanosNaContaNova(session.user))return;
                                                             showApp();
+                                                            if(window.MCUso){MCUso.entrar();MCUso.tela(MCTour.telaAtual());}
                                                             MCTour.aoEntrarNaTela(MCTour.telaAtual());
                                                             await loadPatients();
                                                             if(!ehMembroEquipe()&&typeof fetchAnamneseModels==='function')fetchAnamneseModels();
@@ -6882,6 +6884,7 @@ if(!telaPermitidaPapel(name)){showToast('Área disponível apenas para o médico
                                                                 const g=document.getElementById('grp-ia');if(g)g.classList.add('open');
                                                               }
                                                               MCTour.aoEntrarNaTela(name);
+                                                              if(window.MCUso)MCUso.tela(name);
                                                             }
                                                             function toggleIAGroup(){document.getElementById('grp-ia').classList.toggle('open');}
 

@@ -273,3 +273,14 @@ export function planoDeCancelamento(
     endDate: diaAnterior(a.proxima_cobranca),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Uso (insights)
+// ---------------------------------------------------------------------------
+
+/** Tamanho do período dos insights de uso (?dias=), 30 por padrão. */
+export const DiasUsoSchema = z.coerce
+  .number()
+  .int()
+  .refine((n) => [7, 14, 30, 60, 90].includes(n), "dias deve ser 7, 14, 30, 60 ou 90")
+  .default(30);

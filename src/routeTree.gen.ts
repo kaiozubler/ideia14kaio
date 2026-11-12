@@ -99,6 +99,7 @@ import { Route as ApiPublicCrmCuponsRouteImport } from './routes/api/public/crm/
 import { Route as ApiPublicCrmHealthRouteImport } from './routes/api/public/crm/health'
 import { Route as ApiPublicCrmPagamentosRouteImport } from './routes/api/public/crm/pagamentos'
 import { Route as ApiPublicCrmPipeRouteImport } from './routes/api/public/crm/pipe'
+import { Route as ApiPublicCrmUsoRouteImport } from './routes/api/public/crm/uso'
 import { Route as ApiPublicCrmUsuariosRouteImport } from './routes/api/public/crm/usuarios'
 import { Route as ApiPublicDocumentosAbrirRouteImport } from './routes/api/public/documentos/abrir'
 import { Route as ApiPublicDocumentosIdentidadeRouteImport } from './routes/api/public/documentos/identidade'
@@ -128,6 +129,7 @@ import { Route as ApiPublicWebhooksWhatsappClinicaChaveRouteImport } from './rou
 import { Route as ApiPublicCrmAssinaturasIdCancelarRouteImport } from './routes/api/public/crm/assinaturas.$id.cancelar'
 import { Route as ApiPublicCrmAssinaturasIdReativarRouteImport } from './routes/api/public/crm/assinaturas.$id.reativar'
 import { Route as ApiPublicCrmClinicasIdAcessoRouteImport } from './routes/api/public/crm/clinicas.$id.acesso'
+import { Route as ApiPublicCrmClinicasIdUsoRouteImport } from './routes/api/public/crm/clinicas.$id.uso'
 import { Route as ApiPublicCrmContratacoesIdAtivarRouteImport } from './routes/api/public/crm/contratacoes.$id.ativar'
 import { Route as ApiPublicCrmPagamentosIdEstornoRouteImport } from './routes/api/public/crm/pagamentos.$id.estorno'
 import { Route as ApiPublicCrmPagamentosIdStatusRouteImport } from './routes/api/public/crm/pagamentos.$id.status'
@@ -609,6 +611,11 @@ const ApiPublicCrmPipeRoute = ApiPublicCrmPipeRouteImport.update({
   path: '/api/public/crm/pipe',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCrmUsoRoute = ApiPublicCrmUsoRouteImport.update({
+  id: '/api/public/crm/uso',
+  path: '/api/public/crm/uso',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCrmUsuariosRoute = ApiPublicCrmUsuariosRouteImport.update({
   id: '/api/public/crm/usuarios',
   path: '/api/public/crm/usuarios',
@@ -772,6 +779,12 @@ const ApiPublicCrmClinicasIdAcessoRoute =
     path: '/acesso',
     getParentRoute: () => ApiPublicCrmClinicasIdRoute,
   } as any)
+const ApiPublicCrmClinicasIdUsoRoute =
+  ApiPublicCrmClinicasIdUsoRouteImport.update({
+    id: '/uso',
+    path: '/uso',
+    getParentRoute: () => ApiPublicCrmClinicasIdRoute,
+  } as any)
 const ApiPublicCrmContratacoesIdAtivarRoute =
   ApiPublicCrmContratacoesIdAtivarRouteImport.update({
     id: '/api/public/crm/contratacoes/$id/ativar',
@@ -894,6 +907,7 @@ export interface FileRoutesByFullPath {
   '/api/public/crm/health': typeof ApiPublicCrmHealthRoute
   '/api/public/crm/pagamentos': typeof ApiPublicCrmPagamentosRouteWithChildren
   '/api/public/crm/pipe': typeof ApiPublicCrmPipeRouteWithChildren
+  '/api/public/crm/uso': typeof ApiPublicCrmUsoRoute
   '/api/public/crm/usuarios': typeof ApiPublicCrmUsuariosRouteWithChildren
   '/api/public/documentos/abrir': typeof ApiPublicDocumentosAbrirRoute
   '/api/public/documentos/identidade': typeof ApiPublicDocumentosIdentidadeRoute
@@ -923,6 +937,7 @@ export interface FileRoutesByFullPath {
   '/api/public/crm/assinaturas/$id/cancelar': typeof ApiPublicCrmAssinaturasIdCancelarRoute
   '/api/public/crm/assinaturas/$id/reativar': typeof ApiPublicCrmAssinaturasIdReativarRoute
   '/api/public/crm/clinicas/$id/acesso': typeof ApiPublicCrmClinicasIdAcessoRoute
+  '/api/public/crm/clinicas/$id/uso': typeof ApiPublicCrmClinicasIdUsoRoute
   '/api/public/crm/contratacoes/$id/ativar': typeof ApiPublicCrmContratacoesIdAtivarRoute
   '/api/public/crm/pagamentos/$id/estorno': typeof ApiPublicCrmPagamentosIdEstornoRoute
   '/api/public/crm/pagamentos/$id/status': typeof ApiPublicCrmPagamentosIdStatusRoute
@@ -1020,6 +1035,7 @@ export interface FileRoutesByTo {
   '/api/public/crm/health': typeof ApiPublicCrmHealthRoute
   '/api/public/crm/pagamentos': typeof ApiPublicCrmPagamentosRouteWithChildren
   '/api/public/crm/pipe': typeof ApiPublicCrmPipeRouteWithChildren
+  '/api/public/crm/uso': typeof ApiPublicCrmUsoRoute
   '/api/public/crm/usuarios': typeof ApiPublicCrmUsuariosRouteWithChildren
   '/api/public/documentos/abrir': typeof ApiPublicDocumentosAbrirRoute
   '/api/public/documentos/identidade': typeof ApiPublicDocumentosIdentidadeRoute
@@ -1049,6 +1065,7 @@ export interface FileRoutesByTo {
   '/api/public/crm/assinaturas/$id/cancelar': typeof ApiPublicCrmAssinaturasIdCancelarRoute
   '/api/public/crm/assinaturas/$id/reativar': typeof ApiPublicCrmAssinaturasIdReativarRoute
   '/api/public/crm/clinicas/$id/acesso': typeof ApiPublicCrmClinicasIdAcessoRoute
+  '/api/public/crm/clinicas/$id/uso': typeof ApiPublicCrmClinicasIdUsoRoute
   '/api/public/crm/contratacoes/$id/ativar': typeof ApiPublicCrmContratacoesIdAtivarRoute
   '/api/public/crm/pagamentos/$id/estorno': typeof ApiPublicCrmPagamentosIdEstornoRoute
   '/api/public/crm/pagamentos/$id/status': typeof ApiPublicCrmPagamentosIdStatusRoute
@@ -1147,6 +1164,7 @@ export interface FileRoutesById {
   '/api/public/crm/health': typeof ApiPublicCrmHealthRoute
   '/api/public/crm/pagamentos': typeof ApiPublicCrmPagamentosRouteWithChildren
   '/api/public/crm/pipe': typeof ApiPublicCrmPipeRouteWithChildren
+  '/api/public/crm/uso': typeof ApiPublicCrmUsoRoute
   '/api/public/crm/usuarios': typeof ApiPublicCrmUsuariosRouteWithChildren
   '/api/public/documentos/abrir': typeof ApiPublicDocumentosAbrirRoute
   '/api/public/documentos/identidade': typeof ApiPublicDocumentosIdentidadeRoute
@@ -1176,6 +1194,7 @@ export interface FileRoutesById {
   '/api/public/crm/assinaturas/$id/cancelar': typeof ApiPublicCrmAssinaturasIdCancelarRoute
   '/api/public/crm/assinaturas/$id/reativar': typeof ApiPublicCrmAssinaturasIdReativarRoute
   '/api/public/crm/clinicas/$id/acesso': typeof ApiPublicCrmClinicasIdAcessoRoute
+  '/api/public/crm/clinicas/$id/uso': typeof ApiPublicCrmClinicasIdUsoRoute
   '/api/public/crm/contratacoes/$id/ativar': typeof ApiPublicCrmContratacoesIdAtivarRoute
   '/api/public/crm/pagamentos/$id/estorno': typeof ApiPublicCrmPagamentosIdEstornoRoute
   '/api/public/crm/pagamentos/$id/status': typeof ApiPublicCrmPagamentosIdStatusRoute
@@ -1275,6 +1294,7 @@ export interface FileRouteTypes {
     | '/api/public/crm/health'
     | '/api/public/crm/pagamentos'
     | '/api/public/crm/pipe'
+    | '/api/public/crm/uso'
     | '/api/public/crm/usuarios'
     | '/api/public/documentos/abrir'
     | '/api/public/documentos/identidade'
@@ -1304,6 +1324,7 @@ export interface FileRouteTypes {
     | '/api/public/crm/assinaturas/$id/cancelar'
     | '/api/public/crm/assinaturas/$id/reativar'
     | '/api/public/crm/clinicas/$id/acesso'
+    | '/api/public/crm/clinicas/$id/uso'
     | '/api/public/crm/contratacoes/$id/ativar'
     | '/api/public/crm/pagamentos/$id/estorno'
     | '/api/public/crm/pagamentos/$id/status'
@@ -1401,6 +1422,7 @@ export interface FileRouteTypes {
     | '/api/public/crm/health'
     | '/api/public/crm/pagamentos'
     | '/api/public/crm/pipe'
+    | '/api/public/crm/uso'
     | '/api/public/crm/usuarios'
     | '/api/public/documentos/abrir'
     | '/api/public/documentos/identidade'
@@ -1430,6 +1452,7 @@ export interface FileRouteTypes {
     | '/api/public/crm/assinaturas/$id/cancelar'
     | '/api/public/crm/assinaturas/$id/reativar'
     | '/api/public/crm/clinicas/$id/acesso'
+    | '/api/public/crm/clinicas/$id/uso'
     | '/api/public/crm/contratacoes/$id/ativar'
     | '/api/public/crm/pagamentos/$id/estorno'
     | '/api/public/crm/pagamentos/$id/status'
@@ -1527,6 +1550,7 @@ export interface FileRouteTypes {
     | '/api/public/crm/health'
     | '/api/public/crm/pagamentos'
     | '/api/public/crm/pipe'
+    | '/api/public/crm/uso'
     | '/api/public/crm/usuarios'
     | '/api/public/documentos/abrir'
     | '/api/public/documentos/identidade'
@@ -1556,6 +1580,7 @@ export interface FileRouteTypes {
     | '/api/public/crm/assinaturas/$id/cancelar'
     | '/api/public/crm/assinaturas/$id/reativar'
     | '/api/public/crm/clinicas/$id/acesso'
+    | '/api/public/crm/clinicas/$id/uso'
     | '/api/public/crm/contratacoes/$id/ativar'
     | '/api/public/crm/pagamentos/$id/estorno'
     | '/api/public/crm/pagamentos/$id/status'
@@ -1653,6 +1678,7 @@ export interface RootRouteChildren {
   ApiPublicCrmHealthRoute: typeof ApiPublicCrmHealthRoute
   ApiPublicCrmPagamentosRoute: typeof ApiPublicCrmPagamentosRouteWithChildren
   ApiPublicCrmPipeRoute: typeof ApiPublicCrmPipeRouteWithChildren
+  ApiPublicCrmUsoRoute: typeof ApiPublicCrmUsoRoute
   ApiPublicCrmUsuariosRoute: typeof ApiPublicCrmUsuariosRouteWithChildren
   ApiPublicDocumentosAbrirRoute: typeof ApiPublicDocumentosAbrirRoute
   ApiPublicDocumentosIdentidadeRoute: typeof ApiPublicDocumentosIdentidadeRoute
@@ -2312,6 +2338,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCrmPipeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/crm/uso': {
+      id: '/api/public/crm/uso'
+      path: '/api/public/crm/uso'
+      fullPath: '/api/public/crm/uso'
+      preLoaderRoute: typeof ApiPublicCrmUsoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/crm/usuarios': {
       id: '/api/public/crm/usuarios'
       path: '/api/public/crm/usuarios'
@@ -2515,6 +2548,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCrmClinicasIdAcessoRouteImport
       parentRoute: typeof ApiPublicCrmClinicasIdRoute
     }
+    '/api/public/crm/clinicas/$id/uso': {
+      id: '/api/public/crm/clinicas/$id/uso'
+      path: '/uso'
+      fullPath: '/api/public/crm/clinicas/$id/uso'
+      preLoaderRoute: typeof ApiPublicCrmClinicasIdUsoRouteImport
+      parentRoute: typeof ApiPublicCrmClinicasIdRoute
+    }
     '/api/public/crm/contratacoes/$id/ativar': {
       id: '/api/public/crm/contratacoes/$id/ativar'
       path: '/api/public/crm/contratacoes/$id/ativar'
@@ -2567,12 +2607,14 @@ const ApiContratacaoRouteWithChildren = ApiContratacaoRoute._addFileChildren(
 
 interface ApiPublicCrmClinicasIdRouteChildren {
   ApiPublicCrmClinicasIdAcessoRoute: typeof ApiPublicCrmClinicasIdAcessoRoute
+  ApiPublicCrmClinicasIdUsoRoute: typeof ApiPublicCrmClinicasIdUsoRoute
   ApiPublicCrmClinicasIdAsaasSincronizarRoute: typeof ApiPublicCrmClinicasIdAsaasSincronizarRoute
 }
 
 const ApiPublicCrmClinicasIdRouteChildren: ApiPublicCrmClinicasIdRouteChildren =
   {
     ApiPublicCrmClinicasIdAcessoRoute: ApiPublicCrmClinicasIdAcessoRoute,
+    ApiPublicCrmClinicasIdUsoRoute: ApiPublicCrmClinicasIdUsoRoute,
     ApiPublicCrmClinicasIdAsaasSincronizarRoute:
       ApiPublicCrmClinicasIdAsaasSincronizarRoute,
   }
@@ -2750,6 +2792,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCrmHealthRoute: ApiPublicCrmHealthRoute,
   ApiPublicCrmPagamentosRoute: ApiPublicCrmPagamentosRouteWithChildren,
   ApiPublicCrmPipeRoute: ApiPublicCrmPipeRouteWithChildren,
+  ApiPublicCrmUsoRoute: ApiPublicCrmUsoRoute,
   ApiPublicCrmUsuariosRoute: ApiPublicCrmUsuariosRouteWithChildren,
   ApiPublicDocumentosAbrirRoute: ApiPublicDocumentosAbrirRoute,
   ApiPublicDocumentosIdentidadeRoute: ApiPublicDocumentosIdentidadeRoute,
