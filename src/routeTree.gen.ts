@@ -22,6 +22,7 @@ import { Route as ApiAssistenteIaConversasRouteImport } from './routes/api/assis
 import { Route as ApiAssistenteMedicoWebhookRouteImport } from './routes/api/assistente-medico-webhook'
 import { Route as ApiCaptacaoMovelRouteImport } from './routes/api/captacao-movel'
 import { Route as ApiChatIaRouteImport } from './routes/api/chat-ia'
+import { Route as ApiCnesRouteImport } from './routes/api/cnes'
 import { Route as ApiContratacaoRouteImport } from './routes/api/contratacao'
 import { Route as ApiDailyRoomRouteImport } from './routes/api/daily-room'
 import { Route as ApiDeepgramTokenRouteImport } from './routes/api/deepgram-token'
@@ -202,6 +203,11 @@ const ApiCaptacaoMovelRoute = ApiCaptacaoMovelRouteImport.update({
 const ApiChatIaRoute = ApiChatIaRouteImport.update({
   id: '/api/chat-ia',
   path: '/api/chat-ia',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCnesRoute = ApiCnesRouteImport.update({
+  id: '/api/cnes',
+  path: '/api/cnes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiContratacaoRoute = ApiContratacaoRouteImport.update({
@@ -830,6 +836,7 @@ export interface FileRoutesByFullPath {
   '/api/assistente-medico-webhook': typeof ApiAssistenteMedicoWebhookRoute
   '/api/captacao-movel': typeof ApiCaptacaoMovelRoute
   '/api/chat-ia': typeof ApiChatIaRoute
+  '/api/cnes': typeof ApiCnesRoute
   '/api/contratacao': typeof ApiContratacaoRouteWithChildren
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
@@ -958,6 +965,7 @@ export interface FileRoutesByTo {
   '/api/assistente-medico-webhook': typeof ApiAssistenteMedicoWebhookRoute
   '/api/captacao-movel': typeof ApiCaptacaoMovelRoute
   '/api/chat-ia': typeof ApiChatIaRoute
+  '/api/cnes': typeof ApiCnesRoute
   '/api/contratacao': typeof ApiContratacaoRouteWithChildren
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
@@ -1087,6 +1095,7 @@ export interface FileRoutesById {
   '/api/assistente-medico-webhook': typeof ApiAssistenteMedicoWebhookRoute
   '/api/captacao-movel': typeof ApiCaptacaoMovelRoute
   '/api/chat-ia': typeof ApiChatIaRoute
+  '/api/cnes': typeof ApiCnesRoute
   '/api/contratacao': typeof ApiContratacaoRouteWithChildren
   '/api/daily-room': typeof ApiDailyRoomRoute
   '/api/deepgram-token': typeof ApiDeepgramTokenRoute
@@ -1217,6 +1226,7 @@ export interface FileRouteTypes {
     | '/api/assistente-medico-webhook'
     | '/api/captacao-movel'
     | '/api/chat-ia'
+    | '/api/cnes'
     | '/api/contratacao'
     | '/api/daily-room'
     | '/api/deepgram-token'
@@ -1345,6 +1355,7 @@ export interface FileRouteTypes {
     | '/api/assistente-medico-webhook'
     | '/api/captacao-movel'
     | '/api/chat-ia'
+    | '/api/cnes'
     | '/api/contratacao'
     | '/api/daily-room'
     | '/api/deepgram-token'
@@ -1473,6 +1484,7 @@ export interface FileRouteTypes {
     | '/api/assistente-medico-webhook'
     | '/api/captacao-movel'
     | '/api/chat-ia'
+    | '/api/cnes'
     | '/api/contratacao'
     | '/api/daily-room'
     | '/api/deepgram-token'
@@ -1602,6 +1614,7 @@ export interface RootRouteChildren {
   ApiAssistenteMedicoWebhookRoute: typeof ApiAssistenteMedicoWebhookRoute
   ApiCaptacaoMovelRoute: typeof ApiCaptacaoMovelRoute
   ApiChatIaRoute: typeof ApiChatIaRoute
+  ApiCnesRoute: typeof ApiCnesRoute
   ApiContratacaoRoute: typeof ApiContratacaoRouteWithChildren
   ApiDailyRoomRoute: typeof ApiDailyRoomRoute
   ApiDeepgramTokenRoute: typeof ApiDeepgramTokenRoute
@@ -1797,6 +1810,13 @@ declare module '@tanstack/react-router' {
       path: '/api/chat-ia'
       fullPath: '/api/chat-ia'
       preLoaderRoute: typeof ApiChatIaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cnes': {
+      id: '/api/cnes'
+      path: '/api/cnes'
+      fullPath: '/api/cnes'
+      preLoaderRoute: typeof ApiCnesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/contratacao': {
@@ -2713,6 +2733,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAssistenteMedicoWebhookRoute: ApiAssistenteMedicoWebhookRoute,
   ApiCaptacaoMovelRoute: ApiCaptacaoMovelRoute,
   ApiChatIaRoute: ApiChatIaRoute,
+  ApiCnesRoute: ApiCnesRoute,
   ApiContratacaoRoute: ApiContratacaoRouteWithChildren,
   ApiDailyRoomRoute: ApiDailyRoomRoute,
   ApiDeepgramTokenRoute: ApiDeepgramTokenRoute,

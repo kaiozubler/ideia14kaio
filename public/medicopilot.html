@@ -22,7 +22,8 @@
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="integra-bry-connect.js" defer></script>
     <script src="paciente-protocolos.js" defer></script>
-    <script src="equipe.js?v=3" defer></script>
+    <script src="equipe.js?v=4" defer></script>
+    <script src="lme-estabelecimentos.js?v=1" defer></script>
     <script src="receituario-controlado.js" defer></script>
     <link rel="stylesheet" href="protocolos.css?v=2" />
     <script src="protocolos.js?v=2" defer></script>
@@ -331,6 +332,11 @@
                                                       .lme-doc-chip.done .lme-doc-txt{color:#065f46;font-weight:600}
                                                       .lme-doc-chip .lme-doc-sub{font-size:10px;color:var(--n400);margin-top:2px}
                                                       .lme-panel-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+                                                      .lme-src-cad{box-shadow:inset 3px 0 0 #10b981 !important}
+                                                      .lme-src-ia{box-shadow:inset 3px 0 0 #8b5cf6 !important}
+                                                      .lme-src-falta{box-shadow:inset 3px 0 0 #f59e0b !important}
+                                                      .lme-legenda{display:flex;gap:12px;flex-wrap:wrap;font-size:10.5px;color:var(--n400);margin:-4px 0 12px}
+                                                      .lme-legenda i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:0}
                                                       .lme-empty{font-size:11.5px;color:var(--n400);padding:10px 2px}
 
                                                       /* ATENDIMENTOS */
@@ -2824,6 +2830,8 @@
                 <div class="fld"><label>Nome da mãe</label><input type="text" id="d-mae" /></div>
                 <div class="fld"><label>Nome do pai</label><input type="text" id="d-pai" /></div>
                 <div class="fld"><label>Naturalidade</label><input type="text" id="d-natural" placeholder="Município/UF de nascimento" /></div>
+                <div class="fld"><label>Raça/cor (IBGE)</label><select id="d-raca" onchange="var e=document.getElementById('d-etnia-wrap');if(e)e.style.display=this.value==='indigena'?'':'none'"><option value="">Não informada</option><option value="branca">Branca</option><option value="preta">Preta</option><option value="parda">Parda</option><option value="amarela">Amarela</option><option value="indigena">Indígena</option></select></div>
+                <div class="fld" id="d-etnia-wrap" style="display:none"><label>Etnia</label><input type="text" id="d-etnia" placeholder="Etnia indígena" /></div>
               </div>
 
               <div class="sec-hd">Contato</div>
@@ -4418,6 +4426,36 @@
 
               <div style="border-top:0.5px solid var(--n200);padding-top:16px;display:flex;flex-direction:column;gap:10px">
                 <div>
+                  <div style="font-size:13px;font-weight:600;color:var(--n700)">Estabelecimentos para LME (CNES)</div>
+                  <div style="font-size:11.5px;color:var(--n400);margin-top:2px;line-height:1.5">
+                    O LME pede o CNES do estabelecimento solicitante. Sem CNES próprio, cadastre o estabelecimento público onde você atende
+                    (UBS, ambulatório, farmácia de componente especializado). O padrão entra sozinho em todo LME. Digite o CNES para buscar os dados.
+                  </div>
+                </div>
+                <div id="cli-lme-estab-list" style="display:flex;flex-direction:column;gap:6px"></div>
+                <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:end">
+                  <div class="fld" style="grid-column:span 2">
+                    <label for="cli-lme-cnes">CNES</label>
+                    <input type="text" id="cli-lme-cnes" inputmode="numeric" maxlength="7" placeholder="0000000"
+                      oninput="this.value=this.value.replace(/\D/g,'');if(this.value.length===7)LmeEstab.buscarNoFormulario('cli-lme')" />
+                  </div>
+                  <div class="fld" style="grid-column:span 4"><label for="cli-lme-nome">Nome do estabelecimento</label><input type="text" id="cli-lme-nome" /></div>
+                  <div class="fld" style="grid-column:span 3"><label for="cli-lme-municipio">Município</label><input type="text" id="cli-lme-municipio" /></div>
+                  <div class="fld" style="grid-column:span 1"><label for="cli-lme-uf">UF</label><input type="text" id="cli-lme-uf" maxlength="2" /></div>
+                  <div class="fld" style="grid-column:span 2">
+                    <label for="cli-lme-tipo">Tipo</label>
+                    <select id="cli-lme-tipo"><option value="publico">Público (SUS)</option><option value="proprio">Próprio da clínica</option></select>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                  <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--n600)"><input type="checkbox" id="cli-lme-padrao" /> Usar como padrão no LME</label>
+                  <span id="cli-lme-status" style="font-size:11.5px;color:var(--n400);flex:1"></span>
+                  <button class="btn sm" onclick="LmeEstab.adicionarDoFormulario()"><i class="ti ti-plus"></i> Adicionar estabelecimento</button>
+                </div>
+              </div>
+
+              <div style="border-top:0.5px solid var(--n200);padding-top:16px;display:flex;flex-direction:column;gap:10px">
+                <div>
                   <div style="font-size:13px;font-weight:600;color:var(--n700)">Fluxo de atendimento</div>
                   <div style="font-size:11.5px;color:var(--n400);margin-top:2px">Etapas que o paciente percorre na clínica.</div>
                 </div>
@@ -4825,6 +4863,8 @@
             <div class="fld"><label>Nome da mãe</label><input type="text" id="np-mae" /></div>
             <div class="fld"><label>Nome do pai</label><input type="text" id="np-pai" /></div>
             <div class="fld"><label>Naturalidade</label><input type="text" id="np-natural" placeholder="Município/UF de nascimento" /></div>
+            <div class="fld"><label>Raça/cor (IBGE)</label><select id="np-raca" onchange="var e=document.getElementById('np-etnia-wrap');if(e)e.style.display=this.value==='indigena'?'':'none'"><option value="">Não informada</option><option value="branca">Branca</option><option value="preta">Preta</option><option value="parda">Parda</option><option value="amarela">Amarela</option><option value="indigena">Indígena</option></select></div>
+            <div class="fld" id="np-etnia-wrap" style="display:none"><label>Etnia</label><input type="text" id="np-etnia" placeholder="Etnia indígena" /></div>
             <div class="fld">
               <label>Convênio</label
               ><select id="np-conv">
@@ -5238,6 +5278,11 @@
             </button>
             <span id="lme-status" style="font-size:11.5px;color:var(--n400)"></span>
           </div>
+          <div class="lme-legenda">
+            <span><i style="background:#10b981"></i>Do cadastro (paciente, médico, clínica)</span>
+            <span><i style="background:#8b5cf6"></i>Sugerido pela IA (prontuário e transcrição): revise</span>
+            <span><i style="background:#f59e0b"></i>Obrigatório sem dado</span>
+          </div>
 
           <div id="lme-pendencias" style="display:none;margin-bottom:12px;border:0.5px solid #fde047;background:#fefce8;border-radius:8px;padding:8px 10px;font-size:11.5px;color:#78350f"></div>
 
@@ -5252,7 +5297,12 @@
           </div>
 
           <div class="form-grid">
-            <div class="fld"><label>1 - Número do CNES *</label><input type="text" id="lme-cnes" placeholder="0000000" /></div>
+            <div class="fld">
+              <label>1 - Número do CNES *</label>
+              <select id="lme-estab-sel" onchange="lmeEstabEscolher(this.value)" style="margin-bottom:6px"><option value="">Estabelecimentos cadastrados…</option></select>
+              <input type="text" id="lme-cnes" placeholder="0000000" inputmode="numeric" maxlength="7" oninput="lmeCnesDigitado(this)" />
+              <span id="lme-cnes-info" style="font-size:10.5px;color:var(--n400)"></span>
+            </div>
             <div class="fld"><label>2 - Estabelecimento de saúde solicitante</label><input type="text" id="lme-estab" /></div>
             <div class="fld"><label>3 - Nome completo do paciente *</label><input type="text" id="lme-nome" /></div>
             <div class="fld"><label>4 - Nome da mãe do paciente *</label><input type="text" id="lme-mae" /></div>
@@ -5294,7 +5344,7 @@
             </div>
             <div class="fld"><label>13 - Nome do responsável</label><input type="text" id="lme-resp" /></div>
             <div class="fld"><label>14 - Médico solicitante *</label><input type="text" id="lme-medico" /></div>
-            <div class="fld"><label>15 - CNS do médico *</label><input type="text" id="lme-cns" /></div>
+            <div class="fld"><label>15 - CNS do médico *</label><input type="text" id="lme-cns" inputmode="numeric" maxlength="15" placeholder="15 dígitos" /></div>
             <div class="fld"><label>16 - Data da solicitação *</label><input type="date" id="lme-data" /></div>
             <div class="fld">
               <label>18 - Campos abaixo preenchidos por *</label>
@@ -5330,6 +5380,9 @@
           </div>
         </div>
         <div class="mfoot">
+          <label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--n500);margin-right:auto" title="Só preenche o que está vazio no cadastro; nunca troca um dado já cadastrado.">
+            <input type="checkbox" id="lme-sync-cad" checked /> Completar cadastros vazios com este LME (mãe, raça/cor, CNS, CNES)
+          </label>
           <button class="btn" onclick="closeModal()">Cancelar</button>
           <button class="btn primary" id="lme-emitir-btn" onclick="emitirLME()">
             <i class="ti ti-file-download"></i> Emitir LME
@@ -6513,6 +6566,12 @@
                                                               const m=String(v).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
                                                               return m?`${m[3]}-${m[2]}-${m[1]}`:null;
                                                             }
+                                                            // Raça/cor + etnia do cadastro (campo 19 do LME): a etnia só aparece para indígena.
+                                                            function _setRacaCampos(prefix,raca,etnia){
+                                                              const r=document.getElementById(prefix+'-raca');if(r)r.value=raca||'';
+                                                              const e=document.getElementById(prefix+'-etnia');if(e)e.value=etnia||'';
+                                                              const w=document.getElementById(prefix+'-etnia-wrap');if(w)w.style.display=raca==='indigena'?'':'none';
+                                                            }
                                                             function mapPatientRow(p){
                                                               return {
                                                                 id:p.paciente_id,
@@ -6520,7 +6579,7 @@
                                                                 dob:dateToBR(p.data_nascimento),
                                                                 nasc:p.data_nascimento||'',
                                                                 tel:p.telefone||'—',init:patientInitials(p.name),
-                                                                conv:p.convenio||'Particular',sus:p.sus||'—',email:p.email||'',mae:p.mae||'',pai:p.pai||'',naturalidade:p.naturalidade||'',end:p.endereco||'—',sexo:p.sexo||'',medico:p.medico||'',
+                                                                conv:p.convenio||'Particular',sus:p.sus||'—',email:p.email||'',mae:p.mae||'',pai:p.pai||'',naturalidade:p.naturalidade||'',raca:p.raca_cor||'',etnia:p.etnia||'',end:p.endereco||'—',sexo:p.sexo||'',medico:p.medico||'',
                                                                  grupo:p.grupo||'',ocup:p.ocupacao||'',cpf:p.cpf||'',dadosClinicos:p.dados_clinicos||'',infoComp:p.info_complementar||{},updated_at:p.updated_at||p.created_at||null
                                                                  ,cids:Array.isArray(p.cids)?p.cids:[]
                                                                  ,parentescos:Array.isArray(p.parentescos)?p.parentescos:[]
@@ -6937,7 +6996,7 @@ if(!telaPermitidaPapel(name)){showToast('Área disponível apenas para o médico
                                                               const rm=document.getElementById('cli-logo-remove');
                                                               if(c.logo){prev.innerHTML=`<img src="${c.logo}" style="width:100%;height:100%;object-fit:contain">`;rm.style.display='inline-flex';}
                                                               else{prev.innerHTML='<i class="ti ti-photo" style="font-size:28px"></i>';rm.style.display='none';}
-const tri=document.getElementById('cli-triagem');if(tri)tri.checked=CLINICA.triagem_ativa!==false;
+const tri=document.getElementById('cli-triagem');if(tri)tri.checked=CLINICA.triagem_ativa!==false;if(window.LmeEstab)LmeEstab.renderMinhaClinica();
                                                               if(currentUser?.id){
                                                                 const {data,error}=await sb.from('medico_whatsapp_config').select('phone_number_id').eq('id_medico',currentUser.id).maybeSingle();
                                                                 if(error)console.error('[minha-clinica] Falha ao carregar Phone Number ID:',error.message);
@@ -8184,7 +8243,7 @@ const tri=document.getElementById('cli-triagem');if(tri)tri.checked=CLINICA.tria
                                                         document.getElementById('d-cpf').value=formatCPF(currentPatient.cpf);
                                                         document.getElementById('d-mae').value=currentPatient.mae;
                                                         document.getElementById('d-pai').value=currentPatient.pai;
-                                                        document.getElementById('d-natural').value=currentPatient.naturalidade||'';
+                                                        document.getElementById('d-natural').value=currentPatient.naturalidade||'';_setRacaCampos('d',currentPatient.raca,currentPatient.etnia);
                                                         document.getElementById('d-cep').value=currentPatient.cep||'';
                                                         document.getElementById('d-log').value=currentPatient.logradouro||'';
                                                         document.getElementById('d-num').value=currentPatient.numero||'';
@@ -8321,6 +8380,8 @@ const tri=document.getElementById('cli-triagem');if(tri)tri.checked=CLINICA.tria
                                                                 mae:document.getElementById('d-mae')?.value.trim()||null,
                                                                 pai:document.getElementById('d-pai')?.value.trim()||null,
                                                                 naturalidade:document.getElementById('d-natural')?.value.trim()||null,
+                                                                raca_cor:document.getElementById('d-raca')?.value||null,
+                                                                etnia:document.getElementById('d-raca')?.value==='indigena'?(document.getElementById('d-etnia')?.value.trim()||null):null,
                                                                 cep:addr.cep||null,
                                                                 logradouro:addr.logradouro||null,
                                                                 numero:addr.numero||null,
@@ -9732,7 +9793,7 @@ if(ehMembroEquipe()&&name!=='cadastro'){name='cadastro';el=null;}
                                                               setV('d-email',currentPatient.email);
                                                               setV('d-mae',currentPatient.mae);
                                                               setV('d-pai',currentPatient.pai);
-                                                              setV('d-natural',currentPatient.naturalidade);
+                                                              setV('d-natural',currentPatient.naturalidade);_setRacaCampos('d',currentPatient.raca,currentPatient.etnia);
                                                               setV('d-cep',currentPatient.cep);
                                                               setV('d-log',currentPatient.logradouro);
                                                               setV('d-num',currentPatient.numero);
@@ -14758,7 +14819,7 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                               document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
                                                               const m=document.getElementById('m-'+name);if(m)m.style.display='flex';
                                                               if(name==='new-patient'){
-                                                                ['np-nome','np-cpf','np-dob','np-tel','np-email','np-sus','np-mae','np-pai','np-natural','np-cep','np-log','np-num','np-compl','np-bairro','np-cidade','np-uf'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+                                                                ['np-nome','np-cpf','np-dob','np-tel','np-email','np-sus','np-mae','np-pai','np-natural','np-cep','np-log','np-num','np-compl','np-bairro','np-cidade','np-uf'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});_setRacaCampos('np','','');
                                                                 const npPais=document.getElementById('np-pais');if(npPais)npPais.value='Brasil';
                                                                 ['np-conv','np-sexo','np-medico'].forEach(id=>{const el=document.getElementById(id);if(el)el.selectedIndex=0;});
                                                                 const g=document.getElementById('np-grupo');if(g){populateGrupoSelect(g);g.value='';}
@@ -17579,6 +17640,36 @@ let rxSelected = [];
                                                 ];
 
                                                 function _lmeSet(id, v) { const el = document.getElementById(id); if (el) el.value = v == null ? '' : String(v); }
+                                                /* Origem de cada campo (cadastro / IA / falta). Some assim que o médico digita
+                                                   no campo, porque o valor passa a ser dele. */
+                                                function _lmeMark(id, src) {
+                                                  const el = document.getElementById(id);
+                                                  if (!el) return;
+                                                  el.classList.remove('lme-src-cad', 'lme-src-ia', 'lme-src-falta');
+                                                  if (src) el.classList.add('lme-src-' + src);
+                                                }
+                                                function _lmeSetCad(id, v) {
+                                                  if (v == null || String(v).trim() === '' || String(v) === '—') return false;
+                                                  _lmeSet(id, v); _lmeMark(id, 'cad'); return true;
+                                                }
+                                                function lmeMarcarFaltas() {
+                                                  const f = lmeCollect();
+                                                  LME_OBRIGATORIOS.forEach(([k]) => {
+                                                    const id = LME_CAMPOS[k];
+                                                    const el = id && document.getElementById(id);
+                                                    if (!el) return;
+                                                    if (!String(f[k] || '').trim()) _lmeMark(id, 'falta');
+                                                    else if (el.classList.contains('lme-src-falta')) _lmeMark(id, null);
+                                                  });
+                                                }
+                                                document.addEventListener('input', (ev) => {
+                                                  const t = ev.target;
+                                                  if (t && t.id && t.id.startsWith('lme-') && t.classList) t.classList.remove('lme-src-cad', 'lme-src-ia', 'lme-src-falta');
+                                                }, true);
+                                                document.addEventListener('change', (ev) => {
+                                                  const t = ev.target;
+                                                  if (t && t.id && t.id.startsWith('lme-') && t.tagName === 'SELECT' && t.id !== 'lme-estab-sel') t.classList.remove('lme-src-cad', 'lme-src-ia', 'lme-src-falta');
+                                                }, true);
                                                 function _lmeGet(id) { const el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; }
 
                                                 function lmeCollect() {
@@ -17591,7 +17682,10 @@ let rxSelected = [];
                                                   return f;
                                                 }
 
-                                                function lmeApply(patch) {
+                                                /* origem: 'ia' (padrão) marca os campos em roxo; null aplica sem marca
+                                                   (renovação a partir do último LME). */
+                                                function lmeApply(patch, origem) {
+                                                  if (origem === undefined) origem = 'ia';
                                                   if (!patch || typeof patch !== 'object') return;
                                                   for (const [k, id] of Object.entries(LME_CAMPOS)) {
                                                     if (!id) continue;
@@ -17599,9 +17693,16 @@ let rxSelected = [];
                                                     if (v == null || v === '') continue;
                                                     const el = document.getElementById(id);
                                                     if (!el) continue;
-                                                    if (el.tagName === 'SELECT') { el.value = String(v).toLowerCase(); }
-                                                    else if (!String(el.value || '').trim()) { el.value = String(v); }
-                                                    else if (k === 'anamnese' || k === 'diagnostico') { el.value = String(v); }
+                                                    /* Dado do cadastro prevalece sobre a IA: ela só completa o que
+                                                       ficou vazio (anamnese/diagnóstico podem ser reescritos enquanto
+                                                       não vierem do cadastro). */
+                                                    if (el.classList.contains('lme-src-cad')) continue;
+                                                    const vazio = !String(el.value || '').trim();
+                                                    if (el.tagName === 'SELECT') {
+                                                      const nv = String(v).toLowerCase();
+                                                      if (el.value !== nv && [...el.options].some(o => o.value === nv)) { el.value = nv; _lmeMark(id, origem); }
+                                                    }
+                                                    else if (vazio || ((k === 'anamnese' || k === 'diagnostico') && el.classList.contains('lme-src-ia'))) { el.value = String(v); _lmeMark(id, origem); }
                                                   }
                                                   if (patch.cid_descricao) window.__lmeCidDesc = String(patch.cid_descricao);
                                                   if (Array.isArray(patch.medicamentos) && patch.medicamentos.length) {
@@ -17627,6 +17728,13 @@ let rxSelected = [];
                                                 function lmeRemoveMed(i) { lmeMeds.splice(i, 1); lmeRenderMeds(); }
                                                 function lmeMedNome(i, v) { if (lmeMeds[i]) lmeMeds[i].nome = v; }
                                                 function lmeMedQtd(i, m, v) { if (lmeMeds[i]) lmeMeds[i].quantidades[m] = v; }
+                                                function lmeMedCopiar(i) {
+                                                  const m = lmeMeds[i]; if (!m) return;
+                                                  const q = (m.quantidades || [])[0] || '';
+                                                  if (!q) { showToast && showToast('Preencha a quantidade do 1º mês', 'error'); return; }
+                                                  m.quantidades = [q, q, q, q, q, q];
+                                                  lmeRenderMeds();
+                                                }
                                                 function lmeRenderMeds() {
                                                   const box = document.getElementById('lme-meds');
                                                   if (!box) return;
@@ -17646,6 +17754,7 @@ let rxSelected = [];
                                                             style="width:100%;border:0.5px solid var(--n200);border-radius:8px;padding:6px 9px;font-size:12.5px;outline:none;font-family:inherit" />
                                                           <div id="lme-med-sg-${i}" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:40;background:#fff;border:0.5px solid var(--n200);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,.08);max-height:180px;overflow-y:auto"></div>
                                                         </div>
+                                                        <button class="btn sm ghost" onclick="lmeMedCopiar(${i})" title="Repetir a quantidade do 1º mês nos 6 meses"><i class="ti ti-copy"></i> 1º mês → todos</button>
                                                         <button class="btn sm" onclick="lmeRemoveMed(${i})" title="Remover"><i class="ti ti-trash"></i></button>
                                                       </div>
                                                       <div style="display:flex;gap:5px;margin-top:6px">
@@ -17713,57 +17822,169 @@ let rxSelected = [];
                                                 }
 
                                                 /* ---- Abertura do modal + preenchimento automático pelo cadastro ---- */
-                                                function openLmeModal() {
+                                                /* Ordem de preenchimento: 1) cadastros (paciente, médico, clínica e
+                                                   estabelecimentos CNES), 2) medidas da triagem mais recente, 3) IA sobre
+                                                   prontuário e transcrição só para o que ainda ficou vazio, 4) o médico. */
+                                                let lmeEstabs = [];
+                                                function _lmeIdade(nasc) {
+                                                  if (!nasc) return null;
+                                                  const d = new Date(String(nasc).slice(0, 10) + 'T00:00:00');
+                                                  if (isNaN(d)) return null;
+                                                  const h = new Date();
+                                                  let a = h.getFullYear() - d.getFullYear();
+                                                  if (h.getMonth() < d.getMonth() || (h.getMonth() === d.getMonth() && h.getDate() < d.getDate())) a--;
+                                                  return a;
+                                                }
+                                                function lmeRenderEstabSel() {
+                                                  const sel = document.getElementById('lme-estab-sel');
+                                                  if (!sel) return;
+                                                  const cnes = _lmeGet('lme-cnes');
+                                                  sel.innerHTML = '<option value="">' + (lmeEstabs.length ? 'Estabelecimentos cadastrados…' : 'Nenhum cadastrado (Minha clínica)') + '</option>' +
+                                                    lmeEstabs.map(e => `<option value="${_rxEsc(e.cnes)}"${e.cnes === cnes ? ' selected' : ''}>${_rxEsc(e.nome)} · ${_rxEsc(e.cnes)}${e.padrao ? ' (padrão)' : ''}</option>`).join('');
+                                                }
+                                                function lmeEstabEscolher(cnes) {
+                                                  const e = lmeEstabs.find(x => x.cnes === cnes);
+                                                  if (!e) return;
+                                                  _lmeSetCad('lme-cnes', e.cnes);
+                                                  _lmeSetCad('lme-estab', e.nome);
+                                                  lmeCnesInfo();
+                                                }
+                                                function lmeCnesInfo(msg) {
+                                                  const info = document.getElementById('lme-cnes-info');
+                                                  if (!info) return;
+                                                  if (msg != null) { info.textContent = msg; return; }
+                                                  const c = _lmeGet('lme-cnes');
+                                                  if (!c) info.textContent = '';
+                                                  else if (!/^\d{7}$/.test(c)) info.textContent = 'O CNES tem 7 dígitos.';
+                                                  else if (lmeEstabs.some(e => e.cnes === c)) info.textContent = 'Do cadastro de estabelecimentos.';
+                                                  else info.textContent = 'Não cadastrado: será salvo em Minha clínica ao emitir.';
+                                                }
+                                                let _lmeCnesTimer = null;
+                                                function lmeCnesDigitado(el) {
+                                                  el.value = String(el.value || '').replace(/\D/g, '').slice(0, 7);
+                                                  const sel = document.getElementById('lme-estab-sel');
+                                                  const conhecido = lmeEstabs.find(e => e.cnes === el.value);
+                                                  if (sel) sel.value = conhecido ? conhecido.cnes : '';
+                                                  if (conhecido) { lmeEstabEscolher(conhecido.cnes); return; }
+                                                  lmeCnesInfo();
+                                                  clearTimeout(_lmeCnesTimer);
+                                                  if (el.value.length !== 7 || !window.LmeEstab) return;
+                                                  _lmeCnesTimer = setTimeout(async () => {
+                                                    lmeCnesInfo('Consultando o CNES…');
+                                                    const d = await LmeEstab.consultar(el.value);
+                                                    if (_lmeGet('lme-cnes') !== el.value) return;
+                                                    if (!d) { lmeCnesInfo('Não encontrado no CNES. Confira o número.'); return; }
+                                                    if (!_lmeGet('lme-estab') && d.nome) _lmeSet('lme-estab', d.nome);
+                                                    lmeCnesInfo('CNES: ' + (d.nome || '') + (d.uf ? ' (' + d.uf + ')' : '') + (d.atende_sus ? '' : ' · sem atendimento SUS registrado') + '. Será salvo em Minha clínica ao emitir.');
+                                                  }, 250);
+                                                }
+                                                async function _lmeUltimaTriagem() {
+                                                  try {
+                                                    const { data } = await sb.from('triagens').select('peso,altura,realizado_em')
+                                                      .eq('paciente_id', currentPatient.id)
+                                                      .or('peso.not.is.null,altura.not.is.null')
+                                                      .order('realizado_em', { ascending: false }).limit(1);
+                                                    const t = (data || [])[0];
+                                                    if (!t) return null;
+                                                    // Só medidas recentes (até 6 meses, a validade do LME) valem mais que o cadastro.
+                                                    if (Date.now() - new Date(t.realizado_em).getTime() > 183 * 864e5) return null;
+                                                    return t;
+                                                  } catch (e) { return null; }
+                                                }
+
+                                                async function openLmeModal() {
                                                   if (!currentPatient) { showToast && showToast('Abra o cadastro de um paciente para gerar o LME', 'error'); return; }
-                                                  let clinic = {}; try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
                                                   let info = {}; try { info = loadInfoComp() || {}; } catch (e) {}
                                                   const u = currentUser || {};
                                                   const meta = u.user_metadata || {};
+                                                  const p = currentPatient;
 
                                                   lmeMeds = [];
                                                   lmeChatHistory = [];
                                                   window.__lmeCidDesc = '';
-                                                  Object.values(LME_CAMPOS).forEach(id => { if (id) _lmeSet(id, ''); });
+                                                  Object.values(LME_CAMPOS).forEach(id => { if (id) { _lmeSet(id, ''); _lmeMark(id, null); } });
+                                                  lmeEstabs = [];
 
-                                                  _lmeSet('lme-cnes', clinic.cnes || '');
-                                                  _lmeSet('lme-estab', clinic.fantasia || clinic.razao || '');
-                                                  _lmeSet('lme-nome', currentPatient.name || '');
-                                                  _lmeSet('lme-mae', currentPatient.mae || '');
-                                                  _lmeSet('lme-peso', info.peso || '');
-                                                  _lmeSet('lme-altura', info.altura || '');
-                                                  _lmeSet('lme-medico', meta.full_name || meta.name || (u.email || '').split('@')[0] || '');
-                                                  _lmeSet('lme-cns', meta.cns || meta.CNS || '');
+                                                  // Paciente
+                                                  _lmeSetCad('lme-nome', p.name);
+                                                  _lmeSetCad('lme-mae', p.mae);
+                                                  _lmeSetCad('lme-tel', p.tel);
+                                                  _lmeSetCad('lme-email', p.email);
+                                                  if (p.cpf) { _lmeSetCad('lme-doc-num', p.cpf); _lmeSetCad('lme-doc-tipo', 'cpf'); }
+                                                  else if (p.sus && p.sus !== '—') { _lmeSetCad('lme-doc-num', p.sus); _lmeSetCad('lme-doc-tipo', 'cns'); }
+                                                  if (p.raca) { _lmeSetCad('lme-raca', p.raca); if (p.raca === 'indigena') _lmeSetCad('lme-etnia', p.etnia); }
+                                                  // Menor de idade é civilmente incapaz: o responsável sai do cadastro (mãe, senão pai).
+                                                  const idade = _lmeIdade(p.nasc);
+                                                  if (idade != null && idade < 18) {
+                                                    _lmeSetCad('lme-incapaz', 'sim');
+                                                    _lmeSetCad('lme-resp', p.mae || p.pai);
+                                                  }
+                                                  _lmeSetCad('lme-peso', info.peso);
+                                                  _lmeSetCad('lme-altura', info.altura);
+                                                  const cid0 = (Array.isArray(p.cids) ? p.cids : [])[0];
+                                                  if (cid0) { lmeCidPick(cid0.code, cid0.description || ''); _lmeMark('lme-cid', 'cad'); if (_lmeGet('lme-diagnostico')) _lmeMark('lme-diagnostico', 'cad'); }
+
+                                                  // Médico (Minha equipe › perfil)
+                                                  _lmeSetCad('lme-medico', meta.full_name || meta.name || '');
+                                                  _lmeSetCad('lme-cns', String(meta.cns || meta.CNS || '').replace(/\D/g, ''));
                                                   _lmeSet('lme-data', new Date().toISOString().slice(0, 10));
-                                                  _lmeSet('lme-tel', currentPatient.tel && currentPatient.tel !== '—' ? currentPatient.tel : '');
-                                                  _lmeSet('lme-email', currentPatient.email && currentPatient.email !== '—' ? currentPatient.email : '');
-                                                  if (currentPatient.cpf) { _lmeSet('lme-doc-num', currentPatient.cpf); _lmeSet('lme-doc-tipo', 'cpf'); }
-                                                  else if (currentPatient.sus && currentPatient.sus !== '—') { _lmeSet('lme-doc-num', currentPatient.sus); _lmeSet('lme-doc-tipo', 'cns'); }
-                                                  const cid0 = (Array.isArray(currentPatient.cids) ? currentPatient.cids : [])[0];
-                                                  if (cid0) lmeCidPick(cid0.code, cid0.description || '');
                                                   _lmeSet('lme-preenchido', 'medico');
+
+                                                  // O que já estava no cadastro antes deste LME (para completar só o vazio ao emitir).
+                                                  window.__lmeCadastroAntes = {
+                                                    mae: p.mae || '', raca: p.raca || '', etnia: p.etnia || '',
+                                                    sus: p.sus && p.sus !== '—' ? p.sus : '', cns: String(meta.cns || meta.CNS || ''),
+                                                  };
+
                                                   const chatWrap = document.getElementById('lme-chat-wrap'); if (chatWrap) chatWrap.style.display = 'none';
                                                   const log = document.getElementById('lme-chat-log'); if (log) log.innerHTML = '';
                                                   const pend = document.getElementById('lme-pendencias'); if (pend) pend.style.display = 'none';
+                                                  const sync = document.getElementById('lme-sync-cad'); if (sync) sync.checked = true;
 
                                                   lmeRenderMeds();
                                                   lmeRenderCidChips();
+                                                  lmeRenderEstabSel();
+                                                  lmeCnesInfo('');
                                                   openModal('lme');
-                                                  // Chamada automática da IA para extrair o restante do cadastro/prontuário.
+
+                                                  // Cadastros que vêm do banco: estabelecimentos CNES e a triagem mais recente.
+                                                  const [estabs, triagem] = await Promise.all([
+                                                    window.LmeEstab ? LmeEstab.listar(true).catch(() => []) : [],
+                                                    _lmeUltimaTriagem(),
+                                                  ]);
+                                                  if (!currentPatient || currentPatient.id !== p.id) return;
+                                                  lmeEstabs = estabs || [];
+                                                  const padrao = lmeEstabs.find(e => e.padrao) || (lmeEstabs.length === 1 ? lmeEstabs[0] : null);
+                                                  if (padrao && !_lmeGet('lme-cnes')) lmeEstabEscolher(padrao.cnes);
+                                                  lmeRenderEstabSel();
+                                                  if (triagem) {
+                                                    if (triagem.peso) _lmeSetCad('lme-peso', String(triagem.peso).replace('.', ','));
+                                                    if (triagem.altura) _lmeSetCad('lme-altura', String(triagem.altura));
+                                                  }
+                                                  lmeMarcarFaltas();
+                                                  // IA por último: só completa o que os cadastros não trouxeram.
                                                   lmeAutofill(true);
                                                 }
 
                                                 function lmeContexto() {
                                                   let info = null; try { info = loadInfoComp(); } catch (e) {}
-                                                  let clinic = {}; try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
                                                   const pront = (document.getElementById('pront-area') || {}).value || '';
+                                                  const transcricao = (typeof transcriptLog !== 'undefined' && Array.isArray(transcriptLog))
+                                                    ? transcriptLog.join('\n').slice(-12000) : '';
+                                                  const p = currentPatient || {};
                                                   return {
-                                                    paciente: currentPatient || null,
+                                                    // Só o que o laudo usa: sem CPF/endereço do paciente para a IA.
+                                                    paciente: {
+                                                      nome: p.name || '', nascimento: p.nasc || '', sexo: p.sexo || '', mae: p.mae || '',
+                                                      raca_cor: p.raca || '', etnia: p.etnia || '', ocupacao: p.ocup || '',
+                                                    },
                                                     info_complementar: info,
-                                                    cids_paciente: Array.isArray(currentPatient && currentPatient.cids) ? currentPatient.cids : [],
+                                                    cids_paciente: Array.isArray(p.cids) ? p.cids : [],
                                                     resumo_prontuario: (typeof currentResumoProntuario !== 'undefined' && currentResumoProntuario) || '',
-                                                    dados_clinicos: (currentPatient && currentPatient.dadosClinicos) || '',
+                                                    dados_clinicos: p.dadosClinicos || '',
                                                     atendimento_atual: pront,
-                                                    clinica: { nome: clinic.fantasia || clinic.razao || '', cnes: clinic.cnes || '' },
+                                                    transcricao_consulta: transcricao,
+                                                    estabelecimentos_cadastrados: lmeEstabs.map(e => ({ cnes: e.cnes, nome: e.nome, padrao: !!e.padrao })),
                                                     medico: { nome: _lmeGet('lme-medico'), cns: _lmeGet('lme-cns') },
                                                   };
                                                 }
@@ -17783,7 +18004,7 @@ let rxSelected = [];
                                                   const st = document.getElementById('lme-status');
                                                   if (st) st.textContent = 'IA analisando cadastro e prontuário...';
                                                   try {
-                                                    const r = await fetch('/api/lme-ia', {
+                                                    const r = await iaAuthFetch('/api/lme-ia', {
                                                       method: 'POST', headers: { 'Content-Type': 'application/json' },
                                                       body: JSON.stringify({ action: 'autofill', form: lmeCollect(), contexto: lmeContexto() }),
                                                     });
@@ -17791,7 +18012,8 @@ let rxSelected = [];
                                                     const data = await r.json();
                                                     lmeApply(data.form || {});
                                                     lmeShowPendencias(data.pendencias);
-                                                    if (st) st.textContent = 'Campos preenchidos pela IA — revise antes de emitir.';
+                                                    lmeMarcarFaltas();
+                                                    if (st) st.textContent = 'Cadastro aplicado; a IA completou o restante a partir do prontuário e da transcrição. Revise os campos em roxo.';
                                                     if (!silent) showToast && showToast('LME preenchido pela IA', 'success');
                                                   } catch (e) {
                                                     if (st) st.textContent = '';
@@ -17828,7 +18050,7 @@ let rxSelected = [];
                                                   if (auto !== '__inicio__') { lmeChatBubble('user', texto); if (inp) inp.value = ''; }
                                                   lmeChatHistory.push({ role: 'user', content: texto });
                                                   try {
-                                                    const r = await fetch('/api/lme-ia', {
+                                                    const r = await iaAuthFetch('/api/lme-ia', {
                                                       method: 'POST', headers: { 'Content-Type': 'application/json' },
                                                       body: JSON.stringify({ action: 'chat', messages: lmeChatHistory, form: lmeCollect(), contexto: lmeContexto() }),
                                                     });
@@ -17840,12 +18062,13 @@ let rxSelected = [];
                                                     if (data.patch && Object.keys(data.patch).length) {
                                                       Object.entries(data.patch).forEach(([k, v]) => {
                                                         const id = LME_CAMPOS[k];
-                                                        if (id && v != null && v !== '') _lmeSet(id, v);
+                                                        if (id && v != null && v !== '') { _lmeSet(id, v); _lmeMark(id, 'ia'); }
                                                       });
                                                       if (Array.isArray(data.patch.medicamentos)) lmeApply({ medicamentos: data.patch.medicamentos });
                                                       if (data.patch.cid_descricao) window.__lmeCidDesc = String(data.patch.cid_descricao);
                                                     }
                                                     lmeShowPendencias(data.pendencias);
+                                                    lmeMarcarFaltas();
                                                   } catch (e) {
                                                     lmeChatBubble('ia', 'Falha ao falar com a assistente. Tente novamente.');
                                                     console.warn('lmeChatSend', e);
@@ -18001,11 +18224,61 @@ let rxSelected = [];
                                                 }
 
                                                 /* ---- Emissão: gera, assina, baixa e anexa ao atendimento ---- */
+                                                /* Depois de emitir, completa nos cadastros só o que estava vazio (nunca troca
+                                                   um dado já cadastrado): mãe, raça/cor, etnia e CNS do paciente, CNS do
+                                                   médico e o CNES digitado. Assim o próximo LME já abre preenchido. */
+                                                async function lmeCompletarCadastros(form) {
+                                                  const antes = window.__lmeCadastroAntes || {};
+                                                  const feitos = [];
+                                                  const p = currentPatient;
+                                                  if (p && p.id) {
+                                                    const payload = {};
+                                                    if (!antes.mae && form.paciente_mae) payload.mae = form.paciente_mae;
+                                                    if (!antes.raca && form.raca) {
+                                                      payload.raca_cor = form.raca;
+                                                      if (form.raca === 'indigena' && form.etnia) payload.etnia = form.etnia;
+                                                    } else if (antes.raca === 'indigena' && !antes.etnia && form.raca === 'indigena' && form.etnia) payload.etnia = form.etnia;
+                                                    if (!antes.sus && form.documento_tipo === 'cns' && /^\d{15}$/.test(String(form.documento_numero || '').replace(/\D/g, '')))
+                                                      payload.sus = String(form.documento_numero).replace(/\D/g, '');
+                                                    if (Object.keys(payload).length) {
+                                                      const r = ehMembroEquipe()
+                                                        ? await pacienteCadastroSalvar(p.id, payload)
+                                                        : await sb.from('pacientes').update({ ...payload, motivo_alteracao: 'Completado na emissão do LME' }).eq('paciente_id', p.id).select().single();
+                                                      if (!r.error && r.data) {
+                                                        const upd = mapPatientRow(r.data);
+                                                        Object.assign(currentPatient, upd);
+                                                        if (typeof patients !== 'undefined') patients = patients.map(x => x.id === upd.id ? upd : x);
+                                                        feitos.push('paciente');
+                                                      } else if (r.error) console.warn('LME → cadastro do paciente', r.error.message);
+                                                    }
+                                                  }
+                                                  const cns = String(form.medico_cns || '').replace(/\D/g, '');
+                                                  if (!String(antes.cns || '').replace(/\D/g, '') && /^\d{15}$/.test(cns)) {
+                                                    const { error } = await sb.auth.updateUser({ data: { cns } });
+                                                    if (!error) {
+                                                      if (currentUser) currentUser.user_metadata = { ...(currentUser.user_metadata || {}), cns };
+                                                      feitos.push('CNS do médico');
+                                                    }
+                                                  }
+                                                  if (/^\d{7}$/.test(form.cnes || '') && form.estabelecimento && !lmeEstabs.some(e => e.cnes === form.cnes) && window.LmeEstab) {
+                                                    try {
+                                                      await LmeEstab.salvar({ cnes: form.cnes, nome: form.estabelecimento, tipo: 'publico', padrao: !lmeEstabs.length });
+                                                      feitos.push('estabelecimento CNES');
+                                                    } catch (e) { console.warn('LME → estabelecimento', e); }
+                                                  }
+                                                  if (feitos.length) showToast && showToast('Cadastro completado: ' + feitos.join(', '), 'success');
+                                                }
+
                                                 async function emitirLME() {
                                                   const form = lmeCollect();
                                                   const faltando = LME_OBRIGATORIOS.filter(([k]) => !String(form[k] || '').trim()).map(([, l]) => l);
                                                   if (!form.medicamentos.length) faltando.push('Medicamento(s)');
+                                                  if (form.cnes && !/^\d{7}$/.test(form.cnes)) faltando.push('CNES com 7 dígitos');
+                                                  if (form.medico_cns && !/^\d{15}$/.test(form.medico_cns.replace(/\D/g, ''))) faltando.push('CNS do médico com 15 dígitos');
+                                                  if (form.raca === 'indigena' && !form.etnia) faltando.push('Etnia (paciente indígena)');
+                                                  if (form.incapaz === 'sim' && !form.responsavel_nome) faltando.push('Nome do responsável');
                                                   if (faltando.length) {
+                                                    lmeMarcarFaltas();
                                                     lmeShowPendencias(faltando);
                                                     showToast && showToast('Preencha os campos obrigatórios: ' + faltando.join(', '), 'error');
                                                     return;
@@ -18016,6 +18289,8 @@ let rxSelected = [];
                                                     const res = await _renderLmePdf(form);
                                                     if (!res) return;
                                                     _baixarBlob(res.finalBlob, res.filename);
+                                                    const sync = document.getElementById('lme-sync-cad');
+                                                    if (!sync || sync.checked) lmeCompletarCadastros(form).catch(e => console.warn('lmeCompletarCadastros', e));
                                                     const documentoGerado = await salvarDocumentoGerado({
                                                       tipo: 'laudo',
                                                       pacienteNome: form.paciente_nome,
@@ -18194,7 +18469,7 @@ let rxSelected = [];
                                                   openLmeModal();
                                                   const prev = laudos[0].conteudo || {};
                                                   setTimeout(() => {
-                                                    lmeApply(prev);
+                                                    lmeApply(prev, null);
                                                     _lmeSet('lme-data', new Date().toISOString().slice(0, 10));
                                                     showToast && showToast('Campos preenchidos com o último LME — confira e emita a renovação', 'info');
                                                   }, 60);
@@ -19046,6 +19321,8 @@ let rxSelected = [];
                                                                 mae:val('np-mae')||null,
                                                                 pai:val('np-pai')||null,
                                                                 naturalidade:val('np-natural')||null,
+                                                                raca_cor:val('np-raca')||null,
+                                                                etnia:val('np-raca')==='indigena'?(val('np-etnia')||null):null,
                                                                 // Endereço só pelos campos estruturados (CEP/ViaCEP); o texto
                                                                 // concatenado segue o mesmo formato da ficha do paciente.
                                                                 ...(a=>({cep:a.cep||null,logradouro:a.logradouro||null,numero:a.numero||null,complemento:a.complemento||null,
