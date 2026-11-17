@@ -48,13 +48,15 @@
   async function consultar(cnes) {
     const c = so7(cnes);
     if (c.length !== 7) return null;
+    // Falha devolve { erro }: "não existe no CNES" e "consulta indisponível" pedem mensagens diferentes.
     try {
       const f = typeof window.iaAuthFetch === "function" ? window.iaAuthFetch : fetch;
       const r = await f("/api/cnes?codigo=" + c);
-      if (!r.ok) return null;
+      if (r.status === 404) return { erro: "nao_encontrado" };
+      if (!r.ok) return { erro: "indisponivel" };
       return await r.json();
     } catch (e) {
-      return null;
+      return { erro: "indisponivel" };
     }
   }
 
@@ -151,8 +153,12 @@
     }
     if (st) st.textContent = "Consultando o CNES…";
     const d = await consultar(cnesEl.value);
-    if (!d) {
-      if (st) st.textContent = "Não encontrado no CNES — preencha o nome manualmente.";
+    if (!d || d.erro) {
+      if (st)
+        st.textContent =
+          d && d.erro === "nao_encontrado"
+            ? "Este número não existe no CNES. Confira os dígitos."
+            : "Consulta ao CNES indisponível agora — preencha o nome manualmente.";
       return;
     }
     const set = (id, v) => {

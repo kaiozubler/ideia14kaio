@@ -23,7 +23,7 @@
     <script src="integra-bry-connect.js" defer></script>
     <script src="paciente-protocolos.js" defer></script>
     <script src="equipe.js?v=4" defer></script>
-    <script src="lme-estabelecimentos.js?v=1" defer></script>
+    <script src="lme-estabelecimentos.js?v=2" defer></script>
     <script src="receituario-controlado.js" defer></script>
     <link rel="stylesheet" href="protocolos.css?v=2" />
     <script src="protocolos.js?v=2" defer></script>
@@ -17873,7 +17873,7 @@ let rxSelected = [];
                                                     lmeCnesInfo('Consultando o CNES…');
                                                     const d = await LmeEstab.consultar(el.value);
                                                     if (_lmeGet('lme-cnes') !== el.value) return;
-                                                    if (!d) { lmeCnesInfo('Não encontrado no CNES. Confira o número.'); return; }
+                                                    if (!d || d.erro) { lmeCnesInfo(d && d.erro === 'nao_encontrado' ? 'Não existe no CNES. Confira o número.' : 'Consulta ao CNES indisponível; confira o número e preencha o nome.'); return; }
                                                     if (!_lmeGet('lme-estab') && d.nome) _lmeSet('lme-estab', d.nome);
                                                     lmeCnesInfo('CNES: ' + (d.nome || '') + (d.uf ? ' (' + d.uf + ')' : '') + (d.atende_sus ? '' : ' · sem atendimento SUS registrado') + '. Será salvo em Minha clínica ao emitir.');
                                                   }, 250);
@@ -17902,7 +17902,13 @@ let rxSelected = [];
                                                   lmeMeds = [];
                                                   lmeChatHistory = [];
                                                   window.__lmeCidDesc = '';
-                                                  Object.values(LME_CAMPOS).forEach(id => { if (id) { _lmeSet(id, ''); _lmeMark(id, null); } });
+                                                  Object.values(LME_CAMPOS).forEach(id => {
+                                                    if (!id) return;
+                                                    const el = document.getElementById(id);
+                                                    // Select volta à 1ª opção ("Não", "CPF", "—"): valor '' deixaria o campo em branco.
+                                                    if (el && el.tagName === 'SELECT') el.selectedIndex = 0; else _lmeSet(id, '');
+                                                    _lmeMark(id, null);
+                                                  });
                                                   lmeEstabs = [];
 
                                                   // Paciente
