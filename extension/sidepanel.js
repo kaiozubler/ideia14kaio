@@ -751,17 +751,30 @@
     $("msgs").scrollTop = $("msgs").scrollHeight;
   }
 
-  async function preencherTela() {
+  // Pedidos como "preencha o formulário" no chat viram o mesmo fluxo do botão,
+  // em vez de irem ao assistente (que só age dentro do MediCopilot).
+  function pedeParaPreencher(texto) {
+    const t = texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    if (!/\b(preench|complet)\w*/.test(t)) return false;
+    return /(formul|fomrul|campo|tela|ficha|cadastro|pagina|site|form\b)/.test(t) || t.length <= 40;
+  }
+
+  async function preencherTela(textoDoChat) {
     const token = await MC_AUTH.token();
     if (!token) return showAuth("Sessão expirada. Entre novamente.");
     const btn = $("ch-fill");
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.id) return;
-    const instrucao = $("ch-inp").value.trim();
+    let instrucao = typeof textoDoChat === "string" ? textoDoChat.trim() : "";
     if (instrucao) {
-      $("ch-inp").value = "";
-      autoResizeComposer();
-      bubble("user", "✨ Preencher a tela: " + instrucao);
+      bubble("user", instrucao);
+    } else {
+      instrucao = $("ch-inp").value.trim();
+      if (instrucao) {
+        $("ch-inp").value = "";
+        autoResizeComposer();
+        bubble("user", "✨ Preencher a tela: " + instrucao);
+      }
     }
     btn.disabled = true;
     const pending = bubble("assistant", "Lendo os campos da página…");
@@ -804,6 +817,7 @@
 
   /* ---------- envio ---------- */
   async function send(text) {
+    if (pedeParaPreencher(text)) return preencherTela(text);
     const token = await MC_AUTH.token();
     if (!token) return showAuth("Sessão expirada. Entre novamente.");
     bubble("user", text);
@@ -983,7 +997,7 @@
     showAuth("Você saiu da extensão.");
   };
   $("ch-mic").onclick = () => dgMic.toggle();
-  $("ch-fill").onclick = preencherTela;
+  $("ch-fill").onclick = () => preencherTela();
   $("ch-chips").querySelectorAll(".chip").forEach((btn) => {
     btn.addEventListener("click", () => quickPrompt(btn.dataset.prompt));
   });
