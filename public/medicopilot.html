@@ -24,6 +24,7 @@
     <script src="paciente-protocolos.js" defer></script>
     <script src="equipe.js?v=4" defer></script>
     <script src="lme-estabelecimentos.js?v=2" defer></script>
+    <script src="lme-documentos-uf.js?v=2" defer></script>
     <script src="receituario-controlado.js" defer></script>
     <link rel="stylesheet" href="protocolos.css?v=2" />
     <script src="protocolos.js?v=2" defer></script>
@@ -18319,6 +18320,7 @@ let rxSelected = [];
                                                         form.medicamentos.map(m => m.nome).join('; ');
                                                       if (typeof markAtendDirty === 'function') markAtendDirty();
                                                     }
+                                                  if (form.medicamentos.length > 6) faltando.push('No máximo 6 medicamentos por LME (emita outro LME para os demais)');
                                                     showToast && showToast(window.__lmeRenovacao ? 'LME renovado com sucesso' : 'LME emitido e anexado ao atendimento', 'success');
                                                     window.__lmeRenovacao = false;
                                                     if (typeof renderLmeDocsPanel === 'function') renderLmeDocsPanel();
@@ -18336,21 +18338,28 @@ let rxSelected = [];
                                                    A lista abaixo segue o padrão nacional do Componente Especializado da Assistência Farmacêutica (CEAF/SUS).
                                                    Cada estado (SES) pode ter exigências adicionais — por isso os itens marcados como exigíveis (não
                                                    universais) aparecem como "(Opcional)" e podem ser ajustados aqui conforme o protocolo/UF da clínica. */
-                                                const LME_DOCUMENTOS = [
-                                                  { id: 'lme_laudo',              label: 'LME — Laudo de Solicitação, Avaliação e Autorização de Medicamentos', exigido: true,  origem: 'sistema', tipoDoc: 'laudo' },
-                                                  { id: 'receita',                label: 'Receita médica atual dos medicamentos solicitados',                  exigido: true,  origem: 'sistema', tipoDoc: 'receita' },
-                                                  { id: 'doc_identidade',         label: 'Documento de identidade com foto (RG, CNH ou CIN)',                  exigido: true,  origem: 'upload',  tag: 'Documento de identidade' },
-                                                  { id: 'cpf',                    label: 'CPF do paciente',                                                    exigido: true,  origem: 'upload',  tag: 'CPF' },
-                                                  { id: 'cartao_sus',             label: 'Cartão Nacional de Saúde (Cartão SUS)',                              exigido: true,  origem: 'upload',  tag: 'Cartão SUS' },
-                                                  { id: 'comprovante_residencia', label: 'Comprovante de residência atualizado',                               exigido: true,  origem: 'upload',  tag: 'Comprovante de residência' },
-                                                  { id: 'exames_diagnostico',     label: 'Exame(s) que comprovem o diagnóstico (conforme o PCDT)',             exigido: true,  origem: 'upload',  tag: 'Exames do diagnóstico' },
-                                                  { id: 'termo_consentimento',    label: 'Termo de Consentimento Informado, Livre e Esclarecido assinado',     exigido: true,  origem: 'upload',  tag: 'Termo de consentimento' },
-                                                  { id: 'doc_responsavel',        label: 'Documento e CPF do responsável legal',                               exigido: false, origem: 'upload',  tag: 'Documento do responsável' },
-                                                  { id: 'relatorio_complementar', label: 'Relatório médico complementar',                                      exigido: false, origem: 'upload',  tag: 'Relatório médico complementar' },
-                                                  { id: 'laudo_anatomopatologico',label: 'Laudo anatomopatológico / biópsia',                                  exigido: false, origem: 'upload',  tag: 'Anatomopatológico' },
-                                                  { id: 'declaracao_tratamentos', label: 'Declaração de tratamentos anteriores / falha terapêutica',           exigido: false, origem: 'upload',  tag: 'Tratamentos anteriores' },
-                                                  { id: 'certidao_nascimento',    label: 'Certidão de nascimento (se o paciente não possuir RG)',              exigido: false, origem: 'upload',  tag: 'Certidão de nascimento' },
-                                                ];
+                                                /* Lista montada por UF em lmeAplicarRegrasUf() a partir de public/lme-documentos-uf.js
+                                                   (base federal + exigências da Secretaria Estadual). Mutada no lugar porque as
+                                                   funções abaixo (ZIP, compartilhar, anexar) leem esta mesma referência. */
+                                                const LME_DOCUMENTOS = [];
+                                                let lmeRegrasUf = null;
+                                                function lmeUfDoProcesso() {
+                                                  // A SES competente é a da residência do paciente; sem endereço, a UF da clínica.
+                                                  const ufPac = String((currentPatient && currentPatient.uf) || '').trim().toUpperCase();
+                                                  if (/^[A-Z]{2}$/.test(ufPac)) return { uf: ufPac, origem: 'endereço do paciente' };
+                                                  let clinic = {}; try { clinic = JSON.parse(localStorage.getItem(CLINICA_KEY) || '{}'); } catch (e) {}
+                                                  const ufCli = String(clinic.uf || '').trim().toUpperCase();
+                                                  if (/^[A-Z]{2}$/.test(ufCli)) return { uf: ufCli, origem: 'endereço da clínica' };
+                                                  return { uf: '', origem: '' };
+                                                }
+                                                function lmeAplicarRegrasUf(docsSistema) {
+                                                  const { uf, origem } = lmeUfDoProcesso();
+                                                  const ultimo = (docsSistema || []).filter(d => d.tipo === 'laudo').sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+                                                  const incapaz = !!(ultimo && ultimo.conteudo && ultimo.conteudo.incapaz === 'sim');
+                                                  lmeRegrasUf = window.LmeDocsUf ? Object.assign(LmeDocsUf.montar(uf, { incapaz }), { origemUf: origem }) : null;
+                                                  LME_DOCUMENTOS.splice(0, LME_DOCUMENTOS.length, ...(lmeRegrasUf ? lmeRegrasUf.itens : []));
+                                                  return lmeRegrasUf;
+                                                }
                                                 const LME_VALIDADE_MESES = 6;
                                                 window.__lmeDocsCache = { sistema: [], porDoc: {} };
 
@@ -18430,6 +18439,7 @@ let rxSelected = [];
                                                       actionsHtml +
                                                       '<button class="btn sm" onclick="lmeCompactarZip()"><i class="ti ti-file-zip"></i> Baixar tudo em ZIP</button>' +
                                                       '<button class="btn sm" onclick="lmeAbrirCompartilhar()"><i class="ti ti-send"></i> Compartilhar com o paciente</button>' +
+                                                  const regras = lmeAplicarRegrasUf(docsSistema);
                                                     '</div>';
                                                   roots.forEach(r => r.innerHTML = html);
                                                 }
@@ -18466,6 +18476,7 @@ let rxSelected = [];
                                                   }, 30);
                                                 }
 
+                                                    _lmeRegrasHtml(regras) +
                                                 // Renovação: reabre o LME pré-preenchido com os dados do último laudo emitido, com a data atualizada para hoje.
                                                 async function lmeRenovar() {
                                                   const docsSistema = window.__lmeDocsCache.sistema.length ? window.__lmeDocsCache.sistema : await lmeCarregarDocsSistema();
@@ -18474,6 +18485,23 @@ let rxSelected = [];
                                                   window.__lmeRenovacao = true;
                                                   openLmeModal();
                                                   const prev = laudos[0].conteudo || {};
+                                                function _lmeRegrasHtml(r) {
+                                                  if (!r) return '';
+                                                  const titulo = r.uf
+                                                    ? 'Documentos exigidos: ' + _rxEsc(r.nome || r.uf) + ' (UF pelo ' + _rxEsc(r.origemUf) + ')'
+                                                    : 'Regras federais (cadastre a UF do paciente para ver as do estado)';
+                                                  const aviso = !r.uf ? '' : !r.verificado
+                                                    ? '<div style="color:#b45309;margin-top:4px">Exigências desta Secretaria ainda não levantadas: lista federal. Confira com a SES antes de enviar.</div>'
+                                                    : r.parcial ? '<div style="color:#b45309;margin-top:4px">Levantamento parcial: a lista final depende do medicamento/doença no site da SES.</div>' : '';
+                                                  const fontes = r.fontes.map(f => '<a href="' + _rxEsc(f.url) + '" target="_blank" rel="noopener" style="color:#1d4ed8">' + _rxEsc(f.titulo) + '</a>').join(' · ');
+                                                  return '<details style="font-size:11.5px;color:var(--n600);border:0.5px solid var(--n200);border-radius:8px;padding:8px 10px;margin-bottom:10px;background:#fff">' +
+                                                    '<summary style="cursor:pointer;font-weight:600">' + titulo + (r.lmeValidadeDias ? ' · LME vale ' + r.lmeValidadeDias + ' dias para entrega' : '') + '</summary>' +
+                                                    aviso +
+                                                    (r.canal ? '<div style="margin-top:6px"><b>Onde entregar:</b> ' + _rxEsc(r.canal) + '</div>' : '') +
+                                                    '<ul style="margin:6px 0 0 16px;padding:0">' + r.regras.map(t => '<li>' + _rxEsc(t) + '</li>').join('') + '</ul>' +
+                                                    '<div style="margin-top:6px;color:var(--n400)">Fontes (levantamento de ' + new Date(r.levantamento + 'T00:00:00').toLocaleDateString('pt-BR') + '): ' + fontes + '</div>' +
+                                                    '</details>';
+                                                }
                                                   setTimeout(() => {
                                                     lmeApply(prev, null);
                                                     _lmeSet('lme-data', new Date().toISOString().slice(0, 10));
