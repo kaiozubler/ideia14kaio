@@ -18280,6 +18280,7 @@ let rxSelected = [];
                                                   const form = lmeCollect();
                                                   const faltando = LME_OBRIGATORIOS.filter(([k]) => !String(form[k] || '').trim()).map(([, l]) => l);
                                                   if (!form.medicamentos.length) faltando.push('Medicamento(s)');
+                                                  if (form.medicamentos.length > 6) faltando.push('No máximo 6 medicamentos por LME (emita outro LME para os demais)');
                                                   if (form.cnes && !/^\d{7}$/.test(form.cnes)) faltando.push('CNES com 7 dígitos');
                                                   if (form.medico_cns && !/^\d{15}$/.test(form.medico_cns.replace(/\D/g, ''))) faltando.push('CNS do médico com 15 dígitos');
                                                   if (form.raca === 'indigena' && !form.etnia) faltando.push('Etnia (paciente indígena)');
@@ -18320,7 +18321,6 @@ let rxSelected = [];
                                                         form.medicamentos.map(m => m.nome).join('; ');
                                                       if (typeof markAtendDirty === 'function') markAtendDirty();
                                                     }
-                                                  if (form.medicamentos.length > 6) faltando.push('No máximo 6 medicamentos por LME (emita outro LME para os demais)');
                                                     showToast && showToast(window.__lmeRenovacao ? 'LME renovado com sucesso' : 'LME emitido e anexado ao atendimento', 'success');
                                                     window.__lmeRenovacao = false;
                                                     if (typeof renderLmeDocsPanel === 'function') renderLmeDocsPanel();
@@ -18399,6 +18399,7 @@ let rxSelected = [];
                                                   roots.forEach(r => r.innerHTML = '<div class="lme-empty">Carregando…</div>');
                                                   const docsSistema = await lmeCarregarDocsSistema();
                                                   window.__lmeDocsCache.sistema = docsSistema;
+                                                  const regras = lmeAplicarRegrasUf(docsSistema);
                                                   const validade = lmeValidadeInfo(docsSistema);
 
                                                   let badgeHtml, actionsHtml;
@@ -18417,7 +18418,8 @@ let rxSelected = [];
                                                   const chipsHtml = LME_DOCUMENTOS.map(doc => {
                                                     const st = _lmeStatusDoc(doc, docsSistema);
                                                     const cls = st.done ? 'done' : 'pending';
-                                                    const label = doc.exigido ? doc.label : (doc.label + ' <span style="font-weight:400">(Opcional)</span>');
+                                                    const label = _rxEsc(doc.label) + (doc.exigido ? '' : ' <span style="font-weight:400">(Opcional)</span>') +
+                                                      (doc.detalhe ? '<div style="font-size:10.5px;font-weight:400;color:var(--n400);margin-top:2px">' + _rxEsc(doc.detalhe) + '</div>' : '');
                                                     const sub = st.done
                                                       ? (st.origem === 'sistema' ? 'Gerado em ' + new Date(st.row.created_at).toLocaleDateString('pt-BR') + ' · clique para baixar' : 'Anexado · clique para baixar')
                                                       : (doc.origem === 'sistema' ? 'Clique para gerar' : 'Clique para anexar');
@@ -18434,14 +18436,31 @@ let rxSelected = [];
                                                       '<span class="lme-panel-title"><i class="ti ti-file-text"></i> Documentos do LME — ' + prontos + '/' + LME_DOCUMENTOS.length + ' prontos</span>' +
                                                       badgeHtml +
                                                     '</div>' +
+                                                    _lmeRegrasHtml(regras) +
                                                     '<div class="lme-doc-grid">' + chipsHtml + '</div>' +
                                                     '<div class="lme-panel-actions">' +
                                                       actionsHtml +
                                                       '<button class="btn sm" onclick="lmeCompactarZip()"><i class="ti ti-file-zip"></i> Baixar tudo em ZIP</button>' +
                                                       '<button class="btn sm" onclick="lmeAbrirCompartilhar()"><i class="ti ti-send"></i> Compartilhar com o paciente</button>' +
-                                                  const regras = lmeAplicarRegrasUf(docsSistema);
                                                     '</div>';
                                                   roots.forEach(r => r.innerHTML = html);
+                                                }
+                                                function _lmeRegrasHtml(r) {
+                                                  if (!r) return '';
+                                                  const titulo = r.uf
+                                                    ? 'Documentos exigidos: ' + _rxEsc(r.nome || r.uf) + ' (UF pelo ' + _rxEsc(r.origemUf) + ')'
+                                                    : 'Regras federais (cadastre a UF do paciente para ver as do estado)';
+                                                  const aviso = !r.uf ? '' : !r.verificado
+                                                    ? '<div style="color:#b45309;margin-top:4px">Exigências desta Secretaria ainda não levantadas: lista federal. Confira com a SES antes de enviar.</div>'
+                                                    : r.parcial ? '<div style="color:#b45309;margin-top:4px">Levantamento parcial: a lista final depende do medicamento/doença no site da SES.</div>' : '';
+                                                  const fontes = r.fontes.map(f => '<a href="' + _rxEsc(f.url) + '" target="_blank" rel="noopener" style="color:#1d4ed8">' + _rxEsc(f.titulo) + '</a>').join(' · ');
+                                                  return '<details style="font-size:11.5px;color:var(--n600);border:0.5px solid var(--n200);border-radius:8px;padding:8px 10px;margin-bottom:10px;background:#fff">' +
+                                                    '<summary style="cursor:pointer;font-weight:600">' + titulo + (r.lmeValidadeDias ? ' · LME vale ' + r.lmeValidadeDias + ' dias para entrega' : '') + '</summary>' +
+                                                    aviso +
+                                                    (r.canal ? '<div style="margin-top:6px"><b>Onde entregar:</b> ' + _rxEsc(r.canal) + '</div>' : '') +
+                                                    '<ul style="margin:6px 0 0 16px;padding:0">' + r.regras.map(t => '<li>' + _rxEsc(t) + '</li>').join('') + '</ul>' +
+                                                    '<div style="margin-top:6px;color:var(--n400)">Fontes (levantamento de ' + new Date(r.levantamento + 'T00:00:00').toLocaleDateString('pt-BR') + '): ' + fontes + '</div>' +
+                                                    '</details>';
                                                 }
                                                 // Aliases para os hooks já existentes na aba "Protocolos" (openTab chama estas funções, se existirem).
                                                 function initProtocolos() { renderLmeDocsPanel(); }
@@ -18476,7 +18495,6 @@ let rxSelected = [];
                                                   }, 30);
                                                 }
 
-                                                    _lmeRegrasHtml(regras) +
                                                 // Renovação: reabre o LME pré-preenchido com os dados do último laudo emitido, com a data atualizada para hoje.
                                                 async function lmeRenovar() {
                                                   const docsSistema = window.__lmeDocsCache.sistema.length ? window.__lmeDocsCache.sistema : await lmeCarregarDocsSistema();
@@ -18485,23 +18503,6 @@ let rxSelected = [];
                                                   window.__lmeRenovacao = true;
                                                   openLmeModal();
                                                   const prev = laudos[0].conteudo || {};
-                                                function _lmeRegrasHtml(r) {
-                                                  if (!r) return '';
-                                                  const titulo = r.uf
-                                                    ? 'Documentos exigidos: ' + _rxEsc(r.nome || r.uf) + ' (UF pelo ' + _rxEsc(r.origemUf) + ')'
-                                                    : 'Regras federais (cadastre a UF do paciente para ver as do estado)';
-                                                  const aviso = !r.uf ? '' : !r.verificado
-                                                    ? '<div style="color:#b45309;margin-top:4px">Exigências desta Secretaria ainda não levantadas: lista federal. Confira com a SES antes de enviar.</div>'
-                                                    : r.parcial ? '<div style="color:#b45309;margin-top:4px">Levantamento parcial: a lista final depende do medicamento/doença no site da SES.</div>' : '';
-                                                  const fontes = r.fontes.map(f => '<a href="' + _rxEsc(f.url) + '" target="_blank" rel="noopener" style="color:#1d4ed8">' + _rxEsc(f.titulo) + '</a>').join(' · ');
-                                                  return '<details style="font-size:11.5px;color:var(--n600);border:0.5px solid var(--n200);border-radius:8px;padding:8px 10px;margin-bottom:10px;background:#fff">' +
-                                                    '<summary style="cursor:pointer;font-weight:600">' + titulo + (r.lmeValidadeDias ? ' · LME vale ' + r.lmeValidadeDias + ' dias para entrega' : '') + '</summary>' +
-                                                    aviso +
-                                                    (r.canal ? '<div style="margin-top:6px"><b>Onde entregar:</b> ' + _rxEsc(r.canal) + '</div>' : '') +
-                                                    '<ul style="margin:6px 0 0 16px;padding:0">' + r.regras.map(t => '<li>' + _rxEsc(t) + '</li>').join('') + '</ul>' +
-                                                    '<div style="margin-top:6px;color:var(--n400)">Fontes (levantamento de ' + new Date(r.levantamento + 'T00:00:00').toLocaleDateString('pt-BR') + '): ' + fontes + '</div>' +
-                                                    '</details>';
-                                                }
                                                   setTimeout(() => {
                                                     lmeApply(prev, null);
                                                     _lmeSet('lme-data', new Date().toISOString().slice(0, 10));
