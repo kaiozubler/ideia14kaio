@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { linhaDaCobranca, type PaymentAsaas } from "@/lib/asaas/cobrancas";
 
 // Recebe os eventos do Asaas e atualiza as tabelas correspondentes. É o
 // único lugar que confirma pagamento/cobrança de verdade — nunca o
@@ -19,6 +20,9 @@ import { createFileRoute } from "@tanstack/react-router";
 //   PAYMENT_* (com payment.id)       -> asaas_cobrancas (histórico que o
 //                                       Zubler CRM mostra ao lado dos
 //                                       pagamentos manuais)
+//   PAYMENT_REFUNDED /
+//   PAYMENT_PARTIALLY_REFUNDED       -> conclui os estornos pedidos pelo CRM
+//                                       (pagamentos_estornos)
 //   SUBSCRIPTION_DELETED/INACTIVATED -> assinaturas.status = 'cancelada'
 //                                       (exceto cancelamento agendado pela
 //                                       tela Meu plano, que mantém o acesso
@@ -35,62 +39,40 @@ import { createFileRoute } from "@tanstack/react-router";
 //
 // Configuração pendente no painel do Asaas: Webhooks -> eventos
 // CHECKOUT_CREATED/PAID/CANCELED/EXPIRED, PAYMENT_CREATED/OVERDUE/CONFIRMED/
-// RECEIVED, SUBSCRIPTION_DELETED/INACTIVATED, apontando pra
+// RECEIVED/REFUNDED/PARTIALLY_REFUNDED, SUBSCRIPTION_DELETED/INACTIVATED, apontando pra
 // {seu domínio}/api/asaas/webhook. Se definir um token lá, replique em
 // ASAAS_WEBHOOK_TOKEN.
 
 type EventoAsaas = {
   event: string;
   checkout?: { id?: string };
-  payment?: {
-    id?: string;
-    subscription?: string | null;
-    value?: number;
-    status?: string;
-    billingType?: string;
-    dueDate?: string;
-    paymentDate?: string | null;
-    clientPaymentDate?: string | null;
-  };
+  payment?: PaymentAsaas;
   subscription?: { id?: string };
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = any;
 
-/** Guarda a cobrança recorrente para o Zubler CRM (/api/public/crm/pagamentos). Falha aqui não reenvia o evento. */
+/** Guarda a cobrança para o Zubler CRM (/api/public/crm/pagamentos). Falha aqui não reenvia o evento. */
 async function registrarCobranca(
   db: Db,
   evento: string,
   payment: NonNullable<EventoAsaas["payment"]>,
 ) {
   if (!payment.id) return;
-  let medicoId: string | null = null;
-  let assinaturaId: string | null = null;
-  if (payment.subscription) {
-    const { data } = await db
-      .from("assinaturas")
-      .select("id, medico_id")
-      .eq("asaas_subscription_id", payment.subscription)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    medicoId = data?.medico_id ?? null;
-    assinaturaId = data?.id ?? null;
+  const { vinculoDaCobranca } = await import("@/lib/asaas/vinculo.server");
+  const vinculo = await vinculoDaCobranca(db, payment);
+  const linha: Record<string, unknown> = linhaDaCobranca(
+    { ...payment, id: payment.id },
+    vinculo,
+    evento,
+  );
+  // Sem clínica achada, não apaga o vínculo que a sincronização ou a ativação já gravou.
+  if (!vinculo.medicoId) {
+    delete linha.medico_id;
+    delete linha.assinatura_id;
   }
-  const { error } = await db.from("asaas_cobrancas").upsert({
-    asaas_payment_id: payment.id,
-    asaas_subscription_id: payment.subscription ?? null,
-    medico_id: medicoId,
-    assinatura_id: assinaturaId,
-    valor: payment.value ?? null,
-    status: payment.status ?? null,
-    metodo: payment.billingType ?? null,
-    vencimento: payment.dueDate ?? null,
-    pago_em: payment.paymentDate ?? payment.clientPaymentDate ?? null,
-    ultimo_evento: evento,
-    atualizado_em: new Date().toISOString(),
-  });
+  const { error } = await db.from("asaas_cobrancas").upsert(linha);
   if (error) console.error("[asaas:webhook] erro ao registrar cobrança:", error.message);
 }
 
@@ -165,6 +147,10 @@ export const Route = createFileRoute("/api/asaas/webhook")({
         // --- Cobrança da assinatura (pagamentos recorrentes, depois do primeiro) ---
         if (corpo.payment && corpo.event.startsWith("PAYMENT_")) {
           await registrarCobranca(supabaseAdmin, corpo.event, corpo.payment);
+          if (corpo.event === "PAYMENT_REFUNDED" || corpo.event === "PAYMENT_PARTIALLY_REFUNDED") {
+            const { concluirEstornosDoAsaas } = await import("@/lib/crm/financeiro.server");
+            await concluirEstornosDoAsaas(supabaseAdmin, corpo.payment, corpo.event);
+          }
         }
         const subscriptionId = corpo.payment?.subscription ?? corpo.subscription?.id;
         if (subscriptionId) {
@@ -208,6 +194,29 @@ export const Route = createFileRoute("/api/asaas/webhook")({
             if (error) console.error("[asaas:webhook] erro ao cancelar assinatura:", error.message);
           }
         }
+
+        // A próxima cobrança muda quando o Asaas gera, recebe ou apaga uma cobrança.
+        if (
+          subscriptionId &&
+          [
+            "PAYMENT_CREATED",
+            "PAYMENT_CONFIRMED",
+            "PAYMENT_RECEIVED",
+            "PAYMENT_DELETED",
+            "PAYMENT_RESTORED",
+          ].includes(corpo.event)
+        ) {
+          const { atualizarProximaCobranca } = await import("@/lib/asaas/vinculo.server");
+          await atualizarProximaCobranca(supabaseAdmin, subscriptionId);
+        }
+
+        // Cancelamentos e trocas de plano cuja data chegou (sem depender do login do cliente).
+        const { error: erroAgendamentos } = await supabaseAdmin.rpc(
+          "aplicar_agendamentos_assinaturas",
+          { p_medico_id: null },
+        );
+        if (erroAgendamentos)
+          console.error("[asaas:webhook] erro ao aplicar agendamentos:", erroAgendamentos.message);
 
         return Response.json({ ok: true });
       },

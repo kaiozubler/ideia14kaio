@@ -67,6 +67,7 @@
       crm: { uf: "", number: "" },
       especialidade: "",
       rqe: "",
+      cns: "",
       notifications: { novoPaciente: true, agendaAlterada: true, mensagens: false, faturamento: true },
       scheduleRules: [],
     },
@@ -211,6 +212,7 @@
           </div>
           <div><label class="eq-label">Especialidade</label><input class="eq-input" id="eq-p-esp" placeholder="Ex: Cardiologia" value="${esc(p.especialidade)}"></div>
           <div><label class="eq-label">RQE</label><input class="eq-input" id="eq-p-rqe" maxlength="10" placeholder="Registro de Qualificação de Especialista" value="${esc(p.rqe)}"></div>
+          <div><label class="eq-label"><i class="ti ti-id-badge-2"></i> CNS (Cartão SUS do médico)</label><input class="eq-input" id="eq-p-cns" maxlength="15" inputmode="numeric" placeholder="15 dígitos — usado no LME" value="${esc(p.cns)}"></div>
         </div>
         <div style="font-size:11.5px;color:#64748b;margin:-4px 0 12px">A especialidade só aparece nos documentos e no prontuário junto com o RQE (Res. CFM 2.336/2023).</div>
         <div>
@@ -269,6 +271,10 @@
       bind("eq-p-esp", (e) => {
         p.especialidade = e.target.value;
       });
+      bind("eq-p-cns", (e) => {
+        p.cns = e.target.value.replace(/\D/g, "").slice(0, 15);
+        e.target.value = p.cns;
+      });
       bind("eq-p-rqe", (e) => {
         p.rqe = e.target.value.replace(/\D/g, "").slice(0, 10);
         e.target.value = p.rqe;
@@ -284,6 +290,7 @@
           crm_numero: p.crm?.number || "",
           especialidade: p.especialidade.trim(),
           rqe: p.rqe,
+          cns: p.cns,
         };
         if (window.sb?.auth?.updateUser) {
           btn.disabled = true;
@@ -1495,6 +1502,7 @@
     S.profile.crm = { uf: meta.crm_uf || "", number: meta.crm_numero || "" };
     S.profile.especialidade = meta.especialidade || meta.specialty || "";
     S.profile.rqe = meta.rqe || "";
+    S.profile.cns = String(meta.cns || meta.CNS || "").replace(/\D/g, "").slice(0, 15);
     renderProfile();
   }
 

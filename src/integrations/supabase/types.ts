@@ -2947,6 +2947,45 @@ export type Database = {
           },
         ]
       }
+      lme_estabelecimentos: {
+        Row: {
+          cnes: string
+          created_at: string
+          id: string
+          municipio: string | null
+          nome: string
+          padrao: boolean
+          tipo: string
+          uf: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cnes: string
+          created_at?: string
+          id?: string
+          municipio?: string | null
+          nome: string
+          padrao?: boolean
+          tipo?: string
+          uf?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          cnes?: string
+          created_at?: string
+          id?: string
+          municipio?: string | null
+          nome?: string
+          padrao?: boolean
+          tipo?: string
+          uf?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       lme_processos: {
         Row: {
           ativo: boolean
@@ -3563,6 +3602,8 @@ export type Database = {
           motivo_alteracao: string | null
           name: string
           naturalidade: string | null
+          etnia: string | null
+          raca_cor: string | null
           numero: string | null
           ocupacao: string | null
           paciente_id: string
@@ -3596,6 +3637,8 @@ export type Database = {
           motivo_alteracao?: string | null
           name: string
           naturalidade?: string | null
+          etnia?: string | null
+          raca_cor?: string | null
           numero?: string | null
           ocupacao?: string | null
           paciente_id?: string
@@ -3629,6 +3672,8 @@ export type Database = {
           motivo_alteracao?: string | null
           name?: string
           naturalidade?: string | null
+          etnia?: string | null
+          raca_cor?: string | null
           numero?: string | null
           ocupacao?: string | null
           paciente_id?: string
@@ -5169,6 +5214,8 @@ export type Database = {
           medico: string | null
           name: string | null
           naturalidade: string | null
+          etnia: string | null
+          raca_cor: string | null
           numero: string | null
           ocupacao: string | null
           paciente_id: string | null
@@ -5197,6 +5244,8 @@ export type Database = {
           medico?: string | null
           name?: string | null
           naturalidade?: string | null
+          etnia?: string | null
+          raca_cor?: string | null
           numero?: string | null
           ocupacao?: string | null
           paciente_id?: string | null
@@ -5225,6 +5274,8 @@ export type Database = {
           medico?: string | null
           name?: string | null
           naturalidade?: string | null
+          etnia?: string | null
+          raca_cor?: string | null
           numero?: string | null
           ocupacao?: string | null
           paciente_id?: string | null

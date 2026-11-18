@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { GEMINI_MODEL } from "@/lib/ia/provedor.server";
+import { getUserIdFromRequest } from "@/lib/signature/requestAuth.server";
+
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
 type Body = {
@@ -37,6 +39,18 @@ REGRAS CRÍTICAS:
 - Use SOMENTE informações explicitamente presentes no contexto recebido. NUNCA invente dados
   (nome, CNES, CNS, peso, altura, CID, medicamentos, telefone, documento).
 - Deixe o campo como string vazia (ou lista vazia) quando a informação não existir no contexto.
+- Os campos que já vieram dos cadastros (paciente, médico, clínica) estão em "CAMPOS JÁ PREENCHIDOS":
+  não os altere. Seu papel é completar o que ficou vazio.
+- Fontes, em ordem: "atendimento_atual" (texto do prontuário desta consulta), "transcricao_consulta"
+  (fala transcrita da consulta, pode ter erros de reconhecimento), "resumo_prontuario", "dados_clinicos",
+  "info_complementar", "cids_paciente".
+- Da transcrição, extraia peso, altura, medicamentos (com quantidade mensal quando dita), tratamentos
+  anteriores e falhas terapêuticas apenas quando ditos de forma inequívoca.
+- "cnes"/"estabelecimento": somente um item de "estabelecimentos_cadastrados" (prefira o "padrao")
+  ou um número de 7 dígitos dito explicitamente. Nunca deduza um CNES.
+- "raca": só quando o paciente declarou (autodeclaração); nunca deduza pela descrição física.
+- "medicamentos": nome com princípio ativo, concentração e forma farmacêutica; "quantidades" em
+  unidades da apresentação por mês (ex.: cápsulas), repetindo o valor nos meses quando a dose é estável.
 - "anamnese": redija um texto clínico objetivo (5 a 12 linhas) baseado apenas no prontuário, resumo,
   exames e dados clínicos fornecidos, no formato exigido pelo laudo (história da doença, evolução,
   tratamentos realizados, justificativa da solicitação).
@@ -64,7 +78,10 @@ Responda EXCLUSIVAMENTE com JSON válido, sem markdown:
 { "reply": "mensagem curta para o médico", "patch": { ...apenas campos alterados... }, "pendencias": ["..."] }`;
 
 function parseJsonLoose(text: string): Record<string, unknown> {
-  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "");
+  const cleaned = text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/```\s*$/i, "");
   try {
     return JSON.parse(cleaned);
   } catch {
@@ -102,6 +119,10 @@ export const Route = createFileRoute("/api/lme-ia")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // Só logado: cada chamada gasta crédito do gateway e recebe dados do paciente.
+        if (!(await getUserIdFromRequest(request))) {
+          return Response.json({ error: "unauthorized" }, { status: 401 });
+        }
         const apiKey = process.env["LOVABLE_API_KEY"];
         if (!apiKey) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
 

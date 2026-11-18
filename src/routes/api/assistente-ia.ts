@@ -3,7 +3,8 @@ import { analisarExameArquivo, type AnaliseExame } from "@/lib/exames/analise.se
 import { mensagemErroGateway } from "@/lib/ai/erro-gateway";
 import { getUserIdFromRequest } from "@/lib/signature/requestAuth.server";
 
-import { GEMINI_MODEL } from "@/lib/ia/provedor.server";
+import { GEMINI_MODEL, fetchGateway } from "@/lib/ia/provedor.server";
+import { filtroMarcador, lerStreamGateway, respostaNdjson, type EventoStream } from "@/lib/ia/stream.server";
 type ChatMessage = {
   role: "system" | "user" | "assistant" | "tool";
   content: string | null;
@@ -20,6 +21,8 @@ type ToolCall = {
 export type RequestBody = {
   mode?: string;
   messages?: { role: string; content: string }[];
+  /** Resposta em NDJSON com o texto chegando aos pedaços (ver src/lib/ia/stream.server.ts). */
+  stream?: boolean;
   // Igual a "messages", mas com os atalhos de comando ("/algo") ainda
   // compactos, sem expandir pro texto completo — é essa versão que fica
   // salva em ia_assist_conversas (pra reabrir a conversa depois mostrar o
@@ -46,7 +49,6 @@ export type RequestBody = {
   contexto_tela?: string | null;
 };
 
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = GEMINI_MODEL;
 const TZ_OFFSET_MIN = -180; // America/Sao_Paulo
 
@@ -1918,15 +1920,14 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
 }
 
 async function callGateway(messages: ChatMessage[], apiKey: string, toolset: ToolDef[] = tools) {
-  const res = await fetch(GATEWAY_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Lovable-API-Key": apiKey,
-      "X-Lovable-AIG-SDK": "raw",
-    },
-    body: JSON.stringify({ model: MODEL, messages, tools: toolset, tool_choice: "auto" }),
-  });
+  const res = await fetchGateway(
+    apiKey,
+    { model: MODEL, messages, tools: toolset, tool_choice: "auto" },
+    // O assistente é operacional (buscar paciente, agendar, gerar documento) e
+    // roda várias voltas por mensagem: raciocínio curto em cada volta é o que
+    // mais reduz a espera.
+    "low",
+  );
   if (!res.ok) {
     const text = await res.text();
     console.error(`[assistente-ia] AI gateway error ${res.status}:`, text);
@@ -1936,19 +1937,35 @@ async function callGateway(messages: ChatMessage[], apiKey: string, toolset: Too
   return data.choices?.[0]?.message ?? ({ role: "assistant", content: "" } as ChatMessage);
 }
 
+// Mesma chamada do callGateway, mas em streaming: `aoTexto` recebe o texto
+// enquanto o modelo escreve, e a mensagem completa (com as tool_calls e os campos
+// extras que o gateway exige de volta na próxima volta) é devolvida no fim.
+async function callGatewayStream(
+  messages: ChatMessage[],
+  apiKey: string,
+  toolset: ToolDef[],
+  aoTexto: (delta: string) => void,
+): Promise<ChatMessage> {
+  const res = await fetchGateway(
+    apiKey,
+    { model: MODEL, messages, tools: toolset, tool_choice: "auto", stream: true },
+    "low",
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    console.error(`[assistente-ia] AI gateway error ${res.status}:`, text);
+    throw new Response(mensagemErroGateway(res.status), { status: res.status });
+  }
+  const msg = await lerStreamGateway(res, aoTexto);
+  if (Array.isArray(msg.tool_calls) && !msg.tool_calls.length) delete msg.tool_calls;
+  return msg as ChatMessage;
+}
+
 // Geração de texto simples, sem tool-calling (ex.: anamnese a partir de um prompt
 // cadastrado pelo médico) — igual ao callGateway usado no modo "anamnese" de chat-ia.ts,
 // sem o campo "tools" para não confundir o gateway com uma lista vazia.
 async function callGatewayPlain(messages: ChatMessage[], apiKey: string): Promise<string> {
-  const res = await fetch(GATEWAY_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Lovable-API-Key": apiKey,
-      "X-Lovable-AIG-SDK": "raw",
-    },
-    body: JSON.stringify({ model: MODEL, messages }),
-  });
+  const res = await fetchGateway(apiKey, { model: MODEL, messages });
   if (!res.ok) {
     const text = await res.text();
     console.error(`[assistente-ia] AI gateway error ${res.status}:`, text);
@@ -1960,14 +1977,9 @@ async function callGatewayPlain(messages: ChatMessage[], apiKey: string): Promis
 
 async function gerarTitulo(primeiraMsg: string, apiKey: string): Promise<string> {
   try {
-    const res = await fetch(GATEWAY_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": apiKey,
-        "X-Lovable-AIG-SDK": "raw",
-      },
-      body: JSON.stringify({
+    const res = await fetchGateway(
+      apiKey,
+      {
         model: MODEL,
         messages: [
           {
@@ -1977,8 +1989,9 @@ async function gerarTitulo(primeiraMsg: string, apiKey: string): Promise<string>
           },
           { role: "user", content: primeiraMsg.slice(0, 500) },
         ],
-      }),
-    });
+      },
+      "low",
+    );
     if (!res.ok) return "Nova conversa";
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
     const titulo = (data.choices?.[0]?.message?.content || "").trim().replace(/^["“”']|["“”']$/g, "");
@@ -1994,7 +2007,7 @@ async function salvarConversa(
   conversaId: string | null,
   history: ChatMessage[],
   reply: string,
-  apiKey: string,
+  titulo: Promise<string> | null,
   fonteBaseConhecimento: string[] | null,
 ): Promise<string | null> {
   if (!medicoId || !history.length) return conversaId;
@@ -2012,11 +2025,11 @@ async function salvarConversa(
         .eq("id_medico", medicoId);
       return conversaId;
     }
-    const primeiraMsg = history.find((m) => m.role === "user")?.content || reply;
-    const titulo = await gerarTitulo(String(primeiraMsg || ""), apiKey);
+    // O título já foi pedido em paralelo com a resposta (ver handleAssistente).
+    const tituloFinal = titulo ? await titulo : "Nova conversa";
     const { data } = await db
       .from("ia_assist_conversas")
-      .insert({ id_medico: medicoId, titulo, mensagens })
+      .insert({ id_medico: medicoId, titulo: tituloFinal, mensagens })
       .select("id")
       .single();
     return data?.id ?? null;
@@ -2054,6 +2067,14 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
         ).filter(
           (m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string",
         ) as ChatMessage[];
+
+        // Conversa nova no chat interno: o título é gerado em paralelo com a
+        // resposta, em vez de ser mais uma chamada de IA depois dela.
+        const primeiraMsgUsuario = historyParaSalvar.find((m) => m.role === "user")?.content;
+        const tituloPromise =
+          body.conversa_id || body.canal === "paciente" || !body.user_id || !primeiraMsgUsuario
+            ? null
+            : gerarTitulo(String(primeiraMsgUsuario), apiKey);
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const pendingAction: { value: unknown } = { value: null };
@@ -2106,33 +2127,32 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
         // ativas pro assistente_ai, injeta o índice delas + os trechos que
         // batem com a última mensagem. Só no canal interno (médico), não no
         // canal paciente. Ver src/lib/base-conhecimento/buscar.server.ts.
+        // A busca na base de conhecimento e a análise do anexo não dependem uma
+        // da outra: rodam em paralelo antes da primeira chamada ao modelo.
         let basesConhecimentoUsadas: string[] = [];
         let marcadorBaseLocal: string | null = null;
-        if (canal === "interno" && body.user_id) {
-          const ultimaMensagemUsuario = [...history].reverse().find((m) => m.role === "user")?.content ?? "";
-          if (ultimaMensagemUsuario.trim()) {
-            const { montarContextoBaseConhecimento, MARCADOR_BASE_LOCAL_USADA } = await import(
-              "@/lib/base-conhecimento/buscar.server"
-            );
-            marcadorBaseLocal = MARCADOR_BASE_LOCAL_USADA;
-            const resultadoBaseConhecimento = await montarContextoBaseConhecimento({
-              medicoId: body.user_id,
-              mensagem: ultimaMensagemUsuario,
-              ia: "assistente_ai",
-            });
-            if (resultadoBaseConhecimento.texto) messages.splice(1, 0, { role: "system", content: resultadoBaseConhecimento.texto });
-            basesConhecimentoUsadas = resultadoBaseConhecimento.basesCandidatas;
-          }
-        }
+        const ultimaMensagemUsuario = [...history].reverse().find((m) => m.role === "user")?.content ?? "";
+        const basePromise =
+          canal === "interno" && body.user_id && ultimaMensagemUsuario.trim()
+            ? import("@/lib/base-conhecimento/buscar.server").then(
+                async ({ montarContextoBaseConhecimento, MARCADOR_BASE_LOCAL_USADA }) => ({
+                  marcador: MARCADOR_BASE_LOCAL_USADA,
+                  resultado: await montarContextoBaseConhecimento({
+                    medicoId: body.user_id!,
+                    mensagem: ultimaMensagemUsuario,
+                    ia: "assistente_ai",
+                  }),
+                }),
+              )
+            : null;
 
         // Anexo recebido no chat interno: encaminha para a IA dedicada de exames e
         // injeta a análise no contexto, para o assistente conversar sobre ela.
-        let analiseExame: AnaliseExame | null = null;
-        if (canal === "interno" && body.anexo?.base64) {
-          try {
-            analiseExame = await analisarExameArquivo({
+        const anexo = canal === "interno" && body.anexo?.base64 ? body.anexo : null;
+        const exameResultado = anexo
+          ? analisarExameArquivo({
               apiKey,
-              anexo: body.anexo,
+              anexo,
               buscarTuss: async (termo) => {
                 const { data } = await supabaseAdmin.rpc("buscar_tuss", {
                   termo,
@@ -2142,30 +2162,64 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
                 const hit = (data as any[] | null)?.[0];
                 return hit ? { id: hit.id, codigo_tuss: hit.codigo_tuss, nome: hit.nome } : null;
               },
-            });
+            }).then(
+              (analise) => ({ ok: true as const, analise }),
+              (erro: unknown) => ({ ok: false as const, erro }),
+            )
+          : null;
+
+        // Base de conhecimento local do médico (opcional): se ele tiver bases
+        // ativas pro assistente_ai, injeta o índice delas + os trechos que
+        // batem com a última mensagem. Só no canal interno (médico), não no
+        // canal paciente. Ver src/lib/base-conhecimento/buscar.server.ts.
+        if (basePromise) {
+          const { marcador, resultado } = await basePromise;
+          marcadorBaseLocal = marcador;
+          if (resultado.texto) messages.splice(1, 0, { role: "system", content: resultado.texto });
+          basesConhecimentoUsadas = resultado.basesCandidatas;
+        }
+
+        let analiseExame: AnaliseExame | null = null;
+        if (anexo && exameResultado) {
+          const r = await exameResultado;
+          if (r.ok) {
+            analiseExame = r.analise;
             messages.push({
               role: "system",
               content:
-                `ANÁLISE DE EXAME (IA de exames) — arquivo "${body.anexo.nome || "anexo"}" enviado pelo médico:\n` +
+                `ANÁLISE DE EXAME (IA de exames) — arquivo "${anexo.nome || "anexo"}" enviado pelo médico:\n` +
                 JSON.stringify(analiseExame, null, 2),
             });
-          } catch (e) {
+          } else {
             messages.push({
               role: "system",
               content:
                 "Falha ao analisar o arquivo anexado como exame: " +
-                (e instanceof Error ? e.message : "erro desconhecido") +
+                (r.erro instanceof Error ? r.erro.message : "erro desconhecido") +
                 ". Avise o médico e peça para reenviar o arquivo.",
             });
           }
         }
 
-        try {
+        // Com `tela` (pedido com stream), o texto de cada volta vai para a tela
+        // enquanto o modelo escreve; se a volta terminar chamando ferramentas, a
+        // tela recebe "reset" e descarta esse texto provisório.
+        const rodar = async (tela: ((e: EventoStream) => void) | null): Promise<Record<string, unknown>> => {
           for (let step = 0; step < 8; step++) {
-            const msg = await callGateway(messages, apiKey, toolset);
+            const estado = { emitiu: false };
+            const filtro = tela
+              ? filtroMarcador(marcadorBaseLocal, (v) => {
+                  estado.emitiu = true;
+                  tela({ t: "delta", v });
+                })
+              : null;
+            const msg = filtro
+              ? await callGatewayStream(messages, apiKey, toolset, (d) => filtro.push(d))
+              : await callGateway(messages, apiKey, toolset);
             messages.push(msg);
             const calls = msg.tool_calls ?? [];
             if (!calls.length) {
+              filtro?.flush();
               const replyBruto = (msg.content || "").trim();
               // A busca por palavra-chave não entende contexto — o marcador é como a
               // própria IA confirma que o conteúdo candidato era mesmo relevante.
@@ -2180,10 +2234,10 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
                       body.conversa_id || null,
                       historyParaSalvar,
                       reply,
-                      apiKey,
+                      tituloPromise,
                       usouBaseLocal && basesConhecimentoUsadas.length ? basesConhecimentoUsadas : null,
                     );
-              return Response.json({
+              return {
                 reply,
                 action: pendingAction.value,
                 conversa_id: conversaId,
@@ -2193,8 +2247,9 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
                 // (null se nenhuma, ou se ela considerou os trechos candidatos
                 // irrelevantes) — a tela usa isso pra mostrar um selo visual.
                 fonte_base_conhecimento: usouBaseLocal && basesConhecimentoUsadas.length ? basesConhecimentoUsadas : null,
-              });
+              };
             }
+            if (tela && estado.emitiu) tela({ t: "reset" });
             for (const call of calls) {
               let args: Record<string, any> = {};
               try {
@@ -2215,12 +2270,21 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
               });
             }
           }
-          return Response.json({
+          return {
             reply: "Não consegui concluir essa solicitação agora. Pode reformular?",
             action: pendingAction.value,
             conversa_id: body.conversa_id || null,
             paciente_ativo: pacienteAtivo.value,
+          };
+        };
+
+        if (body.stream) {
+          return respostaNdjson(async (enviar) => {
+            enviar({ t: "done", ...(await rodar(enviar)) });
           });
+        }
+        try {
+          return Response.json(await rodar(null));
         } catch (err) {
           if (err instanceof Response) return err;
           const msg = err instanceof Error ? err.message : "Unknown error";
