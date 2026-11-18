@@ -7314,6 +7314,46 @@ const tri=document.getElementById('cli-triagem');if(tri)tri.checked=CLINICA.tria
                                                               opts.headers=Object.assign({},opts.headers||{},token?{Authorization:'Bearer '+token}:{});
                                                               return fetch(url,opts);
                                                             }
+                                                            // Lê a resposta das IAs em streaming (NDJSON de src/lib/ia/stream.server.ts):
+                                                            // chama aoTexto(textoAcumulado) a cada pedaço e devolve o JSON final ("done"),
+                                                            // o mesmo que a rota devolveria sem stream. Se o servidor responder JSON comum,
+                                                            // devolve esse JSON direto.
+                                                            async function iaLerStream(res,aoTexto){
+                                                              const tipo=res.headers.get('content-type')||'';
+                                                              if(!tipo.includes('ndjson')||!res.body)return res.json();
+                                                              const reader=res.body.getReader();const dec=new TextDecoder();
+                                                              let buf='',texto='',fim=null;
+                                                              const linha=(l)=>{
+                                                                l=l.trim();if(!l)return;
+                                                                let e;try{e=JSON.parse(l);}catch(_){return;}
+                                                                if(e.t==='delta'){texto+=e.v||'';if(aoTexto)aoTexto(texto);}
+                                                                else if(e.t==='reset'){texto='';if(aoTexto)aoTexto('');}
+                                                                else if(e.t==='done'){fim=e;}
+                                                                else if(e.t==='error'){throw new Error(e.message||('Erro '+e.status));}
+                                                              };
+                                                              for(;;){
+                                                                const {done,value}=await reader.read();if(done)break;
+                                                                buf+=dec.decode(value,{stream:true});
+                                                                let i;while((i=buf.indexOf('\n'))>=0){linha(buf.slice(0,i));buf=buf.slice(i+1);}
+                                                              }
+                                                              buf+=dec.decode();linha(buf);
+                                                              if(!fim)throw new Error('A resposta da IA foi interrompida. Tente de novo.');
+                                                              delete fim.t;return fim;
+                                                            }
+                                                            // Mostra o texto parcial dentro do balão "digitando" (id). Sem texto, ou quando
+                                                            // ocultarJson e a resposta começa como JSON de ação ({...} / ```json), mantém
+                                                            // os três pontinhos. O balão final continua sendo criado como antes, no "done".
+                                                            function iaMostrarParcial(id,texto,layerId,ocultarJson){
+                                                              const el=id&&document.getElementById(id);if(!el)return;
+                                                              const t=(texto||'').replace(/^\s+/,'');
+                                                              if(!t||(ocultarJson&&/^[{`]/.test(t))){
+                                                                if(!el.classList.contains('typing')){el.classList.add('typing');el.style.whiteSpace='';el.innerHTML='<span class="tdot"></span><span class="tdot"></span><span class="tdot"></span>';}
+                                                                return;
+                                                              }
+                                                              el.classList.remove('typing');el.style.whiteSpace='pre-wrap';el.textContent=t;
+                                                              if(layerId==='ia-assist-bubbles'&&typeof iaAssistSyncBottomSpace==='function')iaAssistSyncBottomSpace();
+                                                              const layer=document.getElementById(layerId);if(layer)layer.scrollTop=layer.scrollHeight;
+                                                            }
                                                             async function getCopWhatsappToken(){
                                                               const {data}=await sb.auth.getSession();
                                                               return data?.session?.access_token||null;
@@ -9566,8 +9606,8 @@ if(ehMembroEquipe()&&name!=='cadastro'){name='cadastro';el=null;}
                                                               atendChatHistory.push({role:'user',content:txt});
                                                               appendAdvChat('assistant','...');
                                                               const loading=document.getElementById('adv-chat-log').lastChild;
-                                                              iaAuthFetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'chat',messages:atendChatHistory,resumo_prontuario:atendChatContext,user_id:(typeof currentUser!=='undefined'&&currentUser)?currentUser.id:null})})
-                                                                .then(r=>r.json()).then(async j=>{
+                                                              iaAuthFetch('/api/chat-ia',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'chat',stream:true,messages:atendChatHistory,resumo_prontuario:atendChatContext,user_id:(typeof currentUser!=='undefined'&&currentUser)?currentUser.id:null})})
+                                                                .then(async r=>{if(!r.ok)throw new Error(await r.text());return iaLerStream(r,(t)=>{const v=(t||'').replace(/^\s+/,'');if(loading)loading.textContent=(!v||/^[{`]/.test(v))?'...':v;});}).then(async j=>{
                                                                   const raw=(j.reply||'').trim()||'(sem resposta)';
                                                                   const blocks=iaExtractJsonBlocks(raw);
                                                                   const withAction=blocks.filter(b=>b&&typeof b==='object'&&b.action);
@@ -12180,9 +12220,9 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                                                               iaAuthFetch('/api/chat-ia',{
                                                                 method:'POST',
                                                                 headers:{'Content-Type':'application/json'},
-                                                                body:JSON.stringify(Object.assign({mode:'chat',messages:mensagensParaIA,resumo_prontuario:currentResumoProntuario||'',anexo:iaTakeAnexo('ai'),user_id:(typeof currentUser!=='undefined'&&currentUser)?currentUser.id:null},(function(){const p=iaExamePacienteCtx();return p?{paciente_nome:p.nome,paciente_cpf:p.cpf,paciente_nascimento:p.data_nascimento}:{};})()))
+                                                                body:JSON.stringify(Object.assign({mode:'chat',stream:true,messages:mensagensParaIA,resumo_prontuario:currentResumoProntuario||'',anexo:iaTakeAnexo('ai'),user_id:(typeof currentUser!=='undefined'&&currentUser)?currentUser.id:null},(function(){const p=iaExamePacienteCtx();return p?{paciente_nome:p.nome,paciente_cpf:p.cpf,paciente_nascimento:p.data_nascimento}:{};})()))
                                                               })
-                                                              .then(async r=>{if(!r.ok)throw new Error(await r.text());return r.json();})
+                                                              .then(async r=>{if(!r.ok)throw new Error(await r.text());return iaLerStream(r,(t)=>iaMostrarParcial(typingId,t,'bubbles-layer',true));})
                                                               .then(async d=>{
                                                         const raw=(d.reply||'').trim()||'(sem resposta)';
                                                         // A resposta pode conter um ou mais blocos JSON {"reply":...,"action":...}
@@ -12603,10 +12643,10 @@ async function sendIaAssistMsg(){
     const r=await iaAuthFetch('/api/assistente-ia',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({mode:'assistente_global',messages:mensagensParaIA,messages_exibicao:iaAssistHistory,user_id:iaAssistUserId(),conversa_id:iaAssistConversaId,anexo:iaTakeAnexo('assist')})
+      body:JSON.stringify({mode:'assistente_global',messages:mensagensParaIA,messages_exibicao:iaAssistHistory,user_id:iaAssistUserId(),conversa_id:iaAssistConversaId,anexo:iaTakeAnexo('assist'),stream:true})
     });
     if(!r.ok)throw new Error(await r.text());
-    const d=await r.json();
+    const d=await iaLerStream(r,(t)=>iaMostrarParcial(typingId,t,'ia-assist-bubbles'));
     const reply=(d.reply||'').trim()||'(sem resposta)';
     iaAssistHistory.push({role:'assistant',content:reply});
     removeIaAssistTyping(typingId);

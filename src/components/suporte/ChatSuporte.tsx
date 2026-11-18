@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bot, MessageCircleQuestion, Send, User, X } from "lucide-react";
 
+import { lerStreamIA } from "@/lib/ia/lerStream";
 import { WHATSAPP_COMERCIAL } from "@/lib/plans/config";
 
 // Widget de chat flutuante do assistente de dúvidas do MediCopilot. Fica
@@ -23,11 +24,13 @@ export function ChatSuporte() {
   const [mensagens, setMensagens] = useState<Mensagem[]>([SAUDACAO_INICIAL]);
   const [texto, setTexto] = useState("");
   const [carregando, setCarregando] = useState(false);
+  // Texto da resposta chegando aos pedaços (streaming), antes de virar mensagem.
+  const [parcial, setParcial] = useState("");
   const fimRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (aberto) fimRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [mensagens, aberto, carregando]);
+  }, [mensagens, aberto, carregando, parcial]);
 
   async function enviar() {
     const conteudo = texto.trim();
@@ -42,13 +45,18 @@ export function ChatSuporte() {
       const resp = await fetch("/api/suporte-ia", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: historico }),
+        body: JSON.stringify({ messages: historico, stream: true }),
       });
-      const data = await resp.json();
-      if (!resp.ok || !data?.reply) {
+      if (!resp.ok) {
+        const erro = await resp.json().catch(() => null);
+        throw new Error(erro?.error || "Falha ao responder");
+      }
+      const data = await lerStreamIA<{ reply?: string; error?: string }>(resp, setParcial);
+      const reply = data?.reply;
+      if (!reply) {
         throw new Error(data?.error || "Falha ao responder");
       }
-      setMensagens((atual) => [...atual, { role: "assistant", content: data.reply }]);
+      setMensagens((atual) => [...atual, { role: "assistant", content: reply }]);
     } catch {
       setMensagens((atual) => [
         ...atual,
@@ -59,6 +67,7 @@ export function ChatSuporte() {
         },
       ]);
     } finally {
+      setParcial("");
       setCarregando(false);
     }
   }
@@ -131,7 +140,21 @@ export function ChatSuporte() {
             </div>
           ))}
 
-          {carregando && (
+          {carregando && parcial && (
+            <div className="flex gap-2">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600">
+                <Bot className="h-3.5 w-3.5 text-white" />
+              </div>
+              <div
+                style={{ borderRadius: "16px" }}
+                className="max-w-[80%] whitespace-pre-wrap border border-slate-200/70 bg-white px-3.5 py-2.5 text-sm leading-relaxed text-slate-700"
+              >
+                {parcial}
+              </div>
+            </div>
+          )}
+
+          {carregando && !parcial && (
             <div className="flex gap-2">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600">
                 <Bot className="h-3.5 w-3.5 text-white" />

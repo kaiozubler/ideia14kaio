@@ -1,13 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { analisarExameArquivo, type AnaliseExame } from "@/lib/exames/analise.server";
 import { getUserFromRequest } from "@/lib/signature/requestAuth.server";
-import { chamarIA, provedorDoUsuario, type Esforco, type MensagemIA } from "@/lib/ia/provedor.server";
+import {
+  chamarIA,
+  chamarIAStream,
+  provedorDoUsuario,
+  type Esforco,
+  type MensagemIA,
+} from "@/lib/ia/provedor.server";
+import { filtroMarcador, respostaNdjson } from "@/lib/ia/stream.server";
 
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
 type RequestBody = {
   mode?: "chat" | "resumo" | "anamnese" | "copiloto" | "extrair_complementares";
   messages?: ChatMessage[];
+  /** Modo chat: responde em NDJSON com o texto chegando aos pedaços (ver stream.server.ts). */
+  stream?: boolean;
   resumo_prontuario?: string;
   // Respostas de questionários que o paciente preencheu (enviados pela tela de
   // Questionário), já formatadas em texto pelo cliente — um bloco por formulário
@@ -502,34 +511,40 @@ export const Route = createFileRoute("/api/chat-ia")({
           const { montarContextoBaseConhecimento, MARCADOR_BASE_LOCAL_USADA } = await import(
             "@/lib/base-conhecimento/buscar.server"
           );
-          const resultadoBaseConhecimento = await montarContextoBaseConhecimento({
+          // Busca na base e análise do anexo são independentes: rodam em paralelo.
+          const basePromise = montarContextoBaseConhecimento({
             medicoId,
             mensagem: ultimaMensagemUsuario,
             ia: "chat_ai",
           });
 
-          let analiseExame: AnaliseExame | null = null;
-          if (body.anexo?.base64) {
-            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-            analiseExame = await analisarExameArquivo({
-              apiKey,
-              anexo: body.anexo,
-              paciente: {
-                nome: body.paciente_nome ?? null,
-                cpf: body.paciente_cpf ?? null,
-                data_nascimento: body.paciente_nascimento ?? null,
-              },
-              buscarTuss: async (termo) => {
-                const { data } = await supabaseAdmin.rpc("buscar_tuss", {
-                  termo,
-                  p_limit: 1,
-                  p_usar_alias: true,
-                });
-                const hit = (data as any[] | null)?.[0];
-                return hit ? { id: hit.id, codigo_tuss: hit.codigo_tuss, nome: hit.nome } : null;
-              },
-            });
-          }
+          const exameAnexo = body.anexo;
+          const examePromise: Promise<AnaliseExame | null> = exameAnexo?.base64
+            ? import("@/integrations/supabase/client.server").then(({ supabaseAdmin }) =>
+                analisarExameArquivo({
+                  apiKey,
+                  anexo: exameAnexo,
+                  paciente: {
+                    nome: body.paciente_nome ?? null,
+                    cpf: body.paciente_cpf ?? null,
+                    data_nascimento: body.paciente_nascimento ?? null,
+                  },
+                  buscarTuss: async (termo) => {
+                    const { data } = await supabaseAdmin.rpc("buscar_tuss", {
+                      termo,
+                      p_limit: 1,
+                      p_usar_alias: true,
+                    });
+                    const hit = (data as any[] | null)?.[0];
+                    return hit ? { id: hit.id, codigo_tuss: hit.codigo_tuss, nome: hit.nome } : null;
+                  },
+                }),
+              )
+            : Promise.resolve(null);
+          // Evita rejeição não tratada se a base falhar antes de aguardarmos o exame.
+          examePromise.catch(() => {});
+          const resultadoBaseConhecimento = await basePromise;
+          const analiseExame = await examePromise;
 
           const systemContent =
             SYSTEM_CHAT +
@@ -550,24 +565,35 @@ export const Route = createFileRoute("/api/chat-ia")({
               (m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string",
             ),
           ];
-          const textoBruto = await chamar(messages, "medium");
           // A busca por palavra-chave não entende contexto — ela pode achar um trecho
           // "candidato" que na verdade não tem relação com a pergunta. Quem decide se o
           // conteúdo é realmente relevante é a própria IA, sinalizando isso com o
           // marcador (que removemos do texto antes de exibir).
-          const usouBaseLocal = textoBruto.includes(MARCADOR_BASE_LOCAL_USADA);
-          const text = textoBruto.replaceAll(MARCADOR_BASE_LOCAL_USADA, "").trimEnd();
-          return Response.json({
-            reply: text,
-            analise_exame: analiseExame,
-            // Nomes das bases locais que a IA confirmou ter usado nesta resposta (null
-            // se nenhuma, ou se a IA considerou os trechos candidatos irrelevantes) — a
-            // tela usa isso pra mostrar um selo visual.
-            fonte_base_conhecimento:
-              usouBaseLocal && resultadoBaseConhecimento.basesCandidatas.length
-                ? resultadoBaseConhecimento.basesCandidatas
-                : null,
-          });
+          const montarResposta = (textoBruto: string) => {
+            const usouBaseLocal = textoBruto.includes(MARCADOR_BASE_LOCAL_USADA);
+            const text = textoBruto.replaceAll(MARCADOR_BASE_LOCAL_USADA, "").trimEnd();
+            return {
+              reply: text,
+              analise_exame: analiseExame,
+              // Nomes das bases locais que a IA confirmou ter usado nesta resposta (null
+              // se nenhuma, ou se a IA considerou os trechos candidatos irrelevantes) — a
+              // tela usa isso pra mostrar um selo visual.
+              fonte_base_conhecimento:
+                usouBaseLocal && resultadoBaseConhecimento.basesCandidatas.length
+                  ? resultadoBaseConhecimento.basesCandidatas
+                  : null,
+            };
+          };
+
+          if (body.stream) {
+            return respostaNdjson(async (enviar) => {
+              const filtro = filtroMarcador(MARCADOR_BASE_LOCAL_USADA, (v) => enviar({ t: "delta", v }));
+              const textoBruto = await chamarIAStream(provedor, messages, apiKey, "medium", (d) => filtro.push(d));
+              filtro.flush();
+              enviar({ t: "done", ...montarResposta(textoBruto) });
+            });
+          }
+          return Response.json(montarResposta(await chamar(messages, "medium")));
         } catch (err) {
           if (err instanceof Response) return err;
           const msg = err instanceof Error ? err.message : "Unknown error";

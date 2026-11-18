@@ -9,7 +9,8 @@ import {
   formatarPreco,
 } from "@/lib/plans/config";
 
-import { GEMINI_MODEL } from "@/lib/ia/provedor.server";
+import { GEMINI_MODEL, fetchGateway } from "@/lib/ia/provedor.server";
+import { filtroMarcador, lerStreamGateway, respostaNdjson } from "@/lib/ia/stream.server";
 // Assistente de dúvidas do MediCopilot — hoje plugado no chat público da
 // tela de planos (/planos), pensado desde já pra ser reaproveitado como o
 // tira-dúvidas dos clientes DENTRO do app (logados), quando chegar a hora:
@@ -29,7 +30,6 @@ import { GEMINI_MODEL } from "@/lib/ia/provedor.server";
 // - Mesmo AI Gateway e mesma variável de ambiente (LOVABLE_API_KEY) que o
 //   resto do app já usa (ver src/routes/api/assistente-ia.ts).
 
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = GEMINI_MODEL;
 
 const BodySchema = z.object({
@@ -45,6 +45,8 @@ const BodySchema = z.object({
   // Opcional, só pra telemetria/rate-limit por cliente logado no futuro — nunca
   // usado para buscar dados de conta (esse assistente não tem acesso a nada disso).
   user_id: z.string().uuid().nullable().optional(),
+  // Resposta em NDJSON com o texto chegando aos pedaços (ver src/lib/ia/stream.server.ts).
+  stream: z.boolean().optional(),
 });
 
 function montarContextoPlanos(): string {
@@ -132,24 +134,36 @@ export const Route = createFileRoute("/api/suporte-ia")({
         );
         const contexto = await montarContextoBaseSistema(ultimaMsgUsuario);
 
-        const resp = await fetch(GATEWAY_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Lovable-API-Key": apiKey,
-            "X-Lovable-AIG-SDK": "raw",
-          },
-          body: JSON.stringify({
+        // Dúvidas de uso do sistema: raciocínio curto basta e responde bem mais rápido.
+        const resp = await fetchGateway(
+          apiKey,
+          {
             model: MODEL,
             messages: [{ role: "system", content: `${SYSTEM_SUPORTE}${contexto.texto}` }, ...history],
-          }),
-        });
+            ...(body.data.stream ? { stream: true } : {}),
+          },
+          "low",
+        );
 
         if (!resp.ok) {
           const text = await resp.text();
           console.error(`[suporte-ia] AI gateway error ${resp.status}:`, text);
           const { mensagemErroGateway } = await import("@/lib/ai/erro-gateway");
           return Response.json({ error: mensagemErroGateway(resp.status) }, { status: resp.status });
+        }
+
+        if (body.data.stream) {
+          return respostaNdjson(async (enviar) => {
+            const filtro = filtroMarcador(MARCADOR_BASE_SISTEMA_USADA, (v) => enviar({ t: "delta", v }));
+            const mensagem = await lerStreamGateway(resp, (d) => filtro.push(d));
+            filtro.flush();
+            const bruto = String(mensagem.content ?? "").trim();
+            enviar({
+              t: "done",
+              reply: bruto.replace(MARCADOR_BASE_SISTEMA_USADA, "").trim(),
+              baseUsada: bruto.includes(MARCADOR_BASE_SISTEMA_USADA),
+            });
+          });
         }
 
         const data = (await resp.json()) as { choices?: { message?: { content?: string } }[] };
