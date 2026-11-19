@@ -1804,6 +1804,39 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_pipe: {
+        Row: {
+          atualizado_em: string
+          atualizado_por: string
+          etapa: string | null
+          funil: string | null
+          lost: Json | null
+          ref_id: string
+          responsavel: string | null
+          tipo: string
+        }
+        Insert: {
+          atualizado_em?: string
+          atualizado_por: string
+          etapa?: string | null
+          funil?: string | null
+          lost?: Json | null
+          ref_id: string
+          responsavel?: string | null
+          tipo: string
+        }
+        Update: {
+          atualizado_em?: string
+          atualizado_por?: string
+          etapa?: string | null
+          funil?: string | null
+          lost?: Json | null
+          ref_id?: string
+          responsavel?: string | null
+          tipo?: string
+        }
+        Relationships: []
+      }
       cupons: {
         Row: {
           ativo: boolean
@@ -3594,6 +3627,7 @@ export type Database = {
           data_nascimento: string | null
           email: string | null
           endereco: string | null
+          etnia: string | null
           grupo: string | null
           info_complementar: Json
           logradouro: string | null
@@ -3602,13 +3636,12 @@ export type Database = {
           motivo_alteracao: string | null
           name: string
           naturalidade: string | null
-          etnia: string | null
-          raca_cor: string | null
           numero: string | null
           ocupacao: string | null
           paciente_id: string
           pai: string | null
           parentescos: Json
+          raca_cor: string | null
           sexo: string | null
           sus: string | null
           telefone: string | null
@@ -3629,6 +3662,7 @@ export type Database = {
           data_nascimento?: string | null
           email?: string | null
           endereco?: string | null
+          etnia?: string | null
           grupo?: string | null
           info_complementar?: Json
           logradouro?: string | null
@@ -3637,13 +3671,12 @@ export type Database = {
           motivo_alteracao?: string | null
           name: string
           naturalidade?: string | null
-          etnia?: string | null
-          raca_cor?: string | null
           numero?: string | null
           ocupacao?: string | null
           paciente_id?: string
           pai?: string | null
           parentescos?: Json
+          raca_cor?: string | null
           sexo?: string | null
           sus?: string | null
           telefone?: string | null
@@ -3664,6 +3697,7 @@ export type Database = {
           data_nascimento?: string | null
           email?: string | null
           endereco?: string | null
+          etnia?: string | null
           grupo?: string | null
           info_complementar?: Json
           logradouro?: string | null
@@ -3672,13 +3706,12 @@ export type Database = {
           motivo_alteracao?: string | null
           name?: string
           naturalidade?: string | null
-          etnia?: string | null
-          raca_cor?: string | null
           numero?: string | null
           ocupacao?: string | null
           paciente_id?: string
           pai?: string | null
           parentescos?: Json
+          raca_cor?: string | null
           sexo?: string | null
           sus?: string | null
           telefone?: string | null
@@ -5208,18 +5241,18 @@ export type Database = {
           data_nascimento: string | null
           email: string | null
           endereco: string | null
+          etnia: string | null
           grupo: string | null
           logradouro: string | null
           mae: string | null
           medico: string | null
           name: string | null
           naturalidade: string | null
-          etnia: string | null
-          raca_cor: string | null
           numero: string | null
           ocupacao: string | null
           paciente_id: string | null
           pai: string | null
+          raca_cor: string | null
           sexo: string | null
           sus: string | null
           telefone: string | null
@@ -5238,18 +5271,18 @@ export type Database = {
           data_nascimento?: string | null
           email?: string | null
           endereco?: string | null
+          etnia?: string | null
           grupo?: string | null
           logradouro?: string | null
           mae?: string | null
           medico?: string | null
           name?: string | null
           naturalidade?: string | null
-          etnia?: string | null
-          raca_cor?: string | null
           numero?: string | null
           ocupacao?: string | null
           paciente_id?: string | null
           pai?: string | null
+          raca_cor?: string | null
           sexo?: string | null
           sus?: string | null
           telefone?: string | null
@@ -5268,18 +5301,18 @@ export type Database = {
           data_nascimento?: string | null
           email?: string | null
           endereco?: string | null
+          etnia?: string | null
           grupo?: string | null
           logradouro?: string | null
           mae?: string | null
           medico?: string | null
           name?: string | null
           naturalidade?: string | null
-          etnia?: string | null
-          raca_cor?: string | null
           numero?: string | null
           ocupacao?: string | null
           paciente_id?: string | null
           pai?: string | null
+          raca_cor?: string | null
           sexo?: string | null
           sus?: string | null
           telefone?: string | null
@@ -5292,6 +5325,7 @@ export type Database = {
     }
     Functions: {
       acesso_bloqueado: { Args: { uid: string }; Returns: boolean }
+      agenda_online_novo_link: { Args: never; Returns: string }
       agenda_online_preparar: { Args: never; Returns: undefined }
       agenda_publica_reservar: {
         Args: {
@@ -5301,7 +5335,6 @@ export type Database = {
           p_ip_hash: string
           p_medico_id: string
           p_nome: string
-          p_observacoes?: string
           p_telefone: string
           p_token: string
         }
