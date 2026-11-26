@@ -130,7 +130,12 @@ FORMATO DAS RESPOSTAS
 
 OUTRAS REGRAS
 - Se o usuário desistir ("deixa pra lá", "cancela"), encerre o fluxo educadamente e siga disponível.
-- Pedido ambíguo ou fora dos comandos suportados: converse normalmente / use consultar_faq.
+- Pedido ambíguo ou fora dos comandos suportados: converse normalmente.
+
+DÚVIDAS DE USO DO SISTEMA
+- Quando a pergunta for sobre como usar o MediCopilot (onde fica algo, como fazer, como configurar, por que algo aparece, plano/assinatura, equipe, extensão, WhatsApp), chame consultar_faq ANTES de responder, mesmo que ache que sabe. Não chame para pedidos de ação (agendar, gerar documento etc.) nem para dúvidas clínicas.
+- Responda só com o que a ajuda trouxer. Nunca invente tela, botão, menu, preço ou regra. Se a ajuda não cobrir a dúvida, diga isso e sugira o tour da tela (botão "?" no topo) ou o suporte do MediCopilot.
+- Se a dúvida vier junto com algo que você mesmo consegue fazer (ex.: "como agendo? agenda a Maria amanhã"), explique em uma frase e ofereça fazer.
 - Atestado sem CID: pergunte se deseja incluir CID ou seguir sem ele.
 - Agendamento em horário ocupado: a tool avisa o conflito; sugira os horários alternativos devolvidos.
 
@@ -507,10 +512,16 @@ const tools: ToolDef[] = [
     type: "function",
     function: {
       name: "consultar_faq",
-      description: "Consulta a base de conhecimento de uso do sistema.",
+      description:
+        "Consulta a base de ajuda do MediCopilot (FAQ de uso do app: onde fica cada tela, como fazer algo, configurações, plano, equipe, documentos, WhatsApp, extensão). Use SEMPRE antes de responder uma dúvida sobre como usar o sistema.",
       parameters: {
         type: "object",
-        properties: { pergunta: { type: "string" } },
+        properties: {
+          pergunta: {
+            type: "string",
+            description: "A dúvida do usuário reescrita de forma curta e completa, com os termos do app (ex.: \"como trocar o link de agendamento online\").",
+          },
+        },
         required: ["pergunta"],
       },
     },
@@ -1879,12 +1890,30 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
       return { enviado: true, para: paciente.name, telefone_mascarado: maskPhone(paciente.telefone) };
     }
 
-    case "consultar_faq":
+    case "consultar_faq": {
+      // No canal do paciente esta tool é a do FAQ da clínica (patientTools), não a ajuda do app.
+      if (ctx.canal === "paciente") {
+        return {
+          encontrado: false,
+          resposta: "Não há FAQ cadastrado para a clínica. Oriente o paciente a falar com a recepção.",
+        };
+      }
+      const { buscarAjuda } = await import("@/lib/ajuda/sincronizar.server");
+      const trechos = await buscarAjuda(String(args.pergunta || ""), 5);
+      if (!trechos.length) {
+        return {
+          encontrado: false,
+          instrucao:
+            "Nada na base de ajuda para esta dúvida. Diga que não encontrou essa informação na ajuda do sistema, responda só o que for evidente pela conversa (sem inventar telas, botões ou regras) e sugira o tour da tela (botão \"?\" no topo) ou o suporte do MediCopilot pelo WhatsApp.",
+        };
+      }
       return {
-        encontrado: false,
-        resposta:
-          "A base de ajuda do sistema ainda não está disponível. Responda com o que souber do fluxo do app e ofereça ajuda humana se necessário.",
+        encontrado: true,
+        trechos,
+        instrucao:
+          "Responda com base apenas nos trechos que realmente tratam da dúvida, em passos curtos e com os nomes dos botões como estão nos trechos. Ignore os trechos sem relação. Se nenhum responder, siga como se nada tivesse sido encontrado.",
       };
+    }
 
     case "salvar_exame_paciente": {
       if (!medicoId) return { erro: "Usuário não identificado na sessão." };
