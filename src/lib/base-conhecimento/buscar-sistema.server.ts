@@ -2,9 +2,9 @@
 // mas para a base de conhecimento GLOBAL do produto, usada pelo assistente
 // de suporte público (ver supabase/migrations/20260920120000_base_conhecimento_sistema.sql).
 //
-// Continua vazia até alguém popular `base_conhecimento_sistema_itens` — até
-// lá, `montarContextoBaseSistema` sempre devolve texto vazio (zero custo
-// extra de tokens) e o assistente responde só com o próprio system prompt.
+// O conteúdo vem de docs/ajuda/*.md, sincronizado com a tabela por
+// src/lib/ajuda/sincronizar.server.ts (o Assistente IA do app usa a mesma base
+// pela tool consultar_faq).
 
 /** Marcador que a IA inclui ao final da resposta se, e somente se, realmente usou
  * algum trecho da base de conhecimento do sistema (mesma lógica de MARCADOR_BASE_LOCAL_USADA,
@@ -19,24 +19,14 @@ export type ResultadoContextoBaseSistema = {
   temCandidatos: boolean;
 };
 
-export async function montarContextoBaseSistema(mensagem: string): Promise<ResultadoContextoBaseSistema> {
+export async function montarContextoBaseSistema(
+  mensagem: string,
+): Promise<ResultadoContextoBaseSistema> {
   const vazio: ResultadoContextoBaseSistema = { texto: "", temCandidatos: false };
   if (!mensagem.trim()) return vazio;
 
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-  // A função já existe no banco, mas pode ainda não constar no arquivo de
-  // tipos gerado até a próxima sincronização do schema.
-  const { data: trechos, error } = await (supabaseAdmin as any).rpc("buscar_base_conhecimento_sistema", {
-    p_mensagem: mensagem,
-    p_limit: 4,
-  });
-  if (error) {
-    console.error("[base-conhecimento-sistema:buscar] erro na busca textual:", error.message);
-    return vazio;
-  }
-
-  const hits = (trechos ?? []) as { titulo: string; conteudo: string }[];
+  const { buscarAjuda } = await import("@/lib/ajuda/sincronizar.server");
+  const hits = await buscarAjuda(mensagem, 4);
   if (hits.length === 0) return vazio;
 
   const bloco =
