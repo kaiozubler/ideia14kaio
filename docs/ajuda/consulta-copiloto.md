@@ -59,9 +59,14 @@ palavras: grifo amarelo, anotação interna, negrito
 Na barra de formatação do prontuário há negrito, itálico e nota interna. A nota interna aparece grifada em amarelo para destacar algo que é só para você.
 
 ## Como faço uma teleconsulta por vídeo?
-palavras: telemedicina, vídeo, videochamada, consulta online, link de vídeo
+palavras: telemedicina, vídeo, videochamada, consulta online, chamada de vídeo, sala de vídeo
 
-Ao agendar, escolha a modalidade "Vídeo por link". Na hora da consulta, use o botão "Vídeo" da tela de atendimento para abrir a sala e enviar o link ao paciente. O menu do botão tem a opção "Criar nova sala" se você precisar de uma sala nova. Os minutos de vídeo fazem parte da franquia do plano.
+Ao agendar, escolha a modalidade "Vídeo por link". Na hora da consulta, abra o atendimento do paciente e clique no botão azul "Vídeo", na parte de baixo da tela do atendimento: ele abre a sala de vídeo daquele paciente. A setinha ao lado do botão "Vídeo" tem três opções: "Acessar sala", "Criar nova sala" (gera uma sala nova, caso precise) e "Copiar link da chamada". Os minutos de vídeo fazem parte da franquia do plano.
+
+## Onde copio o link da chamada de vídeo para mandar ao paciente?
+palavras: link da teleconsulta, link do vídeo, link da sala, copiar link, enviar link, compartilhar link, link de vídeo
+
+Com o atendimento do paciente aberto, clique na setinha ao lado do botão azul "Vídeo" (parte de baixo da tela do atendimento) e escolha "Copiar link da chamada". O link vai para a área de transferência, sem você entrar na sala, e é só colar na mensagem para o paciente. Se você já estiver dentro da chamada, abra "Participantes" na barra da chamada e clique em "Copiar link da chamada". Quando a consulta foi agendada como "Vídeo por link", as mensagens automáticas de WhatsApp podem levar o link sozinhas, se o modelo da mensagem usar a variável do link de vídeo.
 
 ## Como encerro a consulta?
 palavras: finalizar, salvar consulta, terminar atendimento, rascunho

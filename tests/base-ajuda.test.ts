@@ -70,3 +70,12 @@ test("fontes cobrem arquivo exato ou pasta, não prefixo parcial", () => {
   assert.ok(!temaCobre(t, "public/equipe.css"));
   assert.ok(!temaCobre(t, "extensionx/a.js"));
 });
+
+test("detecta dúvida de uso e ignora pedido de ação", async () => {
+  const { pareceDuvidaDeUso } = await import("../src/lib/ajuda/conteudo.ts");
+  assert.ok(pareceDuvidaDeUso("Onde copio o link da chamada de video?"));
+  assert.ok(pareceDuvidaDeUso("não consigo achar a agenda"));
+  assert.ok(pareceDuvidaDeUso("como faço pra convidar a secretária"));
+  assert.ok(!pareceDuvidaDeUso("agenda a Maria amanhã às 14h"));
+  assert.ok(!pareceDuvidaDeUso("gera um atestado de 2 dias pro João"));
+});
