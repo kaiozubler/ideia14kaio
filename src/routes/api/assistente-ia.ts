@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { pareceDuvidaDeUso } from "@/lib/ajuda/conteudo";
 import { analisarExameArquivo, type AnaliseExame } from "@/lib/exames/analise.server";
 import { mensagemErroGateway } from "@/lib/ai/erro-gateway";
 import { getUserIdFromRequest } from "@/lib/signature/requestAuth.server";
@@ -133,7 +134,7 @@ OUTRAS REGRAS
 - Pedido ambíguo ou fora dos comandos suportados: converse normalmente.
 
 DÚVIDAS DE USO DO SISTEMA
-- Quando a pergunta for sobre como usar o MediCopilot (onde fica algo, como fazer, como configurar, por que algo aparece, plano/assinatura, equipe, extensão, WhatsApp), chame consultar_faq ANTES de responder, mesmo que ache que sabe. Não chame para pedidos de ação (agendar, gerar documento etc.) nem para dúvidas clínicas.
+- Quando a pergunta for sobre como usar o MediCopilot (onde fica algo, como fazer, como configurar, por que algo aparece, plano/assinatura, equipe, extensão, WhatsApp), responda pelo bloco "MANUAL DO MEDICOPILOT" quando ele vier no contexto; se ele não vier ou não cobrir a dúvida, chame consultar_faq ANTES de responder, mesmo que ache que sabe. Não chame para pedidos de ação (agendar, gerar documento etc.) nem para dúvidas clínicas.
 - Responda só com o que a ajuda trouxer. Nunca invente tela, botão, menu, preço ou regra. Se a ajuda não cobrir a dúvida, diga isso e sugira o tour da tela (botão "?" no topo) ou o suporte do MediCopilot.
 - Se a dúvida vier junto com algo que você mesmo consegue fazer (ex.: "como agendo? agenda a Maria amanhã"), explique em uma frase e ofereça fazer.
 - Atestado sem CID: pergunte se deseja incluir CID ou seguir sem ele.
@@ -2175,6 +2176,16 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
               )
             : null;
 
+        // Dúvida de uso do app: busca a base de ajuda (docs/ajuda) já no servidor e
+        // entrega os trechos ao modelo, em vez de depender dele chamar consultar_faq
+        // (sem isso ele às vezes responde de cabeça e inventa telas e botões).
+        const ajudaPromise =
+          canal === "interno" && pareceDuvidaDeUso(ultimaMensagemUsuario)
+            ? import("@/lib/ajuda/sincronizar.server")
+                .then(({ buscarAjuda }) => buscarAjuda(ultimaMensagemUsuario, 4))
+                .catch(() => [])
+            : null;
+
         // Anexo recebido no chat interno: encaminha para a IA dedicada de exames e
         // injeta a análise no contexto, para o assistente conversar sobre ela.
         const anexo = canal === "interno" && body.anexo?.base64 ? body.anexo : null;
@@ -2206,6 +2217,23 @@ export async function handleAssistente(body: RequestBody): Promise<Response> {
           marcadorBaseLocal = marcador;
           if (resultado.texto) messages.splice(1, 0, { role: "system", content: resultado.texto });
           basesConhecimentoUsadas = resultado.basesCandidatas;
+        }
+
+        if (ajudaPromise) {
+          const trechos = await ajudaPromise;
+          if (trechos.length) {
+            messages.splice(1, 0, {
+              role: "system",
+              content:
+                "MANUAL DO MEDICOPILOT — trechos da ajuda oficial mais próximos da última mensagem. " +
+                "Se a mensagem for uma dúvida sobre como usar o sistema, responda com base SOMENTE nestes " +
+                "trechos, citando botões e menus exatamente como aparecem aqui, em passos curtos. Não invente " +
+                "telas, botões ou caminhos que não estejam escritos aqui; se nenhum trecho responder, diga que " +
+                "não encontrou na ajuda e sugira o suporte. Se a mensagem for um pedido de ação ou dúvida " +
+                "clínica, ignore estes trechos.\n\n" +
+                trechos.map((t) => `${t.titulo}\n${t.conteudo}`).join("\n\n"),
+            });
+          }
         }
 
         let analiseExame: AnaliseExame | null = null;

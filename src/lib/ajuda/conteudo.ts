@@ -172,3 +172,13 @@ export function temaCobre(tema: Pick<TemaAjuda, "fontes">, caminho: string): boo
     (f) => caminho === f || caminho.startsWith(f.endsWith("/") ? f : f + "/"),
   );
 }
+
+/** Mensagem com cara de dúvida sobre o uso do app ("como…", "onde…", "não aparece…")
+ * e não de pedido de ação. Decide se o servidor injeta trechos da ajuda no contexto. */
+export function pareceDuvidaDeUso(mensagem: string): boolean {
+  const t = mensagem.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  if (t.includes("?")) return true;
+  return /\b(como|onde|cade|qual (botao|tela|menu|aba|opcao)|nao (consigo|aparece|acho|encontro|funciona|esta funcionando)|tem como|da (pra|para)|para que serve|pra que serve|o que (e|significa)|por que|porque)\b/.test(
+    t,
+  );
+}
