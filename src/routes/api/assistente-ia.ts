@@ -1157,9 +1157,11 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
         .maybeSingle();
       if (mErro) return { erro: mErro.message };
       if (!modelo) return { erro: "Modelo de anamnese não encontrado." };
+      // Mesmas regras de tempo da tela: histórico antigo não vira situação atual.
+      const { dataHojeBrasilia, regrasTemporais } = await import("@/lib/ia/temporal");
       const texto = await callGatewayPlain(
         [
-          { role: "system", content: modelo.prompt },
+          { role: "system", content: `${modelo.prompt}\n\n---\n${regrasTemporais(dataHojeBrasilia())}` },
           { role: "user", content: dados },
         ],
         ctx.apiKey,
@@ -1219,7 +1221,8 @@ async function runTool(name: string, args: Record<string, any>, ctx: ToolCtx): P
       // Duração do tratamento: converte o que veio (valor + unidade) em dias,
       // calcula a data do último dia de uso e guarda junto com o medicamento.
       const DIAS_POR_UNIDADE: Record<string, number> = { dias: 1, dia: 1, semanas: 7, semana: 7, meses: 30, mes: 30, mês: 30 };
-      const hojeISO = new Date().toISOString().slice(0, 10);
+      const { hojeISOBrasilia } = await import("@/lib/ia/temporal");
+      const hojeISO = hojeISOBrasilia();
       const medicamentos = medicamentosBrutos.map((m: any) => {
         const usoContinuo = m?.uso_continuo === true;
         const unidade = String(m?.duracao_unidade || "dias").toLowerCase();

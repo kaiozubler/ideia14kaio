@@ -8,6 +8,7 @@ import {
   type Esforco,
   type MensagemIA,
 } from "@/lib/ia/provedor.server";
+import { dataHojeBrasilia, regrasTemporais } from "@/lib/ia/temporal";
 import { filtroMarcador, respostaNdjson } from "@/lib/ia/stream.server";
 
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
@@ -27,6 +28,8 @@ type RequestBody = {
   atendimentos?: unknown[];
   exames?: unknown[];
   info_complementar?: Record<string, unknown> | null;
+  /** Lista já classificada (em uso hoje × encerrados) de medicamentos_em_uso, montada no app. */
+  medicamentos_prescritos?: string | null;
   system_prompt?: string;
   user_content?: string;
   manual?: boolean;
@@ -228,7 +231,14 @@ do paciente em português do Brasil, organizado em seções:
 2) RESUMO CONSOLIDADO DOS ÚLTIMOS ATENDIMENTOS
 3) OBSERVAÇÃO DOS EXAMES
 4) DADOS CLÍNICOS RELEVANTES
-Seja conciso, factual, sem invenções. Use bullets curtos. Não inclua disclaimers.`;
+5) MEDICAÇÕES — separe "Em uso atual" de "Uso prévio (encerrado)"
+Seja conciso, factual, sem invenções. Use bullets curtos. Não inclua disclaimers.
+
+Datas: este resumo é reaproveitado em consultas futuras, então registre de quando é cada informação
+que pode mudar (ex.: "dipirona 500 mg — 03/2023, 5 dias"). Em "Em uso atual" entram apenas os itens
+vigentes em "medicamentos_prescritos" e os de uso contínuo; medicamento citado só em atendimento
+antigo ou com tratamento já encerrado vai para "Uso prévio", com a data. Alergias, doenças crônicas,
+cirurgias e antecedentes valem sempre — mantenha-os mesmo quando antigos.`;
 
 const SYSTEM_COPILOTO = `Objetivo
 Você é um assistente clínico de apoio à consulta. Ajuda o médico, NÃO substitui o julgamento dele.
@@ -238,6 +248,7 @@ Resumo acumulado da consulta, trecho recente da transcrição e, só no primeiro
 
 Regras
 - Nunca invente nem complete lacunas; use só o que está explícito nos dados.
+- O prontuário é histórico: medicamento, sintoma ou hábito antigo não é atual. Em uso hoje só o vigente em "medicamentos_prescritos" ou o confirmado nesta consulta; alergias e doenças crônicas valem sempre.
 - Nunca afirme certeza diagnóstica com dados insuficientes; silêncio não é evidência.
 - Não repita perguntas já feitas/respondidas nem sugestões já dadas.
 - Priorize a segurança do paciente.
@@ -284,6 +295,11 @@ REGRAS CRÍTICAS (siga rigorosamente):
   informação nova e explícita, sem duplicar o que já existe e sem reescrever o que já estava
   correto.
 - Para campos numéricos ("numero"), só proponha se houver um valor numérico explícito mencionado.
+- Campo "meds" (Medicamentos em uso): é a lista do que o paciente toma de forma CONTÍNUA. Não
+  acrescente tratamentos com duração definida (ex.: antibiótico por 7 dias, analgésico por 5 dias,
+  "Duração: 7 dias (até ...)") — esses ficam registrados na receita com a data limite. Se o
+  atendimento disser explicitamente que o paciente parou ou suspendeu um medicamento da lista,
+  proponha o texto final sem ele.
 - Para CIDs, só sugira itens presentes na lista "cid_opcoes" fornecida (use o mesmo "code" e
   "description" da lista), e apenas quando o atendimento indicar claramente um
   diagnóstico/condição correspondente. Nunca repita um código já presente em "cids_atuais".
@@ -366,7 +382,9 @@ export const Route = createFileRoute("/api/chat-ia")({
             const ctx = JSON.stringify(
               {
                 paciente: body.paciente ?? null,
+                data_hoje: dataHojeBrasilia(),
                 info_complementar: body.info_complementar ?? null,
+                medicamentos_prescritos: body.medicamentos_prescritos || null,
                 atendimentos: body.atendimentos ?? [],
                 exames: body.exames ?? [],
               },
@@ -391,9 +409,11 @@ export const Route = createFileRoute("/api/chat-ia")({
             if (!sys || !usr) {
               return new Response("Missing system_prompt or user_content", { status: 400 });
             }
+            // O prompt é do médico (modelos de anamnese); as regras de tempo vão
+            // sempre junto, para nenhum modelo tratar histórico antigo como atual.
             const text = await chamar(
               [
-                { role: "system", content: sys },
+                { role: "system", content: sys + "\n\n---\n" + regrasTemporais(dataHojeBrasilia()) },
                 { role: "user", content: usr },
               ],
             );
@@ -430,6 +450,10 @@ export const Route = createFileRoute("/api/chat-ia")({
               ctx.paciente = body.paciente ?? null;
               ctx.resumo_prontuario = body.resumo_prontuario ?? "";
               ctx.info_complementar = body.info_complementar ?? null;
+              ctx.data_hoje = dataHojeBrasilia();
+              if (body.medicamentos_prescritos) {
+                ctx.medicamentos_prescritos = body.medicamentos_prescritos;
+              }
               ctx.transcricao_completa = body.transcricao_completa ?? "";
             }
             const text = await chamar(

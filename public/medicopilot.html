@@ -26,6 +26,7 @@
     <script src="lme-estabelecimentos.js?v=2" defer></script>
     <script src="lme-documentos-uf.js?v=2" defer></script>
     <script src="receituario-controlado.js" defer></script>
+    <script src="medicamentos-vigencia.js?v=1" defer></script>
     <link rel="stylesheet" href="protocolos.css?v=2" />
     <script src="protocolos.js?v=2" defer></script>
     <link rel="stylesheet" href="questionarios.css?v=2" />
@@ -9859,6 +9860,7 @@ if(ehMembroEquipe()&&name!=='cadastro'){name='cadastro';el=null;}
                                                               if(!models||!models.length)return'';
                                                               const model=models.find(m=>m.is_default)||models[0];
                                                               const sources=model.sources||inferSourcesFromPrompt(model.prompt||'');
+                                                              await carregarMedsEmUso(currentPatient&&currentPatient.id);
                                                               const ctx=buildAnamneseContext();
                                                               const basePrompt=applyAnamneseVars(model.prompt,ctx);
                                                               const ctxBlock=buildAnamneseContextBlock(sources);
@@ -11781,6 +11783,7 @@ showAtendList();
                                                                   payload.paciente=currentPatient||null;
                                                                   payload.resumo_prontuario=currentResumoProntuario||'';
                                                                   payload.info_complementar=infoComp;
+                                                                  try{payload.medicamentos_prescritos=textoMedsEmUsoPaciente()||null;}catch{}
                                                                   payload.resumo_acumulado='';
                                                                   payload.transcricao_completa=transcriptLog.join('\n');
                                                                 } else {
@@ -11900,11 +11903,18 @@ showAtendList();
                                                                 const {data:pac}=await sb.from('pacientes').select('*').eq('paciente_id',idPaciente).single();
                                                                 const pacUpdated=pac?(pac.updated_at||pac.created_at||null):null;
                                                                 const now=Date.now();
+                                                                // Medicamentos prescritos com data limite: o resumo precisa ser refeito
+                                                                // quando um tratamento começou ou terminou depois dele, senão continua
+                                                                // listando como "em uso" um remédio que o paciente já parou.
+                                                                const medsLinhas=await carregarMedsEmUso(idPaciente);
                                                                 let precisa=!!force;
                                                                 if(last){
                                                                   const ageDays=(now-new Date(last.updated_at).getTime())/(1000*60*60*24);
                                                                   const cadastroMudou=pacUpdated&&last.paciente_updated_at&&new Date(pacUpdated).getTime()>new Date(last.paciente_updated_at).getTime();
-                                                                  if(!force)precisa=cadastroMudou||ageDays>60;
+                                                                  const resumoDia=MedVigencia.hojeISO(new Date(last.updated_at));
+                                                                  const hojeDia=MedVigencia.hojeISO();
+                                                                  const medsMudaram=(medsLinhas||[]).some(m=>(m.data_inicio&&m.data_inicio>=resumoDia)||(m.data_fim&&m.data_fim>=resumoDia&&m.data_fim<hojeDia));
+                                                                  if(!force)precisa=cadastroMudou||medsMudaram||ageDays>60;
                                                                   if(!precisa){
                                                                     currentResumoProntuario=last.resumo||'';
                                                                     setResumoBadge('done');
@@ -11919,7 +11929,7 @@ showAtendList();
 
                                                                 const res=await iaAuthFetch('/api/chat-ia',{
                                                                   method:'POST',headers:{'Content-Type':'application/json'},
-                                                                  body:JSON.stringify({mode:'resumo',paciente:pac,atendimentos:atends,exames:exs,info_complementar:loadInfoComp()})
+                                                                  body:JSON.stringify({mode:'resumo',paciente:pac,atendimentos:atends,exames:exs,info_complementar:loadInfoComp(),medicamentos_prescritos:MedVigencia.textoParaIA(medsLinhas)||null,data_hoje:MedVigencia.isoParaBR(MedVigencia.hojeISO())})
                                                                 });
                                                                 if(!res.ok)throw new Error(await res.text());
                                                                 const {resumo}=await res.json();
@@ -12089,7 +12099,7 @@ if(gErr)console.warn('buscar_genericos falhou para',term,gErr);
                                                                   const alvo=rxNorm(m.apresentacao);let bestScore=-1;
                                                                   aps.forEach(a=>{const an=rxNorm(a);let sc=0;alvo.split(/\s+/).forEach(t=>{if(t&&an.includes(t))sc++;});if(sc>bestScore){bestScore=sc;best=a;}});
                                                                 }
-                                                                rxSelected.push({uid,nome_comercial:g.nome_exibicao,composicao:g.grupo_busca||'',apresentacoes:aps,apresentacao:best,posologia:m.posologia||'',quantidade:m.quantidade||'1 caixa',is_generico:true,fabricantes:[],fabricante:'',id_substancia:g.id_substancia});
+                                                                rxSelected.push({uid,duracao_tipo:m.uso_continuo===true?'uso_continuo':(['dias','semanas','meses'].includes(m.duracao_unidade)&&m.duracao_valor?m.duracao_unidade:''),duracao_valor:m.uso_continuo===true?'':(m.duracao_valor||''),nome_comercial:g.nome_exibicao,composicao:g.grupo_busca||'',apresentacoes:aps,apresentacao:best,posologia:m.posologia||'',quantidade:m.quantidade||'1 caixa',is_generico:true,fabricantes:[],fabricante:'',id_substancia:g.id_substancia});
                                                                 continue;
                                                               }
                                                               // Tenta como comercial
@@ -12105,7 +12115,7 @@ if(cErr)console.warn('buscar_comerciais falhou para',term,cErr);
                                                                   const alvo=rxNorm(m.apresentacao);let bestScore=-1;
                                                                   aps.forEach(a=>{const an=rxNorm(a);let sc=0;alvo.split(/\s+/).forEach(t=>{if(t&&an.includes(t))sc++;});if(sc>bestScore){bestScore=sc;best=a;}});
                                                                 }
-                                                                rxSelected.push({uid,nome_comercial:c.nome_comercial,composicao:'',apresentacoes:aps,apresentacao:best,posologia:m.posologia||'',quantidade:m.quantidade||'1 caixa',is_generico:false,fabricantes:[],fabricante:c.fabricante||'',id_substancia:null});
+                                                                rxSelected.push({uid,duracao_tipo:m.uso_continuo===true?'uso_continuo':(['dias','semanas','meses'].includes(m.duracao_unidade)&&m.duracao_valor?m.duracao_unidade:''),duracao_valor:m.uso_continuo===true?'':(m.duracao_valor||''),nome_comercial:c.nome_comercial,composicao:'',apresentacoes:aps,apresentacao:best,posologia:m.posologia||'',quantidade:m.quantidade||'1 caixa',is_generico:false,fabricantes:[],fabricante:c.fabricante||'',id_substancia:null});
                                                               }
                                                             }catch(e){console.warn('iaExecuteAction receita',e);}
                                                           }
@@ -13783,8 +13793,19 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                                 p.mae?'Mãe: '+p.mae:'',
                                                                 p.pai?'Pai: '+p.pai:''
                                                               ].filter(Boolean).join('\n');
+                                                              // Informações complementares: rótulos legíveis e a data da última
+                                                              // atualização, para a IA saber que podem estar desatualizadas.
                                                               let infoComp='';
-                                                              try{infoComp=Object.entries(loadInfoComp()).filter(([,v])=>v).map(([k,v])=>k+': '+v).join('\n');}catch{}
+                                                              try{
+                                                                const ic=loadInfoComp();
+                                                                const rot=(typeof IC_FIELD_META==='object'&&IC_FIELD_META)||{};
+                                                                infoComp=Object.entries(ic).filter(([k,v])=>v&&k!=='updated_at').map(([k,v])=>((rot[k]&&rot[k].label)||k)+': '+v).join('\n');
+                                                                if(infoComp&&ic.updated_at){
+                                                                  const d=new Date(ic.updated_at);
+                                                                  if(!isNaN(d))infoComp='(registradas/atualizadas em '+d.toLocaleDateString('pt-BR')+' — "Medicamentos em uso" aqui pode estar desatualizado; prevalece a lista de medicamentos prescritos com data limite)\n'+infoComp;
+                                                                }
+                                                              }catch{}
+                                                              const medsPrescritos=textoMedsEmUsoPaciente();
                                                               const resumoPront=(currentResumoProntuario||'').trim()||'(sem resumo do prontuário disponível)';
                                                               // Queixa principal: primeira linha não vazia das anotações do prontuário atual.
                                                               let queixa='';
@@ -13811,7 +13832,8 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                               // Dados clínicos consolidados (resumo do prontuário + complementares).
                                                               const dadosClinicos=[
                                                                 resumoPront&&'## Resumo do prontuário\n'+resumoPront,
-                                                                infoComp&&'## Dados clínicos complementares\n'+infoComp
+                                                                infoComp&&'## Dados clínicos complementares\n'+infoComp,
+                                                                medsPrescritos&&'## Medicamentos prescritos (com data limite)\n'+medsPrescritos
                                                               ].filter(Boolean).join('\n\n')||'(sem dados clínicos disponíveis)';
                                                               // Resumo do atendimento atual: junta anotações do prontuário, transcrição
                                                               // capturada e bolhas (fala do paciente + sugestões/respostas da IA).
@@ -13844,7 +13866,7 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                               }
                                                               if(!atend)atend='(sem dados do atendimento atual)';
                                                               const dataAt=new Date().toLocaleDateString('pt-BR');
-                                                              return {p,idade,dadosCliente,infoComp,resumoPront,atend,dataAt,queixa,ultimosExames,medicoNome,dadosClinicos};
+                                                              return {p,idade,dadosCliente,infoComp,resumoPront,atend,dataAt,queixa,ultimosExames,medicoNome,dadosClinicos,medsPrescritos};
                                                             }
                                                             function applyAnamneseVars(prompt,ctx){
                                                               const map={
@@ -13858,7 +13880,8 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                                 '{queixa_principal}':ctx.queixa||'',
                                                                 '{info_complementar}':ctx.infoComp||'',
                                                                 '{ultimos_exames}':ctx.ultimosExames||'',
-                                                                '{medico_nome}':ctx.medicoNome||''
+                                                                '{medico_nome}':ctx.medicoNome||'',
+                                                                '{medicamentos_em_uso}':ctx.medsPrescritos||'(nenhuma prescrição registrada com data limite)'
                                                               };
                                                               let out=prompt;
                                                               Object.entries(map).forEach(([k,v])=>{out=out.split(k).join(v);});
@@ -14827,6 +14850,7 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                                   const model=models.find(m=>m.id===modelId)||models.find(m=>m.is_default);
                                                                   if(model){
                                                                     const sources=model.sources||inferSourcesFromPrompt(model.prompt||'');
+                                                                    await carregarMedsEmUso(currentPatient&&currentPatient.id);
                                                                     const ctx=buildAnamneseContext();
                                                                     const basePrompt=applyAnamneseVars(model.prompt,ctx);
                                                                     const ctxBlock=buildAnamneseContextBlock(sources);
@@ -14893,6 +14917,7 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                               if(!model){txtEl.textContent='⚠️ Nenhum modelo de prompt disponível.';return;}
                                                               const sources=model.sources||inferSourcesFromPrompt(model.prompt||'');
                                                               // Compatibilidade: se o prompt antigo ainda usar tokens {variáveis}, substitui.
+                                                              await carregarMedsEmUso(currentPatient&&currentPatient.id);
                                                               const ctx=buildAnamneseContext();
                                                               let basePrompt=applyAnamneseVars(model.prompt,ctx);
                                                               // Monta o bloco de contexto a partir das fontes selecionadas pelo usuário.
@@ -15802,6 +15827,137 @@ let rxSelected = [];
                                                               if (it) it[field] = val;
                                                             }
 
+                                                            /* ── Duração do tratamento (data limite) ─────────────────────────
+                                                               Obrigatória em cada medicamento: vira data_fim em
+                                                               medicamentos_em_uso, que as IAs usam para separar o que o
+                                                               paciente toma hoje do que já terminou. */
+                                                            function rxDuracaoItemHtml(it) {
+                                                              const tipo = it.duracao_tipo || '';
+                                                              const lbl = 'font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px';
+                                                              const falta = !MedVigencia.duracaoValida(tipo, it.duracao_valor);
+                                                              const borda = falta && it._duracaoCobrada ? '#f87171' : '#e2e8f0';
+                                                              const fim = MedVigencia.dataFim(MedVigencia.hojeISO(), tipo, it.duracao_valor);
+                                                              const dica = tipo === 'uso_continuo' ? 'Sem data limite — fica como medicamento em uso.'
+                                                                : fim ? 'Tomar até <b>' + MedVigencia.isoParaBR(fim) + '</b>.'
+                                                                : 'Informe por quanto tempo o paciente vai tomar.';
+                                                              return `<div>
+                                                                  <label style="${lbl}">Duração do tratamento <span style="color:#dc2626">*</span></label>
+                                                                  <select onchange="rxSetDuracao('${it.uid}','duracao_tipo',this.value)" style="width:100%;padding:6px 8px;border:1px solid ${borda};border-radius:7px;font-size:12px;background:#fff">
+                                                                    <option value="" ${!tipo ? 'selected' : ''}>Selecione…</option>
+                                                                    <option value="dias" ${tipo === 'dias' ? 'selected' : ''}>Dias</option>
+                                                                    <option value="semanas" ${tipo === 'semanas' ? 'selected' : ''}>Semanas</option>
+                                                                    <option value="meses" ${tipo === 'meses' ? 'selected' : ''}>Meses</option>
+                                                                    <option value="uso_continuo" ${tipo === 'uso_continuo' ? 'selected' : ''}>Uso contínuo</option>
+                                                                  </select>
+                                                                </div>
+                                                                <div>
+                                                                  <label style="${lbl}">${tipo && tipo !== 'uso_continuo' ? 'Quantos ' + tipo : '&nbsp;'}</label>
+                                                                  ${tipo && tipo !== 'uso_continuo'
+                                                                    ? `<input type="number" min="1" value="${String(it.duracao_valor || '').replace(/"/g, '&quot;')}" oninput="rxSetDuracao('${it.uid}','duracao_valor',this.value)" placeholder="Ex: 7" style="width:100%;padding:6px 8px;border:1px solid ${borda};border-radius:7px;font-size:12px">`
+                                                                    : ''}
+                                                                </div>
+                                                                <div id="rx-dur-dica-${it.uid}" style="grid-column:1/-1;font-size:11px;color:${falta && it._duracaoCobrada ? '#dc2626' : '#64748b'};margin-top:-3px">${dica}</div>`;
+                                                            }
+
+                                                            function rxSetDuracao(uid, campo, val) {
+                                                              const it = rxSelected.find(i => i.uid === uid);
+                                                              if (!it) return;
+                                                              it[campo] = val;
+                                                              it._duracaoManual = true;
+                                                              if (campo === 'duracao_tipo') { rxRenderSelected(); return; }
+                                                              // Só atualiza a dica (re-renderizar tiraria o foco do campo).
+                                                              const dica = document.getElementById('rx-dur-dica-' + uid);
+                                                              const fim = MedVigencia.dataFim(MedVigencia.hojeISO(), it.duracao_tipo, val);
+                                                              if (dica) { dica.style.color = '#64748b'; dica.innerHTML = fim ? 'Tomar até <b>' + MedVigencia.isoParaBR(fim) + '</b>.' : 'Informe por quanto tempo o paciente vai tomar.'; }
+                                                            }
+
+                                                            /* Posologia "… por 7 dias" / "uso contínuo" preenche a duração,
+                                                               enquanto o médico não tiver escolhido uma à mão. */
+                                                            function rxDuracaoDaPosologiaItem(uid) {
+                                                              const it = rxSelected.find(i => i.uid === uid);
+                                                              if (!it || it._duracaoManual) return;
+                                                              const d = MedVigencia.duracaoDaPosologia(it.posologia);
+                                                              if (!d || (d.tipo === it.duracao_tipo && String(d.valor) === String(it.duracao_valor || ''))) return;
+                                                              it.duracao_tipo = d.tipo;
+                                                              it.duracao_valor = d.valor;
+                                                              const card = document.getElementById('rx-item-' + uid);
+                                                              const ativo = document.activeElement;
+                                                              const pos = ativo && ativo.selectionStart;
+                                                              rxRenderSelected();
+                                                              // Devolve o foco ao campo de posologia que o médico estava digitando.
+                                                              if (card) {
+                                                                const inp = document.querySelector('#rx-item-' + uid + ' input[placeholder^="Ex: 1 comprimido"]');
+                                                                if (inp) { inp.focus(); try { inp.setSelectionRange(pos, pos); } catch (e) {} }
+                                                              }
+                                                            }
+
+                                                            /* Itens vindos de modelos, últimas receitas ou da IA: aproveita a
+                                                               duração que já veio ou a escrita na posologia. */
+                                                            function rxCompletarDuracao(it) {
+                                                              if (MedVigencia.duracaoValida(it.duracao_tipo, it.duracao_valor)) return it;
+                                                              const d = MedVigencia.duracaoDaPosologia(it.posologia);
+                                                              if (d) { it.duracao_tipo = d.tipo; it.duracao_valor = d.valor; }
+                                                              return it;
+                                                            }
+
+                                                            /* Grava cada medicamento/fórmula da receita em medicamentos_em_uso
+                                                               com a data limite. Só para paciente cadastrado. */
+                                                            async function rxRegistrarMedicamentosEmUso(pacienteId, items, formulas) {
+                                                              if (!pacienteId || !currentUser) return;
+                                                              const hoje = MedVigencia.hojeISO();
+                                                              const linha = (nome, apresentacao, posologia, tipo, valor) => {
+                                                                const continuo = tipo === 'uso_continuo';
+                                                                const valorNum = Number(String(valor || '').replace(',', '.'));
+                                                                return {
+                                                                  user_id: currentUser.id,
+                                                                  paciente_id: pacienteId,
+                                                                  medicamento_nome: String(nome || '').trim(),
+                                                                  apresentacao: apresentacao || null,
+                                                                  posologia: posologia || null,
+                                                                  duracao_valor: continuo || !(valorNum > 0) ? null : Math.round(valorNum),
+                                                                  duracao_unidade: continuo || !(valorNum > 0) ? null : tipo,
+                                                                  duracao_dias: MedVigencia.duracaoEmDias(tipo, valor),
+                                                                  uso_continuo: continuo,
+                                                                  data_inicio: hoje,
+                                                                  data_fim: MedVigencia.dataFim(hoje, tipo, valor)
+                                                                };
+                                                              };
+                                                              const linhas = []
+                                                                .concat((items || []).map(it => linha(it.nome, it.apresentacao, it.posologia, it.duracao_tipo, it.duracao_valor)))
+                                                                .concat((formulas || []).map(f => linha(f.nome_formula || f.forma_farmaceutica || 'Fórmula manipulada', f.forma_farmaceutica, f.posologia, f.duracao_tipo, f.duracao_valor)))
+                                                                .filter(l => l.medicamento_nome);
+                                                              if (!linhas.length) return;
+                                                              const { error } = await sb.from('medicamentos_em_uso').insert(linhas);
+                                                              if (error) { console.warn('Falha ao registrar medicamentos em uso', error); return; }
+                                                              if (currentPatient && currentPatient.id === pacienteId) carregarMedsEmUso(pacienteId, true);
+                                                            }
+
+                                                            /* Cache dos medicamentos prescritos do paciente aberto (para os
+                                                               prompts de anamnese, que são montados de forma síncrona). */
+                                                            let medsEmUsoCache = { pacienteId: null, linhas: [], carregadoEm: 0 };
+                                                            async function carregarMedsEmUso(pacienteId, force) {
+                                                              if (!pacienteId) return [];
+                                                              if (!force && medsEmUsoCache.pacienteId === pacienteId && Date.now() - medsEmUsoCache.carregadoEm < 60000) return medsEmUsoCache.linhas;
+                                                              try {
+                                                                const { data, error } = await sb.from('medicamentos_em_uso')
+                                                                  .select('medicamento_nome,apresentacao,posologia,uso_continuo,data_inicio,data_fim,ativo')
+                                                                  .eq('paciente_id', pacienteId)
+                                                                  .order('data_inicio', { ascending: false })
+                                                                  .limit(100);
+                                                                if (error) throw error;
+                                                                medsEmUsoCache = { pacienteId, linhas: data || [], carregadoEm: Date.now() };
+                                                              } catch (e) {
+                                                                console.warn('Falha ao carregar medicamentos em uso', e);
+                                                                if (medsEmUsoCache.pacienteId !== pacienteId) medsEmUsoCache = { pacienteId, linhas: [], carregadoEm: 0 };
+                                                              }
+                                                              return medsEmUsoCache.linhas;
+                                                            }
+                                                            function textoMedsEmUsoPaciente() {
+                                                              const id = currentPatient && currentPatient.id;
+                                                              if (!id || medsEmUsoCache.pacienteId !== id || !window.MedVigencia) return '';
+                                                              return MedVigencia.textoParaIA(medsEmUsoCache.linhas);
+                                                            }
+
                                                             async function rxOnFabricanteChange(uid, val) {
                                                               const it = rxSelected.find(i => i.uid === uid);
                                                               if (!it) return;
@@ -15972,8 +16128,9 @@ let rxSelected = [];
                                                                     </div>
                                                                     <div style="grid-column:1/-1">
                                                                       <label style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">Posologia / orientação</label>
-                                                                      <input type="text" value="${(it.posologia || '').replace(/"/g, '&quot;')}" oninput="rxSetField('${it.uid}','posologia',this.value)" placeholder="Ex: 1 comprimido de 8/8h por 7 dias" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">
+                                                                      <input type="text" value="${(it.posologia || '').replace(/"/g, '&quot;')}" oninput="rxSetField('${it.uid}','posologia',this.value);rxDuracaoDaPosologiaItem('${it.uid}')" placeholder="Ex: 1 comprimido de 8/8h por 7 dias" style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px">
                                                                     </div>
+                                                                    ${rxDuracaoItemHtml(it)}
                                                                   </div>
                                                                 </div>`;
                                                               }).join('');
@@ -16072,7 +16229,7 @@ let rxSelected = [];
                                                               rxSelected = (modelo.medicamentos || []).map(it => ({
                                                                 ...JSON.parse(JSON.stringify(it)),
                                                                 uid: Math.random().toString(36).slice(2, 10)
-                                                              }));
+                                                              })).map(rxCompletarDuracao);
                                                               rxFormulas = (modelo.formulas || []).map(f => {
                                                                 const clone = JSON.parse(JSON.stringify(f));
                                                                 clone.uid = rxUid();
@@ -16120,6 +16277,8 @@ let rxSelected = [];
                                                                     apresentacoes: Array.isArray(it.apresentacoes) ? it.apresentacoes : [],
                                                                     quantidade: it.quantidade || '',
                                                                     posologia: it.posologia || '',
+                                                                    duracao_tipo: it.duracao_tipo || '',
+                                                                    duracao_valor: it.duracao_valor || '',
                                                                     is_generico: !!it.is_generico,
                                                                     fabricante: it.fabricante || '',
                                                                     fabricantes: Array.isArray(it.fabricantes) ? it.fabricantes : [],
@@ -16189,7 +16348,7 @@ let rxSelected = [];
                                                               rxSelected = (r.itens || []).map(it => ({
                                                                 ...JSON.parse(JSON.stringify(it)),
                                                                 uid: Math.random().toString(36).slice(2, 10)
-                                                              }));
+                                                              })).map(rxCompletarDuracao);
                                                               rxRenderSelected();
                                                               showToast && showToast('Medicamentos da receita anterior adicionados', 'success');
                                                             }
@@ -16274,6 +16433,23 @@ let rxSelected = [];
                                                                 rxSwitchTab('formula');
                                                                 return;
                                                               }
+                                                              // Duração obrigatória: é a data limite que separa, para as IAs,
+                                                              // o que o paciente toma hoje do que já terminou.
+                                                              const semDuracao = rxSelected.filter(it => !MedVigencia.duracaoValida(it.duracao_tipo, it.duracao_valor));
+                                                              if (semDuracao.length) {
+                                                                semDuracao.forEach(it => { it._duracaoCobrada = true; });
+                                                                rxSwitchTab('medicamentos');
+                                                                rxRenderSelected();
+                                                                showToast && showToast('Informe a duração do tratamento (ou uso contínuo) de: ' + semDuracao.map(it => it.nome_comercial).join(', '), 'warn');
+                                                                const el = document.getElementById('rx-item-' + semDuracao[0].uid);
+                                                                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                                return;
+                                                              }
+                                                              if (formulasValidas.some(f => !MedVigencia.duracaoValida(f.duracao_tipo, f.duracao_valor))) {
+                                                                showToast && showToast('Informe quantos ' + (formulasValidas.find(f => !MedVigencia.duracaoValida(f.duracao_tipo, f.duracao_valor)).duracao_tipo || 'dias') + ' dura o tratamento da fórmula', 'warn');
+                                                                rxSwitchTab('formula');
+                                                                return;
+                                                              }
                                                               if (rxSalvarModeloAtivo) {
                                                                 rxAbrirNomeModelo();
                                                                 return;
@@ -16343,6 +16519,8 @@ let rxSelected = [];
                                                                 composicao: it.composicao || '',
                                                                 quantidade: it.quantidade || '',
                                                                 posologia: it.posologia || '',
+                                                                duracao_tipo: it.duracao_tipo || '',
+                                                                duracao_valor: it.duracao_valor || '',
                                                                 substancias: it.substancias,
                                                                 _ref: it
                                                               }));
@@ -16359,9 +16537,14 @@ let rxSelected = [];
                                                               // médico) para reuso rápido na próxima vez que este modal abrir.
                                                               rxRegistrarUltimaReceita(rxSelected);
 
-                                                              const linhasMed = items.map((it, i) =>
-                                                                `${i + 1}. ${it.nome}${it.apresentacao ? ' — ' + it.apresentacao : ''}${it.quantidade ? ' — ' + it.quantidade : ''}${it.posologia ? '\n   ' + it.posologia : ''}${rxRotuloDocumento(it) ? '\n   [' + rxRotuloDocumento(it) + ']' : ''}`
-                                                              ).join('\n');
+                                                              // A duração (com a data limite) vai no registro do prontuário,
+                                                              // para quem ler o histórico — médico ou IA — saber até quando valia.
+                                                              const linhasMed = items.map((it, i) => {
+                                                                const dur = MedVigencia.textoDuracao(it.duracao_tipo, it.duracao_valor);
+                                                                return `${i + 1}. ${it.nome}${it.apresentacao ? ' — ' + it.apresentacao : ''}${it.quantidade ? ' — ' + it.quantidade : ''}${it.posologia ? '\n   ' + it.posologia : ''}${dur ? '\n   Duração: ' + dur : ''}${rxRotuloDocumento(it) ? '\n   [' + rxRotuloDocumento(it) + ']' : ''}`;
+                                                              }).join('\n');
+                                                              const pacienteIdRx = (rxIsAvulsa ? (rxManualPatient && rxManualPatient.id) : (currentPatient && currentPatient.id)) || null;
+                                                              const formulasUso = formulasValidas.map(f => ({ nome_formula: rxFormulaParaItem(f).nome, forma_farmaceutica: rxFormulaParaItem(f).forma_farmaceutica, posologia: f.posologia, duracao_tipo: f.duracao_tipo, duracao_valor: f.duracao_valor }));
                                                               const linhasFormula = formulaItems.map((f, i) => `${i + 1}. ${rxFormulaResumoTexto(formulasValidas[i])}${rxRotuloDocumento(f) ? '\n   [' + rxRotuloDocumento(f) + ']' : ''}`).join('\n');
 
                                                               const blocosLinhas = [];
@@ -16375,6 +16558,7 @@ let rxSelected = [];
                                                                 // atendimento nem mexe em um atendimento em andamento.
                                                                 const avulsaPatient = rxManualPatient;
                                                                 await rxGerarDocumentosReceita({ items, formulas: formulaItems, paciente: prep.paciente });
+                                                                rxRegistrarMedicamentosEmUso(pacienteIdRx, items, formulasUso);
                                                                 rxManualPatient = null;
                                                                 closeModal();
                                                                 registrarReceitaAvulsaNoPaciente([...items, ...formulaItems], linhas, avulsaPatient);
@@ -16394,6 +16578,7 @@ let rxSelected = [];
                                                                 resumo:(items[0]&&items[0].nome?items[0].nome+(items.length>1?' + '+(items.length-1):''):'medicamento(s)')
                                                               };
                                                               await rxGerarDocumentosReceita({ items, formulas: formulaItems, paciente: prep.paciente });
+                                                              rxRegistrarMedicamentosEmUso(pacienteIdRx, items, formulasUso);
                                                               rxManualPatient = null;
                                                               closeModal();
                                                               showToast && showToast('Receita adicionada ao prontuário', 'success');
@@ -19613,6 +19798,7 @@ let rxSelected = [];
                                                               {k:'{queixa_principal}',d:'Queixa principal'},
                                                               {k:'{info_complementar}',d:'Informações complementares'},
                                                               {k:'{ultimos_exames}',d:'Últimos exames'},
+                                                              {k:'{medicamentos_em_uso}',d:'Medicamentos prescritos: em uso hoje e encerrados (com data limite)'},
                                                               {k:'{medico_nome}',d:'Nome do médico'}
                                                             ];
                                                             const ANAMNESE_SOURCES=[
@@ -19693,11 +19879,11 @@ let rxSelected = [];
                                                             function inferSourcesFromPrompt(text){
                                                               const t=(text||'').toLowerCase();
                                                               const has=k=>t.indexOf(k)!==-1;
-                                                              const any=has('{paciente_nome}')||has('{paciente_idade}')||has('{paciente_sexo}')||has('{medico_nome}')||has('{data_atendimento}')||has('{queixa_principal}')||has('{resumo_paciente}')||has('{resumo_prontuario}')||has('{dados_clinicos}')||has('{info_complementar}')||has('{ultimos_exames}');
+                                                              const any=has('{paciente_nome}')||has('{paciente_idade}')||has('{paciente_sexo}')||has('{medico_nome}')||has('{data_atendimento}')||has('{queixa_principal}')||has('{resumo_paciente}')||has('{resumo_prontuario}')||has('{dados_clinicos}')||has('{info_complementar}')||has('{ultimos_exames}')||has('{medicamentos_em_uso}');
                                                               if(!any){return {...DEFAULT_ANAMNESE_SOURCES};}
                                                               return {
                                                                 cadastrais: has('{paciente_nome}')||has('{paciente_idade}')||has('{paciente_sexo}')||has('{medico_nome}')||has('{data_atendimento}')||has('{queixa_principal}'),
-                                                                complementares: has('{info_complementar}')||has('{dados_clinicos}'),
+                                                                complementares: has('{info_complementar}')||has('{dados_clinicos}')||has('{medicamentos_em_uso}'),
                                                                 prontuario: has('{resumo_paciente}')||has('{resumo_prontuario}')||has('{dados_clinicos}'),
                                                                 exames: has('{ultimos_exames}'),
                                                                 atendimento: true,
@@ -19718,6 +19904,11 @@ let rxSelected = [];
                                                               }
                                                               if(sources.prontuario){
                                                                 blocks.push('## Resumo do prontuário\n'+(ctx.resumoPront||'(sem resumo do prontuário)'));
+                                                              }
+                                                              // Sempre que houver histórico no contexto, vai junto a lista de
+                                                              // medicamentos com data limite — é ela que diz o que está em uso hoje.
+                                                              if((sources.prontuario||sources.complementares)&&ctx.medsPrescritos){
+                                                                blocks.push('## Medicamentos prescritos (com data limite)\n'+ctx.medsPrescritos);
                                                               }
                                                               if(sources.exames){
                                                                 blocks.push('## Resumo dos exames\n'+(ctx.ultimosExames||'(sem exames cadastrados)'));
