@@ -687,7 +687,18 @@
                      e os avisos flutuam por cima dele — senão só apareceriam ao finalizar. */
                   body.panel-expanded-active .task-tray{position:fixed;top:12px;right:56px;z-index:100001;margin:0;padding:4px 6px;border-radius:999px;background:rgba(255,255,255,.92);box-shadow:0 6px 18px -6px rgba(15,23,42,.3)}
                   body.panel-expanded-active .task-tray:not(:has(.task-bubble,.task-tray-overflow)){display:none}
-                  body.panel-expanded-active .toast{z-index:100002}
+                  /* Modais e popups abertos durante a consulta também sobem acima do painel
+                     expandido, mantendo a mesma ordem entre si (100000 + z-index original). */
+                  body.panel-expanded-active #modal-overlay{z-index:100300}
+                  body.panel-expanded-active .rx-popup-backdrop{z-index:100310!important}
+                  body.panel-expanded-active .ag-tooltip{z-index:100999}
+                  body.panel-expanded-active .cv-modal{z-index:101000}
+                  body.panel-expanded-active .dialer-panel{z-index:101100}
+                  body.panel-expanded-active .ia-assist-modal{z-index:101200}
+                  body.panel-expanded-active .ia-prev-modal,
+                  body.panel-expanded-active .cf-prev{z-index:101300}
+                  body.panel-expanded-active .lgm-overlay{z-index:101500}
+                  body.panel-expanded-active .toast{z-index:109999}
                   .task-tray-bubbles{display:flex;flex-direction:row-reverse;align-items:center;gap:8px;flex-wrap:nowrap;justify-content:flex-end}
                   @keyframes taskFloat{
                     0%{transform:translateY(0) rotate(0deg);}
