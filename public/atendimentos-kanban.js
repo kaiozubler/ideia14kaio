@@ -651,7 +651,7 @@
     await registrarPresenca(c);
     S.atendendo = c.f.id;
     if (!opts.aoEntrar) await seguir(c, "atender");
-    if (ehMedico()) abrirProntuario(c);
+    if (ehMedico()) await abrirAtendimento(c);
     else if (!opts.aoEntrar) toast(c.nome.split(" ")[0] + " chamado(a) para o consultório", "success");
   }
 
@@ -705,6 +705,32 @@
       return;
     }
     openPatient(c.pacienteId);
+  }
+
+  // Paciente entrou no consultório: abre direto um atendimento (não o
+  // cadastro). Se já houver um atendimento em andamento deste mesmo paciente,
+  // retoma-o; em teleconsulta, abre também a chamada de vídeo da sala do
+  // agendamento (a mesma enviada ao paciente).
+  async function abrirAtendimento(c) {
+    if (!c.pacienteId || typeof openPatient !== "function" || typeof showNovoAtend !== "function") {
+      abrirProntuario(c);
+      return;
+    }
+    const pid = String(c.pacienteId);
+    const emAndamento = typeof atendEmAndamento !== "undefined" && atendEmAndamento && atendEmAndamento.dirty &&
+      String(atendEmAndamento.patientId) === pid;
+    if (emAndamento && typeof continuarAtendimentoGlobal === "function") {
+      await continuarAtendimentoGlobal();
+    } else {
+      await openPatient(c.pacienteId);
+      if (typeof currentPatient === "undefined" || !currentPatient || String(currentPatient.id) !== pid) return;
+      openTab("atendimentos", null);
+      showNovoAtend();
+    }
+    if (c.modalidade === "video" && typeof openVideoCall === "function") {
+      const jaNaChamada = window.__vcJoined && String(window.__vcActivePatientId) === pid;
+      if (!jaNaChamada) openVideoCall();
+    }
   }
 
   /* ---------- modais ---------- */
