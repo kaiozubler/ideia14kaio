@@ -6002,6 +6002,26 @@
         .cf-saved-icons{display:flex;gap:3px;align-items:center}
         .cf-saved-ic{width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff}
         .cf-saved-empty{padding:28px 14px;text-align:center;color:#94a3b8;font-size:12px}
+
+        /* Documentos gerados pela Conduta: status, ações e pré-visualização */
+        .cf-doc{flex-wrap:wrap}
+        .cf-doc-status{font-size:11px;color:#64748b;display:flex;align-items:center;gap:5px;width:100%;padding-left:42px;margin-top:-4px}
+        .cf-doc-status.ok{color:#047857}
+        .cf-doc-status.err{color:#b91c1c}
+        .cf-doc-act{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:9px;font-weight:700;font-size:11px;cursor:pointer;border:1.5px solid rgba(203,213,225,.7);background:#fff;color:#334155;font-family:inherit}
+        .cf-doc-act:hover:not(:disabled){border-color:rgba(52,211,153,.8);color:#065f46}
+        .cf-doc-act:disabled{opacity:.4;cursor:not-allowed}
+        .cf-prev{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:1300;display:flex;align-items:center;justify-content:center;padding:20px}
+        .cf-prev-box{width:900px;max-width:100%;height:92vh;border-radius:18px;overflow:hidden;background:#fff;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(15,23,42,.35)}
+        .cf-prev-box .cf-hd{flex-wrap:wrap;gap:8px}
+        .cf-prev-tabs{display:flex;gap:6px;padding:8px 16px;border-bottom:1px solid #f0f4f8;flex-wrap:wrap;flex-shrink:0}
+        .cf-prev-frame{flex:1;width:100%;border:0;background:#e2e8f0}
+        .cf-prev-pages{flex:1;overflow-y:auto;background:#e2e8f0;padding:18px;display:flex;flex-direction:column;align-items:center;gap:14px}
+        .cf-prev-pages canvas{width:100%;max-width:794px;height:auto;background:#fff;box-shadow:0 2px 10px rgba(15,23,42,.15);border-radius:4px}
+        .cf-prev-msg{font-size:13px;color:#64748b;padding:40px 0}
+        .cf-ex-add{margin-top:6px;border:1.5px dashed rgba(56,189,248,.6);border-radius:12px;padding:10px 12px;background:rgba(240,249,255,.6)}
+        .cf-ex-add-lbl{font-size:10.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+        .cf-tuss-tag{font-size:9.5px;font-weight:700;color:#475569;background:#f1f5f9;padding:1px 6px;border-radius:4px;letter-spacing:.04em;white-space:nowrap}
       </style>
 
       <div class="modal" id="m-cond-sugestao" style="display:none">
@@ -6144,12 +6164,29 @@
           <div class="cf-ft">
             <div style="display:flex;gap:7px;align-items:center">
               <button class="cf-btn" onclick="condBackToConduta()"><i class="ti ti-arrow-left"></i> Voltar</button>
-              <button class="cf-btn"><i class="ti ti-download"></i> Baixar todos</button>
+              <button class="cf-btn" id="cf-doc-baixar-todos" onclick="cfBaixarTodos()"><i class="ti ti-download"></i> Baixar todos</button>
             </div>
             <button class="cf-btn primary" id="cf-doc-send" onclick="condEnviar()">
               <i class="ti ti-send"></i> Confirmar e enviar
             </button>
           </div>
+        </div>
+      </div>
+
+      <!-- Pré-visualização de um documento gerado pela Conduta (fica acima do modal de documentos) -->
+      <div id="cf-prev" class="cf-prev" style="display:none" onclick="if(event.target===this)cfFecharPreview()">
+        <div class="cf-prev-box">
+          <div class="cf-hd">
+            <div class="cf-title"><span class="cf-dot"></span><span id="cf-prev-title">Documento</span></div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <button class="cf-btn" onclick="cfPreviewNovaAba()"><i class="ti ti-external-link"></i> Abrir em nova aba</button>
+              <button class="cf-btn primary" onclick="cfPreviewBaixar()"><i class="ti ti-download"></i> Baixar PDF</button>
+              <button class="cf-close" onclick="cfFecharPreview()"><i class="ti ti-x"></i></button>
+            </div>
+          </div>
+          <div id="cf-prev-tabs" class="cf-prev-tabs" style="display:none"></div>
+          <div id="cf-prev-pages" class="cf-prev-pages"></div>
+          <iframe id="cf-prev-frame" title="Pré-visualização do documento" class="cf-prev-frame" style="display:none"></iframe>
         </div>
       </div>
 
@@ -13938,6 +13975,8 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                             }
                                                             function openCondutaFlow(){
                                                               condState=cfDefaultState();
+                                                              Object.values(cfDocs).forEach(cfLiberarArquivos);
+                                                              cfDocs={};
                                                               CF_SUGESTOES=["Outra conduta"];
                                                               cfRenderSugestao(true);
                                                               openModal('cond-sugestao');
@@ -14091,14 +14130,15 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                         const lista=cfGetSavedCondutas();
                                                         const modelo=lista[idx];
                                                         if(!modelo)return;
-                                                        condState=JSON.parse(JSON.stringify(modelo.state));
+                                                        condState=Object.assign(cfDefaultState(),JSON.parse(JSON.stringify(modelo.state)));
+                                                        // O modelo foi revisado quando salvo: todos os campos ativos contam
+                                                        // como revisados e seguem direto para os documentos.
                                                         condState.vistos={};
+                                                        CF_CAMPOS.forEach(c=>{if(condState.ativados[c.key])condState.vistos[c.key]=true;});
+                                                        condState.removidos={};
+                                                        condState.ciente=false;
                                                         cfCloseSavedPopup();
-                                                        cfRenderDocs();
-                                                        document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
-                                                        document.getElementById('modal-overlay').classList.add('open');
-                                                        const m=document.getElementById('m-cond-docs');
-                                                        if(m)m.style.display='flex';
+                                                        condGoDocs();
                                                       }
 
                                                       function cfRemoverModelo(idx){
@@ -14182,15 +14222,16 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                                 apresentacoes_db:[]
                                                               }));
                                                               condState.orientacoes=(d.orientacoes||'').toString();
-                                                              condState.exames=(Array.isArray(d.exames)?d.exames:[]).map((e,i)=>({id:i+1,nome:(e.nome||'').trim(),instrucoes:(e.instrucoes||'').trim(),selecionado:true}));
+                                                              condState.exames=(Array.isArray(d.exames)?d.exames:[]).map((e,i)=>({id:i+1,nome:(e.nome||'').trim(),codigo_tuss:'',instrucoes:(e.instrucoes||'').trim(),selecionado:true})).filter(e=>e.nome);
                                                               const at=d.atestado||{};
                                                               condState.atestado={tipo:(at.tipo||'').trim(),dias:parseInt(at.dias)||0,texto:(at.texto||'').trim()};
                                                               if(!condState.atestado.tipo&&!condState.atestado.texto)condState.ativados.atestado=false;
                                                               condState.laudo=(d.laudo||'').toString();
                                                               if(!condState.laudo)condState.ativados.laudo=false;
-                                                              if(!condState.exames.length)condState.ativados.exames=false;
                                                               if(!condState.medicamentos.length)condState.ativados.medicamentos=false;
-                                                              if(!condState.orientacoes)condState.ativados.orientacoes=false;
+                                                              // Orientações e Exames ficam sempre ativos, mesmo vazios: o médico
+                                                              // escreve as orientações e lança exames manualmente quando a IA
+                                                              // não sugeriu nada. Vazios, simplesmente não geram documento.
                                                             }
                                                             async function cfEnrichMedicamentos(){
                                                         for(const med of condState.medicamentos){
@@ -14290,7 +14331,7 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                               nav.innerHTML=CF_CAMPOS.map(c=>{
                                                                 const at=condState.ativados[c.key],vi=condState.vistos[c.key];
                                                                 return `<div class="cf-nav-item">
-                                                                  <button class="cf-nav-btn${vi?' visto':''}" ${at?'':'disabled'} onclick="cfNavClick('${c.key}')">
+                                                                  <button class="cf-nav-btn${vi?' visto':''}" style="${at?'':'opacity:.5'}" title="${at?'':'Clique para incluir este campo'}" onclick="cfNavClick('${c.key}')">
                                                                     <span class="cf-nav-badge" style="background:${vi?'linear-gradient(135deg,#34d399,#059669)':(at?c.grad:'rgba(203,213,225,.5)')}"><i class="ti ${c.icon}"></i></span>
                                                                     <span style="flex:1">${c.label}</span>
                                                                   </button>
@@ -14465,12 +14506,17 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                             </div>
                                                           </div>`;
                                                       }
-                                                              if(key==='orientacoes')return `<textarea class="cf-ta" style="min-height:160px" oninput="condState.orientacoes=this.value">${s.orientacoes}</textarea>`;
-                                                              if(key==='exames')return s.exames.map(e=>`
+                                                              if(key==='orientacoes')return `
+                                                        <p style="font-size:11px;color:#64748b;margin:0 0 6px">Texto entregue ao paciente. Edite à vontade: o documento é gerado com o que estiver aqui.</p>
+                                                        <textarea id="cf-orientacoes-ta" class="cf-ta" style="min-height:160px"
+                                                          placeholder="Escreva as orientações ao paciente (cuidados, sinais de alerta, retorno…)"
+                                                          oninput="condState.orientacoes=this.value">${escH(s.orientacoes)}</textarea>`;
+                                                              if(key==='exames')return (s.exames.length?'':'<p style="font-size:12px;color:#94a3b8;margin:0 0 8px">Nenhum exame sugerido. Lance abaixo os exames a solicitar.</p>')+s.exames.map(e=>`
                                                         <div class="cf-med${e.selecionado?' sel':' off'}" data-exame-id="${e.id}"
                                                           onclick="cfToggleExame(${e.id})"
                                                           style="flex-direction:column;align-items:stretch;cursor:pointer">
                                                           <div style="display:flex;align-items:center;gap:8px">
+                                                            ${e.codigo_tuss?`<span class="cf-tuss-tag">TUSS ${escH(e.codigo_tuss)}</span>`:''}
                                                             <input class="cf-inp"
                                                               style="flex:1;font-weight:600;font-size:12px;background:transparent;border-color:rgba(203,213,225,.4);padding:4px 8px"
                                                               value="${escH(e.nome)}"
@@ -14487,7 +14533,22 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                             oninput="event.stopPropagation();cfEditExame(${e.id},'instrucoes',this.value)"
                                                             onclick="event.stopPropagation()"
                                                             placeholder="Instruções adicionais">${escH(e.instrucoes)}</textarea>
-                                                        </div>`).join('');
+                                                        </div>`).join('')+`
+                                                        <div class="cf-ex-add">
+                                                          <div class="cf-ex-add-lbl">Adicionar exame</div>
+                                                          <div style="position:relative">
+                                                            <div style="display:flex;gap:6px">
+                                                              <input type="text" id="cf-ex-search" class="cf-inp" autocomplete="off"
+                                                                placeholder="Busque na tabela TUSS ou digite o exame e clique em Adicionar"
+                                                                oninput="cfExameSearch(this.value)"
+                                                                onkeydown="if(event.key==='Enter'){event.preventDefault();cfExameAddManual();}"
+                                                                onblur="setTimeout(()=>{const b=document.getElementById('cf-ex-results');if(b)b.style.display='none';},200)">
+                                                              <button type="button" class="cf-btn" style="flex-shrink:0" onclick="cfExameAddManual()"><i class="ti ti-plus"></i> Adicionar</button>
+                                                            </div>
+                                                            <div id="cf-ex-results"
+                                                              style="position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(15,23,42,.10);max-height:260px;overflow-y:auto;z-index:20;display:none"></div>
+                                                          </div>
+                                                        </div>`;
                                                               if(key==='atestado'){
                                                                 const at=s.atestado||{tipo:'Repouso',dias:0,texto:''};
                                                                 const opts=['Repouso','Somente presença','Afastamento do trabalho'];
@@ -14541,6 +14602,57 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                       function cfRemoveExame(id){
                                                         condState.exames=condState.exames.filter(x=>x.id!==id);
                                                         cfRenderConduta();
+                                                      }
+                                                      // ── Lançamento manual de exames no modal de Conduta ─────────────────────
+                                                      let cfExSearchTimer=null;
+                                                      let cfExLastResults=[];
+                                                      function cfExameSearch(q){
+                                                        clearTimeout(cfExSearchTimer);
+                                                        cfExSearchTimer=setTimeout(()=>cfExameDoSearch(q),250);
+                                                      }
+                                                      async function cfExameDoSearch(q){
+                                                        const box=document.getElementById('cf-ex-results');
+                                                        if(!box)return;
+                                                        const term=(q||'').trim();
+                                                        if(term.length<2){box.style.display='none';box.innerHTML='';return;}
+                                                        box.style.display='block';
+                                                        box.innerHTML='<div style="padding:12px;font-size:12px;color:#94a3b8;text-align:center"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Buscando…</div>';
+                                                        // buscar_tuss: mesma busca do modal "Solicitar exames" (já sem odontologia)
+                                                        const {data,error}=await sb.rpc('buscar_tuss',{termo:term,p_limit:30});
+                                                        const atual=(document.getElementById('cf-ex-search')?.value||'').trim();
+                                                        if(atual!==term)return; // resposta de uma busca antiga
+                                                        if(error){box.innerHTML='<div style="padding:12px;font-size:12px;color:#dc2626;text-align:center">Erro ao buscar exames</div>';return;}
+                                                        cfExLastResults=data||[];
+                                                        const esc=_rxEsc;
+                                                        const manual=`<div onmousedown="event.preventDefault();cfExameAddManual()" style="padding:9px 12px;cursor:pointer;font-size:12px;color:#0369a1;border-bottom:1px solid #f1f5f9"><i class="ti ti-plus"></i> Adicionar “${esc(term)}” como digitado</div>`;
+                                                        box.innerHTML=manual+(cfExLastResults.length?cfExLastResults.map((e,i)=>`
+                                                          <div onmousedown="event.preventDefault();cfExameAddTuss(${i})"
+                                                            style="padding:9px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer"
+                                                            onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background=''">
+                                                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                                                              <span style="font-weight:600;font-size:12.5px;color:#0f172a">${esc(e.nome)}</span>
+                                                              <span class="cf-tuss-tag">TUSS ${esc(e.codigo_tuss)}</span>
+                                                            </div>
+                                                            ${e.grupo?`<div style="font-size:11px;color:#059669;margin-top:2px">${esc(e.grupo)}</div>`:''}
+                                                          </div>`).join(''):'<div style="padding:12px;font-size:12px;color:#94a3b8;text-align:center">Nenhum exame encontrado na TUSS</div>');
+                                                      }
+                                                      function cfExameAdicionar(nome,codigo){
+                                                        nome=(nome||'').trim();
+                                                        if(!nome){showToast('Digite o nome do exame','warn');return;}
+                                                        const dup=condState.exames.some(e=>(codigo&&e.codigo_tuss===codigo)||e.nome.toLowerCase()===nome.toLowerCase());
+                                                        if(dup){showToast('Esse exame já está na lista','warn');return;}
+                                                        condState.exames.push({id:Date.now(),nome,codigo_tuss:codigo||'',instrucoes:'',selecionado:true});
+                                                        condState.ativados.exames=true;
+                                                        cfRenderConduta();
+                                                        const inp=document.getElementById('cf-ex-search');
+                                                        if(inp){inp.value='';inp.focus();}
+                                                      }
+                                                      function cfExameAddTuss(i){
+                                                        const e=cfExLastResults[i];
+                                                        if(e)cfExameAdicionar(e.nome,e.codigo_tuss);
+                                                      }
+                                                      function cfExameAddManual(){
+                                                        cfExameAdicionar(document.getElementById('cf-ex-search')?.value||'','');
                                                       }
                                                       // ─────────────────────────────────────────────────────────────────────────
                                                            // ── Tag de tipo de receita (Portaria SVS/MS 344/1998) ────────────────────
@@ -14715,7 +14827,11 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                       }
                                                       // ─────────────────────────────────────────────────────────────────────────────
                                                                   function cfNavClick(key){
-                                                        if(!condState.ativados[key])return;
+                                                        // Campo desconsiderado: clicar inclui de volta e leva até ele.
+                                                        if(!condState.ativados[key]){
+                                                          condState.ativados[key]=true;
+                                                          cfRenderConduta();
+                                                        }
                                                         condState.vistos[key]=true;
                                                         const sec=document.querySelector(`#cf-cond-scroll .cf-section[data-key="${key}"]`);
                                                         if(sec)sec.scrollIntoView({behavior:'smooth',block:'start'});
@@ -14764,28 +14880,306 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                               document.getElementById('cf-cond-falta').textContent=all?'':`${falt} campo${falt>1?'s':''} ainda não revisado${falt>1?'s':''}`;
                                                               document.getElementById('cf-cond-next').disabled=!all;
                                                             }
+                                                            /* ── Passo 3: documentos prontos ─────────────────────────────────────
+                                                               Ao entrar no passo, cada campo revisado vira um PDF final (mesmo motor
+                                                               de "Gerar documento": modelo da clínica, QR de verificação e assinatura
+                                                               ICP-Brasil quando disponível). O médico pré-visualiza e baixa cada um,
+                                                               ou todos em ZIP; ao confirmar, os PDFs são salvos em Documentos do
+                                                               paciente e, no WhatsApp, enviados pela rota /api/comunicacao/enviar.
+                                                               Os PDFs ficam fora do condState (que é clonado em JSON para os modelos
+                                                               salvos) e são reaproveitados enquanto o conteúdo não muda. */
+                                                            const CF_DOC_TITULOS={conduta:'Plano de Conduta',medicamentos:'Receita',orientacoes:'Orientações ao Paciente',exames:'Solicitação de Exames',atestado:'Atestado Médico',laudo:'Laudo Médico'};
+                                                            let cfDocs={};          // key -> {sig,status:'gerando'|'pronto'|'erro'|'vazio',arquivos:[],erro}
+                                                            let cfDocsRodando=false, cfDocsDeNovo=false;
+                                                            let cfPrevAtual=null;   // {key,idx}
+                                                            function cfPacienteDoc(){
+                                                              const p=currentPatient||{};
+                                                              return {nome:p.name||'',idade:_rxIdade(p.nasc||p.data_nascimento||''),cpf:p.cpf||'',id:p.id||null};
+                                                            }
+                                                            function cfDocsIncluidos(){
+                                                              return CF_CAMPOS.filter(c=>condState.ativados[c.key]&&condState.vistos[c.key]&&!condState.removidos[c.key]);
+                                                            }
+                                                            function cfTextoParaHtml(t){
+                                                              return String(t||'').trim().split(/\n{2,}/).map(par=>`<p style="margin:0 0 8px;line-height:1.55">${_rxEsc(par).replace(/\n/g,'<br>')}</p>`).join('');
+                                                            }
+                                                            function cfDocAssinatura(key){
+                                                              const s=condState, p=cfPacienteDoc();
+                                                              const dado={
+                                                                conduta:(s.condutaCards||[]).filter(c=>c.tipo!=='atencao').map(c=>[c.titulo,c.texto]),
+                                                                medicamentos:(s.medicamentos||[]).filter(m=>m.selecionado).map(m=>[m.nome,m.apresentacao,m.quantidade,m.instrucoes]),
+                                                                orientacoes:s.orientacoes,
+                                                                exames:(s.exames||[]).filter(e=>e.selecionado&&e.nome.trim()).map(e=>[e.nome,e.codigo_tuss,e.instrucoes]),
+                                                                atestado:s.atestado,
+                                                                laudo:s.laudo
+                                                              }[key];
+                                                              return JSON.stringify([p.id,p.nome,p.cpf,dado]);
+                                                            }
+                                                            // Conteúdo do documento; null quando o campo está vazio (não gera PDF).
+                                                            function cfDocConteudo(key){
+                                                              const s=condState, p=cfPacienteDoc();
+                                                              const item=(titulo,texto,i)=>`<div class="rx-item"><div class="rx-index">${i+1}</div><div>${titulo?`<div class="med-name">${_rxEsc(titulo)}</div>`:''}<div class="med-instructions">${_rxEsc(texto||'').replace(/\n/g,'<br>')||'&nbsp;'}</div></div></div>`;
+                                                              if(key==='conduta'){
+                                                                // Pontos de atenção são alertas da IA para o médico: não vão para o documento.
+                                                                const cards=(s.condutaCards||[]).filter(c=>c.tipo!=='atencao'&&(c.titulo||c.texto));
+                                                                if(!cards.length)return null;
+                                                                return {tipo:'conduta',bodyHtml:cards.map((c,i)=>item(c.titulo,c.texto,i)).join(''),conteudo:{conduta:cards.map(c=>({titulo:c.titulo,texto:c.texto}))}};
+                                                              }
+                                                              if(key==='orientacoes'){
+                                                                const t=(s.orientacoes||'').trim();
+                                                                if(!t)return null;
+                                                                return {tipo:'orientacoes',bodyHtml:`<div class="rx-item"><div>${cfTextoParaHtml(t)}</div></div>`,conteudo:{texto:t}};
+                                                              }
+                                                              if(key==='atestado'){
+                                                                const at=s.atestado||{};
+                                                                const dias=parseInt(at.dias)||0;
+                                                                let t=(at.texto||'').trim();
+                                                                if(!t&&!dias&&!at.tipo)return null;
+                                                                if(!t){
+                                                                  const hoje=new Date().toLocaleDateString('pt-BR');
+                                                                  t=at.tipo==='Somente presença'
+                                                                    ?`Declaro, para os devidos fins, que ${p.nome||'o(a) paciente'} esteve em atendimento médico nesta data (${hoje}).`
+                                                                    :`Atesto, para os devidos fins, que ${p.nome||'o(a) paciente'} esteve sob meus cuidados nesta data (${hoje})${dias?`, necessitando de ${dias} (${window.Receituario&&Receituario.numeroPorExtenso?Receituario.numeroPorExtenso(dias,false):dias}) dia${dias>1?'s':''} de ${at.tipo==='Afastamento do trabalho'?'afastamento de suas atividades laborais':'repouso'} a partir desta data`:''}.`;
+                                                                }
+                                                                return {tipo:'atestado',bodyHtml:`<div class="rx-item"><div>${cfTextoParaHtml(t)}</div></div>`,conteudo:{tipo:at.tipo||'',dias,texto:t}};
+                                                              }
+                                                              if(key==='laudo'){
+                                                                const t=(s.laudo||'').trim();
+                                                                if(!t)return null;
+                                                                return {tipo:'laudo',bodyHtml:`<div class="rx-item"><div>${cfTextoParaHtml(t)}</div></div>`,conteudo:{texto:t}};
+                                                              }
+                                                              if(key==='exames'){
+                                                                const ex=(s.exames||[]).filter(e=>e.selecionado&&e.nome.trim());
+                                                                if(!ex.length)return null;
+                                                                return {tipo:'solicitacao_exame',examsHtml:ex.map((e,i)=>item(e.nome+(e.codigo_tuss?` (TUSS ${e.codigo_tuss})`:''),e.instrucoes,i)).join(''),conteudo:{itens:ex.map(e=>({codigo_tuss:e.codigo_tuss||null,nome:e.nome,instrucoes:e.instrucoes||''}))}};
+                                                              }
+                                                              if(key==='medicamentos'){
+                                                                return (s.medicamentos||[]).some(m=>m.selecionado)?{tipo:'receita'}:null;
+                                                              }
+                                                              return null;
+                                                            }
+                                                            function cfLiberarArquivos(d){(d&&d.arquivos||[]).forEach(a=>{if(a.url)try{URL.revokeObjectURL(a.url);}catch(_){}});}
+                                                            async function cfGerarDoc(key){
+                                                              const sig=cfDocAssinatura(key);
+                                                              const spec=cfDocConteudo(key);
+                                                              cfLiberarArquivos(cfDocs[key]);
+                                                              if(!spec){cfDocs[key]={sig,status:'vazio',arquivos:[]};return;}
+                                                              const d=cfDocs[key]={sig,status:'gerando',arquivos:[]};
+                                                              cfRenderDocList();
+                                                              const p=cfPacienteDoc();
+                                                              const salvarBase={pacienteNome:p.nome||'Paciente',pacienteCpf:p.cpf||null,pacienteId:p.id};
+                                                              try{
+                                                                if(key==='medicamentos'){
+                                                                  await condGerarReceita(a=>d.arquivos.push(a));
+                                                                  if(!d.arquivos.length)throw new Error('Receita não gerada. Confira CPF e data de nascimento do paciente.');
+                                                                }else if(key==='exames'){
+                                                                  const r=await _renderSolicitacaoExamesPdf({
+                                                                    patientName:p.nome,patientAge:p.idade,patientCpf:p.cpf,examsHtml:spec.examsHtml,
+                                                                    careType:'Eletivo',urgente:false,fastingRequired:'—',validityDays:'—',
+                                                                    clinicalIndication:'',cidCode:'',cidDescription:'',preparationNotes:'',additionalNotes:''
+                                                                  });
+                                                                  if(!r)throw new Error('Falha ao gerar a solicitação de exames.');
+                                                                  d.arquivos.push({titulo:CF_DOC_TITULOS.exames,blob:r.finalBlob,filename:r.filename,assinado:!!r.signedUrl,
+                                                                    salvar:{...salvarBase,tipo:'solicitacao_exame',conteudo:{...spec.conteudo,verificacao:r.verificacao||null},blob:r.finalBlob,filename:r.filename,assinado:!!r.signedUrl}});
+                                                                }else{
+                                                                  const r=await _renderDocumentoPdf({
+                                                                    docTitle:CF_DOC_TITULOS[key],docMark:'',patientName:p.nome,patientAge:p.idade,patientCpf:p.cpf,
+                                                                    bodyHtml:spec.bodyHtml,filenamePrefix:spec.tipo,contentDescription:`${CF_DOC_TITULOS[key]} para ${p.nome||'paciente'}`
+                                                                  });
+                                                                  if(!r)throw new Error('Falha ao gerar o PDF.');
+                                                                  d.arquivos.push({titulo:CF_DOC_TITULOS[key],blob:r.finalBlob,filename:r.filename,assinado:!!r.signedUrl,
+                                                                    salvar:{...salvarBase,tipo:spec.tipo,conteudo:{...spec.conteudo,verificacao:r.verificacao||null},blob:r.finalBlob,filename:r.filename,assinado:!!r.signedUrl}});
+                                                                }
+                                                                // Conteúdo mudou enquanto gerava: descarta e deixa para a próxima rodada.
+                                                                if(cfDocAssinatura(key)!==sig){d.sig='';}
+                                                                d.status='pronto';
+                                                              }catch(e){
+                                                                console.error('Conduta: falha ao gerar',key,e);
+                                                                d.status='erro';d.erro=(e&&e.message)||String(e);
+                                                              }
+                                                            }
+                                                            // Gera, um por vez, os documentos incluídos que ainda não estão prontos
+                                                            // para o conteúdo atual. Erros só são refeitos no "Tentar de novo".
+                                                            async function cfGerarDocsPendentes(){
+                                                              if(cfDocsRodando){cfDocsDeNovo=true;return;}
+                                                              cfDocsRodando=true;
+                                                              try{
+                                                                do{
+                                                                  cfDocsDeNovo=false;
+                                                                  for(const c of cfDocsIncluidos()){
+                                                                    if(!document.getElementById('m-cond-docs')||document.getElementById('m-cond-docs').style.display==='none')return;
+                                                                    if(!condState.ativados[c.key]||condState.removidos[c.key])continue;
+                                                                    const d=cfDocs[c.key];
+                                                                    if(d&&d.sig===cfDocAssinatura(c.key)&&d.status!=='gerando')continue;
+                                                                    await cfGerarDoc(c.key);
+                                                                    cfRenderDocList();
+                                                                  }
+                                                                }while(cfDocsDeNovo);
+                                                              }finally{
+                                                                cfDocsRodando=false;
+                                                                cfRenderDocList();
+                                                              }
+                                                            }
+                                                            function cfTentarDeNovo(key){
+                                                              if(cfDocs[key])cfDocs[key].sig='';
+                                                              cfGerarDocsPendentes();
+                                                            }
                                                             function condGoDocs(){
                                                         cfRenderDocs();
                                                         document.querySelectorAll('.overlay > .modal').forEach(m=>m.style.display='none');
                                                         document.getElementById('modal-overlay').classList.add('open');
                                                         document.getElementById('m-cond-docs').style.display='flex';
+                                                        cfGerarDocsPendentes();
                                                       }
-                                                            function cfRenderDocs(){
+                                                            function cfRenderDocList(){
                                                               const list=document.getElementById('cf-doc-list');
+                                                              if(!list||!condState)return;
                                                               const docs=CF_CAMPOS.filter(c=>condState.ativados[c.key]&&condState.vistos[c.key]);
-                                                              list.innerHTML=docs.length===0
-                                                                ?`<p style="color:#94a3b8;text-align:center;padding:32px 0;font-size:13px">Nenhum campo foi revisado.</p>`
-                                                                :docs.map(c=>{
-                                                                  const off=!!condState.removidos[c.key];
-                                                                  const isMed=c.key==='medicamentos';
-                                                                  return `<div class="cf-doc${off?' off':''}">
-                                                                    <span class="cf-nav-badge" style="width:30px;height:30px;background:${off?'linear-gradient(135deg,#94a3b8,#64748b)':c.grad}"><i class="ti ${c.icon}"></i></span>
-                                                                    <span class="cf-doc-name" style="${off?'color:#94a3b8':''}">${c.label}</span>
-                                                                    <button class="cf-doc-fmt docx"><i class="ti ti-file-text"></i> DOCX</button>
-                                                                    <button class="cf-doc-fmt pdf"${isMed?' onclick="condGerarReceita()" title="Gerar receita em PDF"':''}><i class="ti ti-file-type-pdf"></i> ${isMed?'Receita PDF':'PDF'}</button>
-                                                                    <button class="cf-close" style="padding:4px" onclick="cfToggleRemovido('${c.key}')"><i class="ti ${off?'ti-plus':'ti-ban'}" style="color:${off?'#059669':'#f43f5e'}"></i></button>
-                                                                  </div>`;
-                                                                }).join('');
+                                                              if(!docs.length){list.innerHTML=`<p style="color:#94a3b8;text-align:center;padding:32px 0;font-size:13px">Nenhum campo foi revisado.</p>`;cfUpdateSendBtn();return;}
+                                                              list.innerHTML=docs.map(c=>{
+                                                                const off=!!condState.removidos[c.key];
+                                                                const d=cfDocs[c.key];
+                                                                const atual=d&&d.sig===cfDocAssinatura(c.key);
+                                                                const st=off?'off':(!d||(!atual&&d.status!=='gerando'))?'fila':d.status;
+                                                                const arqs=(st==='pronto'&&d.arquivos)||[];
+                                                                let status='';
+                                                                if(st==='fila')status='<div class="cf-doc-status"><i class="ti ti-clock"></i> Na fila para gerar…</div>';
+                                                                else if(st==='gerando')status='<div class="cf-doc-status"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Gerando PDF…</div>';
+                                                                else if(st==='vazio')status='<div class="cf-doc-status"><i class="ti ti-info-circle"></i> Campo vazio: nenhum documento será gerado.</div>';
+                                                                else if(st==='erro')status=`<div class="cf-doc-status err"><i class="ti ti-alert-circle"></i> ${_rxEsc(d.erro||'Falha ao gerar')} <button class="cf-doc-act" onclick="cfTentarDeNovo('${c.key}')"><i class="ti ti-refresh"></i> Tentar de novo</button></div>`;
+                                                                else if(st==='pronto')status=arqs.map((a,i)=>`<div class="cf-doc-status ok"><i class="ti ti-circle-check"></i> ${_rxEsc(a.titulo)} pronto${a.assinado?' · assinado digitalmente':' · para assinatura manual'}
+                                                                    <span style="margin-left:auto;display:flex;gap:5px">
+                                                                      <button class="cf-doc-act" onclick="cfVisualizarDoc('${c.key}',${i})"><i class="ti ti-eye"></i> Visualizar</button>
+                                                                      <button class="cf-doc-act" onclick="cfBaixarDoc('${c.key}',${i})"><i class="ti ti-download"></i> Baixar</button>
+                                                                    </span></div>`).join('');
+                                                                const unico=arqs.length===1;
+                                                                return `<div class="cf-doc${off?' off':''}">
+                                                                  <span class="cf-nav-badge" style="width:30px;height:30px;background:${off?'linear-gradient(135deg,#94a3b8,#64748b)':c.grad}"><i class="ti ${c.icon}"></i></span>
+                                                                  <span class="cf-doc-name" style="${off?'color:#94a3b8':''}">${CF_DOC_TITULOS[c.key]||c.label}</span>
+                                                                  ${unico?`<button class="cf-doc-act" onclick="cfVisualizarDoc('${c.key}',0)"><i class="ti ti-eye"></i> Visualizar</button>
+                                                                  <button class="cf-doc-fmt pdf" onclick="cfBaixarDoc('${c.key}',0)"><i class="ti ti-file-type-pdf"></i> PDF</button>`:''}
+                                                                  <button class="cf-close" style="padding:4px" title="${off?'Incluir':'Não gerar este documento'}" onclick="cfToggleRemovido('${c.key}')"><i class="ti ${off?'ti-plus':'ti-ban'}" style="color:${off?'#059669':'#f43f5e'}"></i></button>
+                                                                  ${unico?'':status}
+                                                                  ${unico?`<div class="cf-doc-status ok"><i class="ti ti-circle-check"></i> Pronto${arqs[0].assinado?' · assinado digitalmente':' · para assinatura manual'}</div>`:''}
+                                                                </div>`;
+                                                              }).join('');
+                                                              const bt=document.getElementById('cf-doc-baixar-todos');
+                                                              if(bt)bt.disabled=!cfArquivosProntos().length;
+                                                              cfUpdateSendBtn();
+                                                            }
+                                                            function cfArquivosProntos(){
+                                                              return cfDocsIncluidos().flatMap(c=>{
+                                                                const d=cfDocs[c.key];
+                                                                return d&&d.status==='pronto'&&d.sig===cfDocAssinatura(c.key)?d.arquivos:[];
+                                                              });
+                                                            }
+                                                            function cfDocsPendentes(){
+                                                              return cfDocsIncluidos().filter(c=>{
+                                                                const d=cfDocs[c.key];
+                                                                return !d||d.sig!==cfDocAssinatura(c.key)||d.status==='gerando'||d.status==='erro';
+                                                              });
+                                                            }
+                                                            function cfArquivo(key,idx){const d=cfDocs[key];return d&&d.arquivos&&d.arquivos[idx]||null;}
+                                                            function cfBaixarDoc(key,idx){
+                                                              const a=cfArquivo(key,idx);
+                                                              if(!a){showToast('Documento ainda não está pronto','warn');return;}
+                                                              _baixarBlob(a.blob,a.filename);
+                                                            }
+                                                            async function cfBaixarTodos(){
+                                                              const arqs=cfArquivosProntos();
+                                                              if(!arqs.length){showToast('Nenhum documento pronto para baixar','warn');return;}
+                                                              if(cfDocsPendentes().length)showToast('Alguns documentos ainda não ficaram prontos e não entram no download','warn');
+                                                              if(arqs.length===1||!window.JSZip){arqs.forEach(a=>_baixarBlob(a.blob,a.filename));return;}
+                                                              try{
+                                                                const zip=new JSZip();
+                                                                const usados={};
+                                                                arqs.forEach(a=>{
+                                                                  let nome=a.filename;
+                                                                  if(usados[nome]){nome=nome.replace(/\.pdf$/i,'')+'_'+(++usados[nome])+'.pdf';}else usados[nome]=1;
+                                                                  zip.file(nome,a.blob);
+                                                                });
+                                                                const blob=await zip.generateAsync({type:'blob'});
+                                                                const p=cfPacienteDoc();
+                                                                _baixarBlob(blob,`documentos_${(p.nome||'paciente').replace(/[^\w\-]+/g,'_').toLowerCase()}_${new Date().toISOString().slice(0,10)}.zip`);
+                                                              }catch(e){console.error(e);arqs.forEach(a=>_baixarBlob(a.blob,a.filename));}
+                                                            }
+                                                            function cfVisualizarDoc(key,idx){
+                                                              const d=cfDocs[key];
+                                                              const a=cfArquivo(key,idx);
+                                                              if(!a){showToast('Documento ainda não está pronto','warn');return;}
+                                                              if(!a.url)a.url=URL.createObjectURL(a.blob);
+                                                              cfPrevAtual={key,idx};
+                                                              document.getElementById('cf-prev-title').textContent=a.titulo;
+                                                              cfRenderPreviewPaginas(a);
+                                                              const tabs=document.getElementById('cf-prev-tabs');
+                                                              if(d.arquivos.length>1){
+                                                                tabs.style.display='flex';
+                                                                tabs.innerHTML=d.arquivos.map((x,i)=>`<button class="cf-ch${i===idx?' active':''}" onclick="cfVisualizarDoc('${key}',${i})">${_rxEsc(x.titulo)}</button>`).join('');
+                                                              }else{tabs.style.display='none';tabs.innerHTML='';}
+                                                              document.getElementById('cf-prev').style.display='flex';
+                                                            }
+                                                            // Pré-visualização com pdf.js (páginas em canvas): o visor nativo em iframe
+                                                            // fica em branco em alguns navegadores e no iPad mostra só a 1ª página.
+                                                            let _cfPdfJsPromise=null;
+                                                            function cfCarregarPdfJs(){
+                                                              if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
+                                                              _cfPdfJsPromise=_cfPdfJsPromise||new Promise((resolve,reject)=>{
+                                                                const s=document.createElement('script');
+                                                                s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+                                                                s.onload=()=>{
+                                                                  if(!window.pdfjsLib){reject(new Error('pdf.js indisponível'));return;}
+                                                                  window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                                                                  resolve(window.pdfjsLib);
+                                                                };
+                                                                s.onerror=()=>{_cfPdfJsPromise=null;reject(new Error('pdf.js indisponível'));};
+                                                                document.head.appendChild(s);
+                                                              });
+                                                              return _cfPdfJsPromise;
+                                                            }
+                                                            async function cfRenderPreviewPaginas(a){
+                                                              const box=document.getElementById('cf-prev-pages');
+                                                              const frame=document.getElementById('cf-prev-frame');
+                                                              const token={};cfRenderPreviewPaginas.atual=token;
+                                                              frame.style.display='none';frame.src='about:blank';
+                                                              box.style.display='flex';
+                                                              box.innerHTML='<div class="cf-prev-msg"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Carregando pré-visualização…</div>';
+                                                              try{
+                                                                const pdfjs=await cfCarregarPdfJs();
+                                                                const pdf=await pdfjs.getDocument({data:new Uint8Array(await a.blob.arrayBuffer())}).promise;
+                                                                if(cfRenderPreviewPaginas.atual!==token)return;
+                                                                box.innerHTML='';
+                                                                for(let n=1;n<=pdf.numPages;n++){
+                                                                  const page=await pdf.getPage(n);
+                                                                  if(cfRenderPreviewPaginas.atual!==token)return;
+                                                                  const vp=page.getViewport({scale:1.6});
+                                                                  const cv=document.createElement('canvas');
+                                                                  cv.width=vp.width;cv.height=vp.height;
+                                                                  box.appendChild(cv);
+                                                                  await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+                                                                }
+                                                              }catch(e){
+                                                                console.warn('Pré-visualização com pdf.js falhou, usando o visor do navegador:',e);
+                                                                if(cfRenderPreviewPaginas.atual!==token)return;
+                                                                box.style.display='none';box.innerHTML='';
+                                                                frame.style.display='block';
+                                                                frame.src=a.url+'#navpanes=0&view=FitH';
+                                                              }
+                                                            }
+                                                            function cfFecharPreview(){
+                                                              cfRenderPreviewPaginas.atual=null;
+                                                              document.getElementById('cf-prev').style.display='none';
+                                                              document.getElementById('cf-prev-frame').src='about:blank';
+                                                              document.getElementById('cf-prev-pages').innerHTML='';
+                                                              cfPrevAtual=null;
+                                                            }
+                                                            function cfPreviewBaixar(){if(cfPrevAtual)cfBaixarDoc(cfPrevAtual.key,cfPrevAtual.idx);}
+                                                            function cfPreviewNovaAba(){
+                                                              const a=cfPrevAtual&&cfArquivo(cfPrevAtual.key,cfPrevAtual.idx);
+                                                              if(!a)return;
+                                                              if(!a.url)a.url=URL.createObjectURL(a.blob);
+                                                              window.open(a.url,'_blank','noopener');
+                                                            }
+                                                            function cfRenderDocs(){
+                                                              cfRenderDocList();
                                                               document.getElementById('cf-ch-wa').classList.toggle('active',condState.canal==='whatsapp');
                                                               document.getElementById('cf-ch-em').classList.toggle('active',condState.canal==='email');
                                                               const _isWa=condState.canal==='whatsapp';
@@ -14819,7 +15213,7 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                               }
                                                               cfUpdateSendBtn();
                                                             }
-                                                            function cfToggleRemovido(k){condState.removidos[k]=!condState.removidos[k];cfRenderDocs();}
+                                                            function cfToggleRemovido(k){condState.removidos[k]=!condState.removidos[k];cfRenderDocList();if(!condState.removidos[k])cfGerarDocsPendentes();}
                                                             function cfToggleSalvarConduta(on){
                                                         const inp=document.getElementById('cf-salvar-nome');
                                                         if(!inp)return;
@@ -14828,23 +15222,35 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                         if(on)inp.focus();
                                                       }
                                                             function condToggleCiente(ev){
-                                                              if(ev.target.id==='cf-ciente'){condState.ciente=ev.target.checked;}
-                                                              else{condState.ciente=!condState.ciente;document.getElementById('cf-ciente').checked=condState.ciente;}
+                                                              // O checkbox fica dentro do <label>: clicar no texto já dispara um clique
+                                                              // nativo no checkbox. Só esse segundo evento conta (antes contava os dois
+                                                              // e a marcação se desfazia).
+                                                              if(ev.target.id!=='cf-ciente')return;
+                                                              condState.ciente=ev.target.checked;
                                                               document.getElementById('cf-ciente-lbl').classList.toggle('on',condState.ciente);
                                                               cfUpdateSendBtn();
                                                             }
                                                             function cfUpdateSendBtn(){
+                                                              const btn=document.getElementById('cf-doc-send');
+                                                              if(!btn||!condState)return;
+                                                              if(btn.dataset.enviando==='1')return;
                                                               const contato=(document.getElementById('cf-doc-contato')?.value||'').trim();
-                                                              const ok=condState.ciente&&contato.length>0;
-                                                              document.getElementById('cf-doc-send').disabled=!ok;
+                                                              const pend=cfDocsPendentes().length;
+                                                              btn.disabled=!(condState.ciente&&contato.length>0&&pend===0);
+                                                              btn.title=pend?'Aguarde todos os documentos ficarem prontos (ou desconsidere os que falharam)':'';
                                                             }
                                                             document.addEventListener('input',e=>{if(e.target&&e.target.id==='cf-doc-contato')cfUpdateSendBtn();});
                                                             async function condEnviar(){
+                                                              if(cfDocsPendentes().length){showToast('Aguarde todos os documentos ficarem prontos','warn');return;}
                                                               const sel=document.getElementById('cf-anamnese-model');
                                                               const modelId=sel?sel.value:'';
                                                               const btn=document.getElementById('cf-doc-send');
+                                                              const origHtml=btn.innerHTML;
+                                                              const contato=(document.getElementById('cf-doc-contato')?.value||'').trim();
+                                                              btn.disabled=true;btn.dataset.enviando='1';
+                                                              const fim=()=>{btn.dataset.enviando='';btn.innerHTML=origHtml;cfUpdateSendBtn();};
                                                               if(modelId){
-                                                                const origHtml=btn.innerHTML;btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Gerando anamnese...';
+                                                                btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Gerando anamnese...';
                                                                 try{
                                                                   const models=await fetchAnamneseModels();
                                                                   const model=models.find(m=>m.id===modelId)||models.find(m=>m.is_default);
@@ -14871,40 +15277,63 @@ async function iaAssistEnviarConviteWhatsapp(action){
                                                                       }
                                                                     }
                                                                   }
-                                                                }catch(e){showToast('Erro ao gerar anamnese: '+(e.message||e),'error');btn.disabled=false;btn.innerHTML=origHtml;return;}
-                                                                  // Salvar conduta se checkbox marcado
-                                                      if(condState.salvarModelo){
-                                                        const nomeInp = document.getElementById('cf-save-nome');
-                                                        const nome = nomeInp ? nomeInp.value.trim() : '';
-                                                        if(nome) cfSaveConduta(nome, condState);
-                                                      }
-                                                      showToast('Documentos enviados...', 'success');
-                                                      closeModal();
+                                                                }catch(e){showToast('Erro ao gerar anamnese: '+(e.message||e),'error');fim();return;}
                                                               }
+
+                                                              // Salva os PDFs prontos em Documentos do paciente (uma vez só por arquivo).
+                                                              btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Salvando documentos...';
+                                                              const arqs=cfArquivosProntos();
+                                                              const salvos=[];
+                                                              for(const a of arqs){
+                                                                if(!a.docId&&a.salvar){
+                                                                  const row=await salvarDocumentoGerado(a.salvar);
+                                                                  if(row)a.docId=row.id;
+                                                                }
+                                                                if(a.docId)salvos.push(a);
+                                                              }
+                                                              if(arqs.length){
+                                                                const pa=document.getElementById('pront-area');
+                                                                if(pa){
+                                                                  const ts=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+                                                                  pa.value+=(pa.value?'\n\n':'')+`[${ts}] DOCUMENTOS DA CONDUTA:\n`+arqs.map(a=>'• '+a.titulo+(a.assinado?' (assinado digitalmente)':'')).join('\n');
+                                                                  markAtendDirty();
+                                                                }
+                                                              }
+
+                                                              // Envio: WhatsApp da clínica (mesma rota de Documentos › Forçar envio).
+                                                              let msgEnvio='';
+                                                              if(salvos.length&&condState.canal==='whatsapp'){
+                                                                btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Enviando pelo WhatsApp...';
+                                                                let ok=0;const falhas=[];
+                                                                try{
+                                                                  const {data:sess}=await sb.auth.getSession();
+                                                                  const token=sess?.session?.access_token;
+                                                                  if(!token)throw new Error('Sessão expirada');
+                                                                  for(const a of salvos){
+                                                                    try{
+                                                                      const resp=await fetch('/api/comunicacao/enviar',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
+                                                                        body:JSON.stringify({tipo:'documento',documento_id:a.docId,telefone:contato})});
+                                                                      const j=await resp.json().catch(()=>({}));
+                                                                      if(!resp.ok)throw new Error(j.message||j.error||'Falha no envio');
+                                                                      ok++;
+                                                                    }catch(e){falhas.push(a.titulo+': '+(e.message||e));}
+                                                                  }
+                                                                }catch(e){falhas.push(e.message||String(e));}
+                                                                if(falhas.length)showToast('Não foi possível enviar pelo WhatsApp — '+falhas[0]+'. Os documentos ficaram salvos em Documentos.','error');
+                                                                msgEnvio=ok?` • ${ok} enviado${ok>1?'s':''} pelo WhatsApp`:'';
+                                                              }else if(salvos.length&&condState.canal==='email'){
+                                                                msgEnvio=' • envio por e-mail ainda não disponível: baixe os PDFs para enviar';
+                                                              }
+
                                                               // Salvar conduta como modelo se checkbox marcado
-                                                      const _chkSalvar=document.getElementById('cf-salvar-conduta');
-                                                      const _nomeSalvar=(document.getElementById('cf-salvar-nome')?.value||'').trim();
-                                                      if(_chkSalvar&&_chkSalvar.checked&&_nomeSalvar){
-                                                        try{
-                                                          const _lista=cfGetSavedCondutas();
-                                                          const _campos=[
-                                                            {key:'conduta',     grad:'linear-gradient(135deg,#34d399,#059669)', icon:'ti-clipboard'},
-                                                            {key:'medicamentos',grad:'linear-gradient(135deg,#818cf8,#6d28d9)', icon:'ti-pill'},
-                                                            {key:'orientacoes', grad:'linear-gradient(135deg,#f472b6,#db2777)', icon:'ti-heart'},
-                                                            {key:'exames',      grad:'linear-gradient(135deg,#38bdf8,#0284c7)', icon:'ti-flask'},
-                                                            {key:'atestado',    grad:'linear-gradient(135deg,#fb923c,#ea580c)', icon:'ti-award'},
-                                                            {key:'laudo',       grad:'linear-gradient(135deg,#a78bfa,#7c3aed)', icon:'ti-eye'},
-                                                          ];
-                                                          _lista.push({
-                                                            nome: _nomeSalvar,
-                                                            data: new Date().toLocaleDateString('pt-BR'),
-                                                            campos: _campos.filter(c=>condState.ativados&&condState.ativados[c.key]),
-                                                            state: JSON.parse(JSON.stringify(condState))
-                                                          });
-                                                          localStorage.setItem(CF_SAVED_KEY, JSON.stringify(_lista));
-                                                        }catch(_e){console.warn('Erro ao salvar conduta',_e);}
-                                                      }
-                                                      showToast('Documentos enviados via '+(condState.canal==='whatsapp'?'WhatsApp':'e-mail')+(modelId?' • Anamnese adicionada ao prontuário':''),'success');
+                                                              const _chkSalvar=document.getElementById('cf-salvar-conduta');
+                                                              const _nomeSalvar=(document.getElementById('cf-salvar-nome')?.value||'').trim();
+                                                              if(_chkSalvar&&_chkSalvar.checked&&_nomeSalvar){
+                                                                try{ cfSaveConduta(_nomeSalvar,condState); }
+                                                                catch(_e){console.warn('Erro ao salvar conduta',_e);}
+                                                              }
+                                                              showToast(`${salvos.length} documento${salvos.length===1?'':'s'} salvo${salvos.length===1?'':'s'} em Documentos`+msgEnvio+(modelId?' • Anamnese adicionada ao prontuário':''),'success');
+                                                              fim();
                                                               closeModal();
                                                             }
                                                             async function runAnamneseGeneration(modelId){
@@ -16778,7 +17207,7 @@ let rxSelected = [];
                                                             /* Gera um PDF por tipo de documento. Itens de notificação também
                                                                entram na receita comum, que é a receita que acompanha a
                                                                notificação (Portaria 344, art. 35). */
-                                                            async function rxGerarDocumentosReceita({ items, formulas, paciente }) {
+                                                            async function rxGerarDocumentosReceita({ items, formulas, paciente, onPronto }) {
                                                               const T = Receituario.TIPOS;
                                                               const catDe = (it) => (it.controle && it.controle.cat) || 'COMUM';
                                                               const doTipo = (lst, pred) => (lst || []).filter(it => pred(catDe(it)));
@@ -16786,13 +17215,13 @@ let rxSelected = [];
                                                               const vaiNaComum = (c) => c === 'COMUM' || ehNotif(c);
 
                                                               const comunsM = doTipo(items, vaiNaComum), comunsF = doTipo(formulas, vaiNaComum);
-                                                              if (comunsM.length || comunsF.length) await openReceitaPDF({ items: comunsM, formulas: comunsF, modo: 'COMUM', paciente });
+                                                              if (comunsM.length || comunsF.length) await openReceitaPDF({ items: comunsM, formulas: comunsF, modo: 'COMUM', paciente, onPronto });
                                                               for (const modo of ['CE', 'RET_ATM', 'RET_GLP1']) {
                                                                 const m = doTipo(items, c => c === modo), f = doTipo(formulas, c => c === modo);
-                                                                if (m.length || f.length) await openReceitaPDF({ items: m, formulas: f, modo, paciente });
+                                                                if (m.length || f.length) await openReceitaPDF({ items: m, formulas: f, modo, paciente, onPronto });
                                                               }
                                                               for (const it of doTipo(items, ehNotif).concat(doTipo(formulas, ehNotif))) {
-                                                                await openNotificacaoPDF({ item: it, paciente });
+                                                                await openNotificacaoPDF({ item: it, paciente, onPronto });
                                                               }
                                                             }
 
@@ -16800,7 +17229,7 @@ let rxSelected = [];
                                                                para transcrição no talonário oficial. Não é documento válido para
                                                                dispensação: notificação eletrônica exige numeração do SNCR
                                                                (RDC nº 1.000/2025), ainda não integrado. */
-                                                            async function openNotificacaoPDF({ item, paciente }) {
+                                                            async function openNotificacaoPDF({ item, paciente, onPronto }) {
                                                               const T = Receituario.TIPOS;
                                                               const tipo = T[item.controle.cat];
                                                               if (!tipo || !tipo.notificacao) return;
@@ -16899,8 +17328,7 @@ let rxSelected = [];
                                                                   jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                                                                   pagebreak: { mode: ['css', 'legacy'] }
                                                                 }).from(holder.querySelector('.sheet') || holder).outputPdf('blob');
-                                                                _baixarBlob(blob, filename);
-                                                                await salvarDocumentoGerado({
+                                                                const salvarNotif = {
                                                                   tipo: 'receita',
                                                                   pacienteNome: p.name || 'Paciente',
                                                                   pacienteCpf: p.cpf || null,
@@ -16913,7 +17341,12 @@ let rxSelected = [];
                                                                   blob,
                                                                   filename,
                                                                   assinado: false,
-                                                                });
+                                                                };
+                                                                // Fluxo Conduta: entrega o PDF pronto para pré-visualizar/baixar;
+                                                                // quem chama salva ao confirmar.
+                                                                if (onPronto) { onPronto({ titulo: 'Espelho — ' + tipo.titulo, blob, filename, assinado: false, salvar: salvarNotif }); return; }
+                                                                _baixarBlob(blob, filename);
+                                                                await salvarDocumentoGerado(salvarNotif);
                                                               } catch (e) {
                                                                 console.error('Falha ao gerar espelho da notificação', e);
                                                                 showToast && showToast('Falha ao gerar espelho da ' + tipo.titulo, 'error');
@@ -17374,7 +17807,7 @@ let rxSelected = [];
                                                   setTimeout(() => URL.revokeObjectURL(url), 4000);
                                                 }
 
-                                                async function openReceitaPDF({ items, formulas, controleEspecial, modo, paciente }) {
+                                                async function openReceitaPDF({ items, formulas, controleEspecial, modo, paciente, onPronto }) {
                                       const meds = items || [];
                                       const formulasList = formulas || [];
                                       if (!meds.length && !formulasList.length) { showToast && showToast('Nenhum medicamento ou fórmula para a receita', 'warn'); return; }
@@ -17485,13 +17918,7 @@ let rxSelected = [];
                                                   });
                                                   if (!result) return;
 
-                                                  _baixarBlob(result.finalBlob, result.filename);
-                                                  showToast && showToast(
-                                                    result.signedUrl ? 'Receita assinada digitalmente ✓' : 'Receita gerada com sucesso',
-                                                    'success'
-                                                  );
-
-                                                  await salvarDocumentoGerado({
+                                                  const salvarReceita = {
                                                     tipo: 'receita',
                                                     pacienteNome: p.name || 'Paciente',
                                                     pacienteCpf: p.cpf || null,
@@ -17500,7 +17927,19 @@ let rxSelected = [];
                                                     blob: result.finalBlob,
                                                     filename: result.filename,
                                                     assinado: !!result.signedUrl,
-                                                  });
+                                                  };
+                                                  // Fluxo Conduta: entrega o PDF pronto para pré-visualizar/baixar;
+                                                  // quem chama salva ao confirmar.
+                                                  if (onPronto) {
+                                                    onPronto({ titulo: modo === 'COMUM' ? 'Receituário Médico' : tipoDoc.titulo, blob: result.finalBlob, filename: result.filename, assinado: !!result.signedUrl, salvar: salvarReceita });
+                                                    return;
+                                                  }
+                                                  _baixarBlob(result.finalBlob, result.filename);
+                                                  showToast && showToast(
+                                                    result.signedUrl ? 'Receita assinada digitalmente ✓' : 'Receita gerada com sucesso',
+                                                    'success'
+                                                  );
+                                                  await salvarDocumentoGerado(salvarReceita);
                                                 }
 
                                                 /* ========== SOLICITAÇÃO DE EXAMES (TUSS) ==========
@@ -19175,7 +19614,9 @@ let rxSelected = [];
                                                   laudo:              { label: 'Laudo',                   icon: 'ti-clipboard-text' },
                                                   solicitacao_exame:  { label: 'Solicitação de exame',     icon: 'ti-test-pipe' },
                                                   encaminhamento:     { label: 'Encaminhamento',           icon: 'ti-send' },
-                                                  prontuario:         { label: 'Prontuário',               icon: 'ti-notes' },
+                                                  orientacoes:        { label: 'Orientações ao paciente',  icon: 'ti-heart' },
+                                                  conduta:            { label: 'Plano de conduta',         icon: 'ti-clipboard-list' },
+                                                  prontuario:        { label: 'Prontuário',               icon: 'ti-notes' },
                                                 };
                                                 const DOC_STATUS_META = {
                                                   nao_assinado: { label: 'Não assinado', cls: 'rx-st-nao_assinado' },
@@ -19721,7 +20162,7 @@ let rxSelected = [];
                                                 }
 
                                                 /* Chamada a partir do fluxo Conduta > Documentos > botão PDF de Medicamentos */
-                                                async function condGerarReceita() {
+                                                async function condGerarReceita(onPronto) {
                                                               const meds = (condState && condState.medicamentos || []).filter(m => m.selecionado);
                                                               if (!meds.length) { showToast && showToast('Selecione ao menos um medicamento', 'warn'); return; }
                                                               const itensBase = meds.map(m => ({
@@ -19735,7 +20176,7 @@ let rxSelected = [];
                                                               const paciente = currentPatient || {};
                                                               const prep = await rxPrepararItensControlados(itensBase, [], paciente);
                                                               if (!prep) return;
-                                                              await rxGerarDocumentosReceita({ items: prep.itens, formulas: [], paciente: prep.paciente });
+                                                              await rxGerarDocumentosReceita({ items: prep.itens, formulas: [], paciente: prep.paciente, onPronto });
                                                             }
                                                             async function saveNewPatient(){
                                                               const val=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
