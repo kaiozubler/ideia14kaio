@@ -520,6 +520,9 @@
                                                       .bbl-text{flex:1;min-width:0;white-space:pre-wrap}
                                                       .bbl-content{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
                                                       .bbl-content .bbl-text{flex:none}
+                                                      .bbl-atalho{align-self:flex-start;display:inline-flex;align-items:center;gap:5px;margin-top:2px;padding:4px 10px;border:0.5px solid #fde68a;border-radius:999px;background:#fffbeb;color:#92400e;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;transition:background .14s}
+                                                      .bbl-atalho:hover{background:#fef3c7}
+                                                      .bbl-atalho .ti{font-size:13px;color:#d97706}
                                                       .bbl-actions{display:flex;gap:2px;opacity:0;transition:opacity .14s;flex-shrink:0;margin-top:0}
                                                       .bbl:hover .bbl-actions{opacity:1}
                                                       .bbl-pin-btn{width:18px;height:18px;border-radius:3px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--n300)}
@@ -1549,6 +1552,14 @@
                                                         min-height:0;
                                                         display:flex;
                                                         flex-direction:column;
+                                                      }
+                                                      /* Lista de atendimentos anteriores rola por dentro (a aba tem overflow:hidden) */
+                                                      #s-patient-detail #atend-list{
+                                                        flex:1;
+                                                        min-height:0;
+                                                        overflow-y:auto;
+                                                        padding-right:4px;
+                                                        padding-bottom:12px;
                                                       }
                                                       #s-patient-detail #atend-detail-view #atend-detail-scroll{
         flex:0 1 auto;
@@ -3385,10 +3396,10 @@
                         <button
                           class="btn sm primary"
                           onclick="openCondutaFlow()"
-                          title="Gerar conduta com documentos"
+                          title="Finalizar: gerar conduta com documentos"
                           style="background:linear-gradient(135deg,#34d399,#059669);border-color:rgba(5,150,105,.5)"
                         >
-                          <i class="ti ti-stethoscope"></i> Conduta
+                          <i class="ti ti-stethoscope"></i> Finalização
                         </button>
                         <div class="video-split-btn split-btn" id="video-split-btn">
                           <button
@@ -11575,7 +11586,11 @@ showAtendList();
                                                               const selo=temFonte
                                                                 ? `<div class="bk-fonte-badge bk-fonte-badge-click" title="${iaEscHtml(fonteBaseConhecimento.join(', '))} — clique para abrir"><i class="ti ti-database"></i> Base de conhecimento local: ${iaEscHtml(fonteBaseConhecimento.join(', '))}</div>`
                                                                 : '';
-                                                              el.innerHTML=`<div class="bbl-content"><span class="bbl-text">${text}</span>${selo}</div><span class="bbl-actions"><button class="bbl-pin-btn" onclick="togglePin('${id}')" title="Fixar"><i class="ti ti-pin"></i></button></span>`;
+                                                              const atalho=opts&&opts.atalho;
+                                                              const atalhoHtml=atalho==='dados-clinicos'
+                                                                ? `<button type="button" class="bbl-atalho" onclick="abrirDadosClinicosDoAtendimento()" title="Abrir os dados clínicos do paciente (o atendimento continua salvo)"><i class="ti ti-alert-circle"></i> Ver dados clínicos</button>`
+                                                                : '';
+                                                              el.innerHTML=`<div class="bbl-content"><span class="bbl-text">${text}</span>${atalhoHtml}${selo}</div><span class="bbl-actions"><button class="bbl-pin-btn" onclick="togglePin('${id}')" title="Fixar"><i class="ti ti-pin"></i></button></span>`;
                                                               if(!bubblesVisible&&type!=='usr')el.style.display='none';
                                                               layer.appendChild(el);
                                                               if(temFonte){
@@ -11586,7 +11601,7 @@ showAtendList();
                                                               bblCount++;
                                                               if((!opts||opts.record!==false)&&atendEmAndamento){
                                                                 if(!Array.isArray(atendEmAndamento.bblHistory))atendEmAndamento.bblHistory=[];
-                                                                atendEmAndamento.bblHistory.push({type,text:rawText,ts:new Date().toISOString()});
+                                                                atendEmAndamento.bblHistory.push(atalho?{type,text:rawText,atalho,ts:new Date().toISOString()}:{type,text:rawText,ts:new Date().toISOString()});
                                                                 saveAtendDraft();
                                                               }
                                                             }
@@ -11850,7 +11865,21 @@ showAtendList();
                                                                 ?('📋 **Resumo do prontuário de '+nomePaciente+'**\n\n'+resumo+'\n\n---\n'+instrucoes)
                                                                 :('Ainda não há um resumo de prontuário disponível para '+nomePaciente+'. '+instrucoes);
                                                               aiChatHistory.push({role:'assistant',content:msg});
-                                                              spawnBubble('ia',msg);
+                                                              spawnBubble('ia',msg,{atalho:'dados-clinicos'});
+                                                            }
+
+                                                            /* Atalho da mensagem de resumo: leva aos Dados Clínicos (aba Prontuário) já
+                                                               abertos e com foco. O atendimento em andamento fica salvo pelo openTab e é
+                                                               retomado ao voltar para a aba Atendimentos. */
+                                                            function abrirDadosClinicosDoAtendimento(){
+                                                              openTab('prontuario');
+                                                              const body=document.getElementById('dc-body');
+                                                              if(body&&body.style.display==='none')toggleDadosClinicos();
+                                                              const ta=document.getElementById('dados-clinicos-ta');
+                                                              if(ta){
+                                                                ta.scrollIntoView({behavior:'smooth',block:'center'});
+                                                                setTimeout(()=>{try{ta.focus({preventScroll:true});}catch(e){}},250);
+                                                              }
                                                             }
 
                                                             async function ensureResumoProntuario(idPaciente,opts){
@@ -19934,7 +19963,7 @@ let rxSelected = [];
                                                               const layer=document.getElementById('bubbles-layer');
                                                               const ph=document.getElementById('orb-center-placeholder');
                                                               if(layer){layer.innerHTML='';if(ph)layer.appendChild(ph);}
-                                                              (Array.isArray(d.bblHistory)?d.bblHistory:[]).forEach(b=>spawnBubble(b.type||'ia',b.text||'',{record:false}));
+                                                              (Array.isArray(d.bblHistory)?d.bblHistory:[]).forEach(b=>spawnBubble(b.type||'ia',b.text||'',{record:false,atalho:b.atalho}));
                                                               if(!bubblesVisible&&layer)layer.classList.add('hidden-bbl');
                                                               const icon=document.getElementById('toggle-bbl-icon');if(icon)icon.className=bubblesVisible?'ti ti-eye':'ti ti-eye-off';
                                                               refreshPinnedStrip();
