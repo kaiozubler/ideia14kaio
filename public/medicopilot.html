@@ -679,6 +679,11 @@
 
                   /* ============ TASK TRAY — comandos executados durante a consulta ============ */
                   .task-tray{display:flex;align-items:center;gap:8px;margin-left:auto;position:relative;padding-left:6px}
+                  /* Com o painel da consulta expandido (z-index 100000), os balões de pendência
+                     e os avisos flutuam por cima dele — senão só apareceriam ao finalizar. */
+                  body.panel-expanded-active .task-tray{position:fixed;top:12px;right:56px;z-index:100001;margin:0;padding:4px 6px;border-radius:999px;background:rgba(255,255,255,.92);box-shadow:0 6px 18px -6px rgba(15,23,42,.3)}
+                  body.panel-expanded-active .task-tray:not(:has(.task-bubble,.task-tray-overflow)){display:none}
+                  body.panel-expanded-active .toast{z-index:100002}
                   .task-tray-bubbles{display:flex;flex-direction:row-reverse;align-items:center;gap:8px;flex-wrap:nowrap;justify-content:flex-end}
                   @keyframes taskFloat{
                     0%{transform:translateY(0) rotate(0deg);}
@@ -7726,12 +7731,40 @@ const tri=document.getElementById('cli-triagem');if(tri)tri.checked=CLINICA.tria
                                                                 // "Gerar pendência" = o balão flutuante do task tray: fica
                                                                 // sinalizado para o médico revisar quando quiser, sem
                                                                 // interromper a consulta agora.
+                                                                if(COP_VOICE_ABRE_MODAL.has(rule.action)){
+                                                                  // Agendar/receita abrem um modal: em vez de abri-lo no meio da
+                                                                  // consulta (e escondido atrás do painel expandido, só aparecendo
+                                                                  // ao finalizar), vira um balão que abre o modal ao ser tocado.
+                                                                  copVoiceCriarPendencia(rule,kwLabel,label);
+                                                                  return;
+                                                                }
                                                                 if(typeof showToast==='function')showToast('Pendência detectada: "'+kwLabel+'" → gerando '+label+'...','info');
                                                                 runCopVoiceRuleAction(rule,kwLabel,label);
                                                               } else {
                                                                 if(typeof showToast==='function')showToast('Comando de voz detectado: "'+kwLabel+'" → '+label,'success');
                                                                 runCopVoiceRuleAction(rule,kwLabel,label);
                                                               }
+                                                            }
+                                                            // Ações diretas que abrem um modal na tela.
+                                                            const COP_VOICE_ABRE_MODAL=new Set(['agendar_paciente','gerar_receita']);
+                                                            const COP_VOICE_PEND_KIND={agendar_paciente:'agendamento',gerar_receita:'receita'};
+                                                            function copVoiceCriarPendencia(rule,kwLabel,label){
+                                                              const kind=COP_VOICE_PEND_KIND[rule.action]||'documento';
+                                                              const item={id:'tt-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),attachId:null,kind,createdAt:Date.now(),
+                                                                pendencia:{rule,kwLabel,label}};
+                                                              window.taskTray.push(item);
+                                                              renderTaskTray();
+                                                              if(typeof showToast==='function')showToast('Pendência criada: '+label+' — toque no balão "'+((TASK_KIND_CFG[kind]||{}).label||label)+'" para abrir.','info');
+                                                            }
+                                                            // Recolhe o painel expandido da consulta (z-index 100000), que
+                                                            // cobriria o modal aberto pela ação.
+                                                            function copVoiceRecolherPainelExpandido(){
+                                                              const w=document.querySelector('#atend-novo-view .split-wrap');
+                                                              if(w&&(w.classList.contains('exp-left')||w.classList.contains('exp-right'))){
+                                                                togglePanelExpand(w.classList.contains('exp-left')?'left':'right');
+                                                              }
+                                                              const card=document.getElementById('adv-ai-card');
+                                                              if(card&&card.classList.contains('adv-ai-expanded'))toggleAdvAiExpand();
                                                             }
 
                                                             // As 6 primeiras ações (gerar/enviar receita, gerar/enviar atestado,
@@ -7759,6 +7792,7 @@ const tri=document.getElementById('cli-triagem');if(tri)tri.checked=CLINICA.tria
                                                             // ---- Ações diretas (sem IA) ----
                                                             function executeCopVoiceActionDireto(rule,kwLabel,label){
                                                               const nome=(currentPatient&&currentPatient.name)||'';
+                                                              if(COP_VOICE_ABRE_MODAL.has(rule.action))copVoiceRecolherPainelExpandido();
                                                               switch(rule.action){
                                                                 case 'gerar_receita': {
                                                                   // Abre o mesmo modal de "Receitas e Atestados" já usado no resto
@@ -7804,7 +7838,7 @@ const tri=document.getElementById('cli-triagem');if(tri)tri.checked=CLINICA.tria
                                                             // task tray — ex.: "enviar receita" manda a última receita gerada
                                                             // nesta consulta para o paciente.
                                                             function copVoiceEnviarUltimoBalao(kind,label){
-                                                              const idx=window.taskTray.map(function(t){return t.kind;}).lastIndexOf(kind);
+                                                              const idx=window.taskTray.map(function(t){return t.pendencia?null:t.kind;}).lastIndexOf(kind);
                                                               if(idx===-1){
                                                                 if(typeof showToast==='function')showToast('Nenhum(a) '+label.toLowerCase()+' pendente nesta consulta para enviar.','error');
                                                                 return;
@@ -9963,7 +9997,36 @@ if(ehMembroEquipe()&&name!=='cadastro'){name='cadastro';el=null;}
                                                                 alert('Erro ao salvar identificação do paciente.');
                                                               }
                                                             }
+                                                            /* Load ao finalizar: a finalização consulta a IA (informações complementares)
+                                                               e grava no banco, o que leva alguns segundos — sem retorno visual o botão
+                                                               parecia travado. Uma camada bloqueia a tela (e cliques repetidos) até terminar. */
+                                                            let _finalizandoAtend=false;
+                                                            function mostrarLoadFinalizar(show){
+                                                              let el=document.getElementById('finalizar-load');
+                                                              if(!el&&show){
+                                                                el=document.createElement('div');el.id='finalizar-load';
+                                                                el.setAttribute('role','status');el.setAttribute('aria-live','polite');
+                                                                el.style.cssText='position:fixed;inset:0;z-index:200001;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.35);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)';
+                                                                el.innerHTML='<div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;padding:16px 22px;box-shadow:0 18px 40px -12px rgba(15,23,42,.45);font-size:13.5px;font-weight:600;color:#0f172a">'
+                                                                  +'<i class="ti ti-loader-2" style="font-size:22px;color:#059669;animation:spin 1s linear infinite"></i>'
+                                                                  +'<span>Finalizando consulta…<br><small style="font-weight:400;color:#64748b">Salvando o atendimento, aguarde.</small></span></div>';
+                                                                document.body.appendChild(el);
+                                                              }
+                                                              if(el)el.style.display=show?'flex':'none';
+                                                            }
                                                             async function saveAtendInternal(opts){
+                                                              if(!(opts&&opts.finalize))return _saveAtendInternal(opts);
+                                                              if(_finalizandoAtend)return{deferred:true}; // clique repetido enquanto finaliza
+                                                              _finalizandoAtend=true;
+                                                              mostrarLoadFinalizar(true);updateSaveStatus('saving');
+                                                              try{
+                                                                const r=await _saveAtendInternal(opts);
+                                                                updateSaveStatus(r&&r.deferred?'dirty':'saved');
+                                                                return r;
+                                                              }catch(e){updateSaveStatus('error');throw e;}
+                                                              finally{_finalizandoAtend=false;mostrarLoadFinalizar(false);}
+                                                            }
+                                                            async function _saveAtendInternal(opts){
                                                               const finalize=!!(opts&&opts.finalize);
                                                               if(finalize&&precisaIdentificarPaciente()){
                                                                 abrirModalIdentificarPaciente(opts);
@@ -13219,6 +13282,14 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                   function openTaskBubble(taskId){
                     const item=window.taskTray.find(function(t){return t.id===taskId;});
                     if(!item)return;
+                    if(item.pendencia){
+                      // Pendência de comando de voz (ex.: Agendar): executa a ação agora.
+                      window.taskTray=window.taskTray.filter(function(t){return t.id!==taskId;});
+                      renderTaskTray();
+                      const p=item.pendencia;
+                      runCopVoiceRuleAction(p.rule,p.kwLabel,p.label);
+                      return;
+                    }
                     if(item.kind==='confirmacao'){
                       const pending=window.copVoicePendingConfirm[item.attachId];
                       const desc=pending?('"'+pending.kwLabel+'" → '+pending.label):'este comando de voz';
@@ -13259,11 +13330,11 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                     document.getElementById('task-tray-dropdown').classList.remove('open');
                     const byKind={};
                     window.taskTray.forEach(function(item){
-                      if(item.kind==='confirmacao')return; // aguardando confirmação — não funde
+                      if(item.kind==='confirmacao'||item.pendencia)return; // aguardando decisão do médico — não funde
                       (byKind[item.kind]=byKind[item.kind]||[]).push(item);
                     });
                     let fundidos=0;
-                    const novaLista=window.taskTray.filter(function(item){return item.kind==='confirmacao';});
+                    const novaLista=window.taskTray.filter(function(item){return item.kind==='confirmacao'||item.pendencia;});
                     Object.keys(byKind).forEach(function(kind){
                       const items=byKind[kind];
                       if(items.length<2){ novaLista.push(items[0]); return; }
@@ -13302,7 +13373,7 @@ if((patientAge==='—'||patientCpf==='—')&&att.paciente_id){
                     let ok=0, falhas=0;
                     const restantes=[];
                     for(const item of window.taskTray.slice()){
-                      if(item.kind==='confirmacao'){ restantes.push(item); continue; } // aguardando decisão do médico
+                      if(item.kind==='confirmacao'||item.pendencia){ restantes.push(item); continue; } // aguardando decisão do médico
                       const att=window.iaAssistAttachments[item.attachId];
                       if(!att)continue;
                       try{
