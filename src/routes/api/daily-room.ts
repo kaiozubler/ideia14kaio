@@ -1,9 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { getUserIdFromRequest } from "@/lib/signature/requestAuth.server";
+import { SALA_RE } from "@/lib/video/consulta";
 
 export const Route = createFileRoute("/api/daily-room")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // Só quem está logado no app cria salas e recebe token de anfitrião
+        // (is_owner); o paciente entra por /consulta/<sala> com token de
+        // participante (/api/public/consulta/sala).
+        const userId = await getUserIdFromRequest(request);
+        if (!userId) return Response.json({ error: "unauthorized" }, { status: 401 });
         const apiKey = process.env["DAILY_API_KEY"];
         if (!apiKey) {
           console.error("[daily-room] DAILY_API_KEY não está disponível neste ambiente");
@@ -24,6 +31,9 @@ export const Route = createFileRoute("/api/daily-room")({
           };
         } catch {
           /* no body */
+        }
+        if (body.name !== undefined && !SALA_RE.test(String(body.name))) {
+          return Response.json({ error: "sala_invalida" }, { status: 400 });
         }
         // Por padrão a sala expira em 2h (chamada iniciada agora). Quando a
         // sala é pré-criada no momento do agendamento (consulta pode ser
@@ -52,7 +62,7 @@ export const Route = createFileRoute("/api/daily-room")({
         if (body.name) {
           const existing = await fetch(
             `https://api.daily.co/v1/rooms/${encodeURIComponent(body.name)}`,
-            { headers: { Authorization: `Bearer ${apiKey}` } }
+            { headers: { Authorization: `Bearer ${apiKey}` } },
           );
           if (existing.ok) {
             data = (await existing.json()) as { url?: string; name?: string };
@@ -81,7 +91,7 @@ export const Route = createFileRoute("/api/daily-room")({
               }
               const existing = await fetch(
                 `https://api.daily.co/v1/rooms/${encodeURIComponent(existingRoomName)}`,
-                { headers: { Authorization: `Bearer ${apiKey}` } }
+                { headers: { Authorization: `Bearer ${apiKey}` } },
               );
               if (existing.ok) {
                 data = (await existing.json()) as { url?: string; name?: string };

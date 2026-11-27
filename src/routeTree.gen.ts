@@ -31,6 +31,7 @@ import { Route as ApiMapaFamiliarIaRouteImport } from './routes/api/mapa-familia
 import { Route as ApiSuporteIaRouteImport } from './routes/api/suporte-ia'
 import { Route as ApiWhatsappConviteRouteImport } from './routes/api/whatsapp-convite'
 import { Route as ApiWhatsappWebhookRouteImport } from './routes/api/whatsapp-webhook'
+import { Route as ConsultaSalaRouteImport } from './routes/consulta.$sala'
 import { Route as ContratacaoConclusaoRouteImport } from './routes/contratacao/conclusao'
 import { Route as ContratacaoConfirmarRouteImport } from './routes/contratacao/confirmar'
 import { Route as ContratacaoDadosRouteImport } from './routes/contratacao/dados'
@@ -95,6 +96,7 @@ import { Route as ApiDocumentosVerificacaoReservarRouteImport } from './routes/a
 import { Route as ApiPublicAgendamentoClinicaRouteImport } from './routes/api/public/agendamento/clinica'
 import { Route as ApiPublicAgendamentoHorariosRouteImport } from './routes/api/public/agendamento/horarios'
 import { Route as ApiPublicAgendamentoReservarRouteImport } from './routes/api/public/agendamento/reservar'
+import { Route as ApiPublicConsultaSalaRouteImport } from './routes/api/public/consulta/sala'
 import { Route as ApiPublicCrmClinicasRouteImport } from './routes/api/public/crm/clinicas'
 import { Route as ApiPublicCrmCuponsRouteImport } from './routes/api/public/crm/cupons'
 import { Route as ApiPublicCrmHealthRouteImport } from './routes/api/public/crm/health'
@@ -248,6 +250,11 @@ const ApiWhatsappConviteRoute = ApiWhatsappConviteRouteImport.update({
 const ApiWhatsappWebhookRoute = ApiWhatsappWebhookRouteImport.update({
   id: '/api/whatsapp-webhook',
   path: '/api/whatsapp-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConsultaSalaRoute = ConsultaSalaRouteImport.update({
+  id: '/consulta/$sala',
+  path: '/consulta/$sala',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContratacaoConclusaoRoute = ContratacaoConclusaoRouteImport.update({
@@ -592,6 +599,11 @@ const ApiPublicAgendamentoReservarRoute =
     path: '/api/public/agendamento/reservar',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicConsultaSalaRoute = ApiPublicConsultaSalaRouteImport.update({
+  id: '/api/public/consulta/sala',
+  path: '/api/public/consulta/sala',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCrmClinicasRoute = ApiPublicCrmClinicasRouteImport.update({
   id: '/api/public/crm/clinicas',
   path: '/api/public/crm/clinicas',
@@ -845,6 +857,7 @@ export interface FileRoutesByFullPath {
   '/api/suporte-ia': typeof ApiSuporteIaRoute
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
+  '/consulta/$sala': typeof ConsultaSalaRoute
   '/contratacao/conclusao': typeof ContratacaoConclusaoRoute
   '/contratacao/confirmar': typeof ContratacaoConfirmarRoute
   '/contratacao/dados': typeof ContratacaoDadosRoute
@@ -909,6 +922,7 @@ export interface FileRoutesByFullPath {
   '/api/public/agendamento/clinica': typeof ApiPublicAgendamentoClinicaRoute
   '/api/public/agendamento/horarios': typeof ApiPublicAgendamentoHorariosRoute
   '/api/public/agendamento/reservar': typeof ApiPublicAgendamentoReservarRoute
+  '/api/public/consulta/sala': typeof ApiPublicConsultaSalaRoute
   '/api/public/crm/clinicas': typeof ApiPublicCrmClinicasRouteWithChildren
   '/api/public/crm/cupons': typeof ApiPublicCrmCuponsRouteWithChildren
   '/api/public/crm/health': typeof ApiPublicCrmHealthRoute
@@ -974,6 +988,7 @@ export interface FileRoutesByTo {
   '/api/suporte-ia': typeof ApiSuporteIaRoute
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
+  '/consulta/$sala': typeof ConsultaSalaRoute
   '/contratacao/conclusao': typeof ContratacaoConclusaoRoute
   '/contratacao/confirmar': typeof ContratacaoConfirmarRoute
   '/contratacao/dados': typeof ContratacaoDadosRoute
@@ -1038,6 +1053,7 @@ export interface FileRoutesByTo {
   '/api/public/agendamento/clinica': typeof ApiPublicAgendamentoClinicaRoute
   '/api/public/agendamento/horarios': typeof ApiPublicAgendamentoHorariosRoute
   '/api/public/agendamento/reservar': typeof ApiPublicAgendamentoReservarRoute
+  '/api/public/consulta/sala': typeof ApiPublicConsultaSalaRoute
   '/api/public/crm/clinicas': typeof ApiPublicCrmClinicasRouteWithChildren
   '/api/public/crm/cupons': typeof ApiPublicCrmCuponsRouteWithChildren
   '/api/public/crm/health': typeof ApiPublicCrmHealthRoute
@@ -1104,6 +1120,7 @@ export interface FileRoutesById {
   '/api/suporte-ia': typeof ApiSuporteIaRoute
   '/api/whatsapp-convite': typeof ApiWhatsappConviteRoute
   '/api/whatsapp-webhook': typeof ApiWhatsappWebhookRoute
+  '/consulta/$sala': typeof ConsultaSalaRoute
   '/contratacao/conclusao': typeof ContratacaoConclusaoRoute
   '/contratacao/confirmar': typeof ContratacaoConfirmarRoute
   '/contratacao/dados': typeof ContratacaoDadosRoute
@@ -1168,6 +1185,7 @@ export interface FileRoutesById {
   '/api/public/agendamento/clinica': typeof ApiPublicAgendamentoClinicaRoute
   '/api/public/agendamento/horarios': typeof ApiPublicAgendamentoHorariosRoute
   '/api/public/agendamento/reservar': typeof ApiPublicAgendamentoReservarRoute
+  '/api/public/consulta/sala': typeof ApiPublicConsultaSalaRoute
   '/api/public/crm/clinicas': typeof ApiPublicCrmClinicasRouteWithChildren
   '/api/public/crm/cupons': typeof ApiPublicCrmCuponsRouteWithChildren
   '/api/public/crm/health': typeof ApiPublicCrmHealthRoute
@@ -1235,6 +1253,7 @@ export interface FileRouteTypes {
     | '/api/suporte-ia'
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
+    | '/consulta/$sala'
     | '/contratacao/conclusao'
     | '/contratacao/confirmar'
     | '/contratacao/dados'
@@ -1299,6 +1318,7 @@ export interface FileRouteTypes {
     | '/api/public/agendamento/clinica'
     | '/api/public/agendamento/horarios'
     | '/api/public/agendamento/reservar'
+    | '/api/public/consulta/sala'
     | '/api/public/crm/clinicas'
     | '/api/public/crm/cupons'
     | '/api/public/crm/health'
@@ -1364,6 +1384,7 @@ export interface FileRouteTypes {
     | '/api/suporte-ia'
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
+    | '/consulta/$sala'
     | '/contratacao/conclusao'
     | '/contratacao/confirmar'
     | '/contratacao/dados'
@@ -1428,6 +1449,7 @@ export interface FileRouteTypes {
     | '/api/public/agendamento/clinica'
     | '/api/public/agendamento/horarios'
     | '/api/public/agendamento/reservar'
+    | '/api/public/consulta/sala'
     | '/api/public/crm/clinicas'
     | '/api/public/crm/cupons'
     | '/api/public/crm/health'
@@ -1493,6 +1515,7 @@ export interface FileRouteTypes {
     | '/api/suporte-ia'
     | '/api/whatsapp-convite'
     | '/api/whatsapp-webhook'
+    | '/consulta/$sala'
     | '/contratacao/conclusao'
     | '/contratacao/confirmar'
     | '/contratacao/dados'
@@ -1557,6 +1580,7 @@ export interface FileRouteTypes {
     | '/api/public/agendamento/clinica'
     | '/api/public/agendamento/horarios'
     | '/api/public/agendamento/reservar'
+    | '/api/public/consulta/sala'
     | '/api/public/crm/clinicas'
     | '/api/public/crm/cupons'
     | '/api/public/crm/health'
@@ -1623,6 +1647,7 @@ export interface RootRouteChildren {
   ApiSuporteIaRoute: typeof ApiSuporteIaRoute
   ApiWhatsappConviteRoute: typeof ApiWhatsappConviteRoute
   ApiWhatsappWebhookRoute: typeof ApiWhatsappWebhookRoute
+  ConsultaSalaRoute: typeof ConsultaSalaRoute
   ContratacaoConclusaoRoute: typeof ContratacaoConclusaoRoute
   ContratacaoConfirmarRoute: typeof ContratacaoConfirmarRoute
   ContratacaoDadosRoute: typeof ContratacaoDadosRoute
@@ -1686,6 +1711,7 @@ export interface RootRouteChildren {
   ApiPublicAgendamentoClinicaRoute: typeof ApiPublicAgendamentoClinicaRoute
   ApiPublicAgendamentoHorariosRoute: typeof ApiPublicAgendamentoHorariosRoute
   ApiPublicAgendamentoReservarRoute: typeof ApiPublicAgendamentoReservarRoute
+  ApiPublicConsultaSalaRoute: typeof ApiPublicConsultaSalaRoute
   ApiPublicCrmClinicasRoute: typeof ApiPublicCrmClinicasRouteWithChildren
   ApiPublicCrmCuponsRoute: typeof ApiPublicCrmCuponsRouteWithChildren
   ApiPublicCrmHealthRoute: typeof ApiPublicCrmHealthRoute
@@ -1873,6 +1899,13 @@ declare module '@tanstack/react-router' {
       path: '/api/whatsapp-webhook'
       fullPath: '/api/whatsapp-webhook'
       preLoaderRoute: typeof ApiWhatsappWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/consulta/$sala': {
+      id: '/consulta/$sala'
+      path: '/consulta/$sala'
+      fullPath: '/consulta/$sala'
+      preLoaderRoute: typeof ConsultaSalaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contratacao/conclusao': {
@@ -2323,6 +2356,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAgendamentoReservarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/consulta/sala': {
+      id: '/api/public/consulta/sala'
+      path: '/api/public/consulta/sala'
+      fullPath: '/api/public/consulta/sala'
+      preLoaderRoute: typeof ApiPublicConsultaSalaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/crm/clinicas': {
       id: '/api/public/crm/clinicas'
       path: '/api/public/crm/clinicas'
@@ -2742,6 +2782,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSuporteIaRoute: ApiSuporteIaRoute,
   ApiWhatsappConviteRoute: ApiWhatsappConviteRoute,
   ApiWhatsappWebhookRoute: ApiWhatsappWebhookRoute,
+  ConsultaSalaRoute: ConsultaSalaRoute,
   ContratacaoConclusaoRoute: ContratacaoConclusaoRoute,
   ContratacaoConfirmarRoute: ContratacaoConfirmarRoute,
   ContratacaoDadosRoute: ContratacaoDadosRoute,
@@ -2808,6 +2849,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAgendamentoClinicaRoute: ApiPublicAgendamentoClinicaRoute,
   ApiPublicAgendamentoHorariosRoute: ApiPublicAgendamentoHorariosRoute,
   ApiPublicAgendamentoReservarRoute: ApiPublicAgendamentoReservarRoute,
+  ApiPublicConsultaSalaRoute: ApiPublicConsultaSalaRoute,
   ApiPublicCrmClinicasRoute: ApiPublicCrmClinicasRouteWithChildren,
   ApiPublicCrmCuponsRoute: ApiPublicCrmCuponsRouteWithChildren,
   ApiPublicCrmHealthRoute: ApiPublicCrmHealthRoute,

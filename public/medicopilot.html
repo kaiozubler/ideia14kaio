@@ -1129,6 +1129,16 @@
                                                       .ag-tt-status{display:inline-block;margin-top:6px;padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:700}
                                                       .ag-tt-status-desc{margin-top:5px;color:#64748b;font-size:10.5px;line-height:1.55}
                                                       .ag-tt-habit{margin-top:9px;padding-top:9px;border-top:1px solid rgba(15,42,80,.08);color:#64748b;font-size:10.5px;line-height:1.65}
+                                                      .vlink-box{display:flex;align-items:center;gap:8px;margin-top:8px;padding:7px 8px 7px 10px;border:1px solid #c7d2fe;border-radius:10px;background:#eef2ff;min-width:0}
+                                                      .vlink-box>i{font-size:14px;color:#4f46e5;flex-shrink:0}
+                                                      .vlink-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+                                                      .vlink-lbl{font-size:10px;font-weight:700;color:#4338ca;text-transform:uppercase;letter-spacing:.05em}
+                                                      .vlink-url{font-size:11.5px;color:#1e1b4b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:all}
+                                                      .vlink-url.vazio{color:#64748b;font-style:italic;user-select:none}
+                                                      .vlink-copy{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;padding:5px 10px;border:none;border-radius:8px;background:#4f46e5;color:#fff;font-size:11px;font-weight:700;cursor:pointer}
+                                                      .vlink-copy:hover{background:#4338ca}
+                                                      .vlink-copy:disabled{opacity:.7;cursor:default}
+                                                      .vlink-copy.ok{background:#16a34a}
 
                                                       .ag-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;padding:14px;background:transparent;border:none;box-shadow:none}
                                                       .ag-card-full{background:rgba(255,255,255,.62);backdrop-filter:blur(18px) saturate(180%);-webkit-backdrop-filter:blur(18px) saturate(180%);border:1px solid rgba(255,255,255,.85);border-radius:18px;padding:16px;box-shadow:0 10px 26px -16px rgba(15,42,80,.25);position:relative;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}
@@ -10445,6 +10455,7 @@ showAtendList();
                                                                   <select onchange="setPatientAgStatus('${a.id}',this.value)" style="font-size:11.5px;padding:5px 8px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;color:#0f172a">
                                                                     ${extra}<option value="">Alterar status…</option>${opts}
                                                                   </select>
+                                                                  ${videoLinkAtivo(a.modalidade,st,a.data_hora,a.duracao_min)?`<div style="flex-basis:100%;min-width:0">${videoLinkBoxHtml(a.id)}</div>`:''}
                                                                 </div>`;
                                                               }).join('');
                                                             }
@@ -19929,6 +19940,8 @@ let rxSelected = [];
                                                                 specialty:r.especialidade||'',
                                                                 motivo:r.motivo||'',observacoes:r.observacoes||'',
                                                                 duracao:r.duracao_min||30,
+                                                                modalidade:r.modalidade||'presencial',
+                                                                rawDataHora:r.data_hora,
                                                                 horarioEntrada:r.horario_entrada||null,
                                                                 doctor:r.medico_nome||'Médico não informado',
                                                                 doctorId:r.agenda_medico_id||r.id_medico||'sem-medico',
@@ -20027,10 +20040,19 @@ let rxSelected = [];
                                                             /* ===== Tooltip de detalhes do agendamento ===== */
                                                             function agEnsureTooltipEl(){
                                                               let el=document.getElementById('ag-tooltip');
-                                                              if(!el){el=document.createElement('div');el.id='ag-tooltip';el.className='ag-tooltip';document.body.appendChild(el);}
+                                                              if(!el){
+                                                                el=document.createElement('div');el.id='ag-tooltip';el.className='ag-tooltip';
+                                                                // Com link de teleconsulta o balão aceita clique (botão Copiar):
+                                                                // o mouse pode sair do card e entrar nele sem que ele suma.
+                                                                el.addEventListener('mouseenter',()=>clearTimeout(AG_TT_HIDE));
+                                                                el.addEventListener('mouseleave',agHideTooltip);
+                                                                document.body.appendChild(el);
+                                                              }
                                                               return el;
                                                             }
-                                                            function agHideTooltip(){const el=document.getElementById('ag-tooltip');if(el)el.style.display='none';}
+                                                            let AG_TT_HIDE=null;
+                                                            function agHideTooltip(){clearTimeout(AG_TT_HIDE);const el=document.getElementById('ag-tooltip');if(el)el.style.display='none';}
+                                                            function agHideTooltipSoon(){clearTimeout(AG_TT_HIDE);AG_TT_HIDE=setTimeout(agHideTooltip,250);}
                                                             function agPatientHabitsHtml(a){
                                                               if(!a.paciente_id)return '<div class="ag-tt-habit">Agendamento sem paciente cadastrado vinculado.</div>';
                                                               const hist=(AGENDAMENTOS||[]).filter(r=>r.paciente_id===a.paciente_id&&String(r.id)!==String(a.id));
@@ -20077,6 +20099,7 @@ let rxSelected = [];
                                                                                      ${a.observacoes?`<div class="ag-tt-row ag-tt-obs"><i class="ti ti-message"></i> ${agEsc(a.observacoes)}</div>`:''}
                                                                 <div class="ag-tt-status" style="color:${meta.color};background:${meta.bg}">${meta.label}</div>
                                                                 <div class="ag-tt-status-desc">${meta.desc}</div>
+                                                                ${videoLinkAtivo(a.modalidade,a.rawStatus,a.rawDataHora,a.duracao)?videoLinkBoxHtml(a.id):''}
                                                                 ${agPatientHabitsHtml(a)}`;
                                                             }
                                                             function agShowTooltip(cardEl,id){
@@ -20084,7 +20107,9 @@ let rxSelected = [];
                                                               const a=AG_APTS.find(x=>String(x.id)===String(id));
                                                               if(!a)return;
                                                               const el=agEnsureTooltipEl();
+                                                              clearTimeout(AG_TT_HIDE);
                                                               el.innerHTML=agTooltipHtml(a);
+                                                              el.style.pointerEvents=el.querySelector('.vlink-box')?'auto':'none';
                                                               el.style.display='block';
                                                               const r=cardEl.getBoundingClientRect();
                                                               const tw=el.offsetWidth||270,th=el.offsetHeight||160;
@@ -20171,7 +20196,7 @@ let rxSelected = [];
                                                               const bg=ov?'rgba(244,67,54,.10)':(c+'18');
                                                               const menuOpen=AG_STATE.openMenu===a.id;
                                                               const menu=menuOpen?`<div class="ag-menu">${AG_MENU.map(m=>`<button class="${m.danger?'danger':''}" onclick="agAction('${m.action}','${a.id}',event)"><i class="ti ${m.icon}"></i>${m.label}</button>`).join('')}</div>`:'';
-                                                              return `<div class="ag-card ${ov?'overdue':''}" style="--dc:${ov?'#F44336':c};--dc-bg:${bg}" onclick="agCardClick(event,'${a.id}')" onmouseenter="agShowTooltip(this,'${a.id}')" onmouseleave="agHideTooltip()">
+                                                              return `<div class="ag-card ${ov?'overdue':''}" style="--dc:${ov?'#F44336':c};--dc-bg:${bg}" onclick="agCardClick(event,'${a.id}')" onmouseenter="agShowTooltip(this,'${a.id}')" onmouseleave="agHideTooltipSoon()">
                                                                 <div class="ag-card-row">
                                                                   <div style="flex:1;min-width:0">
                                                                     <div class="ag-card-name">${a.patient}</div>
@@ -20290,7 +20315,7 @@ let rxSelected = [];
                                                               if(!apts.length){body.innerHTML=`<div class="ag-empty"><i class="ti ti-calendar-off" style="font-size:32px"></i><p>Nenhum agendamento neste mês</p></div>`;return;}
                                                               const html=`<div class="ag-cards">`+apts.map(a=>{
                                                                 const ov=agIsOverdue(a);const col=agDocColor(a.doctorId);
-                                                                return `<div class="ag-card-full ${ov?'overdue':''}" onclick="agCardClick(event,'${a.id}')" onmouseenter="agShowTooltip(this,'${a.id}')" onmouseleave="agHideTooltip()">
+                                                                return `<div class="ag-card-full ${ov?'overdue':''}" onclick="agCardClick(event,'${a.id}')" onmouseenter="agShowTooltip(this,'${a.id}')" onmouseleave="agHideTooltipSoon()">
                                                                   ${ov?'<div class="ovr">Horário expirado</div>':''}
                                                                   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
                                                                     <div style="flex:1"><h4>${a.patient}</h4><div class="spec">${a.specialty||a.doctor}</div></div>
@@ -20486,7 +20511,7 @@ let rxSelected = [];
                                                               // Expira a sala 3h depois do fim previsto da consulta — dá margem
                                                               // para atrasos sem deixar a sala aberta indefinidamente.
                                                               const exp=Math.floor(new Date(dataHoraIso).getTime()/1000)+((duracaoMin||30)*60)+3*3600;
-                                                              const r=await fetch('/api/daily-room',{
+                                                              const r=await iaAuthFetch('/api/daily-room',{
                                                                 method:'POST',headers:{'Content-Type':'application/json'},
                                                                 body:JSON.stringify({name,exp,createOnly:true})
                                                               });
@@ -20716,6 +20741,89 @@ let rxSelected = [];
                                                             // atual (janela de 12h para tolerar atrasos), para reaproveitar a
                                                             // MESMA sala Daily que foi (ou será) enviada ao paciente, em vez de
                                                             // o médico abrir uma sala nova e diferente na hora da chamada.
+                                                            // Link que vai para o paciente: a página /consulta/<sala> do app,
+                                                            // que embute o Daily (o paciente não vê *.daily.co). O médico segue
+                                                            // usando a URL do Daily (__vcRoom.url / video_room_url) por baixo.
+                                                            // Mesma regra de src/lib/video/consulta.ts; domínios de edição do
+                                                            // Lovable exigem login, então o link usa o site publicado.
+                                                            function linkVideoPaciente(urlDaily){
+                                                              const v=String(urlDaily||'').trim();
+                                                              let sala='';
+                                                              try{ const u=new URL(v); if(/\.daily\.co$/i.test(u.hostname)) sala=u.pathname.replace(/^\/+|\/+$/g,''); }catch(e){}
+                                                              if(!/^consulta-[a-z0-9-]{1,31}$/.test(sala)) return v;
+                                                              const o=location.origin||'';
+                                                              const origem=/lovableproject\.com|lovable\.dev|id-preview--|--?dev\.lovable\.app|localhost|127\.0\.0\.1/i.test(o)?'https://medicopilot.lovable.app':o;
+                                                              return origem+'/consulta/'+sala;
+                                                            }
+                                                            // Link da teleconsulta com botão Copiar, mostrado no detalhe do
+                                                            // agendamento (balão da Agenda) e na agenda do cadastro do paciente.
+                                                            // Some quando a sala já expirou (3h após o fim previsto, ver
+                                                            // agmCreateVideoRoomForAgendamento) ou o agendamento saiu da grade.
+                                                            function videoLinkAtivo(modalidade,status,dataHora,duracaoMin){
+                                                              if(modalidade!=='video')return false;
+                                                              if(['cancelado','reagendado'].includes(String(status||'').toLowerCase()))return false;
+                                                              const fim=new Date(dataHora).getTime()+((duracaoMin||30)*60000)+3*3600000;
+                                                              return !isFinite(fim)||fim>Date.now();
+                                                            }
+                                                            function agRowVideo(agId){
+                                                              const k=String(agId);
+                                                              return (AGENDAMENTOS||[]).find(r=>String(r.id)===k)||(PAT_AG_ITEMS||[]).find(r=>String(r.id)===k)||null;
+                                                            }
+                                                            function videoLinkBoxHtml(agId){
+                                                              const r=agRowVideo(agId);
+                                                              const link=r&&r.video_room_url?linkVideoPaciente(r.video_room_url):'';
+                                                              const id=agEsc(agId);
+                                                              return `<div class="vlink-box" onclick="event.stopPropagation()">
+                                                                  <i class="ti ti-video"></i>
+                                                                  <div class="vlink-txt">
+                                                                    <span class="vlink-lbl">Link da teleconsulta</span>
+                                                                    <span class="vlink-url${link?'':' vazio'}" title="${agEsc(link)}">${link?agEsc(link):'Link ainda não gerado'}</span>
+                                                                  </div>
+                                                                  <button type="button" class="vlink-copy" onclick="copiarLinkVideoAgendamento('${id}',this,event)"><i class="ti ti-copy"></i><span>${link?'Copiar':'Gerar e copiar'}</span></button>
+                                                                </div>`;
+                                                            }
+                                                            async function copiarLinkVideoAgendamento(agId,btn,ev){
+                                                              if(ev){ev.stopPropagation();ev.preventDefault();}
+                                                              const r=agRowVideo(agId);
+                                                              if(!r){showToast&&showToast('Agendamento não encontrado','error');return;}
+                                                              const lbl=btn&&btn.querySelector('span');
+                                                              let url=r.video_room_url;
+                                                              try{
+                                                                if(!url){
+                                                                  // A sala é pré-criada em segundo plano ao agendar; se ainda não
+                                                                  // existe (ou falhou), cria agora com o mesmo nome consulta-<id>.
+                                                                  if(btn)btn.disabled=true;
+                                                                  if(lbl)lbl.textContent='Gerando…';
+                                                                  const room=await agmCreateVideoRoomForAgendamento(r.id,r.data_hora,r.duracao_min);
+                                                                  url=room.url;
+                                                                  [AGENDAMENTOS,PAT_AG_ITEMS].forEach(lista=>(lista||[]).forEach(x=>{if(String(x.id)===String(r.id)){x.video_room_url=room.url;x.video_room_name=room.name;}}));
+                                                                }
+                                                                const link=linkVideoPaciente(url);
+                                                                const box=btn&&btn.closest('.vlink-box');
+                                                                const urlEl=box&&box.querySelector('.vlink-url');
+                                                                if(urlEl){urlEl.textContent=link;urlEl.title=link;urlEl.classList.remove('vazio');}
+                                                                try{
+                                                                  await navigator.clipboard.writeText(link);
+                                                                }catch(e){
+                                                                  // Sem permissão de área de transferência (ex.: Safari após
+                                                                  // a espera da criação da sala): deixa o usuário copiar à mão.
+                                                                  window.prompt('Copie o link da teleconsulta:',link);
+                                                                  return;
+                                                                }
+                                                                showToast&&showToast('Link da chamada copiado','success');
+                                                                if(btn){
+                                                                  btn.classList.add('ok');
+                                                                  if(lbl)lbl.textContent='Copiado!';
+                                                                  setTimeout(()=>{btn.classList.remove('ok');if(lbl)lbl.textContent='Copiar';},1800);
+                                                                }
+                                                              }catch(e){
+                                                                console.error('copiarLinkVideoAgendamento falhou:',e);
+                                                                showToast&&showToast('Não foi possível gerar o link da chamada','error');
+                                                                if(lbl)lbl.textContent=url?'Copiar':'Gerar e copiar';
+                                                              }finally{
+                                                                if(btn)btn.disabled=false;
+                                                              }
+                                                            }
                                                             async function findLinkedVideoAgendamento(patientId){
                                                               if(!patientId) return null;
                                                               try{
@@ -20806,7 +20914,7 @@ let rxSelected = [];
                                                                   }else{
                                                                     name=('consulta-'+pid+'-'+Date.now().toString(36)).toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,40);
                                                                   }
-                                                                  const r=await fetch('/api/daily-room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+                                                                  const r=await iaAuthFetch('/api/daily-room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
                                                                   if(!r.ok){throw new Error(await r.text());}
                                                                   window.__vcRoom=await r.json();
                                                                   window.__vcRoomPatientId=pid;
@@ -20820,7 +20928,7 @@ let rxSelected = [];
                                                                 }
                                                                 if(!window.DailyIframe){ throw new Error('SDK do Daily não carregou. Verifique sua conexão e recarregue a página.'); }
                                                                 const copyTxt=document.getElementById('vc-copy-url-txt');
-                                                                if(copyTxt) copyTxt.textContent=window.__vcRoom.url;
+                                                                if(copyTxt) copyTxt.textContent=linkVideoPaciente(window.__vcRoom.url);
 
                                                                 if(sub) sub.textContent='Carregando câmera e microfone…';
                                                                 const cf=window.DailyIframe.createCallObject({
@@ -21209,7 +21317,7 @@ let rxSelected = [];
                                                             }
                                                             function copyVideoLink(){
                                                               if(!window.__vcRoom||!window.__vcRoom.url)return;
-                                                              navigator.clipboard.writeText(window.__vcRoom.url).then(()=>{
+                                                              navigator.clipboard.writeText(linkVideoPaciente(window.__vcRoom.url)).then(()=>{
                                                                 const lbl=document.getElementById('vc-copy-label');
                                                                 if(!lbl) return;
                                                                 const prev=lbl.textContent;
@@ -21275,7 +21383,7 @@ let rxSelected = [];
                                                                     const name = linkedAg
                                                                       ? ('consulta-'+linkedAg.id).toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,40)
                                                                       : ('consulta-'+pid+'-'+Date.now().toString(36)).toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,40);
-                                                                    const r=await fetch('/api/daily-room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,createOnly:true})});
+                                                                    const r=await iaAuthFetch('/api/daily-room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,createOnly:true})});
                                                                     if(!r.ok) throw new Error(await r.text());
                                                                     const room=await r.json();
                                                                     url=room.url;
@@ -21285,7 +21393,7 @@ let rxSelected = [];
                                                                   }
                                                                 }
                                                                 if(!url){ showToast&&showToast('Não foi possível gerar o link da chamada','error'); return; }
-                                                                await navigator.clipboard.writeText(url);
+                                                                await navigator.clipboard.writeText(linkVideoPaciente(url));
                                                                 showToast&&showToast('Link da chamada copiado','success');
                                                               }catch(e){
                                                                 console.error('copiarLinkChamadaAtual falhou:',e);

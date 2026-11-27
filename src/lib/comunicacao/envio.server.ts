@@ -13,6 +13,7 @@ import {
   type MidiaCabecalho,
   type Modelo,
 } from "./meta.server";
+import { linkConsultaPaciente, origemPublicaServidor } from "@/lib/video/consulta";
 
 /**
  * Orquestra o envio CLÍNICA → PACIENTE: acha/cria a conversa, decide entre
@@ -141,7 +142,9 @@ export async function valoresDasFontes(
         ? "por vídeo"
         : "presencial"
       : "",
-    "consulta.link_video": d.agendamento?.video_room_url || "",
+    "consulta.link_video": d.agendamento?.video_room_url
+      ? linkConsultaPaciente(origemPublicaServidor(), d.agendamento.video_room_url)
+      : "",
     "consulta.profissional": d.agendamento?.medico_nome || d.medicoNome,
     "clinica.nome": c.fantasia || "",
     "clinica.telefone": c.telefone || "",
