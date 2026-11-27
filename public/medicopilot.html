@@ -20486,7 +20486,7 @@ let rxSelected = [];
                                                               // Expira a sala 3h depois do fim previsto da consulta — dá margem
                                                               // para atrasos sem deixar a sala aberta indefinidamente.
                                                               const exp=Math.floor(new Date(dataHoraIso).getTime()/1000)+((duracaoMin||30)*60)+3*3600;
-                                                              const r=await fetch('/api/daily-room',{
+                                                              const r=await iaAuthFetch('/api/daily-room',{
                                                                 method:'POST',headers:{'Content-Type':'application/json'},
                                                                 body:JSON.stringify({name,exp,createOnly:true})
                                                               });
@@ -20716,6 +20716,20 @@ let rxSelected = [];
                                                             // atual (janela de 12h para tolerar atrasos), para reaproveitar a
                                                             // MESMA sala Daily que foi (ou será) enviada ao paciente, em vez de
                                                             // o médico abrir uma sala nova e diferente na hora da chamada.
+                                                            // Link que vai para o paciente: a página /consulta/<sala> do app,
+                                                            // que embute o Daily (o paciente não vê *.daily.co). O médico segue
+                                                            // usando a URL do Daily (__vcRoom.url / video_room_url) por baixo.
+                                                            // Mesma regra de src/lib/video/consulta.ts; domínios de edição do
+                                                            // Lovable exigem login, então o link usa o site publicado.
+                                                            function linkVideoPaciente(urlDaily){
+                                                              const v=String(urlDaily||'').trim();
+                                                              let sala='';
+                                                              try{ const u=new URL(v); if(/\.daily\.co$/i.test(u.hostname)) sala=u.pathname.replace(/^\/+|\/+$/g,''); }catch(e){}
+                                                              if(!/^consulta-[a-z0-9-]{1,31}$/.test(sala)) return v;
+                                                              const o=location.origin||'';
+                                                              const origem=/lovableproject\.com|lovable\.dev|id-preview--|--?dev\.lovable\.app|localhost|127\.0\.0\.1/i.test(o)?'https://medicopilot.lovable.app':o;
+                                                              return origem+'/consulta/'+sala;
+                                                            }
                                                             async function findLinkedVideoAgendamento(patientId){
                                                               if(!patientId) return null;
                                                               try{
@@ -20806,7 +20820,7 @@ let rxSelected = [];
                                                                   }else{
                                                                     name=('consulta-'+pid+'-'+Date.now().toString(36)).toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,40);
                                                                   }
-                                                                  const r=await fetch('/api/daily-room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+                                                                  const r=await iaAuthFetch('/api/daily-room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
                                                                   if(!r.ok){throw new Error(await r.text());}
                                                                   window.__vcRoom=await r.json();
                                                                   window.__vcRoomPatientId=pid;
@@ -20820,7 +20834,7 @@ let rxSelected = [];
                                                                 }
                                                                 if(!window.DailyIframe){ throw new Error('SDK do Daily não carregou. Verifique sua conexão e recarregue a página.'); }
                                                                 const copyTxt=document.getElementById('vc-copy-url-txt');
-                                                                if(copyTxt) copyTxt.textContent=window.__vcRoom.url;
+                                                                if(copyTxt) copyTxt.textContent=linkVideoPaciente(window.__vcRoom.url);
 
                                                                 if(sub) sub.textContent='Carregando câmera e microfone…';
                                                                 const cf=window.DailyIframe.createCallObject({
@@ -21209,7 +21223,7 @@ let rxSelected = [];
                                                             }
                                                             function copyVideoLink(){
                                                               if(!window.__vcRoom||!window.__vcRoom.url)return;
-                                                              navigator.clipboard.writeText(window.__vcRoom.url).then(()=>{
+                                                              navigator.clipboard.writeText(linkVideoPaciente(window.__vcRoom.url)).then(()=>{
                                                                 const lbl=document.getElementById('vc-copy-label');
                                                                 if(!lbl) return;
                                                                 const prev=lbl.textContent;
@@ -21275,7 +21289,7 @@ let rxSelected = [];
                                                                     const name = linkedAg
                                                                       ? ('consulta-'+linkedAg.id).toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,40)
                                                                       : ('consulta-'+pid+'-'+Date.now().toString(36)).toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,40);
-                                                                    const r=await fetch('/api/daily-room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,createOnly:true})});
+                                                                    const r=await iaAuthFetch('/api/daily-room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,createOnly:true})});
                                                                     if(!r.ok) throw new Error(await r.text());
                                                                     const room=await r.json();
                                                                     url=room.url;
@@ -21285,7 +21299,7 @@ let rxSelected = [];
                                                                   }
                                                                 }
                                                                 if(!url){ showToast&&showToast('Não foi possível gerar o link da chamada','error'); return; }
-                                                                await navigator.clipboard.writeText(url);
+                                                                await navigator.clipboard.writeText(linkVideoPaciente(url));
                                                                 showToast&&showToast('Link da chamada copiado','success');
                                                               }catch(e){
                                                                 console.error('copiarLinkChamadaAtual falhou:',e);
